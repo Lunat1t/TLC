@@ -66,6 +66,8 @@ function commit(next) {
 
 function currentProject() { return projects.find(project => project.id === selectedId); }
 
+function editorUrl(projectId) { return `editor.html?id=${encodeURIComponent(projectId)}`; }
+
 function openDetails(projectId) {
   selectedId = projectId;
   const project = currentProject();
@@ -73,6 +75,7 @@ function openDetails(projectId) {
   $('detailsTitle').textContent = project.name;
   $('detailsMeta').textContent = `${HUBS[project.hub]} · создан ${formatDate(project.createdAt)}`;
   $('controllerLink').hidden = project.hub !== 'spike';
+  $('openEditor').href = editorUrl(project.id);
   $('detailsDialog').showModal();
 }
 
@@ -110,7 +113,7 @@ $('newForm').addEventListener('submit', event => {
     commit([...projects, project]);
     $('newDialog').close();
     showNotice(`Проект «${project.name}» создан.`);
-    openDetails(project.id);
+    window.location.assign(editorUrl(project.id));
   } catch (error) { showFormError('formError', error); }
 });
 

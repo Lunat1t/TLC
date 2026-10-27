@@ -49,7 +49,7 @@ export function makeProject(name, hub, id, date = new Date()) {
     createdAt: time,
     updatedAt: time,
     devices: [],
-    workspace: null,
+    workspace: {blocks: []},
   });
 }
 
