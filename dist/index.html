@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#02c7ea">
+  <title>Robot Studio — мои проекты</title>
+  <link rel="stylesheet" href="home.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html" aria-label="Robot Studio, главная">ROBOT<span>STUDIO</span></a>
+    <label class="hub-picker">Робот
+      <select id="hubChoice" aria-label="Робот для нового проекта">
+        <option value="spike">SPIKE Prime</option>
+        <option value="ev3">LEGO EV3</option>
+      </select>
+    </label>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="heroTitle">
+      <div class="hero-copy">
+        <p class="eyebrow">ПРОГРАММИРОВАНИЕ РОБОТОВ</p>
+        <h1 id="heroTitle">Начните со <span id="heroHub">SPIKE Prime</span></h1>
+        <p class="hero-description">Ваши проекты для роботов в одном месте. Создайте первый проект и выберите своё устройство.</p>
+        <button class="primary-button" id="heroCreate" type="button">Создать проект <span aria-hidden="true">↗</span></button>
+      </div>
+      <img class="hero-art" src="robot-hero.svg" alt="Иллюстрация робота и деталей конструктора">
+    </section>
+
+    <section class="library" aria-labelledby="libraryTitle">
+      <div class="library-heading">
+        <div>
+          <p class="section-eyebrow">РАБОЧЕЕ ПРОСТРАНСТВО</p>
+          <h2 id="libraryTitle">Мои проекты</h2>
+          <p class="storage-note">Проекты сохраняются в этом браузере. Файл проекта можно скачать из его карточки.</p>
+        </div>
+        <span id="projectCount" class="project-count">0 проектов</span>
+      </div>
+
+      <div class="quick-actions">
+        <button id="newProject" class="action-tile" type="button"><span class="action-icon" aria-hidden="true">＋</span><strong>Новый проект</strong><small>SPIKE или EV3</small></button>
+        <button id="openProjectFile" class="action-tile" type="button"><span class="action-icon folder" aria-hidden="true">▱</span><strong>Открыть файл</strong><small>Импорт проекта</small></button>
+        <input id="projectFile" type="file" accept=".json,.robotproj.json,application/json" hidden>
+      </div>
+
+      <div id="emptyState" class="empty-state"><div class="empty-mark" aria-hidden="true">◇</div><h3>Проектов пока нет</h3><p>Нажмите «Новый проект», чтобы начать.</p></div>
+      <div id="projectList" class="project-list" aria-label="Сохранённые проекты"></div>
+      <p id="notice" class="notice" role="status" hidden></p>
+    </section>
+  </main>
+
+  <dialog id="newDialog" class="modal" aria-labelledby="newTitle">
+    <form id="newForm">
+      <div class="modal-heading"><p class="section-eyebrow">НОВЫЙ ПРОЕКТ</p><h2 id="newTitle">Что будем создавать?</h2></div>
+      <label class="form-field">Название проекта<input id="projectName" name="name" maxlength="64" required autocomplete="off" placeholder="Например, мой робот"></label>
+      <fieldset class="robot-options"><legend>Выберите робота</legend>
+        <label class="robot-option"><input type="radio" name="hub" value="spike" checked><span class="robot-icon spike" aria-hidden="true">▦</span><span><strong>SPIKE Prime</strong><small>Хаб с портами A–F</small></span></label>
+        <label class="robot-option"><input type="radio" name="hub" value="ev3"><span class="robot-icon ev3" aria-hidden="true">▣</span><span><strong>LEGO EV3</strong><small>Хаб с портами A–D</small></span></label>
+      </fieldset>
+      <p id="formError" class="form-error" role="alert" hidden></p>
+      <div class="modal-actions"><button id="cancelNew" type="button" class="secondary-button">Отмена</button><button type="submit" class="primary-button">Создать проект</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="detailsDialog" class="modal" aria-labelledby="detailsTitle">
+    <div class="modal-heading"><p class="section-eyebrow">ПРОЕКТ</p><h2 id="detailsTitle"></h2></div>
+    <p id="detailsMeta" class="details-meta"></p>
+    <p class="details-note">Рабочая область нового языка появится здесь позже. Проект и выбранный робот уже сохранены.</p>
+    <div class="details-actions"><button id="renameProject" type="button" class="secondary-button">Переименовать</button><button id="exportProject" type="button" class="secondary-button">Скачать файл</button><button id="deleteProject" type="button" class="danger-button">Удалить</button></div>
+    <div class="modal-actions"><a id="controllerLink" class="text-link" href="controller.html">Открыть прежний пульт Socer</a><button id="closeDetails" type="button" class="primary-button">Закрыть</button></div>
+  </dialog>
+
+  <dialog id="renameDialog" class="modal" aria-labelledby="renameTitle">
+    <form id="renameForm"><div class="modal-heading"><p class="section-eyebrow">ПРОЕКТ</p><h2 id="renameTitle">Переименовать</h2></div>
+      <label class="form-field">Новое название<input id="renameInput" maxlength="64" required autocomplete="off"></label>
+      <p id="renameError" class="form-error" role="alert" hidden></p>
+      <div class="modal-actions"><button id="cancelRename" type="button" class="secondary-button">Отмена</button><button type="submit" class="primary-button">Сохранить</button></div>
+    </form>
+  </dialog>
+
+  <script type="module" src="home.js"></script>
+</body>
+</html>

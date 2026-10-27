@@ -1,0 +1,13 @@
+.git
+.openai
+.vercel
+legacy
+tests
+README.md
+node_modules
+*.log
+__pycache__
+*.pyc
+
+.env
+.env.*

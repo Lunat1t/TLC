@@ -1,0 +1,10 @@
+{
+  "source": "Physical user-confirmed Hub1, USB /dev/ttyACM0, 2026-10-26; InfoRequest only, no upload or motor commands",
+  "frameHex": "54 54 00 07 2c 54 06 0b 96 00 a8 06 8b 10 07 13 00 00 02",
+  "rpc": "1.0.47",
+  "firmware": "1.8.149",
+  "packetSize": 512,
+  "messageSize": 5000,
+  "chunkSize": 4096,
+  "product": 0
+}

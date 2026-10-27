@@ -1,0 +1,42 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {curve,driveAxis,turnAxis,drivePercent,command,packet,LatestWriter} from '../dist/control.js';
+test('neutral and deadzones',()=>{assert.equal(curve(.1),0);assert.deepEqual(command({x:.1,y:.1},0),{speed:0,turn:0,kick:false});});
+test('all speed levels and reversal',()=>{for(const [i,speed] of [175,300,500].entries()){assert.equal(command({x:0,y:-1},i).speed,speed);assert.equal(command({x:0,y:1},i).speed,-speed);}});
+test('turn buttons spin in place with speed 0 so one motor goes reverse and one forward',()=>{assert.deepEqual(command({x:1,y:0},2),{speed:0,turn:150,kick:false});assert.equal(command({x:-1,y:0},2).turn,-150);const turnWhileForward=command({x:1,y:-1},2);assert.deepEqual(turnWhileForward,{speed:0,turn:150,kick:false});});
+test('sharp turn response and faster hub limits',()=>{
+  assert.equal(turnAxis(.1),0);
+  assert.ok(turnAxis(.5)>.75);
+  assert.deepEqual(command({x:1,y:-1},2,false,{speed:600,turn:240}),{speed:0,turn:240,kick:false});
+  assert.deepEqual(command({x:0,y:-1},2,false,{speed:600,turn:240}),{speed:600,turn:0,kick:false});
+  assert.equal(command({x:1,y:0},0).turn,150,'L1 does not weaken the turn');
+  assert.equal(command({x:1,y:-1},0).speed,0,'turn button forces tank spin (one motor reverse, one forward)');
+  assert.equal(command({x:1,y:-.5},0).turn,150);
+  assert.equal(drivePercent({x:1,y:0},0),100);
+  assert.equal(command({x:1,y:-1},2,false,{speed:400,turn:0}).turn,0);
+  assert.equal(command({x:1,y:-1},2,false,{speed:400,turn:0}).speed,400);
+});
+test('stick continuously changes speed within the selected limit',()=>{
+  assert.equal(driveAxis(-.1),0);
+  const center=command({x:0,y:-.5},0).speed;
+  assert.ok(center>0&&center<175);
+  assert.equal(command({x:0,y:-1},0).speed,175);
+  assert.ok(command({x:0,y:-.5},2).speed>center);
+  assert.equal(drivePercent({x:0,y:-1},0),35);
+  assert.equal(drivePercent({x:0,y:-.5},2),Math.round(command({x:0,y:-.5},2).speed/5));
+});
+test('motion packet',()=>{assert.equal(packet({speed:-500,turn:-150,kick:true}),'v,-500,-150,1\n');});
+test('BLE keeps latest command and never overlaps writes',async()=>{const sent=[];let release;const writer=new LatestWriter(async value=>{sent.push(value);if(value===1)await new Promise(r=>release=r);},e=>{throw e;});writer.submit(1);writer.submit(2);writer.submit(3);assert.deepEqual(sent,[1]);release();await new Promise(r=>setTimeout(r,0));assert.deepEqual(sent,[1,3]);});
+test('stop supersedes queued movement',async()=>{const sent=[];let release;const writer=new LatestWriter(async value=>{sent.push(value);if(value==='moving')await new Promise(r=>release=r);},()=>{});writer.submit('moving');writer.submit('more motion');writer.submit('stop');release();await new Promise(r=>setTimeout(r,0));assert.deepEqual(sent,['moving','stop']);});
+test('write failure closes transport and clears pending motion',async()=>{let error;const writer=new LatestWriter(async()=>{throw new Error('disconnected');},e=>error=e);writer.submit(1);writer.submit(2);await new Promise(r=>setTimeout(r,0));assert.equal(writer.closed,true);assert.equal(writer.pending,null);assert.equal(error.message,'disconnected');});
+test('kick takes priority over moving stick updates, and stop cancels an unsent kick',async()=>{
+  const sent=[];let release;
+  const writer=new LatestWriter(async value=>{sent.push(value);if(value==='moving')await new Promise(r=>release=r);},e=>{throw e;});
+  writer.submit('moving');writer.submit('new motion');writer.submitAction('k\n');writer.submit('latest motion');
+  release();await new Promise(r=>setTimeout(r,0));
+  assert.deepEqual(sent,['moving','k\n','latest motion']);
+  writer.submit('moving');writer.submitAction('k\n');writer.submitStop('x\n');
+  release();
+  await new Promise(r=>setTimeout(r,0));
+  assert.equal(sent.at(-1),'x\n');
+});

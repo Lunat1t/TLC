@@ -1,0 +1,11 @@
+{
+  "name": "socer-phone-controller",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/run.js",
+    "start": "python3 -m http.server 8080 --directory dist",
+    "test:hub": "python3 -B tests/test_one_motor.py",
+    "test:full": "python3 -B tests/test_full.py"
+  }
+}
