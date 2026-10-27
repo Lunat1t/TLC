@@ -24,3 +24,9 @@ button:focus-visible,a:focus-visible,.canvas-block:focus-visible{outline:3px sol
 @media(max-width:420px){.back-link span{display:none}.reset-view{display:none}.board-hint{white-space:normal;width:min(280px,calc(100% - 28px))}}
 @media(min-width:801px){.close-palette{display:none}}
 @media(prefers-reduced-motion:reduce){.palette{transition:none}}
+.export-code{border:1px solid #c6dce2;background:#fff;color:#086985;border-radius:11px;min-height:41px;padding:0 12px;font-weight:800;white-space:nowrap}
+.drive-palette{margin-top:10px}.drive-preview{display:grid;place-items:center;width:106px;height:33px;border-radius:8px;background:#0589b1;color:#fff;font-size:20px;font-weight:800;box-shadow:inset 0 -4px #00759b}
+.drive-block{width:320px;height:auto;min-height:90px;padding:12px;background:#0589b1;box-shadow:inset 0 -6px #00759b,0 8px 16px #14697b24;color:#fff}.drive-block::before{background:#0589b1}.drive-block::after{display:none}.drive-title{font-size:14px;font-weight:800;margin-bottom:9px;cursor:grab}.drive-controls{display:flex;flex-wrap:wrap;gap:5px;align-items:center;cursor:default}.drive-controls select,.drive-controls input{min-height:32px;border:0;border-radius:7px;padding:5px 6px;background:#fff;color:#163f50;font:700 13px system-ui;max-width:120px}.drive-controls input{width:65px}.drive-ghost{width:220px;background:#0589b1;box-shadow:inset 0 -6px #00759b}.drive-ghost::before{background:#0589b1}
+.code-dialog{width:min(600px,calc(100vw - 30px))}.code-dialog textarea{width:100%;height:200px;padding:12px;border:1px solid #dce8ec;border-radius:9px;resize:vertical;font:13px/1.5 monospace;color:#18313b;background:#f8fbfc}
+@media(max-width:800px){.export-code{padding:0 7px;font-size:11px;white-space:normal;line-height:1.1;max-width:94px}}
+@media(max-width:800px){.project-heading{flex:1;min-width:0}.project-heading strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bluetooth-button svg{display:none}}

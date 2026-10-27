@@ -1,5 +1,5 @@
 import {HUBS, loadProjects, saveProjects} from './projects.js';
-import {addBlock, moveBlock, readBlocks, removeBlock} from './workspace.js';
+import {addBlock, moveBlock, readBlocks, removeBlock, updateDrive, generatePybricks} from './workspace.js';
 
 const $ = id => document.getElementById(id);
 const board = $('board');
@@ -16,7 +16,7 @@ function status(message, error = false) {
   $('saveState').textContent = message;
   $('saveState').classList.toggle('error', error);
 }
-function save(nextBlocks) {
+function save(nextBlocks, redraw = true) {
   const updated = {...project, updatedAt: new Date().toISOString(),
     workspace: {...(project.workspace || {}), blocks: nextBlocks}};
   const next = projects.map(item => item.id === project.id ? updated : item);
@@ -26,7 +26,7 @@ function save(nextBlocks) {
     project = updated;
     blocks = nextBlocks;
     status('Сохранено');
-    renderBlocks();
+    if (redraw) renderBlocks();
   } catch { status('Не удалось сохранить', true); }
 }
 function view() {
@@ -39,24 +39,24 @@ function world(clientX, clientY) {
   const rect = board.getBoundingClientRect();
   return {x: (clientX - rect.left - panX) / zoom, y: (clientY - rect.top - panY) / zoom};
 }
-function addAt(clientX, clientY) {
+function addAt(clientX, clientY, type = 'empty') {
   const point = world(clientX, clientY);
-  try { save(addBlock(blocks, newId(), point.x - 87, point.y - 28)); closePalette(); }
+  try { save(addBlock(blocks, newId(), point.x - (type === 'drive' ? 160 : 87), point.y - 28, type)); closePalette(); }
   catch (error) { status(error.message, true); }
 }
-function addAtCenter() {
+function addAtCenter(type = 'empty') {
   const rect = board.getBoundingClientRect();
-  addAt(rect.left + rect.width / 2, rect.top + rect.height / 2);
+  addAt(rect.left + rect.width / 2, rect.top + rect.height / 2, type);
 }
 function renderBlocks() {
   layer.replaceChildren();
   $('boardHint').hidden = blocks.length > 0;
   for (const block of blocks) {
     const element = document.createElement('div');
-    element.className = 'canvas-block' + (block.id === selectedId ? ' selected' : '');
+    element.className = 'canvas-block' + (block.type === 'drive' ? ' drive-block' : '') + (block.id === selectedId ? ' selected' : '');
     element.tabIndex = 0;
-    element.setAttribute('role', 'button');
-    element.setAttribute('aria-label', 'Пустой блок. Стрелки перемещают, Delete удаляет');
+    element.setAttribute('role', block.type === 'drive' ? 'group' : 'button');
+    element.setAttribute('aria-label', block.type === 'drive' ? 'Блок движения мотора. Перетащите за заголовок' : 'Пустой блок. Стрелки перемещают, Delete удаляет');
     element.style.left = block.x + 'px';
     element.style.top = block.y + 'px';
     const remove = document.createElement('button');
@@ -68,8 +68,32 @@ function renderBlocks() {
       event.stopPropagation(); selectedId = null; save(removeBlock(blocks, block.id));
     });
     element.append(remove);
+    if (block.type === 'drive') {
+      const title = document.createElement('div');
+      title.className = 'drive-title'; title.textContent = '↗  Движение мотора';
+      const controls = document.createElement('div'); controls.className = 'drive-controls';
+      const makeSelect = (label, field, choices) => {
+        const select = document.createElement('select'); select.setAttribute('aria-label', label);
+        for (const [value, text] of choices) { const option = document.createElement('option'); option.value = value; option.textContent = text; select.append(option); }
+        select.value = block[field];
+        select.addEventListener('change', () => save(updateDrive(blocks, block.id, {[field]:select.value}, project.hub)));
+        return select;
+      };
+      const motorOptions = (project.hub === 'ev3' ? 'ABCD' : 'ABCDEF').split('').map(port => [port, 'Мотор ' + port]);
+      const motor = makeSelect('Порт мотора', 'motor', motorOptions);
+      const direction = makeSelect('Направление мотора', 'direction', [['forward','Вперёд'], ['backward','Назад']]);
+      const value = document.createElement('input'); value.type = 'number'; value.required = true; value.inputMode = 'decimal'; value.min = '0.01'; value.max = '10000'; value.step = 'any'; value.value = block.value; value.setAttribute('aria-label', 'Значение движения');
+      value.addEventListener('input', () => {
+        const number = Number(value.value);
+        if (!value.value || !Number.isFinite(number) || number < .01 || number > 10000) { status('Введите число от 0,01 до 10000', true); return; }
+        save(updateDrive(blocks, block.id, {value:number}, project.hub), false);
+      });
+      const unit = makeSelect('Единица измерения', 'unit', [['rotations','оборотов'], ['degrees','градусов'], ['seconds','секунд']]);
+      controls.append(motor, direction, value, unit);
+      element.append(title, controls);
+    }
     element.addEventListener('pointerdown', event => {
-      if (event.button !== 0 || event.target === remove) return;
+      if (event.button !== 0 || event.target.closest('button, select, input')) return;
       event.preventDefault();
       event.stopPropagation();
       selectedId = block.id;
@@ -79,6 +103,7 @@ function renderBlocks() {
       element.setPointerCapture(event.pointerId);
     });
     element.addEventListener('keydown', event => {
+      if (event.target !== element) return;
       const offsets = {ArrowLeft:[-16,0], ArrowRight:[16,0], ArrowUp:[0,-16], ArrowDown:[0,16]};
       if (event.key === 'Delete' || event.key === 'Backspace') {
         event.preventDefault(); selectedId = null; save(removeBlock(blocks, block.id)); return;
@@ -109,7 +134,7 @@ try {
   projects = loadProjects(storage);
   project = projects.find(item => item.id === projectId);
   if (!project) throw new Error('Проект не найден. Вернитесь к списку проектов.');
-  blocks = readBlocks(project.workspace);
+  blocks = readBlocks(project.workspace, project.hub);
   $('projectTitle').textContent = project.name;
   $('projectHub').textContent = HUBS[project.hub];
   document.title = project.name + ' — TLC';
@@ -124,6 +149,8 @@ try {
   $('projectTitle').textContent = 'Проект недоступен';
   $('boardHint').textContent = error.message;
   $('emptyBlock').disabled = true;
+  $('driveBlock').disabled = true;
+  $('exportCode').disabled = true;
   status('Ошибка проекта', true);
 }
 
@@ -136,38 +163,34 @@ $('openPalette').addEventListener('click', openPalette);
 $('closePalette').addEventListener('click', closePalette);
 $('paletteBackdrop').addEventListener('click', closePalette);
 
-$('emptyBlock').addEventListener('pointerdown', event => {
-  if (!project || event.button !== 0) return;
-  event.preventDefault();
-  const ghost = document.createElement('div');
-  ghost.className = 'drag-ghost';
-  ghost.style.left = event.clientX + 'px';
-  ghost.style.top = event.clientY + 'px';
-  document.body.append(ghost);
-  gesture = {kind:'palette', ghost};
-  $('emptyBlock').setPointerCapture(event.pointerId);
-});
-$('emptyBlock').addEventListener('pointermove', event => {
-  if (gesture?.kind !== 'palette') return;
-  gesture.ghost.style.left = event.clientX + 'px';
-  gesture.ghost.style.top = event.clientY + 'px';
-});
-$('emptyBlock').addEventListener('pointerup', event => {
-  if (gesture?.kind !== 'palette') return;
-  gesture.ghost.remove();
-  gesture = null;
-  const rect = board.getBoundingClientRect();
-  if (event.clientX >= rect.left && event.clientX <= rect.right &&
-      event.clientY >= rect.top && event.clientY <= rect.bottom) addAt(event.clientX, event.clientY);
-  else addAtCenter();
-});
-$('emptyBlock').addEventListener('pointercancel', () => {
-  if (gesture?.kind === 'palette') gesture.ghost.remove();
-  gesture = null;
-});
-$('emptyBlock').addEventListener('keydown', event => {
-  if (event.key === 'Enter' || event.key === ' ') {event.preventDefault(); addAtCenter();}
-});
+for (const [id, type] of [['emptyBlock', 'empty'], ['driveBlock', 'drive']]) {
+  const button = $(id);
+  button.addEventListener('pointerdown', event => {
+    if (!project || event.button !== 0) return;
+    event.preventDefault();
+    const ghost = document.createElement('div');
+    ghost.className = 'drag-ghost' + (type === 'drive' ? ' drive-ghost' : '');
+    ghost.style.left = event.clientX + 'px'; ghost.style.top = event.clientY + 'px';
+    document.body.append(ghost);
+    gesture = {kind:'palette', ghost, type};
+    button.setPointerCapture(event.pointerId);
+  });
+  button.addEventListener('pointermove', event => {
+    if (gesture?.kind !== 'palette') return;
+    gesture.ghost.style.left = event.clientX + 'px'; gesture.ghost.style.top = event.clientY + 'px';
+  });
+  button.addEventListener('pointerup', event => {
+    if (gesture?.kind !== 'palette') return;
+    gesture.ghost.remove(); gesture = null;
+    const rect = board.getBoundingClientRect();
+    if (event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) addAt(event.clientX, event.clientY, type);
+    else addAtCenter(type);
+  });
+  button.addEventListener('pointercancel', () => { if (gesture?.kind === 'palette') gesture.ghost.remove(); gesture = null; });
+  button.addEventListener('keydown', event => {
+    if (event.key === 'Enter' || event.key === ' ') {event.preventDefault(); addAtCenter(type);}
+  });
+}
 
 board.addEventListener('pointerdown', event => {
   if (event.button !== 0 || event.target.closest('.canvas-block')) return;
@@ -217,3 +240,17 @@ $('resetView').addEventListener('click', () => {
 });
 $('bluetoothButton').addEventListener('click', () => $('bluetoothDialog').showModal());
 $('closeBluetooth').addEventListener('click', () => $('bluetoothDialog').close());
+
+$('exportCode').addEventListener('click', () => {
+  const invalid = layer.querySelector('input:invalid');
+  if (invalid) { invalid.reportValidity(); return; }
+  try { $('codeOutput').value = generatePybricks(blocks, project.hub); $('codeDialog').showModal(); }
+  catch (error) { status(error.message, true); }
+});
+$('closeCode').addEventListener('click', () => $('codeDialog').close());
+$('downloadCode').addEventListener('click', () => {
+  const blob = new Blob([$('codeOutput').value], {type:'text/x-python;charset=utf-8'});
+  const url = URL.createObjectURL(blob); const link = document.createElement('a');
+  link.href = url; link.download = 'tlc_program.py'; document.body.append(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+});
