@@ -32,16 +32,21 @@ button:focus-visible,a:focus-visible,.canvas-block:focus-visible{outline:3px sol
 @media(max-width:800px){.project-heading{flex:1;min-width:0}.project-heading strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bluetooth-button svg{display:none}}
 
 
-.motor-modules { display:flex; flex-direction:column; gap:8px; margin:8px 0; }
-.motor-module { display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:8px; border:1px solid #8885; border-radius:8px; }
-.motor-module input { width:80px; }
-.module-add { min-width:36px; min-height:36px; font-size:24px; }
-.module-menu:not([hidden]) { display:flex; flex-direction:column; gap:6px; margin:8px 0; }
-.drive-block { height:auto; min-height:100px; }
-.drive-block small { display:block; font-size:11px; max-width:300px; }
-
-.module-picker { position:relative; margin-left:auto; cursor:default; }
-.module-menu:not([hidden]) { position:absolute; top:calc(100% + 6px); right:0; z-index:10; width:210px; margin:0; padding:8px; border:1px solid #dce8ec; border-radius:10px; background:white; box-shadow:0 8px 24px #18313b33; color:#18313b; }
+/* One motor action grows sideways as parameter modules are attached. */
+.drive-block { width:max-content; min-width:270px; height:auto; min-height:100px; padding:0; }
+.motor-strip { display:flex; flex-wrap:nowrap; align-items:stretch; min-height:100px; }
+.motor-base { flex:none; padding:14px; min-width:220px; }
+.motor-base .drive-controls { flex-wrap:nowrap; }
+.motor-modules { display:flex; flex-direction:row; flex-wrap:nowrap; align-items:stretch; }
+.motor-module { position:relative; flex:none; display:flex; flex-direction:column; justify-content:center; gap:8px; min-width:145px; margin-left:-1px; padding:14px 30px 14px 14px; border-left:1px solid #ffffff55; background:#ffffff12; cursor:grab; }
+.motor-module > span { white-space:nowrap; font-size:12px; font-weight:800; }
+.motor-module-fields { display:flex; align-items:center; flex-wrap:nowrap; gap:6px; }
+.motor-module input,.motor-module select { min-height:34px; max-width:125px; border:0; border-radius:7px; padding:6px; background:#fff; color:#163f50; font:700 13px system-ui; }
+.motor-module input { width:75px; }
+.motor-module > button { position:absolute; top:5px; right:5px; width:22px; height:22px; border:0; border-radius:50%; color:white; background:#ffffff25; }
+.module-picker { position:relative; flex:none; display:flex; align-items:center; padding:12px; cursor:default; }
+.module-add { width:36px; height:36px; border:1px solid #ffffff88; border-radius:9px; background:#ffffff22; color:white; font-size:24px; }
+.module-menu:not([hidden]) { display:flex; flex-direction:column; gap:6px; position:absolute; top:calc(100% + 6px); right:0; z-index:10; width:210px; margin:0; padding:8px; border:1px solid #dce8ec; border-radius:10px; background:white; box-shadow:0 8px 24px #18313b33; color:#18313b; }
 .module-menu button { text-align:left; padding:10px; border:0; border-radius:6px; background:#eff8fb; color:#18313b; }
 .module-menu button:disabled { opacity:.45; cursor:default; }
 .drive-block:has(.module-menu:not([hidden])) { z-index:4; }
