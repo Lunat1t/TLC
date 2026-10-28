@@ -41,7 +41,7 @@ function world(clientX, clientY) {
 }
 function addAt(clientX, clientY, type = 'empty') {
   const point = world(clientX, clientY);
-  try { save(addBlock(blocks, newId(), point.x - (type === 'drive' ? 160 : 87), point.y - 28, type)); closePalette(); }
+  try { save(addBlock(blocks, newId(), point.x - (type !== 'empty' ? 135 : 87), point.y - 28, type)); closePalette(); }
   catch (error) { status(error.message, true); }
 }
 function addAtCenter(type = 'empty') {
@@ -52,11 +52,13 @@ function renderBlocks() {
   layer.replaceChildren();
   $('boardHint').hidden = blocks.length > 0;
   for (const block of blocks) {
+    const paired = block.type === 'pair';
+    const motorBlock = block.type === 'drive' || paired;
     const element = document.createElement('div');
-    element.className = 'canvas-block' + (block.type === 'drive' ? ' drive-block' : '') + (block.id === selectedId ? ' selected' : '');
+    element.className = 'canvas-block' + (motorBlock ? ' drive-block' + (paired ? ' pair-block' : '') : '') + (block.id === selectedId ? ' selected' : '');
     element.tabIndex = 0;
-    element.setAttribute('role', block.type === 'drive' ? 'group' : 'button');
-    element.setAttribute('aria-label', block.type === 'drive' ? 'Блок движения мотора. Перетащите за заголовок' : 'Пустой блок. Стрелки перемещают, Delete удаляет');
+    element.setAttribute('role', motorBlock ? 'group' : 'button');
+    element.setAttribute('aria-label', motorBlock ? (paired ? 'Связанные моторы. Перетащите за заголовок' : 'Блок движения мотора. Перетащите за заголовок') : 'Пустой блок. Стрелки перемещают, Delete удаляет');
     element.style.left = block.x + 'px';
     element.style.top = block.y + 'px';
     const remove = document.createElement('button');
@@ -68,9 +70,9 @@ function renderBlocks() {
       event.stopPropagation(); selectedId = null; save(removeBlock(blocks, block.id));
     });
     element.append(remove);
-    if (block.type === 'drive') {
+    if (motorBlock) {
       const title = document.createElement('div');
-      title.className = 'drive-title'; title.textContent = '↗  Движение мотора';
+      title.className = 'drive-title'; title.textContent = paired ? '⇉  Связанные моторы' : '↗  Движение мотора';
       const controls = document.createElement('div'); controls.className = 'drive-controls';
       const makeSelect = (label, field, choices) => {
         const select = document.createElement('select'); select.setAttribute('aria-label', label);
@@ -80,8 +82,8 @@ function renderBlocks() {
         return select;
       };
       const motorOptions = (project.hub === 'ev3' ? 'ABCD' : 'ABCDEF').split('').map(port => [port, 'Мотор ' + port]);
-      const motor = makeSelect('Порт мотора', 'motor', motorOptions);
-      const direction = makeSelect('Направление мотора', 'direction', [['forward','Вперёд'], ['backward','Назад']]);
+      const motor = makeSelect(paired ? 'Порт первого мотора' : 'Порт мотора', 'motor', motorOptions);
+      const direction = makeSelect(paired ? 'Направление первого мотора' : 'Направление мотора', 'direction', [['forward','Вперёд'], ['backward','Назад']]);
       const value = document.createElement('input'); value.type = 'number'; value.required = true; value.inputMode = 'decimal'; value.min = '0.01'; value.max = '10000'; value.step = 'any'; value.value = block.value; value.setAttribute('aria-label', 'Значение движения');
       value.addEventListener('input', () => {
         const number = Number(value.value);
@@ -90,6 +92,12 @@ function renderBlocks() {
       });
       const unit = makeSelect('Единица измерения', 'unit', [['rotations','оборотов'], ['degrees','градусов'], ['seconds','секунд']]);
       controls.append(motor, direction);
+      if (paired) {
+        const second = document.createElement('div'); second.className = 'drive-controls pair-second';
+        second.append(makeSelect('Порт второго мотора', 'motor2', motorOptions),
+          makeSelect('Направление второго мотора', 'direction2', [['forward','Вперёд'],['backward','Назад']]));
+        controls.classList.add('pair-controls'); controls.append(second);
+      }
       const moduleArea = document.createElement('div'); moduleArea.className = 'motor-modules';
       const commit = changes => save(updateDrive(blocks, block.id, changes, project.hub));
       const row = (name, label, children) => {
@@ -111,7 +119,7 @@ function renderBlocks() {
           row(name, name === 'speed' ? 'Скорость (°/с)' : 'Мощность (%)', [input]);
         }
       }
-      const plus = document.createElement('button'); plus.type = 'button'; plus.textContent = '+'; plus.className = 'module-add'; plus.setAttribute('aria-label','Добавить модуль мотора'); plus.setAttribute('aria-expanded','false');
+      const plus = document.createElement('button'); plus.type = 'button'; plus.textContent = '+'; plus.className = 'module-add'; plus.setAttribute('aria-label',paired ? 'Добавить модуль связанных моторов' : 'Добавить модуль мотора'); plus.setAttribute('aria-expanded','false');
       const menu = document.createElement('div'); menu.hidden = true; menu.className = 'module-menu';
       plus.addEventListener('click', () => { const open = menu.hidden; closeModuleMenus(); menu.hidden = !open; plus.setAttribute('aria-expanded', String(open)); });
       for (const [name,label] of [['speed','Скорость'],['power','Мощность'],['travel','Величина движения']]) {
@@ -122,7 +130,7 @@ function renderBlocks() {
           commit({modules:[...modules,name], ...(name === 'power' ? {unit:'seconds'} : {})});
         }); menu.append(option);
       }
-      const hint = document.createElement('small'); hint.textContent = 'Без модуля скорости: 360°/с. Для запуска задайте величину движения. Скорость и мощность заменяют друг друга.';
+      const hint = document.createElement('small'); hint.textContent = (paired ? 'Оба мотора запускаются вместе. Обороты и градусы относятся к валу каждого мотора. Направления задаются отдельно. ' : '') + 'Без модуля скорости: 360°/с. Для запуска задайте величину движения. Скорость и мощность заменяют друг друга.';
       const picker = document.createElement('div'); picker.className = 'module-picker';
       picker.addEventListener('pointerdown', event => event.stopPropagation());
       picker.append(plus, menu);
@@ -190,6 +198,7 @@ try {
   $('boardHint').textContent = error.message;
   $('emptyBlock').disabled = true;
   $('driveBlock').disabled = true;
+  $('pairBlock').disabled = true;
   $('exportCode').disabled = true;
   status('Ошибка проекта', true);
 }
@@ -203,13 +212,13 @@ $('openPalette').addEventListener('click', openPalette);
 $('closePalette').addEventListener('click', closePalette);
 $('paletteBackdrop').addEventListener('click', closePalette);
 
-for (const [id, type] of [['emptyBlock', 'empty'], ['driveBlock', 'drive']]) {
+for (const [id, type] of [['emptyBlock', 'empty'], ['driveBlock', 'drive'], ['pairBlock', 'pair']]) {
   const button = $(id);
   button.addEventListener('pointerdown', event => {
     if (!project || event.button !== 0) return;
     event.preventDefault();
     const ghost = document.createElement('div');
-    ghost.className = 'drag-ghost' + (type === 'drive' ? ' drive-ghost' : '');
+    ghost.className = 'drag-ghost' + (type !== 'empty' ? ' drive-ghost' : '');
     ghost.style.left = event.clientX + 'px'; ghost.style.top = event.clientY + 'px';
     document.body.append(ghost);
     gesture = {kind:'palette', ghost, type};
