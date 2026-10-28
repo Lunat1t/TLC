@@ -39,3 +39,9 @@ button:focus-visible,a:focus-visible,.canvas-block:focus-visible{outline:3px sol
 .module-menu:not([hidden]) { display:flex; flex-direction:column; gap:6px; margin:8px 0; }
 .drive-block { height:auto; min-height:100px; }
 .drive-block small { display:block; font-size:11px; max-width:300px; }
+
+.module-picker { position:relative; margin-left:auto; cursor:default; }
+.module-menu:not([hidden]) { position:absolute; top:calc(100% + 6px); right:0; z-index:10; width:210px; margin:0; padding:8px; border:1px solid #dce8ec; border-radius:10px; background:white; box-shadow:0 8px 24px #18313b33; color:#18313b; }
+.module-menu button { text-align:left; padding:10px; border:0; border-radius:6px; background:#eff8fb; color:#18313b; }
+.module-menu button:disabled { opacity:.45; cursor:default; }
+.drive-block:has(.module-menu:not([hidden])) { z-index:4; }
