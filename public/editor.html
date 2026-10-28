@@ -10,7 +10,7 @@
 <body>
   <div class="editor-shell">
     <header class="editor-topbar">
-      <a class="back-link" href="index.html" aria-label="К списку проектов">← <span>Проекты</span></a>
+      <a class="back-link" href="/" aria-label="К списку проектов">← <span>Проекты</span></a>
       <div class="project-heading"><strong id="projectTitle">Проект</strong><span id="projectHub"></span></div>
       <span id="saveState" class="save-state" role="status">Сохранено</span>
       <button id="exportCode" class="export-code" type="button">Программа Pybricks</button>
@@ -22,7 +22,7 @@
         <div class="palette-heading"><div><small>БИБЛИОТЕКА</small><h2>Блоки</h2></div><button id="closePalette" class="icon-button close-palette" type="button" aria-label="Закрыть меню">×</button></div>
         <button id="categoryToggle" class="category-toggle" type="button" aria-expanded="true" aria-controls="blockCategory"><span>Основные</span><span id="categoryChevron" aria-hidden="true">⌄</span></button>
         <div id="blockCategory" class="block-category">
-          <button id="emptyBlock" class="palette-block" type="button" aria-label="Добавить пустой блок. Можно перетащить на доску"><span class="block-preview" aria-hidden="true"></span><span>Пустой блок</span><small>Перетащите на доску</small></button>
+          <button id="startBlock" class="palette-block start-palette" type="button" aria-label="Добавить блок Когда программа запускается. Можно перетащить на доску"><span class="start-preview" aria-hidden="true">▶</span><span>Когда программа запускается</span><small>Точка старта программы</small></button>
           <button id="driveBlock" class="palette-block drive-palette" type="button" aria-label="Добавить блок движения. Можно перетащить на доску"><span class="drive-preview" aria-hidden="true">↗</span><span>Движение мотора</span><small>Перетащите на доску</small></button>
           <button id="pairBlock" class="palette-block drive-palette" type="button" aria-label="Добавить связанные моторы. Можно перетащить на доску"><span class="drive-preview pair-preview" aria-hidden="true">⇉</span><span>Связанные моторы</span><small>Два мотора, общие модули</small></button>
         </div>

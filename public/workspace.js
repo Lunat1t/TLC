@@ -6,13 +6,13 @@ const units = ['rotations', 'degrees', 'seconds'];
 export function readBlocks(workspace, hub = 'spike') {
   if (!workspace || !Array.isArray(workspace.blocks)) return [];
   const seen = new Set();
-  const clean = workspace.blocks.filter(block => block && ['empty', 'drive', 'pair'].includes(block.type) &&
+  const clean = workspace.blocks.filter(block => block && ['start', 'drive', 'pair'].includes(block.type) &&
     typeof block.id === 'string' && Number.isFinite(block.x) && Number.isFinite(block.y))
     .filter(block => { if (seen.has(block.id)) return false; seen.add(block.id); return true; })
     .slice(0, MAX_BLOCKS).map(block => {
       const base = {id: block.id, type: block.type, x: block.x, y: block.y,
         ...(typeof block.parentId === 'string' ? {parentId:block.parentId} : {})};
-      if (block.type === 'empty') return base;
+      if (block.type === 'start') return base;
       return {...base, ...(block.type === 'pair' ? {
         motor2: ports[hub]?.includes(block.motor2) ? block.motor2 : 'B',
         direction2: block.direction2 === 'backward' ? 'backward' : 'forward'
@@ -26,10 +26,10 @@ export function readBlocks(workspace, hub = 'spike') {
   return layoutChains(cleanLinks(clean));
 }
 
-export function addBlock(blocks, id, x, y, type = 'empty') {
+export function addBlock(blocks, id, x, y, type = 'start') {
   if (blocks.length >= MAX_BLOCKS) throw new Error('На доске слишком много блоков.');
   if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error('Не удалось определить место блока.');
-  if (!['empty', 'drive', 'pair'].includes(type)) throw new Error('Неизвестный блок.');
+  if (!['start', 'drive', 'pair'].includes(type)) throw new Error('Неизвестный блок.');
   const block = {id, type, x: Math.round(x), y: Math.round(y)};
   if (type === 'drive' || type === 'pair') Object.assign(block, {motor:'A', direction:'forward', modules:[], speed:MOTOR_SPEED, power:50, value:1, unit:'rotations'});
   if (type === 'pair') Object.assign(block, {motor2:'B', direction2:'backward'});
