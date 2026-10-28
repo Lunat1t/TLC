@@ -4,3 +4,4 @@ import './pybricks.test.js';
 import './app-pybricks.test.js';
 import './projects.test.js';
 import './workspace.test.js';
+import './auth.test.js';

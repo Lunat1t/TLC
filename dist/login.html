@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#02c7ea">
+  <title>Вход — TLC</title>
+  <link rel="stylesheet" href="auth.css">
+</head>
+<body>
+  <header class="auth-topbar">
+    <a class="brand" href="index.html" aria-label="TLC, главная">
+      TLC <span class="brand-pill">TechLabCode</span>
+    </a>
+    <a class="back-home" href="index.html">← К проектам</a>
+  </header>
+
+  <main class="auth-main">
+    <section class="login-card" aria-labelledby="loginTitle">
+      <div class="orb-mascot-wrap">
+        <div id="loginOrbStage" class="orb-stage-ring" title="Нажмите, чтобы орб моргнул">
+          <canvas id="loginOrbCanvas" class="orb-canvas" width="200" height="200" aria-label="Интерактивный аватар Live Orb"></canvas>
+        </div>
+      </div>
+
+      <p class="eyebrow">АВТОРИЗАЦИЯ УЧЕНИКА</p>
+      <h1 id="loginTitle" class="login-title">Вход в TLC</h1>
+      <p class="login-subtitle">Войдите в свой профиль, чтобы синхронизировать проекты роботов SPIKE Prime и LEGO EV3.</p>
+
+      <form id="loginForm" class="login-form" novalidate>
+        <label class="field-label" for="loginInput">
+          Логин или код ученика
+          <input
+            id="loginInput"
+            class="field-input"
+            name="login"
+            type="text"
+            maxlength="64"
+            required
+            autocomplete="username"
+            placeholder="Например, robo_alex"
+          >
+        </label>
+
+        <label class="field-label" for="passwordInput">
+          Пароль
+          <input
+            id="passwordInput"
+            class="field-input"
+            name="password"
+            type="password"
+            required
+            autocomplete="current-password"
+            placeholder="Введите пароль"
+          >
+        </label>
+
+        <p id="loginStatus" class="form-status" role="status" hidden></p>
+
+        <div class="login-actions">
+          <button id="studentLoginBtn" class="primary-submit" type="submit">
+            Войти в аккаунт <span aria-hidden="true">→</span>
+          </button>
+
+          <button
+            id="teacherLoginBtn"
+            class="teacher-button"
+            type="button"
+            disabled
+            aria-disabled="true"
+            title="Вход для учителей будет доступен в следующем обновлении"
+          >
+            <span>Вход для учителей</span>
+            <span class="badge-soon">Скоро</span>
+          </button>
+        </div>
+      </form>
+
+      <div class="divider">или</div>
+
+      <div class="register-callout">
+        <div class="register-callout-copy">
+          <strong>Ещё нет аккаунта?</strong>
+          <small>Начните с выбора живого 3D-аватара</small>
+        </div>
+        <a id="registerRedirect" class="register-button" href="avatar.html">
+          Регистрация <span aria-hidden="true">↗</span>
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="login.js"></script>
+</body>
+</html>

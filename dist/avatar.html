@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#02c7ea">
+  <title>Выбор аватара — TLC</title>
+  <link rel="stylesheet" href="auth.css">
+</head>
+<body>
+  <header class="auth-topbar">
+    <a class="brand" href="index.html" aria-label="TLC, главная">
+      TLC <span class="brand-pill">Live Orb Avatar</span>
+    </a>
+    <a class="back-home" href="login.html">← Ко входу</a>
+  </header>
+
+  <main class="auth-main">
+    <div class="avatar-layout">
+      <aside class="orb-showcase-card" aria-labelledby="activeOrbTitle">
+        <span class="orb-hint-pill">Следит глазами за курсором</span>
+        <div id="heroOrbStage" class="hero-orb-stage" title="Нажмите на сферу, чтобы моргнуть">
+          <canvas id="heroOrbCanvas" class="hero-orb-canvas" width="432" height="432" aria-label="Предпросмотр аватара Live Orb"></canvas>
+        </div>
+        <h2 id="activeOrbTitle" class="showcase-title">Aurora WebGL</h2>
+        <p class="showcase-subtitle">Интерактивная WebGL-сфера с глазами-капсулами в стиле <code>radiumcoders/live-orb</code>.</p>
+        <button id="blinkNowBtn" class="blink-action-btn" type="button">Моргнуть глазами 👀</button>
+      </aside>
+
+      <section class="orb-picker-card" aria-labelledby="pickerHeading">
+        <div class="picker-header">
+          <p class="eyebrow" style="text-align:left">ШАГ 1 · РЕГИСТРАЦИЯ ПРОФИЛЯ</p>
+          <h1 id="pickerHeading">Выберите свой аватар</h1>
+          <p>Выберите готовый образ сферы или настройте собственные цвета корпуса и глаз.</p>
+        </div>
+
+        <div id="presetGrid" class="preset-grid" role="group" aria-label="Варианты аватара Live Orb"></div>
+
+        <form id="avatarForm" class="customizer-panel">
+          <label class="field-label" for="nicknameInput">
+            Никнейм пилота (необязательно)
+            <input
+              id="nicknameInput"
+              class="field-input"
+              type="text"
+              maxlength="40"
+              autocomplete="nickname"
+              placeholder="Например, CyberPilot"
+            >
+          </label>
+
+          <div class="customizer-row">
+            <label class="color-field" for="bodyColorInput">
+              <input id="bodyColorInput" type="color" value="#7C6AF7">
+              <span>Цвет сферы</span>
+            </label>
+
+            <label class="color-field" for="eyeColorInput">
+              <input id="eyeColorInput" type="color" value="#09090B">
+              <span>Цвет глаз</span>
+            </label>
+
+            <label class="color-field" for="shaderModeSelect">
+              <span>Режим:</span>
+              <select id="shaderModeSelect" style="border:0;background:transparent;font-weight:800;color:#122831">
+                <option value="webgl">WebGL Перелив</option>
+                <option value="custom">Сплошной цвет</option>
+                <option value="white">White</option>
+                <option value="black">Black</option>
+              </select>
+            </label>
+          </div>
+
+          <p id="avatarStatus" class="form-status" role="status" hidden></p>
+
+          <div class="avatar-footer-actions">
+            <a class="secondary-link" href="login.html">← Вернуться ко входу</a>
+            <button id="saveAvatarBtn" class="primary-submit" type="submit" style="padding:0 26px">
+              Сохранить аватар и продолжить <span aria-hidden="true">→</span>
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <script type="module" src="avatar.js"></script>
+</body>
+</html>

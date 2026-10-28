@@ -10,12 +10,18 @@
 <body>
   <header class="topbar">
     <a class="brand" href="index.html" aria-label="TLC, главная">TLC</a>
-    <label class="hub-picker">Робот
-      <select id="hubChoice" aria-label="Робот для нового проекта">
-        <option value="spike">SPIKE Prime</option>
-        <option value="ev3">LEGO EV3</option>
-      </select>
-    </label>
+    <div class="topbar-actions">
+      <label class="hub-picker">Робот
+        <select id="hubChoice" aria-label="Робот для нового проекта">
+          <option value="spike">SPIKE Prime</option>
+          <option value="ev3">LEGO EV3</option>
+        </select>
+      </label>
+      <a id="loginNavLink" class="login-nav-button" href="login.html" aria-label="Войти в профиль">
+        <canvas id="topbarOrbCanvas" class="topbar-orb" width="56" height="56" aria-hidden="true"></canvas>
+        <span id="loginNavLabel">Войти</span>
+      </a>
+    </div>
   </header>
 
   <main>

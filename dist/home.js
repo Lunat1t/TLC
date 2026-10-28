@@ -1,3 +1,5 @@
+import {loadAuthState} from './auth.js';
+import {createLiveOrb} from './live-orb.js';
 import {HUBS, importProject, loadProjects, makeProject, projectName, saveProjects} from './projects.js';
 
 const $ = id => document.getElementById(id);
@@ -99,6 +101,16 @@ catch (error) {
   $('heroCreate').disabled = $('newProject').disabled = $('openProjectFile').disabled = true;
 }
 render();
+
+try {
+  const auth = loadAuthState(storage);
+  if ($('topbarOrbCanvas')) {
+    createLiveOrb($('topbarOrbCanvas'), auth.avatar);
+  }
+  if (auth.user?.nickname && $('loginNavLabel')) {
+    $('loginNavLabel').textContent = auth.user.nickname;
+  }
+} catch {}
 
 $('hubChoice').addEventListener('change', () => {
   $('heroHub').textContent = HUBS[$('hubChoice').value];
