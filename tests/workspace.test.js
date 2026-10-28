@@ -209,32 +209,30 @@ test('sheets recover invalid active ids and limit imported views and sheet count
   assert.throws(()=>addSheet(full,'too-many','Extra'),/32/);
 });
 
-test('if block supports modular sensor/operation conditions, inner body branch, and Pybricks code generation', async () => {
+test('if/else block supports empty condition, body and else branches, and Pybricks code generation', async () => {
   const {attachChain,updateDrive,generatePybricks}=await import('../dist/workspace.js');
   let b=addBlock([],'start-1',0,0,'start');
   b=addBlock(b,'if-1',0,100,'if');
-  b=addBlock(b,'inner-1',100,200,'drive');
-  b=addBlock(b,'after-1',200,300,'drive');
-  b=updateDrive(b,'inner-1',{motor:'A',modules:['travel'],value:2,unit:'rotations'},'spike');
+  b=addBlock(b,'inner-body',100,200,'drive');
+  b=addBlock(b,'inner-else',100,300,'drive');
+  b=addBlock(b,'after-1',200,400,'drive');
+  b=updateDrive(b,'inner-body',{motor:'A',modules:['travel'],value:2,unit:'rotations'},'spike');
+  b=updateDrive(b,'inner-else',{motor:'C',modules:['travel'],value:1,unit:'rotations'},'spike');
   b=updateDrive(b,'after-1',{motor:'B',modules:['travel'],value:1,unit:'seconds'},'spike');
   b=attachChain(b,'if-1','start-1');
-  b=attachChain(b,'inner-1','if-1','body');
+  b=attachChain(b,'inner-body','if-1','body');
+  b=attachChain(b,'inner-else','if-1','else');
   b=attachChain(b,'after-1','if-1');
 
-  assert.equal(b.find(x=>x.id==='inner-1').branch,'body');
+  assert.equal(b.find(x=>x.id==='inner-body').branch,'body');
+  assert.equal(b.find(x=>x.id==='inner-else').branch,'else');
   assert.equal(b.find(x=>x.id==='after-1').branch,undefined);
 
-  b=updateDrive(b,'if-1',{
-    sensor:'distance',sensorPort:'C',ifModules:['compare','logic'],
-    operator:'<',compareValue:15,logicOp:'and',
-    sensor2:'color',sensorPort2:'D',operator2:'=',colorValue2:'red'
-  },'spike');
-
   const code=generatePybricks(b,'spike');
-  assert.match(code,/from pybricks\.pupdevices import Motor, UltrasonicSensor, ColorSensor/);
-  assert.match(code,/from pybricks\.parameters import Color, Port, Stop/);
-  assert.match(code,/if \(distance_sensor_c\.distance\(\) < 150\) and \(color_sensor_d\.color\(\) == Color\.RED\):/);
+  assert.match(code,/if True:/);
   assert.match(code,/    motor_a\.run_angle\(360, 720, then=Stop\.BRAKE\)/);
+  assert.match(code,/else:/);
+  assert.match(code,/    motor_c\.run_angle\(360, 360, then=Stop\.BRAKE\)/);
   assert.match(code,/\nmotor_b\.run_time\(360, 1000, then=Stop\.BRAKE\)/);
 });
 

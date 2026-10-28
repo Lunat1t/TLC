@@ -8,21 +8,10 @@ export type BlockType = "start" | "drive" | "pair" | "if"
 export type MotorDirection = "forward" | "backward"
 export type TravelUnit = "rotations" | "degrees" | "seconds"
 export type MotorModule = "speed" | "power" | "travel"
-export type ConditionSensor =
-  | "distance"
-  | "color"
-  | "reflection"
-  | "force"
-  | "angle"
-  | "number"
-export type ConditionOperator = "<" | ">" | "=" | "!=" | "<=" | ">="
-export type ColorValue = "red" | "blue" | "green" | "yellow" | "white" | "black"
-export type TouchState = "pressed" | "released"
-export type IfModule = "compare" | "logic"
-export type LogicOperator = "and" | "or"
-export type BranchSlot = "body"
+export type BranchSlot = "body" | "else"
 
-export const IF_TOP_HEIGHT = 64
+export const IF_TOP_HEIGHT = 58
+export const IF_MID_HEIGHT = 48
 export const IF_FOOT_HEIGHT = 28
 export const IF_INDENT = 28
 export const IF_EMPTY_MOUTH = 52
@@ -43,23 +32,6 @@ export interface WorkspaceBlock {
   power?: number
   value?: number
   unit?: TravelUnit
-  // If-block modular fields
-  sensor?: ConditionSensor
-  sensorPort?: string
-  leftValue?: number
-  ifModules?: IfModule[]
-  operator?: ConditionOperator
-  compareValue?: number
-  colorValue?: ColorValue
-  touchState?: TouchState
-  logicOp?: LogicOperator
-  sensor2?: ConditionSensor
-  sensorPort2?: string
-  leftValue2?: number
-  operator2?: ConditionOperator
-  compareValue2?: number
-  colorValue2?: ColorValue
-  touchState2?: TouchState
 }
 
 export interface SheetView {
@@ -86,51 +58,34 @@ const PORTS: Record<HubType, string[]> = {
 }
 
 const UNITS: TravelUnit[] = ["rotations", "degrees", "seconds"]
-const SENSORS: ConditionSensor[] = [
-  "distance",
-  "color",
-  "reflection",
-  "force",
-  "angle",
-  "number",
-]
-const OPERATORS: ConditionOperator[] = ["<", ">", "=", "!=", "<=", ">="]
-const COLORS: ColorValue[] = [
-  "red",
-  "blue",
-  "green",
-  "yellow",
-  "white",
-  "black",
-]
-const PYBRICKS_COLOR: Record<ColorValue, string> = {
-  red: "RED",
-  blue: "BLUE",
-  green: "GREEN",
-  yellow: "YELLOW",
-  white: "WHITE",
-  black: "BLACK",
-}
 
 export function blockHeight(block: Pick<WorkspaceBlock, "type">): number {
-  if (block.type === "if") return IF_TOP_HEIGHT + IF_EMPTY_MOUTH + IF_FOOT_HEIGHT
+  if (block.type === "if")
+    return (
+      IF_TOP_HEIGHT +
+      IF_EMPTY_MOUTH +
+      IF_MID_HEIGHT +
+      IF_EMPTY_MOUTH +
+      IF_FOOT_HEIGHT
+    )
   return block.type === "pair" ? 64 : block.type === "drive" ? 64 : 58
 }
 
 export function ifInnerHeight(
   blocks: WorkspaceBlock[],
   id: string,
+  slot: BranchSlot = "body",
   visited = new Set<string>()
 ): number {
   if (visited.has(id)) return IF_EMPTY_MOUTH
   const nextVisited = new Set(visited)
   nextVisited.add(id)
-  const firstBody = blocks.find(
-    (b) => b.parentId === id && b.branch === "body"
+  const firstChild = blocks.find(
+    (b) => b.parentId === id && b.branch === slot
   )
-  if (!firstBody) return IF_EMPTY_MOUTH
+  if (!firstChild) return IF_EMPTY_MOUTH
   let span = 0
-  let curr: WorkspaceBlock | undefined = firstBody
+  let curr: WorkspaceBlock | undefined = firstChild
   const seen = new Set<string>()
   while (curr && !seen.has(curr.id)) {
     const currId: string = curr.id
@@ -151,7 +106,9 @@ export function blockTotalHeight(
   if (block.type !== "if") return blockHeight(block)
   return (
     IF_TOP_HEIGHT +
-    ifInnerHeight(blocks, id, visited) +
+    ifInnerHeight(blocks, id, "body", visited) +
+    IF_MID_HEIGHT +
+    ifInnerHeight(blocks, id, "else", visited) +
     IF_FOOT_HEIGHT
   )
 }
@@ -166,7 +123,7 @@ export function cleanLinks(blocks: WorkspaceBlock[]): WorkspaceBlock[] {
       delete next.branch
     }
     const slotKey = next.parentId
-      ? `${next.parentId}:${next.branch === "body" ? "body" : "next"}`
+      ? `${next.parentId}:${next.branch || "next"}`
       : ""
     if (
       !next.parentId ||
@@ -227,6 +184,11 @@ export function chainIds(blocks: WorkspaceBlock[], id: string): string[] {
       .filter((b) => b.parentId && b.branch === "body")
       .map((b) => [b.parentId as string, b.id])
   )
+  const elseChildren = new Map(
+    blocks
+      .filter((b) => b.parentId && b.branch === "else")
+      .map((b) => [b.parentId as string, b.id])
+  )
   const result: string[] = []
   const seen = new Set<string>()
   function visit(currId: string | undefined) {
@@ -236,6 +198,8 @@ export function chainIds(blocks: WorkspaceBlock[], id: string): string[] {
       result.push(current)
       const bodyId = bodyChildren.get(current)
       if (bodyId) visit(bodyId)
+      const elseId = elseChildren.get(current)
+      if (elseId) visit(elseId)
       current = nextChildren.get(current)
     }
   }
@@ -266,6 +230,10 @@ export function layoutChains(blocks: WorkspaceBlock[]): WorkspaceBlock[] {
       if (next.branch === "body" && parent.type === "if") {
         next.x = parent.x + IF_INDENT
         next.y = parent.y + IF_TOP_HEIGHT - 4
+      } else if (next.branch === "else" && parent.type === "if") {
+        const bodyH = ifInnerHeight(currentList(), parent.id, "body")
+        next.x = parent.x + IF_INDENT
+        next.y = parent.y + IF_TOP_HEIGHT + bodyH + IF_MID_HEIGHT - 4
       } else {
         next.x = parent.x
         next.y = parent.y + blockTotalHeight(currentList(), parent.id) - 4
@@ -305,79 +273,19 @@ export function readBlocks(
     .slice(0, MAX_BLOCKS)
     .map((block): WorkspaceBlock => {
       const type = block.type as BlockType
+      const branchVal =
+        block.branch === "body" || block.branch === "else"
+          ? (block.branch as BranchSlot)
+          : undefined
       const base: WorkspaceBlock = {
         id: String(block.id),
         type,
         x: Math.round(Number(block.x)),
         y: Math.round(Number(block.y)),
         ...(typeof block.parentId === "string" ? { parentId: block.parentId } : {}),
-        ...(block.branch === "body" ? { branch: "body" as BranchSlot } : {}),
+        ...(branchVal ? { branch: branchVal } : {}),
       }
-      if (type === "start") return base
-
-      if (type === "if") {
-        const rawIfModules = Array.isArray(block.ifModules)
-          ? ([
-              ...new Set(
-                block.ifModules.filter((m): m is IfModule =>
-                  ["compare", "logic"].includes(String(m))
-                )
-              ),
-            ] as IfModule[])
-          : (["compare"] as IfModule[])
-
-        return {
-          ...base,
-          sensor: SENSORS.includes(block.sensor as ConditionSensor)
-            ? (block.sensor as ConditionSensor)
-            : "distance",
-          sensorPort: PORTS[hub]?.includes(String(block.sensorPort))
-            ? String(block.sensorPort)
-            : "A",
-          leftValue: Number.isFinite(block.leftValue)
-            ? Number(block.leftValue)
-            : 10,
-          ifModules: rawIfModules,
-          operator: OPERATORS.includes(block.operator as ConditionOperator)
-            ? (block.operator as ConditionOperator)
-            : "<",
-          compareValue:
-            Number.isFinite(block.compareValue) &&
-            Number(block.compareValue) >= -10000 &&
-            Number(block.compareValue) <= 10000
-              ? Number(block.compareValue)
-              : 20,
-          colorValue: COLORS.includes(block.colorValue as ColorValue)
-            ? (block.colorValue as ColorValue)
-            : "red",
-          touchState:
-            block.touchState === "released" ? "released" : "pressed",
-          logicOp: block.logicOp === "or" ? "or" : "and",
-          sensor2: SENSORS.includes(block.sensor2 as ConditionSensor)
-            ? (block.sensor2 as ConditionSensor)
-            : "force",
-          sensorPort2: PORTS[hub]?.includes(String(block.sensorPort2))
-            ? String(block.sensorPort2)
-            : "B",
-          leftValue2: Number.isFinite(block.leftValue2)
-            ? Number(block.leftValue2)
-            : 10,
-          operator2: OPERATORS.includes(block.operator2 as ConditionOperator)
-            ? (block.operator2 as ConditionOperator)
-            : "<",
-          compareValue2:
-            Number.isFinite(block.compareValue2) &&
-            Number(block.compareValue2) >= -10000 &&
-            Number(block.compareValue2) <= 10000
-              ? Number(block.compareValue2)
-              : 20,
-          colorValue2: COLORS.includes(block.colorValue2 as ColorValue)
-            ? (block.colorValue2 as ColorValue)
-            : "blue",
-          touchState2:
-            block.touchState2 === "released" ? "released" : "pressed",
-        }
-      }
+      if (type === "start" || type === "if") return base
 
       const rawModules = Array.isArray(block.modules)
         ? ([
@@ -464,26 +372,6 @@ export function addBlock(
   if (type === "pair") {
     Object.assign(block, { motor2: "B", direction2: "backward" })
   }
-  if (type === "if") {
-    Object.assign(block, {
-      sensor: "distance",
-      sensorPort: "A",
-      leftValue: 10,
-      ifModules: ["compare"],
-      operator: "<",
-      compareValue: 20,
-      colorValue: "red",
-      touchState: "pressed",
-      logicOp: "and",
-      sensor2: "force",
-      sensorPort2: "B",
-      leftValue2: 10,
-      operator2: "<",
-      compareValue2: 20,
-      colorValue2: "blue",
-      touchState2: "pressed",
-    })
-  }
   return [...blocks, block]
 }
 
@@ -512,12 +400,12 @@ export function removeBlock(
       .map((block) => {
         if (block.parentId !== id) return block
         const next: WorkspaceBlock = { ...block }
-        const wasBody = next.branch === "body"
+        const wasBranch = Boolean(next.branch)
         delete next.parentId
         delete next.branch
-        if (!wasBody && removed?.parentId) {
+        if (!wasBranch && removed?.parentId) {
           next.parentId = removed.parentId
-          if (removed.branch === "body") next.branch = "body"
+          if (removed.branch) next.branch = removed.branch
         }
         return next
       })
@@ -589,14 +477,16 @@ export function attachChain(
     return blocks
   }
   const effectiveBranch =
-    branch === "body" && parent.type === "if" ? "body" : undefined
+    (branch === "body" || branch === "else") && parent.type === "if"
+      ? branch
+      : undefined
   const outerMoving = outerChainIds(blocks, id)
   const tail = outerMoving[outerMoving.length - 1]
   const detached = detachChain(blocks, id)
   const previousChild = detached.find(
     (b) =>
       b.parentId === parentId &&
-      (effectiveBranch === "body" ? b.branch === "body" : !b.branch)
+      (effectiveBranch ? b.branch === effectiveBranch : !b.branch)
   )
   return layoutChains(
     detached.map((b) => {
@@ -631,14 +521,26 @@ export function snapTargetInfo(
     if (moving.has(b.id)) continue
     if (b.type === "if") {
       const innerDx = Math.abs(b.x + IF_INDENT - x)
-      const innerDy = Math.abs(b.y + IF_TOP_HEIGHT - 4 - y)
+      const bodyDy = Math.abs(b.y + IF_TOP_HEIGHT - 4 - y)
       if (
         innerDx <= threshold &&
-        innerDy <= threshold &&
-        innerDx + innerDy < distance
+        bodyDy <= threshold &&
+        innerDx + bodyDy < distance
       ) {
         best = { id: b.id, branch: "body" }
-        distance = innerDx + innerDy
+        distance = innerDx + bodyDy
+      }
+      const bodyH = ifInnerHeight(blocks, b.id, "body")
+      const elseDy = Math.abs(
+        b.y + IF_TOP_HEIGHT + bodyH + IF_MID_HEIGHT - 4 - y
+      )
+      if (
+        innerDx <= threshold &&
+        elseDy <= threshold &&
+        innerDx + elseDy < distance
+      ) {
+        best = { id: b.id, branch: "else" }
+        distance = innerDx + elseDy
       }
     }
     const dx = Math.abs(b.x - x)
@@ -661,37 +563,6 @@ export function snapTarget(
   return snapTargetInfo(blocks, id, x, y, threshold)?.id ?? null
 }
 
-function buildSingleConditionExpr(
-  sensor: ConditionSensor,
-  port: string,
-  leftVal: number,
-  op: ConditionOperator,
-  val: number,
-  colorVal: ColorValue,
-  touchState: TouchState
-): string {
-  const pyOp = op === "=" ? "==" : op
-  const p = port.toLowerCase()
-  switch (sensor) {
-    case "distance":
-      return `distance_sensor_${p}.distance() ${pyOp} ${Math.round(val * 10)}`
-    case "color": {
-      const colorOp = op === "!=" ? "!=" : "=="
-      return `color_sensor_${p}.color() ${colorOp} Color.${PYBRICKS_COLOR[colorVal] || "RED"}`
-    }
-    case "reflection":
-      return `color_sensor_${p}.reflection() ${pyOp} ${val}`
-    case "force":
-      return touchState === "released"
-        ? `not force_sensor_${p}.pressed()`
-        : `force_sensor_${p}.pressed()`
-    case "angle":
-      return `motor_${p}.angle() ${pyOp} ${val}`
-    case "number":
-      return `${leftVal} ${pyOp} ${val}`
-  }
-}
-
 export function generatePybricks(
   blocks: WorkspaceBlock[],
   hub: HubType
@@ -702,122 +573,37 @@ export function generatePybricks(
   const driveBlocks = ordered.filter((block) =>
     ["drive", "pair"].includes(block.type)
   )
-  const ifBlocks = ordered.filter((block) => block.type === "if")
   if (!driveBlocks.length)
     throw new Error("Добавьте на доску блок движения.")
 
-  for (const ifBlock of ifBlocks) {
-    const mods = ifBlock.ifModules || []
-    if (!mods.includes("compare")) {
-      throw new Error(
-        "Добавьте модуль операции в блок «Если», чтобы задать условие проверки."
+  const used = [
+    ...new Set(
+      driveBlocks.flatMap((block) =>
+        block.type === "pair"
+          ? [block.motor || "A", block.motor2 || "B"]
+          : [block.motor || "A"]
       )
-    }
-  }
-
-  const usedMotors = new Set<string>(
-    driveBlocks.flatMap((block) =>
-      block.type === "pair"
-        ? [block.motor || "A", block.motor2 || "B"]
-        : [block.motor || "A"]
-    )
-  )
-  const usedDistancePorts = new Set<string>()
-  const usedColorPorts = new Set<string>()
-  const usedForcePorts = new Set<string>()
-  let usesColorEnum = false
-
-  function registerSensor(sensor: ConditionSensor, port: string) {
-    if (sensor === "distance") usedDistancePorts.add(port)
-    else if (sensor === "color") {
-      usedColorPorts.add(port)
-      usesColorEnum = true
-    } else if (sensor === "reflection") usedColorPorts.add(port)
-    else if (sensor === "force") usedForcePorts.add(port)
-    else if (sensor === "angle") usedMotors.add(port)
-  }
-
-  for (const b of ifBlocks) {
-    registerSensor(b.sensor || "distance", b.sensorPort || "A")
-    if ((b.ifModules || []).includes("logic")) {
-      registerSensor(b.sensor2 || "force", b.sensorPort2 || "B")
-    }
-  }
-
-  const deviceImports = ["Motor"]
-  if (usedDistancePorts.size) deviceImports.push("UltrasonicSensor")
-  if (usedColorPorts.size) deviceImports.push("ColorSensor")
-  if (usedForcePorts.size)
-    deviceImports.push(hub === "spike" ? "ForceSensor" : "TouchSensor")
-
-  const paramImports = usesColorEnum
-    ? "Color, Port, Stop"
-    : "Port, Stop"
-
-  const sortedMotors = [...usedMotors].sort()
-  const initLines = [
-    ...sortedMotors.map(
-      (port) => `motor_${port.toLowerCase()} = Motor(Port.${port})`
     ),
-    ...[...usedDistancePorts]
-      .sort()
-      .map(
-        (port) =>
-          `distance_sensor_${port.toLowerCase()} = UltrasonicSensor(Port.${port})`
-      ),
-    ...[...usedColorPorts]
-      .sort()
-      .map(
-        (port) =>
-          `color_sensor_${port.toLowerCase()} = ColorSensor(Port.${port})`
-      ),
-    ...[...usedForcePorts]
-      .sort()
-      .map(
-        (port) =>
-          `force_sensor_${port.toLowerCase()} = ${
-            hub === "spike" ? "ForceSensor" : "TouchSensor"
-          }(Port.${port})`
-      ),
-  ]
+  ].sort()
 
   const lines = [
     "# TLC: команды выполняются сверху вниз",
     `from pybricks.${
       hub === "spike" ? "pupdevices" : "ev3devices"
-    } import ${deviceImports.join(", ")}`,
-    `from pybricks.parameters import ${paramImports}`,
+    } import Motor`,
+    "from pybricks.parameters import Port, Stop",
     "from pybricks.tools import wait",
     "",
-    ...initLines,
+    ...used.map(
+      (port) => `motor_${port.toLowerCase()} = Motor(Port.${port})`
+    ),
     "",
   ]
 
   function emitBlock(block: WorkspaceBlock, indent: string) {
     if (block.type === "start") return
     if (block.type === "if") {
-      const cond1 = buildSingleConditionExpr(
-        block.sensor || "distance",
-        block.sensorPort || "A",
-        block.leftValue ?? 10,
-        block.operator || "<",
-        block.compareValue ?? 20,
-        block.colorValue || "red",
-        block.touchState || "pressed"
-      )
-      const hasLogic = (block.ifModules || []).includes("logic")
-      const fullCond = hasLogic
-        ? `(${cond1}) ${block.logicOp === "or" ? "or" : "and"} (${buildSingleConditionExpr(
-            block.sensor2 || "force",
-            block.sensorPort2 || "B",
-            block.leftValue2 ?? 10,
-            block.operator2 || "<",
-            block.compareValue2 ?? 20,
-            block.colorValue2 || "blue",
-            block.touchState2 || "pressed"
-          )})`
-        : cond1
-      lines.push(`${indent}if ${fullCond}:`)
+      lines.push(`${indent}if True:`)
       const firstBody = clean.find(
         (b) => b.parentId === block.id && b.branch === "body"
       )
@@ -832,6 +618,25 @@ export function generatePybricks(
         lines.push(`${indent}    pass`)
       } else {
         for (const inner of bodyChain) {
+          emitBlock(inner, `${indent}    `)
+        }
+      }
+
+      lines.push(`${indent}else:`)
+      const firstElse = clean.find(
+        (b) => b.parentId === block.id && b.branch === "else"
+      )
+      const elseChain = firstElse
+        ? outerChainIds(clean, firstElse.id)
+            .map((id) => clean.find((b) => b.id === id))
+            .filter(
+              (b): b is WorkspaceBlock => b !== undefined && b.type !== "start"
+            )
+        : []
+      if (!elseChain.length) {
+        lines.push(`${indent}    pass`)
+      } else {
+        for (const inner of elseChain) {
           emitBlock(inner, `${indent}    `)
         }
       }
