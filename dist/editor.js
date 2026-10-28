@@ -98,7 +98,9 @@ function renderBlocks() {
         const removeModule = document.createElement('button'); removeModule.type = 'button'; removeModule.textContent = '×';
         removeModule.setAttribute('aria-label', 'Удалить модуль ' + label);
         removeModule.addEventListener('click', () => commit({modules:block.modules.filter(m => m !== name)}));
-        item.append(caption, ...children, removeModule); moduleArea.append(item);
+        const fields = document.createElement('div'); fields.className = 'motor-module-fields';
+        fields.append(...children);
+        item.append(caption, fields, removeModule); moduleArea.append(item);
       };
       for (const name of block.modules) {
         if (name === 'travel') row(name, 'Величина движения', [value, unit]);
@@ -123,8 +125,12 @@ function renderBlocks() {
       const hint = document.createElement('small'); hint.textContent = 'Без модуля скорости: 360°/с. Для запуска задайте величину движения. Скорость и мощность заменяют друг друга.';
       const picker = document.createElement('div'); picker.className = 'module-picker';
       picker.addEventListener('pointerdown', event => event.stopPropagation());
-      picker.append(plus, menu); controls.append(picker);
-      element.append(title, controls, moduleArea, hint);
+      picker.append(plus, menu);
+      const base = document.createElement('div'); base.className = 'motor-base'; base.append(title, controls);
+      const strip = document.createElement('div'); strip.className = 'motor-strip';
+      strip.append(base, moduleArea, picker);
+      element.title = hint.textContent + ' Порядок модулей не влияет на выполнение.';
+      element.append(strip);
     }
     element.addEventListener('pointerdown', event => {
       if (event.button !== 0 || event.target.closest('button, select, input')) return;
