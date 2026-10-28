@@ -47,3 +47,15 @@ test('motor modules preserve settings and reject unsafe combinations', async () 
   assert.throws(() => generatePybricks([{...b[0],unit:'degrees'}],'spike'), /секунды/);
   assert.throws(() => generatePybricks([{...b[0],modules:['speed','power','travel']}],'spike'), /оба режима/);
 });
+
+
+test('parameter module order does not change motor execution', async () => {
+  const {generatePybricks} = await import('../dist/workspace.js');
+  const base = {...addBlock([], 'motor', 0, 0, 'drive')[0], speed:450, power:35, value:2, unit:'seconds'};
+  for (const mode of ['speed','power']) {
+    for (const hub of ['spike','ev3']) {
+      assert.equal(generatePybricks([{...base, modules:[mode,'travel']}], hub),
+        generatePybricks([{...base, modules:['travel',mode]}], hub));
+    }
+  }
+});
