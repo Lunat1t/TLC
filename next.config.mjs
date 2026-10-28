@@ -15,6 +15,10 @@ const nextConfig = {
         source: '/avatar.html',
         destination: '/avatar',
       },
+      {
+        source: '/editor.html',
+        destination: '/editor',
+      },
     ];
   },
 };

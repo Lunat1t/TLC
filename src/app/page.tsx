@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { LiveOrb } from "@/components/ui/live-orb"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -55,6 +56,7 @@ function formatDate(value: string) {
 }
 
 export default function HomePage() {
+  const router = useRouter()
   const [hubChoice, setHubChoice] = React.useState<HubType>("spike")
   const [projects, setProjects] = React.useState<RobotProject[]>([])
   const [auth, setAuth] = React.useState<AuthState>(() => loadAuthState(null))
@@ -114,7 +116,7 @@ export default function HomePage() {
       commit([...projects, created])
       setNewOpen(false)
       setNotice({ text: `Проект «${created.name}» создан.`, isError: false })
-      window.location.assign(`/editor.html?id=${encodeURIComponent(created.id)}`)
+      router.push(`/editor?id=${encodeURIComponent(created.id)}`)
     } catch (err) {
       setFormError(
         err instanceof Error ? err.message : "Не удалось сохранить проект."
@@ -537,12 +539,12 @@ export default function HomePage() {
               >
                 Закрыть
               </Button>
-              <a
-                href={`/editor.html?id=${encodeURIComponent(selectedProject.id)}`}
+              <Link
+                href={`/editor?id=${encodeURIComponent(selectedProject.id)}`}
                 className="inline-flex items-center justify-center rounded-full bg-[#092c37] text-white min-h-[50px] px-6 py-3 text-sm font-extrabold hover:bg-[#18495a]"
               >
                 Открыть редактор
-              </a>
+              </Link>
             </div>
           </div>
         </div>
