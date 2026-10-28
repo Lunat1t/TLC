@@ -133,3 +133,77 @@ test('paired power uses common time and mixed single/pair programs reuse motors'
   assert.equal(code.split('motor_a = Motor').length,2);
   assert.ok(code.indexOf('motor_b.brake()') < code.indexOf('motor_a.run_angle'));
 });
+
+test('LEGO connections insert chains, move descendants and reconnect after deletion', async () => {
+  const {attachChain,moveChain,chainIds,removeBlock,blockHeight} = await import('../dist/workspace.js');
+  let b=addBlock([], 'a',0,0,'drive');
+  b=addBlock(b,'b',300,10,'pair'); b=addBlock(b,'c',400,20);
+  b=attachChain(b,'b','a'); b=attachChain(b,'c','a');
+  assert.deepEqual(chainIds(b,'a'),['a','c','b']);
+  assert.equal(b.find(x=>x.id==='c').y,blockHeight(b[0])+6);
+  b=moveChain(b,'a',50,60);
+  assert.ok(b.every(x=>x.x===50));
+  assert.equal(b[0].y,60);
+  b=removeBlock(b,'c');
+  assert.equal(b.find(x=>x.id==='b').parentId,'a');
+  b=moveChain(b,'b',250,300);
+  assert.equal(b.find(x=>x.id==='b').parentId,undefined);
+  assert.equal(b.find(x=>x.id==='a').x,50);
+});
+
+test('connections survive parameter edits; snapping and execution respect whole chains', async () => {
+  const {attachChain,snapTarget,updateDrive,generatePybricks} = await import('../dist/workspace.js');
+  let b=addBlock([], 'a',0,0,'drive'); b=addBlock(b,'b',100,500,'drive'); b=addBlock(b,'c',400,50,'drive');
+  b=updateDrive(b,'a',{modules:['travel'],motor:'A'},'spike');
+  b=updateDrive(b,'b',{modules:['travel'],motor:'B'},'spike');
+  b=updateDrive(b,'c',{modules:['travel'],motor:'C'},'spike');
+  assert.equal(snapTarget(b,'b',10,110),'a');
+  assert.equal(snapTarget(b,'b',500,500),null);
+  b=attachChain(b,'b','a');
+  assert.equal(snapTarget(b,'a',0,212),null);
+  b=updateDrive(b,'b',{speed:500,modules:['speed','travel']},'spike');
+  assert.equal(b.find(x=>x.id==='b').parentId,'a');
+  const code=generatePybricks(b,'spike');
+  assert.ok(code.indexOf('motor_a.run_angle')<code.indexOf('motor_b.run_angle'));
+  assert.ok(code.indexOf('motor_b.run_angle')<code.indexOf('motor_c.run_angle'));
+  assert.deepEqual(attachChain(b,'a','b'),b);
+});
+
+test('import sanitizes cycles, missing links, duplicate IDs and forks', async () => {
+  const {executionOrder} = await import('../dist/workspace.js');
+  const raw=[{id:'a',parentId:'b'},{id:'b',parentId:'a'},{id:'c',parentId:'a'},{id:'d',parentId:'missing'},{id:'a'}].map(x=>({...x,type:'empty',x:0,y:0}));
+  const clean=readBlocks({blocks:raw});
+  assert.equal(clean.length,4);
+  assert.equal(new Set(executionOrder(clean).map(b=>b.id)).size,4);
+  const parents=clean.filter(b=>b.parentId).map(b=>b.parentId);
+  assert.equal(new Set(parents).size,parents.length);
+});
+
+test('sheets migrate legacy projects and preserve isolated blocks on export/import', async () => {
+  const {readSheets,addSheet,renameSheet,deleteSheet,attachChain} = await import('../dist/workspace.js');
+  const {makeProject,importProject,saveProjects,loadProjects} = await import('../dist/projects.js');
+  let b=addBlock([], 'a',0,0); b=addBlock(b,'b',20,300); b=attachChain(b,'b','a');
+  let state=readSheets({blocks:b});
+  assert.equal(state.sheets[0].name,'Основная');
+  state=addSheet(state,'kicker','Кикер');
+  assert.deepEqual(state.sheets[1].blocks,[]);
+  state=renameSheet(state,'kicker','Захват');
+  const project={...makeProject('Test','spike','project'),workspace:state};
+  const restored=importProject(JSON.stringify(project),'copy');
+  assert.deepEqual(readSheets(restored.workspace),state);
+  const store={value:null,getItem(){return this.value;},setItem(k,v){this.value=v;}};
+  saveProjects(store,[project]); assert.deepEqual(loadProjects(store)[0].workspace,state);
+  assert.throws(()=>renameSheet(state,'kicker','Основная'),/уже есть/);
+  state=deleteSheet(state,'kicker');
+  assert.equal(state.activeSheetId,'sheet-main'); assert.equal(state.sheets[0].blocks.length,2);
+  assert.throws(()=>deleteSheet(state,'sheet-main'),/хотя бы один/);
+});
+
+test('sheets recover invalid active ids and limit imported views and sheet count', async () => {
+  const {readSheets,addSheet,MAX_SHEETS}=await import('../dist/workspace.js');
+  const state=readSheets({activeSheetId:'missing',sheets:[{id:'one',name:'One',blocks:[],view:{panX:10,panY:20,zoom:20}},{id:'one',name:'duplicate'},null]});
+  assert.equal(state.activeSheetId,'one'); assert.equal(state.sheets.length,1); assert.equal(state.sheets[0].view.zoom,2);
+  let full=state;
+  for(let i=1;i<MAX_SHEETS;i++) full=addSheet(full,String(i),'Sheet '+i);
+  assert.throws(()=>addSheet(full,'too-many','Extra'),/32/);
+});
