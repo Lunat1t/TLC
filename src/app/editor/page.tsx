@@ -880,9 +880,9 @@ function EditorWorkspace() {
                     } ${
                       motorBlock
                         ? paired
-                          ? "w-max h-[52px] rounded-[11px] bg-[#107e79] text-white shadow-[inset_0_-5px_#086560,0_6px_14px_rgba(20,105,123,0.14)]"
-                          : "w-max h-[52px] rounded-[11px] bg-[#0589b1] text-white shadow-[inset_0_-5px_#00759b,0_6px_14px_rgba(20,105,123,0.14)]"
-                        : "w-[270px] h-[48px] rounded-t-[18px] rounded-b-[11px] bg-[#f59e0b] text-white px-4 flex items-center shadow-[inset_0_-5px_#d97706,0_6px_14px_rgba(120,53,15,0.14)]"
+                          ? "w-max h-[64px] rounded-[14px] bg-[#107e79] text-white shadow-[inset_0_-6px_#086560,0_8px_18px_rgba(20,105,123,0.16)]"
+                          : "w-max h-[64px] rounded-[14px] bg-[#0589b1] text-white shadow-[inset_0_-6px_#00759b,0_8px_18px_rgba(20,105,123,0.16)]"
+                        : "w-[320px] h-[58px] rounded-t-[22px] rounded-b-[14px] bg-[#f59e0b] text-white px-5 flex items-center shadow-[inset_0_-6px_#d97706,0_8px_18px_rgba(120,53,15,0.16)]"
                     } ${
                       isSelected
                         ? "outline-3 outline-[#087996] outline-offset-4"
@@ -897,7 +897,7 @@ function EditorWorkspace() {
                     {motorBlock && (
                       <span
                         aria-hidden="true"
-                        className={`absolute -top-[6px] left-[29px] w-[39px] h-[11px] rounded-t-[6px] ${
+                        className={`absolute -top-[7px] left-[32px] w-[44px] h-[13px] rounded-t-[7px] ${
                           paired ? "bg-[#107e79]" : "bg-[#0589b1]"
                         }`}
                       />
@@ -913,7 +913,7 @@ function EditorWorkspace() {
                           setSelectedId(null)
                           saveBlocks(removeBlock(blocks, block.id))
                         }}
-                        className="absolute -top-[12px] -right-[11px] z-30 w-[23px] h-[23px] rounded-full bg-white text-[#18313b] shadow-md text-base leading-none font-bold grid place-items-center"
+                        className="absolute -top-[13px] -right-[12px] z-30 w-[26px] h-[26px] rounded-full bg-white text-[#18313b] shadow-md text-lg leading-none font-bold grid place-items-center"
                       >
                         ×
                       </button>
@@ -933,7 +933,7 @@ function EditorWorkspace() {
                             false
                           )
                         }}
-                        className="absolute right-[18px] -top-[13px] z-20 rounded-[7px] px-1.5 py-0.5 bg-white text-[#086985] text-[11px] font-extrabold shadow-xs"
+                        className="absolute right-[20px] -top-[14px] z-20 rounded-[8px] px-2 py-0.5 bg-white text-[#086985] text-xs font-extrabold shadow-xs"
                       >
                         ↗
                       </button>
@@ -941,14 +941,14 @@ function EditorWorkspace() {
 
                     {/* Block Content */}
                     {!motorBlock ? (
-                      <div className="text-[13.5px] font-extrabold tracking-tight whitespace-nowrap drop-shadow-xs">
+                      <div className="text-[16px] font-extrabold tracking-tight whitespace-nowrap drop-shadow-xs">
                         ▶ &nbsp;Когда программа запускается
                       </div>
                     ) : (
-                      <div className="group flex flex-nowrap items-center h-full px-3.5 gap-2">
+                      <div className="group flex flex-nowrap items-center h-full px-5 gap-3">
                         {/* Base inline action: Начать движение [порт] [вперёд] */}
-                        <div className="shrink-0 flex items-center gap-2">
-                          <span className="text-[13.5px] font-extrabold whitespace-nowrap tracking-tight">
+                        <div className="shrink-0 flex items-center gap-2.5">
+                          <span className="text-[16px] font-extrabold whitespace-nowrap tracking-tight">
                             Начать движение
                           </span>
                           <select
@@ -967,7 +967,7 @@ function EditorWorkspace() {
                                 )
                               )
                             }
-                            className="h-[30px] rounded-full px-2.5 bg-white text-[#0d3b4c] font-extrabold text-[13px] shadow-xs cursor-pointer"
+                            className="h-[38px] rounded-full px-3.5 bg-white text-[#0d3b4c] font-extrabold text-[15px] shadow-xs cursor-pointer"
                           >
                             {motorPorts.map((port) => (
                               <option key={port} value={port}>
@@ -995,7 +995,7 @@ function EditorWorkspace() {
                                 )
                               )
                             }
-                            className="h-[30px] rounded-full px-2.5 bg-white text-[#0d3b4c] font-extrabold text-[13px] shadow-xs cursor-pointer"
+                            className="h-[38px] rounded-full px-3.5 bg-white text-[#0d3b4c] font-extrabold text-[15px] shadow-xs cursor-pointer"
                           >
                             <option value="forward">вперёд</option>
                             <option value="backward">назад</option>
@@ -1003,7 +1003,7 @@ function EditorWorkspace() {
 
                           {paired && (
                             <>
-                              <span className="text-[13.5px] font-extrabold opacity-95">
+                              <span className="text-[16px] font-extrabold opacity-95">
                                 и
                               </span>
                               <select
@@ -1020,7 +1020,7 @@ function EditorWorkspace() {
                                     )
                                   )
                                 }
-                                className="h-[30px] rounded-full px-2.5 bg-white text-[#0d3b4c] font-extrabold text-[13px] shadow-xs cursor-pointer"
+                                className="h-[38px] rounded-full px-3.5 bg-white text-[#0d3b4c] font-extrabold text-[15px] shadow-xs cursor-pointer"
                               >
                                 {motorPorts.map((port) => (
                                   <option key={port} value={port}>
@@ -1045,7 +1045,7 @@ function EditorWorkspace() {
                                     )
                                   )
                                 }
-                                className="h-[30px] rounded-full px-2.5 bg-white text-[#0d3b4c] font-extrabold text-[13px] shadow-xs cursor-pointer"
+                                className="h-[38px] rounded-full px-3.5 bg-white text-[#0d3b4c] font-extrabold text-[15px] shadow-xs cursor-pointer"
                               >
                                 <option value="forward">вперёд</option>
                                 <option value="backward">назад</option>
@@ -1060,9 +1060,9 @@ function EditorWorkspace() {
                           .map((mod) => (
                             <div
                               key={mod}
-                              className="shrink-0 flex items-center gap-2 pl-2.5 border-l border-white/30"
+                              className="shrink-0 flex items-center gap-2.5 pl-3.5 border-l border-white/30"
                             >
-                              <span className="whitespace-nowrap text-[13.5px] font-extrabold tracking-tight">
+                              <span className="whitespace-nowrap text-[16px] font-extrabold tracking-tight">
                                 {mod === "travel"
                                   ? "на"
                                   : mod === "speed"
@@ -1096,7 +1096,7 @@ function EditorWorkspace() {
                                         )
                                       )
                                     }}
-                                    className="w-[62px] h-[30px] rounded-full px-2.5 text-center bg-white text-[#0d3b4c] font-extrabold text-[13px] shadow-xs"
+                                    className="w-[78px] h-[38px] rounded-full px-3 text-center bg-white text-[#0d3b4c] font-extrabold text-[15px] shadow-xs"
                                   />
                                   <select
                                     aria-label="Единица измерения"
@@ -1114,7 +1114,7 @@ function EditorWorkspace() {
                                         )
                                       )
                                     }
-                                    className="h-[30px] rounded-full px-2.5 bg-white text-[#0d3b4c] font-extrabold text-[13px] shadow-xs cursor-pointer"
+                                    className="h-[38px] rounded-full px-3.5 bg-white text-[#0d3b4c] font-extrabold text-[15px] shadow-xs cursor-pointer"
                                   >
                                     <option value="rotations">оборотов</option>
                                     <option value="degrees">градусов</option>
@@ -1150,9 +1150,9 @@ function EditorWorkspace() {
                                         )
                                       )
                                     }}
-                                    className="w-[64px] h-[30px] rounded-full px-2.5 text-center bg-white text-[#0d3b4c] font-extrabold text-[13px] shadow-xs"
+                                    className="w-[80px] h-[38px] rounded-full px-3 text-center bg-white text-[#0d3b4c] font-extrabold text-[15px] shadow-xs"
                                   />
-                                  <span className="text-xs font-extrabold text-white/95">
+                                  <span className="text-[14px] font-extrabold text-white/95">
                                     {mod === "speed" ? "°/с" : "%"}
                                   </span>
                                 </>
@@ -1175,7 +1175,7 @@ function EditorWorkspace() {
                                     )
                                   )
                                 }
-                                className="w-[18px] h-[18px] rounded-full bg-white/20 hover:bg-white/40 text-white text-xs leading-none grid place-items-center"
+                                className="w-[22px] h-[22px] rounded-full bg-white/20 hover:bg-white/40 text-white text-sm leading-none grid place-items-center"
                               >
                                 ×
                               </button>
@@ -1196,13 +1196,13 @@ function EditorWorkspace() {
                                 prev === block.id ? null : block.id
                               )
                             }
-                            className="w-[28px] h-[28px] rounded-full border border-white/50 bg-white/15 hover:bg-white/30 text-white text-base leading-none font-black grid place-items-center"
+                            className="w-[36px] h-[36px] rounded-full border border-white/55 bg-white/15 hover:bg-white/30 text-white text-xl leading-none font-black grid place-items-center"
                           >
                             +
                           </button>
 
                           {openMenuBlockId === block.id && (
-                            <div className="absolute top-[calc(100%+6px)] right-0 z-50 w-[220px] p-2 rounded-[10px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-1.5">
+                            <div className="absolute top-[calc(100%+8px)] right-0 z-50 w-[240px] p-2.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-1.5">
                               {(
                                 [
                                   ["speed", "со скоростью"],
@@ -1239,7 +1239,7 @@ function EditorWorkspace() {
                                     )
                                     setOpenMenuBlockId(null)
                                   }}
-                                  className="text-left px-3 py-2 rounded-md bg-[#eff8fb] hover:bg-[#dff2f8] text-xs font-extrabold text-[#18313b] disabled:opacity-45"
+                                  className="text-left px-3.5 py-2.5 rounded-lg bg-[#eff8fb] hover:bg-[#dff2f8] text-sm font-extrabold text-[#18313b] disabled:opacity-45"
                                 >
                                   {label}
                                 </button>

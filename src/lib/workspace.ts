@@ -52,7 +52,7 @@ const PORTS: Record<HubType, string[]> = {
 const UNITS: TravelUnit[] = ["rotations", "degrees", "seconds"]
 
 export function blockHeight(block: Pick<WorkspaceBlock, "type">): number {
-  return block.type === "pair" ? 52 : block.type === "drive" ? 52 : 48
+  return block.type === "pair" ? 64 : block.type === "drive" ? 64 : 58
 }
 
 export function cleanLinks(blocks: WorkspaceBlock[]): WorkspaceBlock[] {
