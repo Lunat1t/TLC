@@ -16,7 +16,11 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { loadAuthState, signInStudent, type AuthState } from "@/lib/auth"
+import {
+  loadAuthState,
+  signInStudentWithSupabase,
+  type AuthState,
+} from "@/lib/auth"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -49,10 +53,13 @@ export default function LoginPage() {
     setLookOverride({ x, y: 0.35 })
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     try {
-      const next = signInStudent(window.localStorage, { login, password })
+      const next = await signInStudentWithSupabase(window.localStorage, {
+        login,
+        password,
+      })
       setBlinkCount((c) => c + 1)
       setStatus({
         message: `Добро пожаловать, ${next.user?.nickname}! Переходим к проектам...`,

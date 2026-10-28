@@ -4,6 +4,7 @@ import {
   type AvatarPreset,
   type LiveOrbVariant,
 } from "@/components/ui/live-orb"
+import { createClient as createSupabaseBrowserClient } from "@/utils/supabase/client"
 
 export const AUTH_STORAGE_KEY = "tlc.auth.v1"
 
@@ -135,6 +136,62 @@ export function saveAvatarChoice(
       presetId: choice.presetId || preset.id,
       name: choice.name || preset.name,
       ...orb,
+    },
+  }
+  storage?.setItem(AUTH_STORAGE_KEY, JSON.stringify(next))
+
+  if (typeof window !== "undefined") {
+    try {
+      const supabase = createSupabaseBrowserClient()
+      void supabase.auth.updateUser({
+        data: {
+          nickname: nickname || undefined,
+          avatar: next.avatar,
+        },
+      })
+    } catch {
+      // Ignore if user does not have an active Supabase cloud session yet
+    }
+  }
+
+  return next
+}
+
+export async function signInStudentWithSupabase(
+  storage: Storage | null | undefined,
+  credentials: { login?: string; password?: string },
+  now: Date = new Date()
+): Promise<AuthState> {
+  const { login } = validateLoginInput(credentials)
+  const password = String(credentials.password || "")
+  const email = login.includes("@")
+    ? login
+    : `${login.toLowerCase().replace(/[^a-z0-9._-]/g, "") || "student"}@tlc.local`
+
+  const current = loadAuthState(storage)
+  let resolvedNickname = current.user?.nickname || login
+
+  if (typeof window !== "undefined") {
+    try {
+      const supabase = createSupabaseBrowserClient()
+      const { data } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+      if (data?.user?.user_metadata?.nickname) {
+        resolvedNickname = String(data.user.user_metadata.nickname)
+      }
+    } catch {
+      // Fallback to local session if offline or user is local-only
+    }
+  }
+
+  const next: AuthState = {
+    ...current,
+    user: {
+      login,
+      nickname: resolvedNickname,
+      loggedInAt: now.toISOString(),
     },
   }
   storage?.setItem(AUTH_STORAGE_KEY, JSON.stringify(next))
