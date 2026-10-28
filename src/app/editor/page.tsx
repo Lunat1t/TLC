@@ -14,25 +14,37 @@ import {
   type RobotProject,
 } from "@/lib/projects"
 import {
+  IF_FOOT_HEIGHT,
+  IF_INDENT,
+  IF_TOP_HEIGHT,
   MAX_SHEETS,
   addBlock,
   addSheet,
   attachChain,
   blockHeight,
+  blockTotalHeight,
   chainIds,
   deleteSheet,
   generatePybricks,
+  ifInnerHeight,
   layoutChains,
   moveChain,
   readSheets,
   removeBlock,
   renameSheet,
-  snapTarget,
+  snapTargetInfo,
   updateDrive,
   type BlockType,
+  type BranchSlot,
+  type ColorValue,
+  type ConditionOperator,
+  type ConditionSensor,
+  type IfModule,
+  type LogicOperator,
   type MotorDirection,
   type MotorModule,
   type SheetState,
+  type TouchState,
   type TravelUnit,
   type WorkspaceBlock,
 } from "@/lib/workspace"
@@ -99,7 +111,10 @@ function EditorWorkspace() {
   }>({ text: "Сохранено", isError: false })
 
   const [gesture, setGesture] = React.useState<DragGesture | null>(null)
-  const [snapTargetId, setSnapTargetId] = React.useState<string | null>(null)
+  const [snapTargetSlot, setSnapTargetSlot] = React.useState<{
+    id: string
+    branch?: BranchSlot
+  } | null>(null)
   const [justAddedId, setJustAddedId] = React.useState<string | null>(null)
   const [justSnappedIds, setJustSnappedIds] = React.useState<string[]>([])
   const [justSnappedHeadId, setJustSnappedHeadId] = React.useState<
@@ -245,9 +260,9 @@ function EditorWorkspace() {
   const finishBlockMove = React.useCallback(
     (id: string, x: number, y: number, snap = true) => {
       let next = moveChain(blocks, id, x, y)
-      const target = snap ? snapTarget(next, id, x, y) : null
+      const target = snap ? snapTargetInfo(next, id, x, y) : null
       if (target) {
-        next = attachChain(next, id, target)
+        next = attachChain(next, id, target.id, target.branch)
         triggerSnapAnimation(next, id)
       }
       saveBlocks(next)
@@ -276,9 +291,9 @@ function EditorWorkspace() {
         const x = point.x - 135
         const y = point.y - 28
         let next = addBlock(blocks, id, x, y, type)
-        const target = snapTarget(next, id, x, y)
+        const target = snapTargetInfo(next, id, x, y)
         if (target) {
-          next = attachChain(next, id, target)
+          next = attachChain(next, id, target.id, target.branch)
           triggerSnapAnimation(next, id)
         } else {
           triggerSpawnAnimation(id)
@@ -334,16 +349,21 @@ function EditorWorkspace() {
         e.clientY <= rect.bottom
       ) {
         const pt = worldFromClient(e.clientX, e.clientY)
-        const target = snapTarget(blocks, "__palette__", pt.x - 135, pt.y - 28)
-        setSnapTargetId(target)
+        const target = snapTargetInfo(
+          blocks,
+          "__palette__",
+          pt.x - 135,
+          pt.y - 28
+        )
+        setSnapTargetSlot(target)
       } else {
-        setSnapTargetId(null)
+        setSnapTargetSlot(null)
       }
     }
     const handleUp = (e: PointerEvent) => {
       const type = gesture.type
       setGesture(null)
-      setSnapTargetId(null)
+      setSnapTargetSlot(null)
       const rect = boardRef.current?.getBoundingClientRect()
       if (
         rect &&
@@ -709,6 +729,44 @@ function EditorWorkspace() {
                   Два мотора, общие модули
                 </small>
               </button>
+
+              {/* Блок 4: Что если (Если ... то) */}
+              <button
+                id="ifBlock"
+                type="button"
+                disabled={!project}
+                aria-label="Добавить блок Если. Можно перетащить на доску"
+                onPointerDown={(e) => {
+                  if (!project || e.button !== 0) return
+                  e.preventDefault()
+                  setGesture({
+                    kind: "palette",
+                    type: "if",
+                    clientX: e.clientX,
+                    clientY: e.clientY,
+                  })
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault()
+                    addBlockAtCenter("if")
+                  }
+                }}
+                className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left flex flex-col gap-2 hover:border-[#7c3aed] hover:bg-[#f5f3ff] transition-colors disabled:opacity-50 cursor-grab active:cursor-grabbing"
+              >
+                <span
+                  aria-hidden="true"
+                  className="grid place-items-center w-[106px] h-[33px] rounded-[8px] bg-[#7c3aed] text-white text-sm font-black shadow-[inset_0_-4px_#5b21b6]"
+                >
+                  Если … то
+                </span>
+                <span className="text-[13px] font-extrabold text-[#18313b]">
+                  Что если (Если … то)
+                </span>
+                <small className="text-[11px] text-[#78909a]">
+                  Условие с модулями датчиков и операций
+                </small>
+              </button>
             </div>
           )}
         </aside>
@@ -813,13 +871,13 @@ function EditorWorkspace() {
                   dx,
                   dy,
                 })
-                const target = snapTarget(
+                const target = snapTargetInfo(
                   blocks,
                   gesture.id,
                   gesture.originX + dx,
                   gesture.originY + dy
                 )
-                setSnapTargetId(target)
+                setSnapTargetSlot(target)
               }
             }}
             onPointerUp={(e) => {
@@ -827,7 +885,7 @@ function EditorWorkspace() {
               if (gesture.kind === "block") {
                 const { id, originX, originY, startX, startY, moved } = gesture
                 setGesture(null)
-                setSnapTargetId(null)
+                setSnapTargetSlot(null)
                 if (moved) {
                   finishBlockMove(
                     id,
@@ -850,20 +908,29 @@ function EditorWorkspace() {
               }}
               className="absolute top-0 left-0 w-0 h-0"
             >
-              {/* Magnetic LEGO socket preview under snapTarget */}
-              {snapTargetId &&
+              {/* Magnetic LEGO socket preview under or inside snapTarget */}
+              {snapTargetSlot &&
                 (() => {
                   const targetBlock = blocks.find(
-                    (b) => b.id === snapTargetId
+                    (b) => b.id === snapTargetSlot.id
                   )
                   if (!targetBlock) return null
-                  const socketY =
-                    targetBlock.y + blockHeight(targetBlock) - 4
+                  const isInside =
+                    snapTargetSlot.branch === "body" &&
+                    targetBlock.type === "if"
+                  const socketX = isInside
+                    ? targetBlock.x + IF_INDENT
+                    : targetBlock.x
+                  const socketY = isInside
+                    ? targetBlock.y + IF_TOP_HEIGHT - 4
+                    : targetBlock.y +
+                      blockTotalHeight(blocks, targetBlock.id) -
+                      4
                   return (
                     <div
                       aria-hidden="true"
                       style={{
-                        left: `${targetBlock.x}px`,
+                        left: `${socketX}px`,
                         top: `${socketY}px`,
                       }}
                       className="absolute z-20 w-[320px] h-[58px] rounded-[12px] border-2 border-dashed border-[#fbbf24] bg-[#fef3c7]/55 shadow-[0_0_24px_rgba(251,191,36,0.45)] pointer-events-none animate-lego-magnet"
@@ -881,9 +948,9 @@ function EditorWorkspace() {
 
                 let magneticPullX = 0
                 let magneticPullY = 0
-                if (isMoving && snapTargetId && gesture?.kind === "block") {
+                if (isMoving && snapTargetSlot && gesture?.kind === "block") {
                   const targetBlock = blocks.find(
-                    (b) => b.id === snapTargetId
+                    (b) => b.id === snapTargetSlot.id
                   )
                   const draggedRoot = blocks.find(
                     (b) => b.id === gesture.id
@@ -891,9 +958,17 @@ function EditorWorkspace() {
                   if (targetBlock && draggedRoot) {
                     const rawRootX = draggedRoot.x + gesture.dx
                     const rawRootY = draggedRoot.y + gesture.dy
-                    const snapX = targetBlock.x
-                    const snapY =
-                      targetBlock.y + blockHeight(targetBlock) - 4
+                    const isInside =
+                      snapTargetSlot.branch === "body" &&
+                      targetBlock.type === "if"
+                    const snapX = isInside
+                      ? targetBlock.x + IF_INDENT
+                      : targetBlock.x
+                    const snapY = isInside
+                      ? targetBlock.y + IF_TOP_HEIGHT - 4
+                      : targetBlock.y +
+                        blockTotalHeight(blocks, targetBlock.id) -
+                        4
                     magneticPullX = (snapX - rawRootX) * 0.42
                     magneticPullY = (snapY - rawRootY) * 0.42
                   }
@@ -906,23 +981,315 @@ function EditorWorkspace() {
                   ? Math.round(block.y + gesture.dy + magneticPullY)
                   : block.y
                 const paired = block.type === "pair"
+                const isIfBlock = block.type === "if"
                 const motorBlock = block.type === "drive" || paired
                 const isSelected = block.id === selectedId
-                const isSnapTarget = block.id === snapTargetId
-                const hasChild = blocks.some((b) => b.parentId === block.id)
+                const isSnapTarget = block.id === snapTargetSlot?.id
+                const hasChild = blocks.some(
+                  (b) => b.parentId === block.id && !b.branch
+                )
+                const hasBodyChild =
+                  isIfBlock &&
+                  blocks.some(
+                    (b) => b.parentId === block.id && b.branch === "body"
+                  )
                 const isConnected = Boolean(block.parentId)
                 const isJustAdded = justAddedId === block.id
                 const isJustSnapped = justSnappedIds.includes(block.id)
                 const isJustSnappedHead = justSnappedHeadId === block.id
                 const modules = block.modules || []
+                const ifModules = block.ifModules || []
+                const innerSpineHeight = isIfBlock
+                  ? ifInnerHeight(blocks, block.id)
+                  : 0
 
-                const radiusClass = motorBlock
-                  ? `${isConnected ? "rounded-t-[5px]" : "rounded-t-[14px]"} ${
-                      hasChild ? "rounded-b-[5px]" : "rounded-b-[14px]"
-                    }`
-                  : `rounded-t-[22px] ${
-                      hasChild ? "rounded-b-[5px]" : "rounded-b-[14px]"
-                    }`
+                const radiusClass = isIfBlock
+                  ? ""
+                  : motorBlock
+                    ? `${isConnected ? "rounded-t-[5px]" : "rounded-t-[14px]"} ${
+                        hasChild ? "rounded-b-[5px]" : "rounded-b-[14px]"
+                      }`
+                    : `rounded-t-[22px] ${
+                        hasChild ? "rounded-b-[5px]" : "rounded-b-[14px]"
+                      }`
+
+                const renderSensorCondition = (
+                  prefix: 1 | 2,
+                  sensorVal: ConditionSensor,
+                  portVal: string,
+                  leftVal: number,
+                  opVal: ConditionOperator,
+                  compVal: number,
+                  colorVal: ColorValue,
+                  touchVal: TouchState,
+                  includeCompare: boolean
+                ) => {
+                  const sensorKey = prefix === 1 ? "sensor" : "sensor2"
+                  const portKey = prefix === 1 ? "sensorPort" : "sensorPort2"
+                  const leftKey = prefix === 1 ? "leftValue" : "leftValue2"
+                  const opKey = prefix === 1 ? "operator" : "operator2"
+                  const compKey =
+                    prefix === 1 ? "compareValue" : "compareValue2"
+                  const colorKey = prefix === 1 ? "colorValue" : "colorValue2"
+                  const touchKey = prefix === 1 ? "touchState" : "touchState2"
+
+                  const unitLabel =
+                    sensorVal === "distance"
+                      ? "см"
+                      : sensorVal === "reflection"
+                        ? "%"
+                        : sensorVal === "angle"
+                          ? "°"
+                          : ""
+
+                  return (
+                    <>
+                      <select
+                        aria-label={
+                          prefix === 1
+                            ? "Условие датчика"
+                            : "Второе условие датчика"
+                        }
+                        value={sensorVal}
+                        onChange={(e) =>
+                          project &&
+                          saveBlocks(
+                            updateDrive(
+                              blocks,
+                              block.id,
+                              {
+                                [sensorKey]: e.target
+                                  .value as ConditionSensor,
+                              },
+                              project.hub
+                            )
+                          )
+                        }
+                        className="h-[38px] rounded-full px-3.5 bg-white text-[#2e1065] font-extrabold text-[15px] shadow-xs cursor-pointer"
+                      >
+                        <option value="distance">расстояние</option>
+                        <option value="color">цвет</option>
+                        <option value="reflection">яркость света</option>
+                        <option value="force">датчик касания</option>
+                        <option value="angle">угол мотора</option>
+                        <option value="number">число</option>
+                      </select>
+
+                      {sensorVal === "number" ? (
+                        <input
+                          type="number"
+                          step="any"
+                          aria-label={
+                            prefix === 1
+                              ? "Первое число для сравнения"
+                              : "Первое число второго условия"
+                          }
+                          value={leftVal}
+                          onChange={(e) => {
+                            const val = Number(e.target.value)
+                            if (!project || !Number.isFinite(val)) return
+                            saveBlocks(
+                              updateDrive(
+                                blocks,
+                                block.id,
+                                { [leftKey]: val },
+                                project.hub
+                              )
+                            )
+                          }}
+                          className="w-[74px] h-[38px] rounded-full px-3 text-center bg-white text-[#2e1065] font-extrabold text-[15px] shadow-xs"
+                        />
+                      ) : (
+                        <select
+                          aria-label={
+                            prefix === 1 ? "Порт датчика" : "Порт второго датчика"
+                          }
+                          value={portVal}
+                          onChange={(e) =>
+                            project &&
+                            saveBlocks(
+                              updateDrive(
+                                blocks,
+                                block.id,
+                                { [portKey]: e.target.value },
+                                project.hub
+                              )
+                            )
+                          }
+                          className="h-[38px] rounded-full px-3.5 bg-white text-[#2e1065] font-extrabold text-[15px] shadow-xs cursor-pointer"
+                        >
+                          {motorPorts.map((port) => (
+                            <option key={port} value={port}>
+                              {port}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+
+                      {includeCompare && (
+                        <div className="shrink-0 flex items-center gap-2 pl-3 border-l border-white/30">
+                          {sensorVal === "force" ? (
+                            <select
+                              aria-label="Состояние датчика касания"
+                              value={touchVal}
+                              onChange={(e) =>
+                                project &&
+                                saveBlocks(
+                                  updateDrive(
+                                    blocks,
+                                    block.id,
+                                    {
+                                      [touchKey]: e.target.value as TouchState,
+                                    },
+                                    project.hub
+                                  )
+                                )
+                              }
+                              className="h-[38px] rounded-full px-3.5 bg-white text-[#2e1065] font-extrabold text-[15px] shadow-xs cursor-pointer"
+                            >
+                              <option value="pressed">нажат</option>
+                              <option value="released">отпущен</option>
+                            </select>
+                          ) : sensorVal === "color" ? (
+                            <>
+                              <select
+                                aria-label="Операция сравнения цвета"
+                                value={opVal === "!=" ? "!=" : "="}
+                                onChange={(e) =>
+                                  project &&
+                                  saveBlocks(
+                                    updateDrive(
+                                      blocks,
+                                      block.id,
+                                      {
+                                        [opKey]: e.target
+                                          .value as ConditionOperator,
+                                      },
+                                      project.hub
+                                    )
+                                  )
+                                }
+                                className="h-[38px] rounded-full px-3 bg-white text-[#2e1065] font-extrabold text-[15px] shadow-xs cursor-pointer"
+                              >
+                                <option value="=">=</option>
+                                <option value="!=">≠</option>
+                              </select>
+                              <select
+                                aria-label="Выбор цвета"
+                                value={colorVal}
+                                onChange={(e) =>
+                                  project &&
+                                  saveBlocks(
+                                    updateDrive(
+                                      blocks,
+                                      block.id,
+                                      {
+                                        [colorKey]: e.target
+                                          .value as ColorValue,
+                                      },
+                                      project.hub
+                                    )
+                                  )
+                                }
+                                className="h-[38px] rounded-full px-3.5 bg-white text-[#2e1065] font-extrabold text-[15px] shadow-xs cursor-pointer"
+                              >
+                                <option value="red">🔴 красный</option>
+                                <option value="blue">🔵 синий</option>
+                                <option value="green">🟢 зелёный</option>
+                                <option value="yellow">🟡 жёлтый</option>
+                                <option value="white">⚪ белый</option>
+                                <option value="black">⚫ чёрный</option>
+                              </select>
+                            </>
+                          ) : (
+                            <>
+                              <select
+                                aria-label="Операция сравнения"
+                                value={opVal}
+                                onChange={(e) =>
+                                  project &&
+                                  saveBlocks(
+                                    updateDrive(
+                                      blocks,
+                                      block.id,
+                                      {
+                                        [opKey]: e.target
+                                          .value as ConditionOperator,
+                                      },
+                                      project.hub
+                                    )
+                                  )
+                                }
+                                className="h-[38px] rounded-full px-3 bg-white text-[#2e1065] font-extrabold text-[15px] shadow-xs cursor-pointer"
+                              >
+                                <option value="<">&lt;</option>
+                                <option value=">">&gt;</option>
+                                <option value="=">=</option>
+                                <option value="!=">≠</option>
+                                <option value="<=">≤</option>
+                                <option value=">=">≥</option>
+                              </select>
+                              <input
+                                type="number"
+                                step="any"
+                                aria-label="Значение сравнения"
+                                value={compVal}
+                                onChange={(e) => {
+                                  const val = Number(e.target.value)
+                                  if (
+                                    !project ||
+                                    !Number.isFinite(val) ||
+                                    val < -10000 ||
+                                    val > 10000
+                                  )
+                                    return
+                                  saveBlocks(
+                                    updateDrive(
+                                      blocks,
+                                      block.id,
+                                      { [compKey]: val },
+                                      project.hub
+                                    )
+                                  )
+                                }}
+                                className="w-[78px] h-[38px] rounded-full px-3 text-center bg-white text-[#2e1065] font-extrabold text-[15px] shadow-xs"
+                              />
+                              {unitLabel && (
+                                <span className="text-[15px] font-extrabold text-white/95">
+                                  {unitLabel}
+                                </span>
+                              )}
+                            </>
+                          )}
+                          {prefix === 1 && (
+                            <button
+                              type="button"
+                              aria-label="Удалить модуль операции"
+                              onClick={() =>
+                                project &&
+                                saveBlocks(
+                                  updateDrive(
+                                    blocks,
+                                    block.id,
+                                    {
+                                      ifModules: ifModules.filter(
+                                        (m) => m !== "compare"
+                                      ),
+                                    },
+                                    project.hub
+                                  )
+                                )
+                              }
+                              className="w-[22px] h-[22px] rounded-full bg-white/20 hover:bg-white/40 text-white text-sm leading-none grid place-items-center"
+                            >
+                              ×
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )
+                }
 
                 return (
                   <div
@@ -930,13 +1297,15 @@ function EditorWorkspace() {
                     data-canvas-block="true"
                     data-block-id={block.id}
                     tabIndex={0}
-                    role={motorBlock ? "group" : "button"}
+                    role={motorBlock || isIfBlock ? "group" : "button"}
                     aria-label={
-                      motorBlock
-                        ? paired
-                          ? "Связанные моторы. Перетащите за заголовок"
-                          : "Блок движения мотора. Перетащите за заголовок"
-                        : "Когда программа запускается. Стрелки перемещают, Delete удаляет"
+                      isIfBlock
+                        ? "Блок условия Если. Перетащите за заголовок"
+                        : motorBlock
+                          ? paired
+                            ? "Связанные моторы. Перетащите за заголовок"
+                            : "Блок движения мотора. Перетащите за заголовок"
+                          : "Когда программа запускается. Стрелки перемещают, Delete удаляет"
                     }
                     style={{
                       left: `${displayX}px`,
@@ -993,31 +1362,37 @@ function EditorWorkspace() {
                     } ${
                       openMenuBlockId === block.id ? "z-40" : ""
                     } ${radiusClass} ${
-                      motorBlock
-                        ? paired
-                          ? "w-max h-[64px] bg-[#107e79] text-white shadow-[inset_0_-4px_#086560,0_8px_18px_rgba(20,105,123,0.16)]"
-                          : "w-max h-[64px] bg-[#0589b1] text-white shadow-[inset_0_-4px_#00759b,0_8px_18px_rgba(20,105,123,0.16)]"
-                        : "w-[320px] h-[58px] bg-[#f59e0b] text-white px-5 flex items-center shadow-[inset_0_-4px_#d97706,0_8px_18px_rgba(120,53,15,0.16)]"
+                      isIfBlock
+                        ? "pointer-events-none text-white"
+                        : motorBlock
+                          ? paired
+                            ? "w-max h-[64px] bg-[#107e79] text-white shadow-[inset_0_-4px_#086560,0_8px_18px_rgba(20,105,123,0.16)]"
+                            : "w-max h-[64px] bg-[#0589b1] text-white shadow-[inset_0_-4px_#00759b,0_8px_18px_rgba(20,105,123,0.16)]"
+                          : "w-[320px] h-[58px] bg-[#f59e0b] text-white px-5 flex items-center shadow-[inset_0_-4px_#d97706,0_8px_18px_rgba(120,53,15,0.16)]"
                     } ${
                       isJustAdded ? "animate-lego-spawn" : ""
                     } ${
                       isJustSnapped ? "animate-lego-snap" : ""
                     } ${
-                      isSelected
+                      !isIfBlock && isSelected
                         ? "outline-3 outline-[#087996] outline-offset-2"
                         : ""
                     } ${
-                      isSnapTarget
+                      !isIfBlock && isSnapTarget
                         ? "ring-4 ring-[#fbbf24] shadow-[0_0_26px_rgba(251,191,36,0.55)]"
                         : ""
                     }`}
                   >
-                    {/* Top LEGO connector stud for motor blocks */}
-                    {motorBlock && (
+                    {/* Top LEGO connector stud for motor & if blocks */}
+                    {(motorBlock || isIfBlock) && (
                       <span
                         aria-hidden="true"
-                        className={`absolute -top-[8px] left-[32px] w-[44px] h-[11px] rounded-t-[6px] ${
-                          paired ? "bg-[#107e79]" : "bg-[#0589b1]"
+                        className={`absolute -top-[8px] left-[32px] w-[44px] h-[11px] rounded-t-[6px] pointer-events-auto ${
+                          isIfBlock
+                            ? "bg-[#7c3aed]"
+                            : paired
+                              ? "bg-[#107e79]"
+                              : "bg-[#0589b1]"
                         }`}
                       />
                     )}
@@ -1040,14 +1415,291 @@ function EditorWorkspace() {
                           setSelectedId(null)
                           saveBlocks(removeBlock(blocks, block.id))
                         }}
-                        className="absolute -top-[13px] -right-[12px] z-30 w-[26px] h-[26px] rounded-full bg-white text-[#18313b] shadow-md text-lg leading-none font-bold grid place-items-center"
+                        className="pointer-events-auto absolute -top-[13px] -right-[12px] z-30 w-[26px] h-[26px] rounded-full bg-white text-[#18313b] shadow-md text-lg leading-none font-bold grid place-items-center"
                       >
                         ×
                       </button>
                     )}
 
                     {/* Block Content */}
-                    {!motorBlock ? (
+                    {isIfBlock ? (
+                      <div className="flex flex-col items-start">
+                        {/* 1. Top Header Bar of C-shaped If block */}
+                        <div
+                          className={`pointer-events-auto relative flex flex-nowrap items-center h-[64px] w-max min-w-[320px] px-5 gap-3 bg-[#7c3aed] shadow-[inset_0_-4px_#5b21b6,0_8px_18px_rgba(91,33,182,0.2)] ${
+                            isConnected
+                              ? "rounded-tl-[5px] rounded-tr-[14px]"
+                              : "rounded-t-[14px]"
+                          } rounded-br-[14px] ${
+                            isSelected
+                              ? "ring-3 ring-[#087996]"
+                              : isSnapTarget
+                                ? "ring-4 ring-[#fbbf24]"
+                                : ""
+                          }`}
+                        >
+                          {/* Inner top LEGO stud pointing down into the C-mouth */}
+                          <span
+                            aria-hidden="true"
+                            className="absolute -bottom-[7px] left-[60px] w-[44px] h-[10px] rounded-b-[6px] bg-[#7c3aed] z-20"
+                          />
+
+                          <div className="shrink-0 flex items-center gap-2.5">
+                            <span className="text-[16px] font-extrabold whitespace-nowrap tracking-tight">
+                              Если
+                            </span>
+                            {renderSensorCondition(
+                              1,
+                              block.sensor || "distance",
+                              block.sensorPort || "A",
+                              block.leftValue ?? 10,
+                              block.operator || "<",
+                              block.compareValue ?? 20,
+                              block.colorValue || "red",
+                              block.touchState || "pressed",
+                              ifModules.includes("compare")
+                            )}
+                          </div>
+
+                          {/* Optional 2nd condition module (и / или) */}
+                          {ifModules.includes("logic") && (
+                            <div className="shrink-0 flex items-center gap-2.5 pl-3.5 border-l border-white/30">
+                              <select
+                                aria-label="Логическая связка"
+                                value={block.logicOp || "and"}
+                                onChange={(e) =>
+                                  project &&
+                                  saveBlocks(
+                                    updateDrive(
+                                      blocks,
+                                      block.id,
+                                      {
+                                        logicOp: e.target
+                                          .value as LogicOperator,
+                                      },
+                                      project.hub
+                                    )
+                                  )
+                                }
+                                className="h-[38px] rounded-full px-3.5 bg-white text-[#2e1065] font-extrabold text-[15px] shadow-xs cursor-pointer"
+                              >
+                                <option value="and">и</option>
+                                <option value="or">или</option>
+                              </select>
+                              {renderSensorCondition(
+                                2,
+                                block.sensor2 || "force",
+                                block.sensorPort2 || "B",
+                                block.leftValue2 ?? 10,
+                                block.operator2 || "<",
+                                block.compareValue2 ?? 20,
+                                block.colorValue2 || "blue",
+                                block.touchState2 || "pressed",
+                                true
+                              )}
+                              <button
+                                type="button"
+                                aria-label="Удалить второе условие"
+                                onClick={() =>
+                                  project &&
+                                  saveBlocks(
+                                    updateDrive(
+                                      blocks,
+                                      block.id,
+                                      {
+                                        ifModules: ifModules.filter(
+                                          (m) => m !== "logic"
+                                        ),
+                                      },
+                                      project.hub
+                                    )
+                                  )
+                                }
+                                className="w-[22px] h-[22px] rounded-full bg-white/20 hover:bg-white/40 text-white text-sm leading-none grid place-items-center"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Module Picker (+) for If block */}
+                          <div
+                            data-module-picker="true"
+                            className="relative shrink-0 flex items-center ml-1"
+                          >
+                            <button
+                              type="button"
+                              aria-label="Добавить модуль условия"
+                              aria-expanded={openMenuBlockId === block.id}
+                              onClick={() =>
+                                setOpenMenuBlockId((prev) =>
+                                  prev === block.id ? null : block.id
+                                )
+                              }
+                              className="w-[36px] h-[36px] rounded-full border border-white/55 bg-white/15 hover:bg-white/30 text-white text-xl leading-none font-black grid place-items-center"
+                            >
+                              +
+                            </button>
+
+                            {openMenuBlockId === block.id && (
+                              <div className="absolute top-[calc(100%+8px)] right-0 z-50 w-[265px] p-2.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-1 max-h-[340px] overflow-y-auto">
+                                <small className="px-2 py-0.5 text-[10px] font-black tracking-wider text-[#6d28d9] uppercase">
+                                  Модули датчиков
+                                </small>
+                                {(
+                                  [
+                                    ["distance", "Датчик расстояния (см)"],
+                                    ["color", "Датчик цвета"],
+                                    ["reflection", "Яркость света (%)"],
+                                    ["force", "Датчик касания (нажат)"],
+                                    ["angle", "Угол мотора (°)"],
+                                    ["number", "Сравнение чисел"],
+                                  ] as const
+                                ).map(([sensorType, label]) => (
+                                  <button
+                                    key={sensorType}
+                                    type="button"
+                                    onClick={() => {
+                                      if (!project) return
+                                      const nextMods: IfModule[] =
+                                        ifModules.includes("compare")
+                                          ? ifModules
+                                          : ["compare", ...ifModules]
+                                      saveBlocks(
+                                        updateDrive(
+                                          blocks,
+                                          block.id,
+                                          {
+                                            sensor: sensorType,
+                                            ifModules: nextMods,
+                                          },
+                                          project.hub
+                                        )
+                                      )
+                                      setOpenMenuBlockId(null)
+                                    }}
+                                    className="text-left px-3 py-2 rounded-lg bg-[#f5f3ff] hover:bg-[#ede9fe] text-xs font-extrabold text-[#2e1065]"
+                                  >
+                                    {label}
+                                  </button>
+                                ))}
+
+                                <small className="px-2 pt-2 pb-0.5 text-[10px] font-black tracking-wider text-[#6d28d9] uppercase">
+                                  Модули операций
+                                </small>
+                                {(
+                                  [
+                                    ["<", "меньше (<) [значение]"],
+                                    [">", "больше (>) [значение]"],
+                                    ["=", "равно (=) [значение / цвет]"],
+                                    ["!=", "не равно (≠) [значение / цвет]"],
+                                    ["<=", "не больше (≤) [значение]"],
+                                    [">=", "не меньше (≥) [значение]"],
+                                  ] as const
+                                ).map(([opSym, label]) => (
+                                  <button
+                                    key={opSym}
+                                    type="button"
+                                    onClick={() => {
+                                      if (!project) return
+                                      const nextMods: IfModule[] =
+                                        ifModules.includes("compare")
+                                          ? ifModules
+                                          : ["compare", ...ifModules]
+                                      saveBlocks(
+                                        updateDrive(
+                                          blocks,
+                                          block.id,
+                                          {
+                                            ifModules: nextMods,
+                                            operator: opSym,
+                                          },
+                                          project.hub
+                                        )
+                                      )
+                                      setOpenMenuBlockId(null)
+                                    }}
+                                    className="text-left px-3 py-2 rounded-lg bg-[#eff8fb] hover:bg-[#dff2f8] text-xs font-extrabold text-[#18313b]"
+                                  >
+                                    {label}
+                                  </button>
+                                ))}
+
+                                <small className="px-2 pt-2 pb-0.5 text-[10px] font-black tracking-wider text-[#6d28d9] uppercase">
+                                  Логические модули
+                                </small>
+                                {(
+                                  [
+                                    ["and", "и [второе условие]"],
+                                    ["or", "или [второе условие]"],
+                                  ] as const
+                                ).map(([lOp, label]) => (
+                                  <button
+                                    key={lOp}
+                                    type="button"
+                                    onClick={() => {
+                                      if (!project) return
+                                      const nextMods: IfModule[] = [
+                                        ...new Set([
+                                          ...ifModules,
+                                          "compare" as IfModule,
+                                          "logic" as IfModule,
+                                        ]),
+                                      ]
+                                      saveBlocks(
+                                        updateDrive(
+                                          blocks,
+                                          block.id,
+                                          {
+                                            ifModules: nextMods,
+                                            logicOp: lOp,
+                                          },
+                                          project.hub
+                                        )
+                                      )
+                                      setOpenMenuBlockId(null)
+                                    }}
+                                    className="text-left px-3 py-2 rounded-lg bg-[#eff8fb] hover:bg-[#dff2f8] text-xs font-extrabold text-[#18313b]"
+                                  >
+                                    {label}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          <span className="text-[16px] font-extrabold whitespace-nowrap tracking-tight pl-1">
+                            то
+                          </span>
+                        </div>
+
+                        {/* 2. Left Vertical C-Spine + Inner Mouth */}
+                        <div
+                          style={{ height: `${innerSpineHeight}px` }}
+                          className="relative flex items-center"
+                        >
+                          <div className="pointer-events-auto w-[28px] h-full bg-[#7c3aed] shadow-[inset_-4px_0_#5b21b6]" />
+                          {!hasBodyChild && (
+                            <div className="ml-3 px-3.5 py-1.5 rounded-[10px] border border-dashed border-[#7c3aed]/40 bg-[#f5f3ff]/70 text-[#5b21b6] text-xs font-bold whitespace-nowrap pointer-events-none">
+                              Вставьте блоки действий внутрь
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 3. Bottom C-Foot */}
+                        <div
+                          className={`pointer-events-auto relative w-[220px] h-[28px] bg-[#7c3aed] shadow-[inset_0_-4px_#5b21b6,0_8px_18px_rgba(91,33,182,0.16)] rounded-r-[12px] ${
+                            hasChild ? "rounded-bl-[5px]" : "rounded-bl-[14px]"
+                          }`}
+                        >
+                          {/* Top LEGO stud on C-foot to lock with last inner block */}
+                          <span
+                            aria-hidden="true"
+                            className="absolute -top-[8px] left-[60px] w-[44px] h-[10px] rounded-t-[6px] bg-[#7c3aed]"
+                          />
+                        </div>
+                      </div>
+                    ) : !motorBlock ? (
                       <div className="text-[16px] font-extrabold tracking-tight whitespace-nowrap drop-shadow-xs">
                         ▶ &nbsp;Когда программа запускается
                       </div>
@@ -1442,7 +2094,7 @@ function EditorWorkspace() {
           <div className="shrink-0 text-[11px] leading-normal bg-white text-[#66818c] px-3 py-1.5">
             Лист: <strong>{currentSheet?.name}</strong> · Соедините блоки:
             поднесите верх блока к низу блока «Когда программа запускается» или
-            другого блока. Цепочки выполняются сверху вниз.
+            внутрь скобки «Если … то». Цепочки выполняются сверху вниз.
           </div>
         </main>
       </div>
@@ -1457,16 +2109,20 @@ function EditorWorkspace() {
           className={`fixed z-50 pointer-events-none opacity-85 -translate-x-1/2 -translate-y-1/2 scale-90 px-4 flex items-center text-white font-extrabold text-xs ${
             gesture.type === "start"
               ? "w-[240px] h-[52px] rounded-t-[20px] rounded-b-[12px] bg-[#f59e0b] shadow-[inset_0_-6px_#d97706]"
-              : gesture.type === "pair"
-                ? "w-[220px] h-[56px] rounded-[12px] bg-[#107e79] shadow-[inset_0_-6px_#086560]"
-                : "w-[220px] h-[56px] rounded-[12px] bg-[#0589b1] shadow-[inset_0_-6px_#00759b]"
+              : gesture.type === "if"
+                ? "w-[220px] h-[56px] rounded-[12px] bg-[#7c3aed] shadow-[inset_0_-6px_#5b21b6]"
+                : gesture.type === "pair"
+                  ? "w-[220px] h-[56px] rounded-[12px] bg-[#107e79] shadow-[inset_0_-6px_#086560]"
+                  : "w-[220px] h-[56px] rounded-[12px] bg-[#0589b1] shadow-[inset_0_-6px_#00759b]"
           }`}
         >
           {gesture.type === "start"
             ? "▶  Когда программа запускается"
-            : gesture.type === "pair"
-              ? "⇉  Связанные моторы"
-              : "↗  Движение мотора"}
+            : gesture.type === "if"
+              ? "Если … то (Что если)"
+              : gesture.type === "pair"
+                ? "⇉  Связанные моторы"
+                : "↗  Движение мотора"}
         </div>
       )}
 
