@@ -20,7 +20,6 @@ import {
   attachChain,
   chainIds,
   deleteSheet,
-  executionOrder,
   generatePybricks,
   layoutChains,
   moveChain,
@@ -309,14 +308,6 @@ function EditorWorkspace() {
       window.removeEventListener("pointerup", handleUp)
     }
   }, [gesture, addBlockAtClient, addBlockAtCenter])
-
-  const stepNumbers = React.useMemo(() => {
-    const map = new Map<string, number>()
-    for (const root of executionOrder(blocks).filter((b) => !b.parentId)) {
-      chainIds(blocks, root.id).forEach((id, idx) => map.set(id, idx + 1))
-    }
-    return map
-  }, [blocks])
 
   function handleZoom(nextZoom: number) {
     const clamped = Math.min(2, Math.max(0.5, nextZoom))
@@ -889,9 +880,9 @@ function EditorWorkspace() {
                     } ${
                       motorBlock
                         ? paired
-                          ? "w-max min-w-[270px] h-[122px] rounded-[12px] bg-[#107e79] text-white shadow-[inset_0_-6px_#086560,0_8px_16px_rgba(20,105,123,0.14)]"
-                          : "w-max min-w-[270px] h-[100px] rounded-[12px] bg-[#0589b1] text-white shadow-[inset_0_-6px_#00759b,0_8px_16px_rgba(20,105,123,0.14)]"
-                        : "w-[270px] h-[56px] rounded-t-[20px] rounded-b-[12px] bg-[#f59e0b] text-white px-4 flex items-center shadow-[inset_0_-6px_#d97706,0_8px_16px_rgba(120,53,15,0.14)]"
+                          ? "w-max h-[52px] rounded-[11px] bg-[#107e79] text-white shadow-[inset_0_-5px_#086560,0_6px_14px_rgba(20,105,123,0.14)]"
+                          : "w-max h-[52px] rounded-[11px] bg-[#0589b1] text-white shadow-[inset_0_-5px_#00759b,0_6px_14px_rgba(20,105,123,0.14)]"
+                        : "w-[270px] h-[48px] rounded-t-[18px] rounded-b-[11px] bg-[#f59e0b] text-white px-4 flex items-center shadow-[inset_0_-5px_#d97706,0_6px_14px_rgba(120,53,15,0.14)]"
                     } ${
                       isSelected
                         ? "outline-3 outline-[#087996] outline-offset-4"
@@ -906,7 +897,7 @@ function EditorWorkspace() {
                     {motorBlock && (
                       <span
                         aria-hidden="true"
-                        className={`absolute -top-[7px] left-[29px] w-[39px] h-[13px] rounded-t-[6px] ${
+                        className={`absolute -top-[6px] left-[29px] w-[39px] h-[11px] rounded-t-[6px] ${
                           paired ? "bg-[#107e79]" : "bg-[#0589b1]"
                         }`}
                       />
@@ -922,16 +913,11 @@ function EditorWorkspace() {
                           setSelectedId(null)
                           saveBlocks(removeBlock(blocks, block.id))
                         }}
-                        className="absolute -top-[13px] -right-[12px] z-30 w-[25px] h-[25px] rounded-full bg-white text-[#18313b] shadow-md text-lg leading-none font-bold grid place-items-center"
+                        className="absolute -top-[12px] -right-[11px] z-30 w-[23px] h-[23px] rounded-full bg-white text-[#18313b] shadow-md text-base leading-none font-bold grid place-items-center"
                       >
                         ×
                       </button>
                     )}
-
-                    {/* Step badge */}
-                    <span className="absolute left-[79px] -top-[14px] bg-white text-[#245465] border border-[#c6dce2] rounded-[8px] px-1.5 py-0.5 text-[10px] font-bold pointer-events-none">
-                      {stepNumbers.get(block.id) || 1}
-                    </span>
 
                     {/* Detach chain button */}
                     {block.parentId && (
@@ -947,7 +933,7 @@ function EditorWorkspace() {
                             false
                           )
                         }}
-                        className="absolute right-[22px] -top-[15px] z-20 rounded-[8px] px-2 py-0.5 bg-white text-[#086985] text-xs font-extrabold shadow-xs"
+                        className="absolute right-[18px] -top-[13px] z-20 rounded-[7px] px-1.5 py-0.5 bg-white text-[#086985] text-[11px] font-extrabold shadow-xs"
                       >
                         ↗
                       </button>
@@ -959,47 +945,92 @@ function EditorWorkspace() {
                         ▶ &nbsp;Когда программа запускается
                       </div>
                     ) : (
-                      <div className="flex flex-nowrap items-stretch h-full">
-                        {/* Motor Base Controls */}
-                        <div className="shrink-0 p-3.5 min-w-[220px]">
-                          <div className="text-sm font-extrabold mb-2">
-                            {paired
-                              ? "⇉  Связанные моторы"
-                              : "↗  Движение мотора"}
-                          </div>
-                          <div className="space-y-1.5">
-                            <div className="flex items-center gap-1.5">
+                      <div className="flex flex-nowrap items-center h-full px-3 gap-2">
+                        {/* Base inline action: Начать движение [порт] [вперёд] */}
+                        <div className="shrink-0 flex items-center gap-1.5">
+                          <span className="text-[13px] font-extrabold whitespace-nowrap mr-0.5">
+                            Начать движение
+                          </span>
+                          <select
+                            aria-label={
+                              paired ? "Порт первого мотора" : "Порт мотора"
+                            }
+                            value={block.motor || "A"}
+                            onChange={(e) =>
+                              project &&
+                              saveBlocks(
+                                updateDrive(
+                                  blocks,
+                                  block.id,
+                                  { motor: e.target.value },
+                                  project.hub
+                                )
+                              )
+                            }
+                            className="h-[30px] rounded-[7px] px-2 bg-white text-[#163f50] font-extrabold text-xs"
+                          >
+                            {motorPorts.map((port) => (
+                              <option key={port} value={port}>
+                                {port}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            aria-label={
+                              paired
+                                ? "Направление первого мотора"
+                                : "Направление мотора"
+                            }
+                            value={block.direction || "forward"}
+                            onChange={(e) =>
+                              project &&
+                              saveBlocks(
+                                updateDrive(
+                                  blocks,
+                                  block.id,
+                                  {
+                                    direction: e.target.value as MotorDirection,
+                                  },
+                                  project.hub
+                                )
+                              )
+                            }
+                            className="h-[30px] rounded-[7px] px-2 bg-white text-[#163f50] font-extrabold text-xs"
+                          >
+                            <option value="forward">вперёд</option>
+                            <option value="backward">назад</option>
+                          </select>
+
+                          {paired && (
+                            <>
+                              <span className="text-xs font-extrabold opacity-90 px-0.5">
+                                и
+                              </span>
                               <select
-                                aria-label={
-                                  paired ? "Порт первого мотора" : "Порт мотора"
-                                }
-                                value={block.motor || "A"}
+                                aria-label="Порт второго мотора"
+                                value={block.motor2 || "B"}
                                 onChange={(e) =>
                                   project &&
                                   saveBlocks(
                                     updateDrive(
                                       blocks,
                                       block.id,
-                                      { motor: e.target.value },
+                                      { motor2: e.target.value },
                                       project.hub
                                     )
                                   )
                                 }
-                                className="min-h-[32px] rounded-[7px] px-2 bg-white text-[#163f50] font-bold text-[13px]"
+                                className="h-[30px] rounded-[7px] px-2 bg-white text-[#163f50] font-extrabold text-xs"
                               >
                                 {motorPorts.map((port) => (
                                   <option key={port} value={port}>
-                                    Мотор {port}
+                                    {port}
                                   </option>
                                 ))}
                               </select>
                               <select
-                                aria-label={
-                                  paired
-                                    ? "Направление первого мотора"
-                                    : "Направление мотора"
-                                }
-                                value={block.direction || "forward"}
+                                aria-label="Направление второго мотора"
+                                value={block.direction2 || "backward"}
                                 onChange={(e) =>
                                   project &&
                                   saveBlocks(
@@ -1007,47 +1038,73 @@ function EditorWorkspace() {
                                       blocks,
                                       block.id,
                                       {
-                                        direction: e.target
+                                        direction2: e.target
                                           .value as MotorDirection,
                                       },
                                       project.hub
                                     )
                                   )
                                 }
-                                className="min-h-[32px] rounded-[7px] px-2 bg-white text-[#163f50] font-bold text-[13px]"
+                                className="h-[30px] rounded-[7px] px-2 bg-white text-[#163f50] font-extrabold text-xs"
                               >
-                                <option value="forward">Вперёд</option>
-                                <option value="backward">Назад</option>
+                                <option value="forward">вперёд</option>
+                                <option value="backward">назад</option>
                               </select>
-                            </div>
+                            </>
+                          )}
+                        </div>
 
-                            {paired && (
-                              <div className="flex items-center gap-1.5">
-                                <select
-                                  aria-label="Порт второго мотора"
-                                  value={block.motor2 || "B"}
-                                  onChange={(e) =>
-                                    project &&
+                        {/* Attached Modules Inline (+ со скоростью ... + на [значение] [ед. изм.]) */}
+                        {modules.map((mod) => (
+                          <div
+                            key={mod}
+                            className="shrink-0 flex items-center gap-1.5 h-[36px] pl-2 pr-1.5 rounded-[8px] bg-white/15 border border-white/25"
+                          >
+                            <span
+                              aria-hidden="true"
+                              className="text-xs font-black text-white/80"
+                            >
+                              +
+                            </span>
+                            <span className="whitespace-nowrap text-xs font-extrabold">
+                              {mod === "travel"
+                                ? "на"
+                                : mod === "speed"
+                                  ? "со скоростью"
+                                  : "с мощностью"}
+                            </span>
+                            {mod === "travel" ? (
+                              <>
+                                <input
+                                  type="number"
+                                  min="0.01"
+                                  max="10000"
+                                  step="any"
+                                  aria-label="Значение движения"
+                                  value={block.value ?? 1}
+                                  onChange={(e) => {
+                                    const val = Number(e.target.value)
+                                    if (
+                                      !project ||
+                                      !Number.isFinite(val) ||
+                                      val < 0.01 ||
+                                      val > 10000
+                                    )
+                                      return
                                     saveBlocks(
                                       updateDrive(
                                         blocks,
                                         block.id,
-                                        { motor2: e.target.value },
+                                        { value: val },
                                         project.hub
                                       )
                                     )
-                                  }
-                                  className="min-h-[32px] rounded-[7px] px-2 bg-white text-[#163f50] font-bold text-[13px]"
-                                >
-                                  {motorPorts.map((port) => (
-                                    <option key={port} value={port}>
-                                      Мотор {port}
-                                    </option>
-                                  ))}
-                                </select>
+                                  }}
+                                  className="w-[60px] h-[28px] rounded-[6px] px-1.5 bg-white text-[#163f50] font-extrabold text-xs"
+                                />
                                 <select
-                                  aria-label="Направление второго мотора"
-                                  value={block.direction2 || "backward"}
+                                  aria-label="Единица измерения"
+                                  value={block.unit || "rotations"}
                                   onChange={(e) =>
                                     project &&
                                     saveBlocks(
@@ -1055,153 +1112,82 @@ function EditorWorkspace() {
                                         blocks,
                                         block.id,
                                         {
-                                          direction2: e.target
-                                            .value as MotorDirection,
+                                          unit: e.target.value as TravelUnit,
                                         },
                                         project.hub
                                       )
                                     )
                                   }
-                                  className="min-h-[32px] rounded-[7px] px-2 bg-white text-[#163f50] font-bold text-[13px]"
+                                  className="h-[28px] rounded-[6px] px-1.5 bg-white text-[#163f50] font-extrabold text-xs"
                                 >
-                                  <option value="forward">Вперёд</option>
-                                  <option value="backward">Назад</option>
+                                  <option value="rotations">оборотов</option>
+                                  <option value="degrees">градусов</option>
+                                  <option value="seconds">секунд</option>
                                 </select>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Attached Modules */}
-                        <div className="flex flex-row flex-nowrap items-stretch">
-                          {modules.map((mod) => (
-                            <div
-                              key={mod}
-                              className="relative shrink-0 flex flex-col justify-center gap-1.5 min-w-[145px] py-3 pl-3.5 pr-7 border-l border-white/35 bg-white/10"
-                            >
-                              <span className="whitespace-nowrap text-xs font-extrabold">
-                                {mod === "travel"
-                                  ? "Величина движения"
-                                  : mod === "speed"
-                                    ? "Скорость (°/с)"
-                                    : "Мощность (%)"}
-                              </span>
-                              <div className="flex items-center gap-1.5">
-                                {mod === "travel" ? (
-                                  <>
-                                    <input
-                                      type="number"
-                                      min="0.01"
-                                      max="10000"
-                                      step="any"
-                                      aria-label="Значение движения"
-                                      value={block.value ?? 1}
-                                      onChange={(e) => {
-                                        const val = Number(e.target.value)
-                                        if (
-                                          !project ||
-                                          !Number.isFinite(val) ||
-                                          val < 0.01 ||
-                                          val > 10000
-                                        )
-                                          return
-                                        saveBlocks(
-                                          updateDrive(
-                                            blocks,
-                                            block.id,
-                                            { value: val },
-                                            project.hub
-                                          )
-                                        )
-                                      }}
-                                      className="w-[72px] min-h-[32px] rounded-[7px] px-2 bg-white text-[#163f50] font-bold text-[13px]"
-                                    />
-                                    <select
-                                      aria-label="Единица измерения"
-                                      value={block.unit || "rotations"}
-                                      onChange={(e) =>
-                                        project &&
-                                        saveBlocks(
-                                          updateDrive(
-                                            blocks,
-                                            block.id,
-                                            {
-                                              unit: e.target
-                                                .value as TravelUnit,
-                                            },
-                                            project.hub
-                                          )
-                                        )
-                                      }
-                                      className="min-h-[32px] rounded-[7px] px-2 bg-white text-[#163f50] font-bold text-[13px]"
-                                    >
-                                      <option value="rotations">оборотов</option>
-                                      <option value="degrees">градусов</option>
-                                      <option value="seconds">секунд</option>
-                                    </select>
-                                  </>
-                                ) : (
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    max={mod === "speed" ? "1000" : "100"}
-                                    aria-label={
-                                      mod === "speed"
-                                        ? "Скорость, градусов в секунду"
-                                        : "Мощность, процентов"
-                                    }
-                                    value={
-                                      mod === "speed"
-                                        ? (block.speed ?? 360)
-                                        : (block.power ?? 50)
-                                    }
-                                    onChange={(e) => {
-                                      const val = Number(e.target.value)
-                                      if (!project || !Number.isFinite(val))
-                                        return
-                                      saveBlocks(
-                                        updateDrive(
-                                          blocks,
-                                          block.id,
-                                          { [mod]: val },
-                                          project.hub
-                                        )
+                              </>
+                            ) : (
+                              <>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max={mod === "speed" ? "1000" : "100"}
+                                  aria-label={
+                                    mod === "speed"
+                                      ? "Скорость, градусов в секунду"
+                                      : "Мощность, процентов"
+                                  }
+                                  value={
+                                    mod === "speed"
+                                      ? (block.speed ?? 360)
+                                      : (block.power ?? 50)
+                                  }
+                                  onChange={(e) => {
+                                    const val = Number(e.target.value)
+                                    if (!project || !Number.isFinite(val))
+                                      return
+                                    saveBlocks(
+                                      updateDrive(
+                                        blocks,
+                                        block.id,
+                                        { [mod]: val },
+                                        project.hub
                                       )
-                                    }}
-                                    className="w-[75px] min-h-[32px] rounded-[7px] px-2 bg-white text-[#163f50] font-bold text-[13px]"
-                                  />
-                                )}
-                              </div>
-                              <button
-                                type="button"
-                                aria-label={`Удалить модуль ${mod}`}
-                                onClick={() =>
-                                  project &&
-                                  saveBlocks(
-                                    updateDrive(
-                                      blocks,
-                                      block.id,
-                                      {
-                                        modules: modules.filter(
-                                          (m) => m !== mod
-                                        ),
-                                      },
-                                      project.hub
                                     )
+                                  }}
+                                  className="w-[62px] h-[28px] rounded-[6px] px-1.5 bg-white text-[#163f50] font-extrabold text-xs"
+                                />
+                                <span className="text-[11px] font-bold text-white/90">
+                                  {mod === "speed" ? "°/с" : "%"}
+                                </span>
+                              </>
+                            )}
+                            <button
+                              type="button"
+                              aria-label={`Удалить модуль ${mod}`}
+                              onClick={() =>
+                                project &&
+                                saveBlocks(
+                                  updateDrive(
+                                    blocks,
+                                    block.id,
+                                    {
+                                      modules: modules.filter((m) => m !== mod),
+                                    },
+                                    project.hub
                                   )
-                                }
-                                className="absolute top-1.5 right-1.5 w-[22px] h-[22px] rounded-full bg-white/20 hover:bg-white/30 text-white text-sm leading-none grid place-items-center"
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
-                        </div>
+                                )
+                              }
+                              className="w-[18px] h-[18px] rounded-full bg-white/20 hover:bg-white/35 text-white text-xs leading-none grid place-items-center ml-0.5"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
 
                         {/* Module Picker (+) */}
                         <div
                           data-module-picker="true"
-                          className="relative shrink-0 flex items-center p-3"
+                          className="relative shrink-0 flex items-center"
                         >
                           <button
                             type="button"
@@ -1212,18 +1198,18 @@ function EditorWorkspace() {
                                 prev === block.id ? null : block.id
                               )
                             }
-                            className="w-9 h-9 rounded-[9px] border border-white/55 bg-white/15 hover:bg-white/25 text-white text-2xl leading-none font-bold grid place-items-center"
+                            className="w-[30px] h-[30px] rounded-[8px] border border-white/55 bg-white/15 hover:bg-white/25 text-white text-lg leading-none font-black grid place-items-center"
                           >
                             +
                           </button>
 
                           {openMenuBlockId === block.id && (
-                            <div className="absolute top-[calc(100%+6px)] right-0 z-50 w-[210px] p-2 rounded-[10px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-1.5">
+                            <div className="absolute top-[calc(100%+6px)] right-0 z-50 w-[230px] p-2 rounded-[10px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-1.5">
                               {(
                                 [
-                                  ["speed", "Скорость"],
-                                  ["power", "Мощность"],
-                                  ["travel", "Величина движения"],
+                                  ["speed", "+ со скоростью"],
+                                  ["power", "+ с мощностью"],
+                                  ["travel", "+ на [значение] [ед. изм.]"],
                                 ] as const
                               ).map(([modName, label]) => (
                                 <button
