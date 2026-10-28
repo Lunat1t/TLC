@@ -124,7 +124,7 @@ export function layoutChains(blocks: WorkspaceBlock[]): WorkspaceBlock[] {
     const parent = b.parentId ? map.get(b.parentId) : undefined
     if (next && parent) {
       next.x = parent.x
-      next.y = parent.y + blockHeight(parent) + 6
+      next.y = parent.y + blockHeight(parent) - 4
     }
   }
   return blocks
@@ -366,7 +366,7 @@ export function snapTarget(
   id: string,
   x: number,
   y: number,
-  threshold = 36
+  threshold = 48
 ): string | null {
   const moving = new Set(chainIds(blocks, id))
   let best: string | null = null
@@ -374,7 +374,7 @@ export function snapTarget(
   for (const b of blocks) {
     if (moving.has(b.id)) continue
     const dx = Math.abs(b.x - x)
-    const dy = Math.abs(b.y + blockHeight(b) + 6 - y)
+    const dy = Math.abs(b.y + blockHeight(b) - 4 - y)
     if (dx <= threshold && dy <= threshold && dx + dy < distance) {
       best = b.id
       distance = dx + dy

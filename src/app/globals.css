@@ -36,3 +36,79 @@
     font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
 }
+
+@keyframes legoBlockSpawn {
+  0% {
+    opacity: 0;
+    transform: scale(0.74) translateY(-16px);
+  }
+  62% {
+    opacity: 1;
+    transform: scale(1.04) translateY(2px);
+  }
+  82% {
+    transform: scale(0.985) translateY(-1px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes legoClickSnap {
+  0% {
+    transform: translateY(11px) scale(1.03, 0.96);
+  }
+  42% {
+    transform: translateY(-3px) scale(0.99, 1.02);
+  }
+  72% {
+    transform: translateY(1px) scale(1.005, 0.995);
+  }
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+}
+
+@keyframes legoMagnetPulse {
+  0%, 100% {
+    opacity: 0.65;
+    transform: scaleY(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleY(1.03);
+  }
+}
+
+@keyframes legoStudFlash {
+  0% {
+    opacity: 0.95;
+    transform: scaleX(0.4) scaleY(0.7);
+  }
+  60% {
+    opacity: 0.85;
+    transform: scaleX(1.18) scaleY(1.25);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(1.35) scaleY(1.4);
+  }
+}
+
+.animate-lego-spawn {
+  animation: legoBlockSpawn 360ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.animate-lego-snap {
+  animation: legoClickSnap 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-lego-magnet {
+  animation: legoMagnetPulse 900ms ease-in-out infinite;
+}
+
+.animate-lego-flash {
+  animation: legoStudFlash 380ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+

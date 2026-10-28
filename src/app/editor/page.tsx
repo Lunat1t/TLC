@@ -18,6 +18,7 @@ import {
   addBlock,
   addSheet,
   attachChain,
+  blockHeight,
   chainIds,
   deleteSheet,
   generatePybricks,
@@ -99,6 +100,11 @@ function EditorWorkspace() {
 
   const [gesture, setGesture] = React.useState<DragGesture | null>(null)
   const [snapTargetId, setSnapTargetId] = React.useState<string | null>(null)
+  const [justAddedId, setJustAddedId] = React.useState<string | null>(null)
+  const [justSnappedIds, setJustSnappedIds] = React.useState<string[]>([])
+  const [justSnappedHeadId, setJustSnappedHeadId] = React.useState<
+    string | null
+  >(null)
 
   const [bluetoothOpen, setBluetoothOpen] = React.useState(false)
   const [codeModal, setCodeModal] = React.useState<{
@@ -216,14 +222,37 @@ function EditorWorkspace() {
     [snapshotSheets, persistSheets]
   )
 
+  const triggerSnapAnimation = React.useCallback(
+    (nextBlocks: WorkspaceBlock[], headId: string) => {
+      const ids = chainIds(nextBlocks, headId)
+      setJustSnappedIds(ids)
+      setJustSnappedHeadId(headId)
+      window.setTimeout(() => {
+        setJustSnappedIds([])
+        setJustSnappedHeadId(null)
+      }, 420)
+    },
+    []
+  )
+
+  const triggerSpawnAnimation = React.useCallback((id: string) => {
+    setJustAddedId(id)
+    window.setTimeout(() => {
+      setJustAddedId((prev) => (prev === id ? null : prev))
+    }, 400)
+  }, [])
+
   const finishBlockMove = React.useCallback(
     (id: string, x: number, y: number, snap = true) => {
       let next = moveChain(blocks, id, x, y)
       const target = snap ? snapTarget(next, id, x, y) : null
-      if (target) next = attachChain(next, id, target)
+      if (target) {
+        next = attachChain(next, id, target)
+        triggerSnapAnimation(next, id)
+      }
       saveBlocks(next)
     },
-    [blocks, saveBlocks]
+    [blocks, saveBlocks, triggerSnapAnimation]
   )
 
   const worldFromClient = React.useCallback(
@@ -248,7 +277,12 @@ function EditorWorkspace() {
         const y = point.y - 28
         let next = addBlock(blocks, id, x, y, type)
         const target = snapTarget(next, id, x, y)
-        if (target) next = attachChain(next, id, target)
+        if (target) {
+          next = attachChain(next, id, target)
+          triggerSnapAnimation(next, id)
+        } else {
+          triggerSpawnAnimation(id)
+        }
         setSelectedId(id)
         saveBlocks(next)
         setPaletteOpen(false)
@@ -260,7 +294,14 @@ function EditorWorkspace() {
         })
       }
     },
-    [project, worldFromClient, blocks, saveBlocks]
+    [
+      project,
+      worldFromClient,
+      blocks,
+      saveBlocks,
+      triggerSnapAnimation,
+      triggerSpawnAnimation,
+    ]
   )
 
   const addBlockAtCenter = React.useCallback(
@@ -284,10 +325,25 @@ function EditorWorkspace() {
           ? { ...prev, clientX: e.clientX, clientY: e.clientY }
           : prev
       )
+      const rect = boardRef.current?.getBoundingClientRect()
+      if (
+        rect &&
+        e.clientX >= rect.left &&
+        e.clientX <= rect.right &&
+        e.clientY >= rect.top &&
+        e.clientY <= rect.bottom
+      ) {
+        const pt = worldFromClient(e.clientX, e.clientY)
+        const target = snapTarget(blocks, "__palette__", pt.x - 135, pt.y - 28)
+        setSnapTargetId(target)
+      } else {
+        setSnapTargetId(null)
+      }
     }
     const handleUp = (e: PointerEvent) => {
       const type = gesture.type
       setGesture(null)
+      setSnapTargetId(null)
       const rect = boardRef.current?.getBoundingClientRect()
       if (
         rect &&
@@ -307,7 +363,7 @@ function EditorWorkspace() {
       window.removeEventListener("pointermove", handleMove)
       window.removeEventListener("pointerup", handleUp)
     }
-  }, [gesture, addBlockAtClient, addBlockAtCenter])
+  }, [gesture, blocks, worldFromClient, addBlockAtClient, addBlockAtCenter])
 
   function handleZoom(nextZoom: number) {
     const clamped = Math.min(2, Math.max(0.5, nextZoom))
@@ -794,22 +850,79 @@ function EditorWorkspace() {
               }}
               className="absolute top-0 left-0 w-0 h-0"
             >
+              {/* Magnetic LEGO socket preview under snapTarget */}
+              {snapTargetId &&
+                (() => {
+                  const targetBlock = blocks.find(
+                    (b) => b.id === snapTargetId
+                  )
+                  if (!targetBlock) return null
+                  const socketY =
+                    targetBlock.y + blockHeight(targetBlock) - 4
+                  return (
+                    <div
+                      aria-hidden="true"
+                      style={{
+                        left: `${targetBlock.x}px`,
+                        top: `${socketY}px`,
+                      }}
+                      className="absolute z-20 w-[320px] h-[58px] rounded-[12px] border-2 border-dashed border-[#fbbf24] bg-[#fef3c7]/55 shadow-[0_0_24px_rgba(251,191,36,0.45)] pointer-events-none animate-lego-magnet"
+                    >
+                      <span className="absolute -top-[8px] left-[32px] w-[44px] h-[11px] rounded-t-[6px] bg-[#fbbf24]" />
+                    </div>
+                  )
+                })()}
+
               {blocks.map((block) => {
                 const isMoving =
                   gesture?.kind === "block" &&
                   gesture.moved &&
                   gesture.moving.includes(block.id)
+
+                let magneticPullX = 0
+                let magneticPullY = 0
+                if (isMoving && snapTargetId && gesture?.kind === "block") {
+                  const targetBlock = blocks.find(
+                    (b) => b.id === snapTargetId
+                  )
+                  const draggedRoot = blocks.find(
+                    (b) => b.id === gesture.id
+                  )
+                  if (targetBlock && draggedRoot) {
+                    const rawRootX = draggedRoot.x + gesture.dx
+                    const rawRootY = draggedRoot.y + gesture.dy
+                    const snapX = targetBlock.x
+                    const snapY =
+                      targetBlock.y + blockHeight(targetBlock) - 4
+                    magneticPullX = (snapX - rawRootX) * 0.42
+                    magneticPullY = (snapY - rawRootY) * 0.42
+                  }
+                }
+
                 const displayX = isMoving
-                  ? Math.round(block.x + gesture.dx)
+                  ? Math.round(block.x + gesture.dx + magneticPullX)
                   : block.x
                 const displayY = isMoving
-                  ? Math.round(block.y + gesture.dy)
+                  ? Math.round(block.y + gesture.dy + magneticPullY)
                   : block.y
                 const paired = block.type === "pair"
                 const motorBlock = block.type === "drive" || paired
                 const isSelected = block.id === selectedId
                 const isSnapTarget = block.id === snapTargetId
+                const hasChild = blocks.some((b) => b.parentId === block.id)
+                const isConnected = Boolean(block.parentId)
+                const isJustAdded = justAddedId === block.id
+                const isJustSnapped = justSnappedIds.includes(block.id)
+                const isJustSnappedHead = justSnappedHeadId === block.id
                 const modules = block.modules || []
+
+                const radiusClass = motorBlock
+                  ? `${isConnected ? "rounded-t-[5px]" : "rounded-t-[14px]"} ${
+                      hasChild ? "rounded-b-[5px]" : "rounded-b-[14px]"
+                    }`
+                  : `rounded-t-[22px] ${
+                      hasChild ? "rounded-b-[5px]" : "rounded-b-[14px]"
+                    }`
 
                 return (
                   <div
@@ -874,32 +987,46 @@ function EditorWorkspace() {
                       finishBlockMove(block.id, block.x + dx, block.y + dy)
                     }}
                     className={`absolute touch-none select-none cursor-grab ${
-                      isMoving ? "z-30 cursor-grabbing" : "z-10"
+                      isMoving
+                        ? "z-30 cursor-grabbing scale-[1.02] shadow-2xl"
+                        : "z-10 transition-[left,top,box-shadow] duration-200 ease-out"
                     } ${
                       openMenuBlockId === block.id ? "z-40" : ""
-                    } ${
+                    } ${radiusClass} ${
                       motorBlock
                         ? paired
-                          ? "w-max h-[64px] rounded-[14px] bg-[#107e79] text-white shadow-[inset_0_-6px_#086560,0_8px_18px_rgba(20,105,123,0.16)]"
-                          : "w-max h-[64px] rounded-[14px] bg-[#0589b1] text-white shadow-[inset_0_-6px_#00759b,0_8px_18px_rgba(20,105,123,0.16)]"
-                        : "w-[320px] h-[58px] rounded-t-[22px] rounded-b-[14px] bg-[#f59e0b] text-white px-5 flex items-center shadow-[inset_0_-6px_#d97706,0_8px_18px_rgba(120,53,15,0.16)]"
+                          ? "w-max h-[64px] bg-[#107e79] text-white shadow-[inset_0_-4px_#086560,0_8px_18px_rgba(20,105,123,0.16)]"
+                          : "w-max h-[64px] bg-[#0589b1] text-white shadow-[inset_0_-4px_#00759b,0_8px_18px_rgba(20,105,123,0.16)]"
+                        : "w-[320px] h-[58px] bg-[#f59e0b] text-white px-5 flex items-center shadow-[inset_0_-4px_#d97706,0_8px_18px_rgba(120,53,15,0.16)]"
+                    } ${
+                      isJustAdded ? "animate-lego-spawn" : ""
+                    } ${
+                      isJustSnapped ? "animate-lego-snap" : ""
                     } ${
                       isSelected
-                        ? "outline-3 outline-[#087996] outline-offset-4"
+                        ? "outline-3 outline-[#087996] outline-offset-2"
                         : ""
                     } ${
                       isSnapTarget
-                        ? "outline-4 outline-[#f0b52d] outline-offset-3"
+                        ? "ring-4 ring-[#fbbf24] shadow-[0_0_26px_rgba(251,191,36,0.55)]"
                         : ""
                     }`}
                   >
-                    {/* Top LEGO connector tab for motor blocks */}
+                    {/* Top LEGO connector stud for motor blocks */}
                     {motorBlock && (
                       <span
                         aria-hidden="true"
-                        className={`absolute -top-[7px] left-[32px] w-[44px] h-[13px] rounded-t-[7px] ${
+                        className={`absolute -top-[8px] left-[32px] w-[44px] h-[11px] rounded-t-[6px] ${
                           paired ? "bg-[#107e79]" : "bg-[#0589b1]"
                         }`}
+                      />
+                    )}
+
+                    {/* LEGO Click-Snap Flash Ripple when block locks onto parent */}
+                    {isJustSnappedHead && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute -top-[6px] left-[16px] w-[180px] h-[10px] rounded-full bg-gradient-to-r from-[#fef08a] via-white to-transparent pointer-events-none z-40 animate-lego-flash"
                       />
                     )}
 
