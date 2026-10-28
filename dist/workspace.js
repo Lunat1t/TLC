@@ -10,7 +10,9 @@ export function readBlocks(workspace, hub = 'spike') {
     .slice(0, MAX_BLOCKS).map(block => {
       const base = {id: block.id, type: block.type, x: block.x, y: block.y};
       if (block.type === 'empty') return base;
-      return {...base, motor: ports[hub]?.includes(block.motor) ? block.motor : 'A',
+      return {...base, modules: Array.isArray(block.modules) ? [...new Set(block.modules.filter(m => ['speed','power','travel'].includes(m)))] : ['travel'],
+        speed: Number.isFinite(block.speed) && block.speed > 0 && block.speed <= 1000 ? block.speed : MOTOR_SPEED,
+        power: Number.isFinite(block.power) && block.power > 0 && block.power <= 100 ? block.power : 50, motor: ports[hub]?.includes(block.motor) ? block.motor : 'A',
         direction: block.direction === 'backward' ? 'backward' : 'forward',
         value: Number.isFinite(block.value) && block.value > 0 && block.value <= 10000 ? block.value : 1,
         unit: units.includes(block.unit) ? block.unit : 'rotations'};
@@ -22,7 +24,7 @@ export function addBlock(blocks, id, x, y, type = 'empty') {
   if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error('Не удалось определить место блока.');
   if (!['empty', 'drive'].includes(type)) throw new Error('Неизвестный блок.');
   const block = {id, type, x: Math.round(x), y: Math.round(y)};
-  if (type === 'drive') Object.assign(block, {motor:'A', direction:'forward', value:1, unit:'rotations'});
+  if (type === 'drive') Object.assign(block, {motor:'A', direction:'forward', modules:[], speed:MOTOR_SPEED, power:50, value:1, unit:'rotations'});
   return [...blocks, block];
 }
 
@@ -40,13 +42,22 @@ export function generatePybricks(blocks, hub) {
   const driveBlocks = readBlocks({blocks}, hub).filter(block => block.type === 'drive').sort((a,b) => a.y - b.y || a.x - b.x);
   if (!driveBlocks.length) throw new Error('Добавьте на доску блок движения.');
   const used = [...new Set(driveBlocks.map(block => block.motor))].sort();
-  const lines = ['# TLC: команды выполняются сверху вниз', `from pybricks.${hub === 'spike' ? 'pupdevices' : 'ev3devices'} import Motor`, 'from pybricks.parameters import Port, Stop', '',
+  const lines = ['# TLC: команды выполняются сверху вниз', `from pybricks.${hub === 'spike' ? 'pupdevices' : 'ev3devices'} import Motor`, 'from pybricks.parameters import Port, Stop', 'from pybricks.tools import wait', '',
     ...used.map(port => `motor_${port.toLowerCase()} = Motor(Port.${port})`), ''];
   for (const block of driveBlocks) {
+    if (block.modules.includes('speed') && block.modules.includes('power')) throw new Error('Выберите скорость или мощность, а не оба режима.');
+    const powered = block.modules.includes('power');
+    const hasTravel = block.modules.includes('travel');
+    if (!hasTravel) throw new Error('Добавьте модуль «Величина движения», чтобы задать остановку мотора.');
+    if (powered && block.unit !== 'seconds') throw new Error('Для мощности выберите секунды. Для точных оборотов и градусов используйте скорость.');
+    const speed = block.modules.includes('speed') ? block.speed : MOTOR_SPEED;
     const sign = block.direction === 'backward' ? -1 : 1;
     const motor = `motor_${block.motor.toLowerCase()}`;
-    if (block.unit === 'seconds') lines.push(`${motor}.run_time(${sign * MOTOR_SPEED}, ${Math.round(block.value * 1000)}, then=Stop.BRAKE)`);
-    else lines.push(`${motor}.run_angle(${sign * MOTOR_SPEED}, ${Math.max(1, Math.round(block.value * (block.unit === 'rotations' ? 360 : 1)))}, then=Stop.BRAKE)`);
+    if (powered) {
+      lines.push(`${motor}.dc(${sign * block.power})`, 'try:', `    wait(${Math.round(block.value * 1000)})`, 'finally:', `    ${motor}.brake()`);
+    } else if (block.unit === 'seconds') lines.push(`${motor}.run_time(${sign * speed}, ${Math.round(block.value * 1000)}, then=Stop.BRAKE)`);
+    else lines.push(`${motor}.run_angle(${sign * speed}, ${Math.max(1, Math.round(block.value * (block.unit === 'rotations' ? 360 : 1)))}, then=Stop.BRAKE)`);
   }
   return lines.join('\n') + '\n';
 }
+

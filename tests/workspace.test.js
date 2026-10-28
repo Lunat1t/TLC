@@ -19,9 +19,9 @@ test('invalid imported blocks are ignored', () => {
 test('drive blocks persist settings and generate ordered Pybricks commands for both hubs', async () => {
   const {updateDrive, generatePybricks} = await import('../dist/workspace.js');
   let blocks = addBlock([], 'first', 10, 100, 'drive');
-  blocks = updateDrive(blocks, 'first', {motor:'D', direction:'backward', value:1.5, unit:'rotations'}, 'spike');
+  blocks = updateDrive(blocks, 'first', {motor:'D', direction:'backward', modules:['travel'], value:1.5, unit:'rotations'}, 'spike');
   blocks = addBlock(blocks, 'second', 10, 10, 'drive');
-  blocks = updateDrive(blocks, 'second', {motor:'B', direction:'forward', value:2.5, unit:'seconds'}, 'spike');
+  blocks = updateDrive(blocks, 'second', {motor:'B', direction:'forward', modules:['travel'], value:2.5, unit:'seconds'}, 'spike');
   assert.deepEqual(readBlocks({blocks}, 'spike'), blocks);
   const code = generatePybricks(blocks, 'spike');
   assert.match(code, /from pybricks\.pupdevices import Motor/);
@@ -30,4 +30,20 @@ test('drive blocks persist settings and generate ordered Pybricks commands for b
   assert.ok(code.indexOf('motor_b.run_time') < code.indexOf('motor_d.run_angle'));
   assert.match(generatePybricks(blocks, 'ev3'), /from pybricks\.ev3devices import Motor/);
   assert.throws(() => generatePybricks([], 'spike'));
+});
+
+
+test('motor modules preserve settings and reject unsafe combinations', async () => {
+  const {updateDrive, generatePybricks} = await import('../dist/workspace.js');
+  let b = addBlock([], 'motor', 0, 0, 'drive');
+  assert.deepEqual(b[0].modules, []);
+  assert.throws(() => generatePybricks(b, 'spike'), /остановку/);
+  b = updateDrive(b, 'motor', {modules:['speed','travel'], speed:500, value:2}, 'spike');
+  assert.match(generatePybricks(b,'spike'), /run_angle\(500, 720/);
+  b = updateDrive(b,'motor',{modules:['power','travel'],power:40,unit:'seconds',value:3},'spike');
+  assert.match(generatePybricks(b,'spike'), /dc\(40\)/);
+  assert.match(generatePybricks(b,'spike'), /wait\(3000\)/);
+  assert.match(generatePybricks(b,'spike'), /finally:\n    motor_a.brake/);
+  assert.throws(() => generatePybricks([{...b[0],unit:'degrees'}],'spike'), /секунды/);
+  assert.throws(() => generatePybricks([{...b[0],modules:['speed','power','travel']}],'spike'), /оба режима/);
 });
