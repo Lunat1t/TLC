@@ -89,7 +89,39 @@ function renderBlocks() {
         save(updateDrive(blocks, block.id, {value:number}, project.hub), false);
       });
       const unit = makeSelect('Единица измерения', 'unit', [['rotations','оборотов'], ['degrees','градусов'], ['seconds','секунд']]);
-      controls.append(motor, direction, value, unit);
+      controls.append(motor, direction);
+      const moduleArea = document.createElement('div'); moduleArea.className = 'motor-modules';
+      const commit = changes => save(updateDrive(blocks, block.id, changes, project.hub));
+      const row = (name, label, children) => {
+        const item = document.createElement('div'); item.className = 'motor-module';
+        const caption = document.createElement('span'); caption.textContent = label;
+        const removeModule = document.createElement('button'); removeModule.type = 'button'; removeModule.textContent = '×';
+        removeModule.setAttribute('aria-label', 'Удалить модуль ' + label);
+        removeModule.addEventListener('click', () => commit({modules:block.modules.filter(m => m !== name)}));
+        item.append(caption, ...children, removeModule); moduleArea.append(item);
+      };
+      for (const name of block.modules) {
+        if (name === 'travel') row(name, 'Величина движения', [value, unit]);
+        else {
+          const input = document.createElement('input'); input.type = 'number'; input.min = '1'; input.max = name === 'speed' ? '1000' : '100'; input.value = block[name];
+          input.setAttribute('aria-label', name === 'speed' ? 'Скорость, градусов в секунду' : 'Мощность, процентов');
+          input.addEventListener('input', () => { if (input.checkValidity() && input.value) save(updateDrive(blocks, block.id, {[name]:Number(input.value)}, project.hub), false); });
+          row(name, name === 'speed' ? 'Скорость (°/с)' : 'Мощность (%)', [input]);
+        }
+      }
+      const plus = document.createElement('button'); plus.type = 'button'; plus.textContent = '+'; plus.className = 'module-add'; plus.setAttribute('aria-label','Добавить модуль мотора'); plus.setAttribute('aria-expanded','false');
+      const menu = document.createElement('div'); menu.hidden = true; menu.className = 'module-menu';
+      plus.addEventListener('click', () => { menu.hidden = !menu.hidden; plus.setAttribute('aria-expanded', String(!menu.hidden)); });
+      for (const [name,label] of [['speed','Скорость'],['power','Мощность'],['travel','Величина движения']]) {
+        const option = document.createElement('button'); option.type = 'button'; option.textContent = label;
+        option.disabled = block.modules.includes(name);
+        option.addEventListener('click', () => {
+          const modules = block.modules.filter(m => !(name === 'speed' && m === 'power') && !(name === 'power' && m === 'speed'));
+          commit({modules:[...modules,name], ...(name === 'power' ? {unit:'seconds'} : {})});
+        }); menu.append(option);
+      }
+      const hint = document.createElement('small'); hint.textContent = 'Без модуля скорости: 360°/с. Для запуска задайте величину движения. Скорость и мощность заменяют друг друга.';
+      controls.append(plus); element.append(moduleArea, menu, hint);
       element.append(title, controls);
     }
     element.addEventListener('pointerdown', event => {
@@ -254,3 +286,4 @@ $('downloadCode').addEventListener('click', () => {
   link.href = url; link.download = 'tlc_program.py'; document.body.append(link); link.click(); link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 });
+
