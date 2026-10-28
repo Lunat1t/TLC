@@ -1046,26 +1046,6 @@ function EditorWorkspace() {
                       </button>
                     )}
 
-                    {/* Detach chain button */}
-                    {block.parentId && (
-                      <button
-                        type="button"
-                        aria-label="Отсоединить блок с цепочкой"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          finishBlockMove(
-                            block.id,
-                            block.x + 60,
-                            block.y,
-                            false
-                          )
-                        }}
-                        className="absolute right-[20px] -top-[14px] z-20 rounded-[8px] px-2 py-0.5 bg-white text-[#086985] text-xs font-extrabold shadow-xs"
-                      >
-                        ↗
-                      </button>
-                    )}
-
                     {/* Block Content */}
                     {!motorBlock ? (
                       <div className="text-[16px] font-extrabold tracking-tight whitespace-nowrap drop-shadow-xs">
