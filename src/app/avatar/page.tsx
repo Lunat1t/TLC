@@ -15,7 +15,7 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
   loadAuthState,
-  saveAvatarChoice,
+  registerStudentWithSupabase,
   type AvatarState,
 } from "@/lib/auth"
 
@@ -24,13 +24,27 @@ export default function AvatarPage() {
   const [selected, setSelected] = React.useState<AvatarState>(
     () => loadAuthState(null).avatar
   )
+  const [login, setLogin] = React.useState("")
   const [nickname, setNickname] = React.useState("")
+  const [password, setPassword] = React.useState("")
+  const [lookOverride, setLookOverride] = React.useState<{
+    x: number
+    y: number
+    squint?: number
+  } | null>(null)
   const [blinkCount, setBlinkCount] = React.useState(0)
-  const [savedNotice, setSavedNotice] = React.useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [status, setStatus] = React.useState<{
+    text: string
+    isError: boolean
+  } | null>(null)
 
   React.useEffect(() => {
     const state = loadAuthState(window.localStorage)
     setSelected(state.avatar)
+    if (state.user?.login) {
+      setLogin(state.user.login)
+    }
     if (state.user?.nickname) {
       setNickname(state.user.nickname)
     }
@@ -50,19 +64,36 @@ export default function AvatarPage() {
     setBlinkCount((c) => c + 1)
   }
 
-  function handleSave(e: React.FormEvent) {
+  async function handleRegister(e: React.FormEvent) {
     e.preventDefault()
-    const saved = saveAvatarChoice(window.localStorage, {
-      ...selected,
-      nickname,
-    })
-    setBlinkCount((c) => c + 1)
-    setSavedNotice(
-      `Аватар «${saved.avatar.name}» сохранён! Переходим ко входу...`
-    )
-    setTimeout(() => {
-      router.push("/login")
-    }, 550)
+    setStatus(null)
+    setIsSubmitting(true)
+    try {
+      const { state } = await registerStudentWithSupabase(window.localStorage, {
+        login,
+        password,
+        nickname: nickname.trim() || login.trim(),
+        avatar: selected,
+      })
+      setBlinkCount((c) => c + 1)
+      setStatus({
+        text: `Аккаунт «${state.user?.nickname}» и аватар «${state.avatar.name}» сохранены в Supabase! Переходим к проектам...`,
+        isError: false,
+      })
+      setTimeout(() => {
+        router.push("/")
+      }, 650)
+    } catch (err) {
+      setStatus({
+        text:
+          err instanceof Error
+            ? err.message
+            : "Не удалось зарегистрировать аккаунт в Supabase.",
+        isError: true,
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -74,7 +105,7 @@ export default function AvatarPage() {
         >
           TLC
           <span className="text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-[#002c39]/10 text-[#002c39]">
-            Live Orb Avatar
+            Регистрация · Live Orb
           </span>
         </Link>
         <Link
@@ -100,6 +131,7 @@ export default function AvatarPage() {
                 color={selected.color}
                 eyeColor={selected.eyeColor}
                 colors={selected.colors}
+                lookOverride={lookOverride}
                 blinkCount={blinkCount}
               />
             </div>
@@ -112,7 +144,7 @@ export default function AvatarPage() {
               <code className="font-mono text-xs text-[#007e9d]">
                 radiumcoders/live-orb
               </code>
-              ).
+              ). Сохраняется в вашем профиле Supabase.
             </p>
             <Button
               type="button"
@@ -127,14 +159,14 @@ export default function AvatarPage() {
           <Card className="p-6 md:p-8">
             <div className="mb-6">
               <p className="text-[11px] font-black tracking-[0.16em] uppercase text-[#008da9] mb-2">
-                ШАГ 1 · РЕГИСТРАЦИЯ ПРОФИЛЯ
+                РЕГИСТРАЦИЯ В SUPABASE · ВЫБОР АВАТАРА
               </p>
               <h1 className="text-[28px] md:text-[34px] font-black tracking-tight text-[#072733] leading-tight">
-                Выберите свой аватар
+                Создайте профиль и выберите Live Orb
               </h1>
               <p className="text-sm text-[#5b747f] mt-2">
-                Выберите готовый образ сферы или настройте собственные цвета
-                корпуса и глаз.
+                Выберите образ 3D-сферы и укажите логин и пароль — данные
+                сохранятся в облачной базе данных Supabase.
               </p>
             </div>
 
@@ -176,25 +208,11 @@ export default function AvatarPage() {
 
             <form
               id="avatarForm"
-              onSubmit={handleSave}
+              onSubmit={handleRegister}
               className="border-t border-[#e2eef2] pt-5 grid gap-4"
+              noValidate
             >
-              <div className="grid gap-2">
-                <Label htmlFor="nicknameInput">
-                  Никнейм пилота (необязательно)
-                </Label>
-                <Input
-                  id="nicknameInput"
-                  type="text"
-                  maxLength={40}
-                  autoComplete="nickname"
-                  placeholder="Например, CyberPilot"
-                  value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
-                />
-              </div>
-
-              <div className="flex flex-wrap gap-3.5 items-center">
+              <div className="flex flex-wrap gap-3.5 items-center pb-2">
                 <label className="inline-flex items-center gap-2.5 text-[13px] font-bold text-[#21404c] bg-[#f5fafc] px-3 py-2 rounded-xl border border-[#d7e6ec] cursor-pointer">
                   <input
                     id="bodyColorInput"
@@ -258,12 +276,78 @@ export default function AvatarPage() {
                 </label>
               </div>
 
-              {savedNotice && (
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="regLoginInput">
+                    Логин или Email ученика *
+                  </Label>
+                  <Input
+                    id="regLoginInput"
+                    type="text"
+                    maxLength={64}
+                    required
+                    autoComplete="username"
+                    placeholder="Например, robo_alex"
+                    value={login}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setLogin(val)
+                      const x = Math.min(
+                        0.45,
+                        Math.max(-0.45, (val.length - 12) * 0.035)
+                      )
+                      setLookOverride({ x, y: 0.3 })
+                    }}
+                    onBlur={() => setLookOverride(null)}
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="nicknameInput">
+                    Отображаемое имя (никнейм)
+                  </Label>
+                  <Input
+                    id="nicknameInput"
+                    type="text"
+                    maxLength={40}
+                    autoComplete="nickname"
+                    placeholder="Например, CyberPilot"
+                    value={nickname}
+                    onChange={(e) => setNickname(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="regPasswordInput">
+                  Пароль (минимум 6 символов) *
+                </Label>
+                <Input
+                  id="regPasswordInput"
+                  type="password"
+                  required
+                  minLength={6}
+                  autoComplete="new-password"
+                  placeholder="Придумайте надёжный пароль"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onFocus={() =>
+                    setLookOverride({ x: 0, y: -0.55, squint: 0.82 })
+                  }
+                  onBlur={() => setLookOverride(null)}
+                />
+              </div>
+
+              {status && (
                 <p
                   role="status"
-                  className="rounded-xl px-3.5 py-2.5 text-[13px] font-bold bg-[#e3f9eb] text-[#165e36]"
+                  className={`rounded-xl px-3.5 py-2.5 text-[13px] font-bold ${
+                    status.isError
+                      ? "bg-[#fff1ee] text-[#a9352e]"
+                      : "bg-[#e3f9eb] text-[#165e36]"
+                  }`}
                 >
-                  {savedNotice}
+                  {status.text}
                 </p>
               )}
 
@@ -272,14 +356,17 @@ export default function AvatarPage() {
                   href="/login"
                   className="w-full sm:w-auto inline-flex items-center justify-center min-h-[48px] px-5 py-2.5 rounded-full border border-[#c7d9e0] bg-white text-[#23424d] text-sm font-bold hover:bg-[#f2f8fa]"
                 >
-                  ← Вернуться ко входу
+                  ← Уже есть аккаунт? Войти
                 </Link>
                 <Button
                   id="saveAvatarBtn"
                   type="submit"
+                  disabled={isSubmitting}
                   className="w-full sm:w-auto px-7"
                 >
-                  Сохранить аватар и продолжить <span aria-hidden="true">→</span>
+                  {isSubmitting
+                    ? "Сохраняем в Supabase..."
+                    : "Зарегистрироваться с этим аватаром →"}
                 </Button>
               </div>
             </form>

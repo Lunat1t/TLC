@@ -7,7 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { loadAuthState, type AuthState } from "@/lib/auth"
+import {
+  loadAuthState,
+  signOutFromSupabase,
+  syncSessionFromSupabase,
+  type AuthState,
+} from "@/lib/auth"
 import {
   HUBS,
   importProject,
@@ -74,6 +79,9 @@ export default function HomePage() {
     try {
       setProjects(loadProjects(window.localStorage))
       setAuth(loadAuthState(window.localStorage))
+      void syncSessionFromSupabase(window.localStorage).then((synced) => {
+        setAuth(synced)
+      })
     } catch {
       setNotice({
         text: "Список проектов не удалось прочитать. Проверьте хранилище браузера.",
@@ -219,7 +227,7 @@ export default function HomePage() {
           </label>
 
           <Link
-            href="/login"
+            href={auth.user ? "/avatar" : "/login"}
             className="inline-flex items-center gap-2.5 min-h-[46px] pl-2 pr-4 py-1.5 rounded-full bg-[#092c37] text-white text-sm font-extrabold shadow-[0_7px_22px_rgba(0,91,112,0.16)] hover:bg-[#154453] transition-transform hover:-translate-y-0.5"
           >
             <LiveOrb
@@ -231,6 +239,19 @@ export default function HomePage() {
             />
             <span>{auth.user?.nickname || "Войти"}</span>
           </Link>
+          {auth.user && (
+            <button
+              type="button"
+              onClick={async () => {
+                const next = await signOutFromSupabase(window.localStorage)
+                setAuth(next)
+                setNotice({ text: "Вы вышли из аккаунта.", isError: false })
+              }}
+              className="min-h-[46px] px-3.5 rounded-full bg-white/85 hover:bg-white text-[#053543] text-xs font-extrabold shadow-sm transition-transform hover:-translate-y-0.5"
+            >
+              Выйти
+            </button>
+          )}
         </div>
       </header>
 
