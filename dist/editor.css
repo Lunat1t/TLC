@@ -57,3 +57,23 @@ button:focus-visible,a:focus-visible,.canvas-block:focus-visible{outline:3px sol
 .motor-base .pair-controls { display:block; }
 .pair-controls > select { margin-right:5px; }
 .pair-second { margin-top:6px; }
+
+/* Fixed connector heights keep saved chain layout independent of screen size. */
+.drive-block { height:100px; min-height:100px; }
+.pair-block { height:122px; min-height:122px; }
+.motor-strip { height:100%; }
+.block-step { position:absolute; left:79px; top:-14px; background:#fff; color:#245465; border:1px solid #c6dce2; border-radius:8px; padding:1px 6px; font-size:10px; pointer-events:none; }
+.block-detach { position:absolute; right:22px; top:-15px; z-index:4; border:0; border-radius:8px; padding:3px 7px; background:#fff; color:#086985; }
+.canvas-block.snap-target { outline:4px solid #f0b52d; outline-offset:3px; }
+.canvas-block.dragging { z-index:6; }
+.sheet-bar { display:flex; align-items:center; flex:none; gap:5px; padding:7px 10px; min-height:48px; border-top:1px solid #dce8ec; background:#edf4f6; }
+.sheet-tabs { display:flex; gap:4px; overflow-x:auto; min-width:0; flex:1; }
+.sheet-bar button { flex:none; border:1px solid #d4e1e9; border-radius:7px; background:#fff; color:#31525f; padding:7px 11px; min-height:33px; }
+.sheet-tabs .sheet-tab { white-space:nowrap; max-width:220px; overflow:hidden; text-overflow:ellipsis; }
+.sheet-tab[aria-selected=true] { color:#087996; border-bottom:3px solid #087996; font-weight:800; }
+.sheet-bar button:disabled { opacity:.4; cursor:default; }
+.execution-hint { flex:none; font-size:11px; line-height:1.5; background:#fff; color:#66818c; padding:5px 12px; }
+#sheetNameLabel { display:flex; flex-direction:column; gap:8px; }
+#sheetName { padding:10px; border:1px solid #bfd6df; border-radius:8px; font:inherit; }
+#sheetDialogError { color:#b1372c; }
+@media(max-width:600px) { .execution-hint { max-height:38px; overflow:auto; font-size:10px; } }
