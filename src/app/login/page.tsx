@@ -129,7 +129,7 @@ export default function LoginPage() {
           <CardContent>
             <form id="loginForm" onSubmit={handleSubmit} className="grid gap-4" noValidate>
               <div className="grid gap-2">
-                <Label htmlFor="loginInput">Логин или код ученика</Label>
+                <Label htmlFor="loginInput">Логин ученика</Label>
                 <Input
                   id="loginInput"
                   name="login"
@@ -137,7 +137,7 @@ export default function LoginPage() {
                   maxLength={64}
                   required
                   autoComplete="username"
-                  placeholder="Например, robo_alex"
+                  placeholder="Например, Alua"
                   value={login}
                   onChange={handleLoginChange}
                   onBlur={() => setLookOverride(null)}

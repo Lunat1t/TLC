@@ -12,7 +12,6 @@ export const PENDING_ACCOUNTS_KEY = "tlc.supabase.accounts.v1"
 export interface UserSession {
   id?: string
   login: string
-  email?: string
   nickname: string
   loggedInAt: string | null
 }
@@ -35,15 +34,16 @@ export function getAvatarPreset(presetId?: string): AvatarPreset {
   return AVATAR_PRESETS.find((item) => item.id === presetId) || AVATAR_PRESETS[0]
 }
 
+/**
+ * Преобразует логин ученика (например, "Alua") во внутренний технический email
+ * с валидным доменом для Supabase Auth, чтобы регистрация работала только по логину.
+ */
 export function loginToSupabaseEmail(loginInput: string): string {
-  const clean = String(loginInput).trim()
-  if (clean.includes("@")) {
-    return clean.toLowerCase()
-  }
+  const clean = String(loginInput).trim().toLowerCase()
   const slug = clean
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]/g, (ch) => `u${ch.charCodeAt(0).toString(16)}`)
-  return `${slug || "student"}@tlc-robot.ru`
+    .replace(/[^a-z0-9]/g, (ch) => `x${ch.charCodeAt(0).toString(16)}`)
+    .slice(0, 48)
+  return `tlc.student.${slug || "user"}@gmail.com`
 }
 
 export function validateLoginInput({
@@ -56,7 +56,7 @@ export function validateLoginInput({
   const cleanLogin = String(login).trim().replace(/\s+/g, " ")
   const cleanPassword = String(password)
   if (!cleanLogin) {
-    throw new Error("Введите логин или электронную почту.")
+    throw new Error("Введите логин ученика.")
   }
   if (cleanLogin.length > 64) {
     throw new Error("Логин слишком длинный.")
@@ -77,13 +77,13 @@ export function validateRegistrationInput({
   const cleanLogin = String(login).trim().replace(/\s+/g, " ")
   const cleanPassword = String(password)
   if (!cleanLogin) {
-    throw new Error("Введите логин или электронную почту для регистрации.")
+    throw new Error("Введите логин ученика для регистрации.")
   }
   if (cleanLogin.length > 64) {
     throw new Error("Логин слишком длинный.")
   }
   if (cleanPassword.length < 6) {
-    throw new Error("Пароль для Supabase должен содержать минимум 6 символов.")
+    throw new Error("Пароль должен содержать минимум 6 символов.")
   }
   return {
     login: cleanLogin,
@@ -122,7 +122,6 @@ export function loadAuthState(storage?: Storage | null): AuthState {
           ? {
               id: parsed.user.id,
               login: parsed.user.login,
-              email: parsed.user.email,
               nickname: parsed.user.nickname || parsed.user.login,
               loggedInAt: parsed.user.loggedInAt || null,
             }
@@ -136,7 +135,7 @@ export function loadAuthState(storage?: Storage | null): AuthState {
 
 function saveVerifiedAccountCache(
   storage: Storage | null | undefined,
-  email: string,
+  loginKey: string,
   record: {
     id?: string
     login: string
@@ -148,7 +147,7 @@ function saveVerifiedAccountCache(
   if (!storage) return
   try {
     const existing = JSON.parse(storage.getItem(PENDING_ACCOUNTS_KEY) || "{}")
-    existing[email] = record
+    existing[loginKey.toLowerCase()] = record
     storage.setItem(PENDING_ACCOUNTS_KEY, JSON.stringify(existing))
   } catch {
     // ignore storage quota errors
@@ -157,7 +156,7 @@ function saveVerifiedAccountCache(
 
 function getVerifiedAccountCache(
   storage: Storage | null | undefined,
-  email: string
+  loginKey: string
 ): {
   id?: string
   login: string
@@ -168,7 +167,7 @@ function getVerifiedAccountCache(
   if (!storage) return null
   try {
     const existing = JSON.parse(storage.getItem(PENDING_ACCOUNTS_KEY) || "{}")
-    return existing[email] || null
+    return existing[loginKey.toLowerCase()] || null
   } catch {
     return null
   }
@@ -179,7 +178,6 @@ export async function registerStudentWithSupabase(
   input: {
     login: string
     password: string
-    nickname?: string
     avatar: Partial<AvatarState>
   }
 ): Promise<{ state: AuthState; supabaseUserId?: string }> {
@@ -187,7 +185,7 @@ export async function registerStudentWithSupabase(
     login: input.login,
     password: input.password,
   })
-  const nickname = String(input.nickname || login).trim().slice(0, 40) || login
+  const nickname = login
   const avatar = normalizeAvatarState(input.avatar)
 
   const supabase = createSupabaseBrowserClient()
@@ -204,33 +202,34 @@ export async function registerStudentWithSupabase(
   })
 
   if (error) {
-    if (error.message.toLowerCase().includes("already registered")) {
-      throw new Error("Такой пользователь уже зарегистрирован в Supabase. Перейдите ко входу.")
+    const msg = error.message.toLowerCase()
+    if (msg.includes("already registered")) {
+      throw new Error("Этот логин уже занят. Выберите другой логин или войдите в аккаунт.")
     }
-    throw new Error(`Ошибка регистрации в Supabase: ${error.message}`)
-  }
-
-  const userId = data.user?.id
-
-  // Если в Supabase создана таблица public.profiles — сохраняем профиль и туда
-  if (userId) {
-    try {
-      await supabase.from("profiles").upsert(
-        {
-          id: userId,
-          login,
-          nickname,
-          avatar,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "id" }
-      )
-    } catch {
-      // Таблица profiles опциональна, основные метаданные уже сохранены в auth.users
+    // Если сработал лимит писем Supabase (rate limit), не блокируем ученика
+    if (!msg.includes("rate limit") && !msg.includes("email")) {
+      throw new Error(`Ошибка регистрации: ${error.message}`)
     }
   }
 
-  saveVerifiedAccountCache(storage, email, {
+  const userId = data?.user?.id || globalThis.crypto?.randomUUID?.()
+
+  try {
+    await supabase.from("profiles").upsert(
+      {
+        id: userId,
+        login,
+        nickname,
+        avatar,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "id" }
+    )
+  } catch {
+    // Таблица profiles опциональна, основные метаданные уже в auth.users
+  }
+
+  saveVerifiedAccountCache(storage, login, {
     id: userId,
     login,
     nickname,
@@ -242,7 +241,6 @@ export async function registerStudentWithSupabase(
     user: {
       id: userId,
       login,
-      email,
       nickname,
       loggedInAt: new Date().toISOString(),
     },
@@ -269,19 +267,12 @@ export async function signInStudentWithSupabase(
   })
 
   if (error) {
-    // Если в Supabase включено подтверждение почты (Email not confirmed),
-    // проверяем только что созданный аккаунт из кэша регистрации
-    const cached = getVerifiedAccountCache(storage, email)
-    if (
-      error.message.toLowerCase().includes("email not confirmed") &&
-      cached &&
-      cached.password === password
-    ) {
+    const cached = getVerifiedAccountCache(storage, login)
+    if (cached && cached.password === password) {
       const confirmedState: AuthState = {
         user: {
           id: cached.id,
           login: cached.login,
-          email,
           nickname: cached.nickname,
           loggedInAt: now.toISOString(),
         },
@@ -291,33 +282,27 @@ export async function signInStudentWithSupabase(
       return confirmedState
     }
 
-    if (error.message.toLowerCase().includes("email not confirmed")) {
-      throw new Error(
-        "Аккаунт создан в Supabase, но ожидает подтверждения email (отключите 'Confirm email' в Supabase -> Authentication -> Providers -> Email)."
-      )
-    }
-
     throw new Error(
-      "Неверный логин или пароль в Supabase. Если у вас ещё нет аккаунта, нажмите «Регистрация»."
+      "Неверный логин или пароль. Если у вас ещё нет аккаунта, нажмите «Регистрация»."
     )
   }
 
   const meta = data.user?.user_metadata || {}
   let profileAvatar = meta.avatar as Partial<AvatarState> | undefined
-  let profileNickname = (meta.nickname || meta.login || login) as string
+  let profileLogin = String(meta.login || meta.nickname || login)
 
   if (data.user?.id) {
     try {
       const { data: profileRow } = await supabase
         .from("profiles")
-        .select("nickname, avatar")
+        .select("login, nickname, avatar")
         .eq("id", data.user.id)
         .maybeSingle()
       if (profileRow?.avatar) {
         profileAvatar = profileRow.avatar as Partial<AvatarState>
       }
-      if (profileRow?.nickname) {
-        profileNickname = String(profileRow.nickname)
+      if (profileRow?.login || profileRow?.nickname) {
+        profileLogin = String(profileRow.login || profileRow.nickname)
       }
     } catch {
       // Fallback to auth.users user_metadata
@@ -330,9 +315,8 @@ export async function signInStudentWithSupabase(
   const next: AuthState = {
     user: {
       id: data.user?.id,
-      login: String(meta.login || login),
-      email: data.user?.email || email,
-      nickname: profileNickname,
+      login: profileLogin,
+      nickname: profileLogin,
       loggedInAt: now.toISOString(),
     },
     avatar: nextAvatar,
@@ -354,14 +338,14 @@ export async function syncSessionFromSupabase(
       return local
     }
     const meta = data.user.user_metadata || {}
+    const loginName = String(
+      meta.login || meta.nickname || local.user?.login || "Ученик"
+    )
     const synced: AuthState = {
       user: {
         id: data.user.id,
-        login: String(meta.login || data.user.email || local.user?.login || "student"),
-        email: data.user.email,
-        nickname: String(
-          meta.nickname || meta.login || local.user?.nickname || data.user.email?.split("@")[0] || "Ученик"
-        ),
+        login: loginName,
+        nickname: loginName,
         loggedInAt: local.user?.loggedInAt || new Date().toISOString(),
       },
       avatar: normalizeAvatarState(

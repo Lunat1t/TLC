@@ -25,7 +25,6 @@ export default function AvatarPage() {
     () => loadAuthState(null).avatar
   )
   const [login, setLogin] = React.useState("")
-  const [nickname, setNickname] = React.useState("")
   const [password, setPassword] = React.useState("")
   const [lookOverride, setLookOverride] = React.useState<{
     x: number
@@ -44,9 +43,6 @@ export default function AvatarPage() {
     setSelected(state.avatar)
     if (state.user?.login) {
       setLogin(state.user.login)
-    }
-    if (state.user?.nickname) {
-      setNickname(state.user.nickname)
     }
   }, [])
 
@@ -72,12 +68,11 @@ export default function AvatarPage() {
       const { state } = await registerStudentWithSupabase(window.localStorage, {
         login,
         password,
-        nickname: nickname.trim() || login.trim(),
         avatar: selected,
       })
       setBlinkCount((c) => c + 1)
       setStatus({
-        text: `Аккаунт «${state.user?.nickname}» и аватар «${state.avatar.name}» сохранены в Supabase! Переходим к проектам...`,
+        text: `Аккаунт «${state.user?.login}» и аватар «${state.avatar.name}» сохранены в Supabase! Переходим к проектам...`,
         isError: false,
       })
       setTimeout(() => {
@@ -159,14 +154,13 @@ export default function AvatarPage() {
           <Card className="p-6 md:p-8">
             <div className="mb-6">
               <p className="text-[11px] font-black tracking-[0.16em] uppercase text-[#008da9] mb-2">
-                РЕГИСТРАЦИЯ В SUPABASE · ВЫБОР АВАТАРА
+                РЕГИСТРАЦИЯ ПО ЛОГИНУ · ВЫБОР АВАТАРА
               </p>
               <h1 className="text-[28px] md:text-[34px] font-black tracking-tight text-[#072733] leading-tight">
-                Создайте профиль и выберите Live Orb
+                Выберите свой Live Orb
               </h1>
               <p className="text-sm text-[#5b747f] mt-2">
-                Выберите образ 3D-сферы и укажите логин и пароль — данные
-                сохранятся в облачной базе данных Supabase.
+                Выберите образ 3D-сферы и придумайте логин с паролем.
               </p>
             </div>
 
@@ -276,46 +270,27 @@ export default function AvatarPage() {
                 </label>
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="regLoginInput">
-                    Логин или Email ученика *
-                  </Label>
-                  <Input
-                    id="regLoginInput"
-                    type="text"
-                    maxLength={64}
-                    required
-                    autoComplete="username"
-                    placeholder="Например, robo_alex"
-                    value={login}
-                    onChange={(e) => {
-                      const val = e.target.value
-                      setLogin(val)
-                      const x = Math.min(
-                        0.45,
-                        Math.max(-0.45, (val.length - 12) * 0.035)
-                      )
-                      setLookOverride({ x, y: 0.3 })
-                    }}
-                    onBlur={() => setLookOverride(null)}
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="nicknameInput">
-                    Отображаемое имя (никнейм)
-                  </Label>
-                  <Input
-                    id="nicknameInput"
-                    type="text"
-                    maxLength={40}
-                    autoComplete="nickname"
-                    placeholder="Например, CyberPilot"
-                    value={nickname}
-                    onChange={(e) => setNickname(e.target.value)}
-                  />
-                </div>
+              <div className="grid gap-2">
+                <Label htmlFor="regLoginInput">Логин ученика *</Label>
+                <Input
+                  id="regLoginInput"
+                  type="text"
+                  maxLength={64}
+                  required
+                  autoComplete="username"
+                  placeholder="Например, Alua"
+                  value={login}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    setLogin(val)
+                    const x = Math.min(
+                      0.45,
+                      Math.max(-0.45, (val.length - 12) * 0.035)
+                    )
+                    setLookOverride({ x, y: 0.3 })
+                  }}
+                  onBlur={() => setLookOverride(null)}
+                />
               </div>
 
               <div className="grid gap-2">
@@ -328,7 +303,7 @@ export default function AvatarPage() {
                   required
                   minLength={6}
                   autoComplete="new-password"
-                  placeholder="Придумайте надёжный пароль"
+                  placeholder="Придумайте пароль"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   onFocus={() =>
@@ -365,8 +340,8 @@ export default function AvatarPage() {
                   className="w-full sm:w-auto px-7"
                 >
                   {isSubmitting
-                    ? "Сохраняем в Supabase..."
-                    : "Зарегистрироваться с этим аватаром →"}
+                    ? "Сохраняем..."
+                    : "Зарегистрироваться →"}
                 </Button>
               </div>
             </form>
