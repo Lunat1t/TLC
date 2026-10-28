@@ -111,7 +111,7 @@ function renderBlocks() {
       }
       const plus = document.createElement('button'); plus.type = 'button'; plus.textContent = '+'; plus.className = 'module-add'; plus.setAttribute('aria-label','Добавить модуль мотора'); plus.setAttribute('aria-expanded','false');
       const menu = document.createElement('div'); menu.hidden = true; menu.className = 'module-menu';
-      plus.addEventListener('click', () => { menu.hidden = !menu.hidden; plus.setAttribute('aria-expanded', String(!menu.hidden)); });
+      plus.addEventListener('click', () => { const open = menu.hidden; closeModuleMenus(); menu.hidden = !open; plus.setAttribute('aria-expanded', String(open)); });
       for (const [name,label] of [['speed','Скорость'],['power','Мощность'],['travel','Величина движения']]) {
         const option = document.createElement('button'); option.type = 'button'; option.textContent = label;
         option.disabled = block.modules.includes(name);
@@ -121,8 +121,10 @@ function renderBlocks() {
         }); menu.append(option);
       }
       const hint = document.createElement('small'); hint.textContent = 'Без модуля скорости: 360°/с. Для запуска задайте величину движения. Скорость и мощность заменяют друг друга.';
-      controls.append(plus); element.append(moduleArea, menu, hint);
-      element.append(title, controls);
+      const picker = document.createElement('div'); picker.className = 'module-picker';
+      picker.addEventListener('pointerdown', event => event.stopPropagation());
+      picker.append(plus, menu); controls.append(picker);
+      element.append(title, controls, moduleArea, hint);
     }
     element.addEventListener('pointerdown', event => {
       if (event.button !== 0 || event.target.closest('button, select, input')) return;
@@ -287,3 +289,18 @@ $('downloadCode').addEventListener('click', () => {
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 });
 
+
+function closeModuleMenus() {
+  layer.querySelectorAll('.module-menu').forEach(menu => { menu.hidden = true; });
+  layer.querySelectorAll('.module-add').forEach(button => button.setAttribute('aria-expanded', 'false'));
+}
+document.addEventListener('pointerdown', event => {
+  if (!event.target.closest('.module-picker')) closeModuleMenus();
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') {
+    const active = layer.querySelector('.module-menu:not([hidden])');
+    active?.parentElement.querySelector('.module-add')?.focus();
+    closeModuleMenus();
+  }
+});
