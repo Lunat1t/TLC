@@ -1,7 +1,10 @@
 .vercel/
+.next/
+out/
 node_modules/
 __pycache__/
 *.pyc
 *.log
 .vercel
 .env*
+next-env.d.ts

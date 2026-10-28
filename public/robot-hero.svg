@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 350" role="img" aria-label="Иллюстрация робота и деталей">
+  <defs>
+    <linearGradient id="hub" x2="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#deeff2"/></linearGradient>
+    <linearGradient id="motor" x2="0" y2="1"><stop stop-color="#f9ffff"/><stop offset="1" stop-color="#c5e8ed"/></linearGradient>
+    <linearGradient id="blue" x2="0" y2="1"><stop stop-color="#1aa9c9"/><stop offset="1" stop-color="#087391"/></linearGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="13" stdDeviation="11" flood-color="#086074" flood-opacity=".24"/></filter>
+  </defs>
+  <ellipse cx="316" cy="312" rx="262" ry="25" fill="#0089a4" opacity=".19"/>
+  <g filter="url(#shadow)">
+    <g transform="translate(56 183) rotate(-9)">
+      <rect x="0" y="25" width="133" height="89" rx="17" fill="url(#motor)" stroke="#a1cbd0" stroke-width="3"/>
+      <path d="M4 38h124" stroke="#fff" stroke-width="10" opacity=".75"/>
+      <rect x="40" y="0" width="60" height="62" rx="12" fill="#eaf8fa" stroke="#b8d8dd" stroke-width="3"/>
+      <circle cx="68" cy="75" r="27" fill="#174653"/><circle cx="68" cy="75" r="17" fill="#263f48"/><circle cx="68" cy="75" r="8" fill="#050e15"/>
+      <circle cx="113" cy="88" r="8" fill="#c3dde2"/>
+      <rect x="49" y="10" width="40" height="21" rx="6" fill="#274e56"/>
+    </g>
+    <g transform="translate(170 93) rotate(5)">
+      <rect x="0" y="35" width="125" height="144" rx="19" fill="url(#motor)" stroke="#afd4d9" stroke-width="3"/>
+      <rect x="15" y="0" width="94" height="70" rx="18" fill="#f8ffff" stroke="#b1d8dd" stroke-width="3"/>
+      <circle cx="62" cy="117" r="37" fill="#22b2d0" stroke="#087c98" stroke-width="7"/>
+      <circle cx="62" cy="117" r="17" fill="#123b49"/>
+      <path d="M62 84v17M62 134v17M29 117h17M78 117h17" stroke="#0b566e" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="62" cy="20" r="7" fill="#aacfd5"/>
+    </g>
+    <g transform="translate(276 28)">
+      <rect x="0" y="0" width="156" height="255" rx="19" fill="url(#hub)" stroke="#9cc7cf" stroke-width="4"/>
+      <path d="M128 3h18q9 0 9 12v223q0 12-9 16h-18z" fill="#e7ac17"/>
+      <circle cx="30" cy="27" r="7" fill="#b8d4d8"/><circle cx="123" cy="27" r="7" fill="#b8d4d8"/>
+      <rect x="22" y="58" width="110" height="120" rx="9" fill="#d9edf0"/>
+      <g fill="#fff0bd">
+        <rect x="45" y="81" width="17" height="17" rx="3"/><rect x="69" y="81" width="17" height="17" rx="3"/><rect x="93" y="81" width="17" height="17" rx="3"/>
+        <rect x="33" y="105" width="17" height="17" rx="3"/><rect x="57" y="105" width="17" height="17" rx="3"/><rect x="81" y="105" width="17" height="17" rx="3"/><rect x="105" y="105" width="17" height="17" rx="3"/>
+        <rect x="45" y="129" width="17" height="17" rx="3"/><rect x="69" y="129" width="17" height="17" rx="3"/><rect x="93" y="129" width="17" height="17" rx="3"/>
+      </g>
+      <circle cx="77" cy="216" r="23" fill="#fcffff" stroke="#b9d4d8" stroke-width="5"/>
+    </g>
+    <g transform="translate(441 164) rotate(7)">
+      <rect x="0" y="0" width="104" height="111" rx="15" fill="url(#blue)" stroke="#076780" stroke-width="4"/>
+      <rect x="10" y="-36" width="84" height="63" rx="14" fill="url(#motor)" stroke="#a8d0d5" stroke-width="3"/>
+      <circle cx="52" cy="45" r="28" fill="#0b536b"/><circle cx="52" cy="45" r="16" fill="#0e3242"/>
+      <path d="M52 16v13M52 61v13M23 45h13M68 45h13" stroke="#1190ad" stroke-width="8" stroke-linecap="round"/>
+    </g>
+    <g transform="translate(80 293) rotate(-10)"><rect width="111" height="30" rx="4" fill="#ee397f"/><rect x="8" y="-9" width="22" height="11" rx="3" fill="#ff70a5"/><rect x="44" y="-9" width="22" height="11" rx="3" fill="#ff70a5"/><rect x="80" y="-9" width="22" height="11" rx="3" fill="#ff70a5"/></g>
+    <g transform="translate(211 289) rotate(8)"><rect width="113" height="34" rx="4" fill="#006cc4"/><rect x="10" y="-10" width="22" height="13" rx="3" fill="#2f9df2"/><rect x="46" y="-10" width="22" height="13" rx="3" fill="#2f9df2"/><rect x="82" y="-10" width="22" height="13" rx="3" fill="#2f9df2"/></g>
+    <g transform="translate(409 286) rotate(-8)"><rect width="97" height="33" rx="4" fill="#ffbf19"/><rect x="8" y="-10" width="21" height="13" rx="3" fill="#ffdb5c"/><rect x="38" y="-10" width="21" height="13" rx="3" fill="#ffdb5c"/><rect x="68" y="-10" width="21" height="13" rx="3" fill="#ffdb5c"/></g>
+  </g>
+</svg>
