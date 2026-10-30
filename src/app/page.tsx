@@ -7,7 +7,8 @@ import { LiveOrb } from "@/components/ui/live-orb"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
+import { ArrowUpRight, BookOpen, FolderOpen, Plus, Upload, Globe2, MoreHorizontal } from "lucide-react"
+import "./home.css"
 import {
   loadAuthState,
   signOutFromSupabase,
@@ -205,202 +206,86 @@ export default function HomePage() {
   )
 
   return (
-    <div className="min-h-dvh flex flex-col bg-[#f8fafb]">
-      <header className="min-h-[78px] px-5 md:px-16 py-3.5 flex items-center justify-between gap-4 bg-[#02c7ea]">
-        <Link
-          href="/"
-          className="text-[19px] font-black tracking-wide text-[#002c39]"
-        >
-          TLC
-        </Link>
-
-        <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2.5 text-xs font-bold text-[#084b60]">
-            <span className="hidden sm:inline">Робот</span>
-            <select
-              aria-label="Робот для нового проекта"
-              value={hubChoice}
-              onChange={(e) => setHubChoice(e.target.value as HubType)}
-              className="min-h-[46px] min-w-[146px] sm:min-w-[170px] px-3.5 rounded-[13px] bg-white text-[#132932] font-extrabold shadow-[0_7px_22px_rgba(0,124,152,0.13)] focus:outline-none"
-            >
-              <option value="spike">SPIKE Prime</option>
-              <option value="ev3">LEGO EV3</option>
-            </select>
-          </label>
-
-          <Link
-            href={auth.user ? "/avatar" : "/login"}
-            className="inline-flex items-center gap-2.5 min-h-[46px] pl-2 pr-4 py-1.5 rounded-full bg-[#092c37] text-white text-sm font-extrabold shadow-[0_7px_22px_rgba(0,91,112,0.16)] hover:bg-[#154453] transition-transform hover:-translate-y-0.5"
-          >
-            <LiveOrb
-              size={30}
-              variant={auth.avatar.variant}
-              color={auth.avatar.color}
-              eyeColor={auth.avatar.eyeColor}
-              colors={auth.avatar.colors}
-            />
-            <span>{auth.user?.nickname || "Войти"}</span>
-          </Link>
-          {auth.user && (
-            <button
-              type="button"
-              onClick={async () => {
-                const next = await signOutFromSupabase(window.localStorage)
-                setAuth(next)
-                setNotice({ text: "Вы вышли из аккаунта.", isError: false })
-              }}
-              className="min-h-[46px] px-3.5 rounded-full bg-white/85 hover:bg-white text-[#053543] text-xs font-extrabold shadow-sm transition-transform hover:-translate-y-0.5"
-            >
-              Выйти
-            </button>
-          )}
+    <div className="home-shell">
+      <aside className="home-sidebar" aria-label="Проекты">
+        <Link href="/" className="home-brand">TLC<span>studio</span></Link>
+        <button type="button" onClick={openNewModal} className="home-new-button">
+          <Plus size={19} aria-hidden="true" /> Новый проект
+        </button>
+        <div className="home-sidebar-heading">
+          <h2>Мои проекты</h2>
+          <span>{countLabel(projects.length)}</span>
         </div>
-      </header>
-
-      <main className="flex-1">
-        <section className="min-h-[340px] grid grid-cols-1 md:grid-cols-2 items-center gap-6 px-5 md:px-16 pt-6 pb-8 bg-[#02c7ea] overflow-hidden">
-          <div className="max-w-[610px] z-10">
-            <p className="text-xs font-black tracking-[0.16em] text-[#08657b] mb-4">
-              ПРОГРАММИРОВАНИЕ РОБОТОВ
-            </p>
-            <h1 className="text-[40px] sm:text-[54px] lg:text-[68px] font-black leading-[1.04] tracking-tight text-[#072733]">
-              Начните со <span className="block">{HUBS[hubChoice]}</span>
-            </h1>
-            <p className="text-base sm:text-lg text-[#164e5e] leading-relaxed my-6 max-w-[520px]">
-              Ваши проекты для роботов в одном месте. Создайте первый проект и
-              выберите своё устройство.
-            </p>
-            <Button onClick={openNewModal} size="lg" className="gap-5">
-              Создать проект <span aria-hidden="true">↗</span>
-            </Button>
-          </div>
-          <img
-            src="/robot-hero.svg"
-            alt="Иллюстрация робота и деталей конструктора"
-            className="w-full max-w-[560px] max-h-[320px] object-contain justify-self-center self-end drop-shadow-[0_22px_13px_rgba(0,123,146,0.19)]"
-          />
-        </section>
-
-        <section className="max-w-[1460px] mx-auto px-5 md:px-16 pt-9 pb-20">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-black tracking-[0.16em] text-[#008da9] mb-2">
-                РАБОЧЕЕ ПРОСТРАНСТВО
-              </p>
-              <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-[#12242d]">
-                Мои проекты
-              </h2>
-              <p className="text-sm text-[#667883] mt-2.5">
-                Проекты сохраняются в этом браузере. Файл проекта можно скачать
-                из его карточки.
-              </p>
-            </div>
-            <Badge variant="outline" className="px-3.5 py-2 text-[13px] self-start sm:self-auto">
-              {countLabel(projects.length)}
-            </Badge>
-          </div>
-
-          <div className="flex flex-wrap gap-4 my-8">
-            <button
-              type="button"
-              onClick={openNewModal}
-              className="w-[168px] min-h-[155px] flex flex-col items-start text-left gap-1 p-4 rounded-[19px] border border-[#dce8ed] bg-white shadow-[0_6px_16px_rgba(25,54,70,0.03)] hover:-translate-y-1 hover:border-[#00abd0] hover:shadow-[0_12px_25px_rgba(0,131,165,0.12)] transition-all"
-            >
-              <span className="grid place-items-center w-14 h-14 mb-2 rounded-[15px] bg-[#d9f8ff] text-[#007f9e] text-[40px] font-light leading-none">
-                ＋
-              </span>
-              <strong className="text-[15px] text-[#15313a]">
-                Новый проект
-              </strong>
-              <small className="text-xs text-[#6a7f87]">SPIKE или EV3</small>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="w-[168px] min-h-[155px] flex flex-col items-start text-left gap-1 p-4 rounded-[19px] border border-[#dce8ed] bg-white shadow-[0_6px_16px_rgba(25,54,70,0.03)] hover:-translate-y-1 hover:border-[#00abd0] hover:shadow-[0_12px_25px_rgba(0,131,165,0.12)] transition-all"
-            >
-              <span className="grid place-items-center w-14 h-14 mb-2 rounded-[15px] bg-[#edf2f4] text-[#6a8792] text-[40px] font-light leading-none">
-                ▱
-              </span>
-              <strong className="text-[15px] text-[#15313a]">
-                Открыть файл
-              </strong>
-              <small className="text-xs text-[#6a7f87]">Импорт проекта</small>
-            </button>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json,.robotproj.json,application/json"
-              onChange={handleFileImport}
-              hidden
-            />
-          </div>
-
+        <nav className="home-project-list" aria-label="Список проектов">
           {sortedProjects.length === 0 ? (
-            <div className="border border-dashed border-[#c8d8df] rounded-[22px] min-h-[192px] flex flex-col items-center justify-center text-center text-[#667f89] bg-white/60 p-6">
-              <div className="text-[38px] leading-none text-[#96c9d5]">◇</div>
-              <h3 className="mt-3 mb-1 text-[#38535d] text-lg font-bold">
-                Проектов пока нет
-              </h3>
-              <p className="text-sm">Нажмите «Новый проект», чтобы начать.</p>
+            <p className="home-empty">Здесь появятся ваши проекты. Создайте первый, чтобы начать.</p>
+          ) : sortedProjects.map((project) => (
+            <div key={project.id} className="home-project-item">
+              <Link href={`/editor?id=${encodeURIComponent(project.id)}`} className="home-project-row" title={`Открыть проект ${project.name}`}>
+                <FolderOpen size={17} aria-hidden="true" />
+                <span className="home-project-copy"><strong>{project.name}</strong><small>{HUBS[project.hub]} · {formatDate(project.updatedAt)}</small></span>
+              </Link>
+              <button type="button" onClick={() => setSelectedId(project.id)} className="home-project-menu" aria-label={`Действия с проектом ${project.name}`} title="Действия с проектом"><MoreHorizontal size={18} aria-hidden="true" /></button>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {sortedProjects.map((project) => (
-                <button
-                  key={project.id}
-                  type="button"
-                  onClick={() => setSelectedId(project.id)}
-                  className="min-h-[174px] border border-[#dce8ed] rounded-[19px] p-4 flex flex-col items-start text-left bg-white shadow-[0_6px_16px_rgba(25,54,70,0.03)] hover:-translate-y-1 hover:border-[#00abd0] hover:shadow-[0_12px_25px_rgba(0,131,165,0.12)] transition-all"
-                >
-                  <span
-                    className={`grid place-items-center w-12 h-12 mb-3 rounded-[13px] text-[28px] font-black ${
-                      project.hub === "spike"
-                        ? "bg-[#d9f8ff] text-[#007f9e]"
-                        : "bg-[#fff1df] text-[#db8730]"
-                    }`}
-                  >
-                    {project.hub === "spike" ? "▦" : "▣"}
-                  </span>
-                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#0087a0]">
-                    {HUBS[project.hub]}
-                  </span>
-                  <strong className="text-lg text-[#16313b] mt-1 mb-2 break-words">
-                    {project.name}
-                  </strong>
-                  <small className="text-xs text-[#788d95] mt-auto">
-                    {formatDate(project.updatedAt)}
-                  </small>
-                </button>
-              ))}
-            </div>
-          )}
+          ))}
+        </nav>
+        <div className="home-sidebar-bottom">
+          <button type="button" onClick={() => fileInputRef.current?.click()} className="home-import"><Upload size={17} aria-hidden="true" /> Открыть файл проекта</button>
+          <input ref={fileInputRef} type="file" accept=".json,.robotproj.json,application/json" onChange={handleFileImport} hidden />
+          <p>Проекты сохраняются в этом браузере.</p>
+        </div>
+      </aside>
 
-          {notice && (
-            <p
-              role="status"
-              className={`rounded-xl px-4 py-3 mt-6 font-bold text-sm ${
-                notice.isError
-                  ? "bg-[#fff1ee] text-[#a9352e]"
-                  : "bg-[#e0f8e8] text-[#19613b]"
-              }`}
-            >
-              {notice.text}
-            </p>
-          )}
-        </section>
-      </main>
+      <div className="home-content">
+        <header className="home-header">
+          <span className="home-mobile-brand">TLC studio</span>
+          <div className="home-header-actions">
+            <label className="home-hub-label">Робот
+              <select aria-label="Робот для нового проекта" value={hubChoice} onChange={(e) => setHubChoice(e.target.value as HubType)}>
+                <option value="spike">SPIKE Prime</option><option value="ev3">LEGO EV3</option>
+              </select>
+            </label>
+            <Link href={auth.user ? "/avatar" : "/login"} className="home-profile">
+              <LiveOrb size={30} variant={auth.avatar.variant} color={auth.avatar.color} eyeColor={auth.avatar.eyeColor} colors={auth.avatar.colors} />
+              <span>{auth.user?.nickname || "Войти"}</span>
+            </Link>
+            {auth.user && <button type="button" className="home-signout" onClick={async () => {
+              const next = await signOutFromSupabase(window.localStorage)
+              setAuth(next)
+              setNotice({ text: "Вы вышли из аккаунта.", isError: false })
+            }}>Выйти</button>}
+          </div>
+        </header>
+
+        <main className="home-main">
+          <div className="home-intro"><h1>Выберите, что создать</h1><p>Соберите робота по инструкции или начните свой проект в TLC.</p></div>
+          <section className="home-instructions" aria-labelledby="home-instructions-title">
+            <div className="home-section-heading"><div><h2 id="home-instructions-title">Инструкции</h2><p>Доступные каталоги сборок для ваших роботов</p></div><BookOpen size={25} aria-hidden="true" /></div>
+            <div className="home-instruction-list">
+              <a href="https://legoowedoo.tilda.ws/instruction-lego-spike" target="_blank" rel="noopener noreferrer" className="home-instruction-row"><span aria-hidden="true" className="home-instruction-mark home-instruction-mark-spike"><BookOpen size={22} /></span><div><strong>SPIKE Prime</strong><small>Схемы сборки роботов и моделей</small></div><ArrowUpRight size={20} aria-hidden="true" /></a>
+              <a href="https://legoowedoo.tilda.ws/instruction-lego-ev3" target="_blank" rel="noopener noreferrer" className="home-instruction-row"><span aria-hidden="true" className="home-instruction-mark home-instruction-mark-ev3"><BookOpen size={22} /></span><div><strong>Роботы EV3</strong><small>Схемы сборки роботов и механизмов LEGO</small></div><ArrowUpRight size={20} aria-hidden="true" /></a>
+            </div>
+            <p className="home-source">Инструкции откроются на внешнем сайте в новой вкладке.</p>
+          </section>
+
+          <section className="home-world" aria-labelledby="home-world-title">
+            <div className="home-world-symbol"><Globe2 size={34} aria-hidden="true" /></div>
+            <div><h2 id="home-world-title">TCL World</h2><p>Будущая игровая среда: играйте дома и создавайте собственные миры на языке TCL.</p></div>
+            <button type="button" disabled aria-label="TCL World скоро появится" className="home-world-button">TCL World · скоро</button>
+          </section>
+
+          {notice && <p role="status" className={`home-notice ${notice.isError ? "home-notice-error" : "home-notice-success"}`}>{notice.text}</p>}
+        </main>
+      </div>
 
       {newOpen && (
-        <div className="fixed inset-0 z-50 bg-[#0b2c3a]/55 backdrop-blur-xs grid place-items-center p-4">
-          <div className="w-full max-w-[480px] rounded-[23px] border border-[#d9e5e9] bg-white p-7 shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-[var(--home-overlay)] backdrop-blur-xs grid place-items-center p-4">
+          <div className="w-full max-w-[480px] rounded-[23px] bg-white p-7 shadow-2xl">
             <form onSubmit={handleCreateProject}>
-              <p className="text-xs font-black tracking-[0.16em] text-[#008da9] mb-2">
-                НОВЫЙ ПРОЕКТ
+              <p className="text-xs font-bold text-[var(--home-blue)] mb-2">
+                Новый проект
               </p>
-              <h2 className="text-[28px] font-black text-[#172f39] mb-5">
+              <h2 className="text-[28px] font-black text-[var(--home-ink)] mb-5">
                 Что будем создавать?
               </h2>
               <div className="grid gap-2">
@@ -417,7 +302,7 @@ export default function HomePage() {
               </div>
 
               <fieldset className="mt-6 grid gap-2.5">
-                <legend className="text-sm font-bold text-[#172f39] mb-2.5">
+                <legend className="text-sm font-bold text-[var(--home-ink)] mb-2.5">
                   Выберите робота
                 </legend>
                 {(["spike", "ev3"] as const).map((h) => (
@@ -425,8 +310,8 @@ export default function HomePage() {
                     key={h}
                     className={`flex items-center gap-3 p-3 rounded-[13px] border cursor-pointer min-h-[75px] ${
                       newHub === h
-                        ? "border-[#00aacd] bg-[#f0fcff] shadow-[inset_0_0_0_1px_#00aacd]"
-                        : "border-[#d5e4e9]"
+                        ? "border-[var(--home-blue)] bg-[var(--home-cyan-soft)] "
+                        : "border-[var(--home-line)]"
                     }`}
                   >
                     <input
@@ -435,22 +320,22 @@ export default function HomePage() {
                       value={h}
                       checked={newHub === h}
                       onChange={() => setNewHub(h)}
-                      className="w-4 h-4 accent-[#009cbd]"
+                      className="w-4 h-4 accent-[var(--home-blue)]"
                     />
                     <span
                       className={`grid place-items-center w-12 h-12 rounded-[13px] text-[28px] font-black ${
                         h === "spike"
-                          ? "bg-[#d9f8ff] text-[#007f9e]"
-                          : "bg-[#fff1df] text-[#db8730]"
+                          ? "bg-[var(--home-cyan-soft)] text-[var(--home-blue)]"
+                          : "bg-[var(--home-ev3-soft)] text-[var(--home-ev3)]"
                       }`}
                     >
                       {h === "spike" ? "▦" : "▣"}
                     </span>
                     <span className="flex flex-col">
-                      <strong className="text-[15px] text-[#172f39]">
+                      <strong className="text-[15px] text-[var(--home-ink)]">
                         {HUBS[h]}
                       </strong>
-                      <small className="text-xs text-[#6d838b]">
+                      <small className="text-xs text-[var(--home-muted)]">
                         {h === "spike" ? "Хаб с портами A–F" : "Хаб с портами A–D"}
                       </small>
                     </span>
@@ -459,7 +344,7 @@ export default function HomePage() {
               </fieldset>
 
               {formError && (
-                <p className="text-[13px] text-[#b43d33] mt-3">{formError}</p>
+                <p className="text-[13px] text-[var(--home-error)] mt-3">{formError}</p>
               )}
 
               <div className="flex justify-end gap-2.5 mt-7">
@@ -478,19 +363,19 @@ export default function HomePage() {
       )}
 
       {selectedProject && !renameOpen && (
-        <div className="fixed inset-0 z-50 bg-[#0b2c3a]/55 backdrop-blur-xs grid place-items-center p-4">
-          <div className="w-full max-w-[480px] rounded-[23px] border border-[#d9e5e9] bg-white p-7 shadow-2xl">
-            <p className="text-xs font-black tracking-[0.16em] text-[#008da9] mb-2">
+        <div className="fixed inset-0 z-50 bg-[var(--home-overlay)] backdrop-blur-xs grid place-items-center p-4">
+          <div className="w-full max-w-[480px] rounded-[23px] bg-white p-7 shadow-2xl">
+            <p className="text-xs font-bold text-[var(--home-blue)] mb-2">
               ПРОЕКТ
             </p>
-            <h2 className="text-[28px] font-black text-[#172f39] mb-2 break-words">
+            <h2 className="text-[28px] font-black text-[var(--home-ink)] mb-2 break-words">
               {selectedProject.name}
             </h2>
-            <p className="text-sm text-[#657d86] mb-4">
+            <p className="text-sm text-[var(--home-muted)] mb-4">
               {HUBS[selectedProject.hub]} · создан{" "}
               {formatDate(selectedProject.createdAt)}
             </p>
-            <p className="p-3.5 rounded-xl bg-[#edf9fc] text-[#3a6875] text-sm">
+            <p className="p-3.5 rounded-xl bg-[var(--home-rail)] text-[var(--home-muted)] text-sm">
               Откройте рабочую область, чтобы размещать блоки на доске.
             </p>
             <div className="flex flex-wrap gap-2 mt-5">
@@ -527,7 +412,7 @@ export default function HomePage() {
               {selectedProject.hub === "spike" && (
                 <a
                   href="/controller.html"
-                  className="mr-auto text-[13px] font-bold text-[#007e9d] hover:underline"
+                  className="mr-auto text-[13px] font-bold text-[var(--home-blue)] hover:underline"
                 >
                   Открыть прежний пульт Socer
                 </a>
@@ -541,7 +426,7 @@ export default function HomePage() {
               </Button>
               <Link
                 href={`/editor?id=${encodeURIComponent(selectedProject.id)}`}
-                className="inline-flex items-center justify-center rounded-full bg-[#092c37] text-white min-h-[50px] px-6 py-3 text-sm font-extrabold hover:bg-[#18495a]"
+                className="inline-flex items-center justify-center rounded-full bg-[var(--home-dark)] text-white min-h-[50px] px-6 py-3 text-sm font-extrabold hover:bg-[var(--home-blue)]"
               >
                 Открыть редактор
               </Link>
@@ -551,13 +436,13 @@ export default function HomePage() {
       )}
 
       {selectedProject && renameOpen && (
-        <div className="fixed inset-0 z-50 bg-[#0b2c3a]/55 backdrop-blur-xs grid place-items-center p-4">
-          <div className="w-full max-w-[480px] rounded-[23px] border border-[#d9e5e9] bg-white p-7 shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-[var(--home-overlay)] backdrop-blur-xs grid place-items-center p-4">
+          <div className="w-full max-w-[480px] rounded-[23px] bg-white p-7 shadow-2xl">
             <form onSubmit={handleRenameProject}>
-              <p className="text-xs font-black tracking-[0.16em] text-[#008da9] mb-2">
+              <p className="text-xs font-bold text-[var(--home-blue)] mb-2">
                 ПРОЕКТ
               </p>
-              <h2 className="text-[28px] font-black text-[#172f39] mb-5">
+              <h2 className="text-[28px] font-black text-[var(--home-ink)] mb-5">
                 Переименовать
               </h2>
               <div className="grid gap-2">
@@ -572,7 +457,7 @@ export default function HomePage() {
                 />
               </div>
               {renameError && (
-                <p className="text-[13px] text-[#b43d33] mt-3">{renameError}</p>
+                <p className="text-[13px] text-[var(--home-error)] mt-3">{renameError}</p>
               )}
               <div className="flex justify-end gap-2.5 mt-7">
                 <Button
