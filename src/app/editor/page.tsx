@@ -2044,20 +2044,6 @@ function EditorWorkspace() {
             </div>
 
             {loadError && !project && <div className="absolute inset-0 z-30 overflow-y-auto bg-white p-6"><h2 className="text-lg font-bold">{loadError}</h2><div className="flex flex-col gap-2 mt-4">{projects.map(p=><Link key={p.id} className="rounded-lg border p-3 text-[#086985]" href={`/editor?id=${encodeURIComponent(p.id)}`}>{p.name}</Link>)}{projects.length===0&&<Link href="/" className="text-[#086985] underline">К списку проектов</Link>}</div></div>}
-            {!checking && !loadError && blocks.length === 0 && (
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-6 py-4 text-center border border-dashed border-[#c9d9df] rounded-[14px] bg-white/80 text-[#66818c] text-sm leading-relaxed pointer-events-none">
-                {loadError || (
-                  <>
-                    Перетащите блок «Когда программа запускается» из меню на
-                    доску
-                    <br />
-                    <small className="text-[#8aa0a9]">
-                      Доску можно двигать, удерживая пустое место
-                    </small>
-                  </>
-                )}
-              </div>
-            )}
           </div>
 
         </main>
