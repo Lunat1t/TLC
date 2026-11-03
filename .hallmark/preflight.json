@@ -1,0 +1,12 @@
+{
+  "scanned": "2026-10-30",
+  "findings": {
+    "framework": "Next.js 15 app router (package.json:20)",
+    "fonts": "Inter with system sans fallback (src/app/globals.css:34-37)",
+    "palette": "TLC HSL custom properties for paper, ink, accent, border and focus (src/app/globals.css:6-26)",
+    "motion": "CSS keyframes and transitions; no motion library (package.json:14-33, src/app/globals.css:40-100)",
+    "target": "LiveOrb WebGL sphere with a 2D fallback; avatar selection screen (src/components/ui/live-orb.tsx:1-640, src/app/avatar/page.tsx:1-300)"
+  },
+  "preserve": ["LiveOrb sphere rendering, WebGL and 2D fallback", "TLC palette and Inter system", "avatar preset selection and Supabase metadata"],
+  "introduce": ["12 selectable orb expressions based on the attached sticker reference", "expression-aware avatar preview and saved avatar metadata", "keyboard-accessible emotion picker"]
+}

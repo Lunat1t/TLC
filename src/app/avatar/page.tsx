@@ -5,8 +5,12 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   AVATAR_PRESETS,
+  DEFAULT_ORB_EXPRESSION,
   LiveOrb,
+  ORB_EXPRESSIONS,
+  OrbExpressionFace,
   type LiveOrbVariant,
+  type OrbExpressionId,
 } from "@/components/ui/live-orb"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,6 +36,7 @@ export default function AvatarPage() {
     squint?: number
   } | null>(null)
   const [blinkCount, setBlinkCount] = React.useState(0)
+  const [expression, setExpression] = React.useState<OrbExpressionId>(DEFAULT_ORB_EXPRESSION)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [status, setStatus] = React.useState<{
     text: string
@@ -41,6 +46,7 @@ export default function AvatarPage() {
   React.useEffect(() => {
     const state = loadAuthState(window.localStorage)
     setSelected(state.avatar)
+    setExpression(state.avatar.expression)
     if (state.user?.login) {
       setLogin(state.user.login)
     }
@@ -56,6 +62,7 @@ export default function AvatarPage() {
       color: preset.color,
       eyeColor: preset.eyeColor,
       colors: [...preset.colors],
+      expression,
     })
     setBlinkCount((c) => c + 1)
   }
@@ -114,7 +121,7 @@ export default function AvatarPage() {
       <main className="flex-1 grid place-items-center px-4 py-8 md:py-12">
         <div className="w-full max-w-[1040px] grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-6 items-start">
           <Card className="p-7 flex flex-col items-center text-center lg:sticky lg:top-6">
-            <Badge className="mb-3.5">Следит глазами за курсором</Badge>
+            <Badge className="mb-3.5">Выберите выражение</Badge>
             <div
               onClick={() => setBlinkCount((c) => c + 1)}
               title="Нажмите на сферу, чтобы моргнуть"
@@ -126,16 +133,44 @@ export default function AvatarPage() {
                 color={selected.color}
                 eyeColor={selected.eyeColor}
                 colors={selected.colors}
+                expression={expression}
                 lookOverride={lookOverride}
                 blinkCount={blinkCount}
               />
+            </div>
+
+            <div className="orb-emotions">
+              <div className="orb-emotions-heading">
+                <h3>Настроение орба</h3>
+                <span>{ORB_EXPRESSIONS.find((item) => item.id === expression)?.name}</span>
+              </div>
+              <div className="orb-emotions-grid" role="group" aria-label="Выберите настроение орба">
+                {ORB_EXPRESSIONS.map((item) => {
+                  const isActive = expression === item.id
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      aria-pressed={isActive}
+                      onClick={() => {
+                        setExpression(item.id)
+                        setSelected((current) => ({ ...current, expression: item.id }))
+                      }}
+                      className={`orb-emotion-option${isActive ? " is-selected" : ""}`}
+                    >
+                      <span className="orb-emotion-art"><OrbExpressionFace expression={item.id} eyeColor={selected.eyeColor} /></span>
+                      <span>{item.name}</span>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
             <h2 className="text-2xl font-black tracking-tight text-[#072733] mt-2">
               {selected.name}
             </h2>
             <p className="text-[13px] text-[#617b86] leading-relaxed mt-1.5 mb-4">
-              Интерактивная WebGL-сфера с глазами-капсулами (
+              Интерактивная WebGL-сфера с вашим настроением (
               <code className="font-mono text-xs text-[#007e9d]">
                 radiumcoders/live-orb
               </code>
@@ -147,7 +182,7 @@ export default function AvatarPage() {
               size="sm"
               onClick={() => setBlinkCount((c) => c + 1)}
             >
-              Моргнуть глазами 👀
+              Моргнуть
             </Button>
           </Card>
 

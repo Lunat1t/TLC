@@ -7,7 +7,7 @@ import { LiveOrb } from "@/components/ui/live-orb"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ArrowUpRight, BookOpen, FolderOpen, Plus, Upload, Globe2, MoreHorizontal } from "lucide-react"
+import { ArrowUpRight, BookOpen, Download, FolderOpen, Plus, Upload, Globe2, MoreHorizontal } from "lucide-react"
 import "./home.css"
 import {
   loadAuthState,
@@ -21,7 +21,8 @@ import {
   loadProjects,
   makeProject,
   projectName,
-  saveProjects,
+  saveEditorProjects,
+  STORAGE_KEY,
   type HubType,
   type RobotProject,
 } from "@/lib/projects"
@@ -56,6 +57,54 @@ function formatDate(value: string) {
       }).format(date)
 }
 
+type InstallPromptEvent = Event & { prompt: () => Promise<void> }
+
+function InstallAppButton() {
+  const installPrompt = React.useRef<InstallPromptEvent | null>(null)
+  const [installed, setInstalled] = React.useState(true)
+
+  React.useEffect(() => {
+    const standalone = window.matchMedia("(display-mode: standalone)").matches ||
+      (navigator as Navigator & { standalone?: boolean }).standalone === true
+    setInstalled(standalone)
+    if ("serviceWorker" in navigator && window.isSecureContext) {
+      void navigator.serviceWorker.register("/sw.js").catch(() => {})
+    }
+    const onPrompt = (event: Event) => {
+      event.preventDefault()
+      installPrompt.current = event as InstallPromptEvent
+    }
+    const onInstalled = () => {
+      installPrompt.current = null
+      setInstalled(true)
+    }
+    window.addEventListener("beforeinstallprompt", onPrompt)
+    window.addEventListener("appinstalled", onInstalled)
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onPrompt)
+      window.removeEventListener("appinstalled", onInstalled)
+    }
+  }, [])
+
+  if (installed) return null
+
+  async function install() {
+    if (installPrompt.current) {
+      const pending = installPrompt.current
+      installPrompt.current = null
+      await pending.prompt()
+      return
+    }
+    const apple = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+    window.alert(apple
+      ? "В Safari нажмите «Поделиться» → «На экран Домой» → «Добавить»."
+      : "Откройте меню браузера и выберите «Установить приложение» или «Добавить на главный экран».")
+  }
+
+  return <button type="button" onClick={() => void install()} className="home-install"><Download size={17} aria-hidden="true" /> Установить на главный экран</button>
+}
+
 export default function HomePage() {
   const router = useRouter()
   const [hubChoice, setHubChoice] = React.useState<HubType>("spike")
@@ -77,9 +126,11 @@ export default function HomePage() {
   const [renameError, setRenameError] = React.useState<string | null>(null)
 
   const fileInputRef = React.useRef<HTMLInputElement | null>(null)
+  const storageRawRef = React.useRef<string | null>(null)
 
   React.useEffect(() => {
     try {
+      storageRawRef.current = window.localStorage.getItem(STORAGE_KEY)
       setProjects(loadProjects(window.localStorage))
       setAuth(loadAuthState(window.localStorage))
       void syncSessionFromSupabase(window.localStorage).then((synced) => {
@@ -98,9 +149,9 @@ export default function HomePage() {
     [projects, selectedId]
   )
 
-  function commit(next: RobotProject[]) {
-    const clean = saveProjects(window.localStorage, next)
-    setProjects(clean)
+  async function commit(next: RobotProject[]) {
+    storageRawRef.current = await saveEditorProjects(window.localStorage, next, storageRawRef.current, navigator.locks)
+    setProjects(next)
   }
 
   function openNewModal() {
@@ -110,11 +161,11 @@ export default function HomePage() {
     setNewOpen(true)
   }
 
-  function handleCreateProject(e: React.FormEvent) {
+  async function handleCreateProject(e: React.FormEvent) {
     e.preventDefault()
     try {
       const created = makeProject(newName, newHub, createId())
-      commit([...projects, created])
+      await commit([...projects, created])
       setNewOpen(false)
       setNotice({ text: `Проект «${created.name}» создан.`, isError: false })
       router.push(`/editor?id=${encodeURIComponent(created.id)}`)
@@ -125,12 +176,12 @@ export default function HomePage() {
     }
   }
 
-  function handleRenameProject(e: React.FormEvent) {
+  async function handleRenameProject(e: React.FormEvent) {
     e.preventDefault()
     if (!selectedProject) return
     try {
       const cleanName = projectName(renameValue)
-      commit(
+      await commit(
         projects.map((p) =>
           p.id === selectedProject.id
             ? { ...p, name: cleanName, updatedAt: new Date().toISOString() }
@@ -146,16 +197,20 @@ export default function HomePage() {
     }
   }
 
-  function handleDeleteProject() {
+  async function handleDeleteProject() {
     if (
       !selectedProject ||
       !window.confirm(`Удалить проект «${selectedProject.name}»?`)
     ) {
       return
     }
-    commit(projects.filter((p) => p.id !== selectedProject.id))
-    setSelectedId(null)
-    setNotice({ text: "Проект удалён.", isError: false })
+    try {
+      await commit(projects.filter((p) => p.id !== selectedProject.id))
+      setSelectedId(null)
+      setNotice({ text: "Проект удалён.", isError: false })
+    } catch (err) {
+      setNotice({ text: err instanceof Error ? err.message : "Не удалось удалить проект.", isError: true })
+    }
   }
 
   function handleExportProject() {
@@ -183,7 +238,7 @@ export default function HomePage() {
         throw new Error("Файл проекта слишком большой.")
       }
       const imported = importProject(await file.text(), createId())
-      commit([...projects, imported])
+      await commit([...projects, imported])
       setSelectedId(imported.id)
       setNotice({
         text: `Проект «${imported.name}» открыт и сохранён.`,
@@ -230,6 +285,7 @@ export default function HomePage() {
           ))}
         </nav>
         <div className="home-sidebar-bottom">
+          <InstallAppButton />
           <button type="button" onClick={() => fileInputRef.current?.click()} className="home-import"><Upload size={17} aria-hidden="true" /> Открыть файл проекта</button>
           <input ref={fileInputRef} type="file" accept=".json,.robotproj.json,application/json" onChange={handleFileImport} hidden />
           <p>Проекты сохраняются в этом браузере.</p>
@@ -246,7 +302,7 @@ export default function HomePage() {
               </select>
             </label>
             <Link href={auth.user ? "/avatar" : "/login"} className="home-profile">
-              <LiveOrb size={30} variant={auth.avatar.variant} color={auth.avatar.color} eyeColor={auth.avatar.eyeColor} colors={auth.avatar.colors} />
+              <LiveOrb size={30} variant={auth.avatar.variant} color={auth.avatar.color} eyeColor={auth.avatar.eyeColor} colors={auth.avatar.colors} expression={auth.avatar.expression} />
               <span>{auth.user?.nickname || "Войти"}</span>
             </Link>
             {auth.user && <button type="button" className="home-signout" onClick={async () => {
@@ -262,10 +318,10 @@ export default function HomePage() {
           <section className="home-instructions" aria-labelledby="home-instructions-title">
             <div className="home-section-heading"><div><h2 id="home-instructions-title">Инструкции</h2><p>Доступные каталоги сборок для ваших роботов</p></div><BookOpen size={25} aria-hidden="true" /></div>
             <div className="home-instruction-list">
-              <a href="https://legoowedoo.tilda.ws/instruction-lego-spike" target="_blank" rel="noopener noreferrer" className="home-instruction-row"><span aria-hidden="true" className="home-instruction-mark home-instruction-mark-spike"><BookOpen size={22} /></span><div><strong>SPIKE Prime</strong><small>Схемы сборки роботов и моделей</small></div><ArrowUpRight size={20} aria-hidden="true" /></a>
-              <a href="https://legoowedoo.tilda.ws/instruction-lego-ev3" target="_blank" rel="noopener noreferrer" className="home-instruction-row"><span aria-hidden="true" className="home-instruction-mark home-instruction-mark-ev3"><BookOpen size={22} /></span><div><strong>Роботы EV3</strong><small>Схемы сборки роботов и механизмов LEGO</small></div><ArrowUpRight size={20} aria-hidden="true" /></a>
+              <Link href="/instructions?kit=spike" className="home-instruction-row"><span aria-hidden="true" className="home-instruction-mark home-instruction-mark-spike"><BookOpen size={22} /></span><div><strong>SPIKE Prime</strong><small>Схемы сборки роботов и моделей</small></div><ArrowUpRight size={20} aria-hidden="true" /></Link>
+              <Link href="/instructions?kit=ev3" className="home-instruction-row"><span aria-hidden="true" className="home-instruction-mark home-instruction-mark-ev3"><BookOpen size={22} /></span><div><strong>Роботы EV3</strong><small>Схемы сборки роботов и механизмов LEGO</small></div><ArrowUpRight size={20} aria-hidden="true" /></Link>
             </div>
-            <p className="home-source">Инструкции откроются на внешнем сайте в новой вкладке.</p>
+            <p className="home-source">Выберите модель внутри TLC; шаги откроет преподаватель.</p>
           </section>
 
           <section className="home-world" aria-labelledby="home-world-title">
@@ -411,10 +467,10 @@ export default function HomePage() {
             <div className="flex flex-wrap items-center justify-end gap-2.5 mt-7">
               {selectedProject.hub === "spike" && (
                 <a
-                  href="/controller.html"
+                  href={`/editor?id=${encodeURIComponent(selectedProject.id)}`}
                   className="mr-auto text-[13px] font-bold text-[var(--home-blue)] hover:underline"
                 >
-                  Открыть прежний пульт Socer
+                  Открыть управление в редакторе
                 </a>
               )}
               <Button

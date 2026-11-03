@@ -1,8 +1,12 @@
 import type { Metadata, Viewport } from "next"
 import "./globals.css"
+import "./avatar/orb-emotions.css"
 
 export const metadata: Metadata = {
   title: "TLC — программирование роботов",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, title: "TechLabCode", statusBarStyle: "default" },
+  icons: { apple: "/icons/icon-180.png", icon: "/icons/icon-192.png" },
   description:
     "Среда блочного программирования роботов LEGO SPIKE Prime и LEGO EV3",
 }

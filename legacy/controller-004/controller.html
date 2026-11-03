@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#092c37">
+  <title>Пульт робота — TLC</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/controller.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="topbar-left">
+        <a class="brand" href="/">TLC <span>ROBOT</span></a>
+        <div class="project-selector">
+          <label for="project" class="sr-only">Выбрать проект</label>
+          <select id="project" class="project-select" aria-label="Выбрать проект">
+            <option value="">-- Выберите проект --</option>
+          </select>
+          <button id="reload" class="button icon-button reload-button" type="button" title="Перезагрузить проект" aria-label="Перезагрузить проект">↻</button>
+          <a id="editInEditor" class="button secondary edit-link" href="/editor" title="Открыть в редакторе блоков">✎ В редакторе</a>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <span id="modeBadge" class="mode-badge trial" role="status">Пробный режим · без робота</span>
+        <span id="status" class="status" role="status">Не подключён</span>
+        <button id="connect" class="button primary" type="button"><span aria-hidden="true">⌁</span> Bluetooth</button>
+        <button id="start" class="button run-button" type="button" disabled><span aria-hidden="true">▶</span> Старт</button>
+        <button id="stop" class="button danger" type="button"><span aria-hidden="true">■</span> Стоп</button>
+        <button id="download" class="button secondary download-button" type="button">↓ Программа хаба</button>
+        <button id="disconnect" type="button" class="button secondary" hidden>Отключить</button>
+      </div>
+    </header>
+
+    <div id="notice" class="notice" role="alert" hidden></div>
+    <div id="programErrors" class="program-errors" role="alert" hidden></div>
+
+    <div id="workspace" class="controller-workspace">
+      <section id="board" class="board-wrap control-board" aria-label="Область управления">
+        <!-- Gamepad layout: 10 buttons -->
+        <div id="gamepad" class="gamepad" role="group" aria-label="Джойстик пульта">
+          <!-- Shoulder buttons row -->
+          <div class="gamepad-shoulders">
+            <button id="btn-l" data-button="l" type="button" class="control-button pad-shoulder left" aria-label="Кнопка L" aria-pressed="false" data-has-handler="false">
+              <span class="button-label">L</span>
+              <kbd class="key-hint">Q</kbd>
+            </button>
+            <div class="shoulder-spacer"></div>
+            <button id="btn-r" data-button="r" type="button" class="control-button pad-shoulder right" aria-label="Кнопка R" aria-pressed="false" data-has-handler="false">
+              <span class="button-label">R</span>
+              <kbd class="key-hint">E</kbd>
+            </button>
+          </div>
+
+          <!-- Main controller body: D-pad on left, Action buttons on right -->
+          <div class="gamepad-body">
+            <!-- D-pad cross -->
+            <div class="dpad" role="group" aria-label="Крестовина управления">
+              <button id="btn-up" data-button="up" type="button" class="control-button pad-dpad up" aria-label="Кнопка ▲" aria-pressed="false" data-has-handler="false">
+                <span class="button-label">▲</span>
+                <kbd class="key-hint">↑</kbd>
+              </button>
+              <button id="btn-left" data-button="left" type="button" class="control-button pad-dpad left" aria-label="Кнопка ◀" aria-pressed="false" data-has-handler="false">
+                <span class="button-label">◀</span>
+                <kbd class="key-hint">←</kbd>
+              </button>
+              <div class="dpad-center" aria-hidden="true"></div>
+              <button id="btn-right" data-button="right" type="button" class="control-button pad-dpad right" aria-label="Кнопка ▶" aria-pressed="false" data-has-handler="false">
+                <span class="button-label">▶</span>
+                <kbd class="key-hint">→</kbd>
+              </button>
+              <button id="btn-down" data-button="down" type="button" class="control-button pad-dpad down" aria-label="Кнопка ▼" aria-pressed="false" data-has-handler="false">
+                <span class="button-label">▼</span>
+                <kbd class="key-hint">↓</kbd>
+              </button>
+            </div>
+
+            <!-- Center brand mark or decorative studs -->
+            <div class="gamepad-center" aria-hidden="true">
+              <div class="gamepad-studs">
+                <span></span><span></span>
+                <span></span><span></span>
+              </div>
+            </div>
+
+            <!-- Action buttons diamond (X, Y, A, B) -->
+            <div class="action-buttons" role="group" aria-label="Кнопки действий">
+              <button id="btn-x" data-button="x" type="button" class="control-button pad-action x" aria-label="Кнопка X" aria-pressed="false" data-has-handler="false">
+                <span class="button-label">X</span>
+                <kbd class="key-hint">U</kbd>
+              </button>
+              <button id="btn-y" data-button="y" type="button" class="control-button pad-action y" aria-label="Кнопка Y" aria-pressed="false" data-has-handler="false">
+                <span class="button-label">Y</span>
+                <kbd class="key-hint">I</kbd>
+              </button>
+              <button id="btn-a" data-button="a" type="button" class="control-button pad-action a" aria-label="Кнопка A" aria-pressed="false" data-has-handler="false">
+                <span class="button-label">A</span>
+                <kbd class="key-hint">J</kbd>
+              </button>
+              <button id="btn-b" data-button="b" type="button" class="control-button pad-action b" aria-label="Кнопка B" aria-pressed="false" data-has-handler="false">
+                <span class="button-label">B</span>
+                <kbd class="key-hint">K</kbd>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Event log container -->
+        <aside class="event-log-container" aria-label="Журнал действий пульта">
+          <div class="log-header">
+            <strong>Лента действий</strong>
+            <button id="clearLog" type="button" class="clear-log-button" title="Очистить ленту">Очистить</button>
+          </div>
+          <ul id="eventLog" class="event-log" role="log" aria-live="polite"></ul>
+        </aside>
+      </section>
+    </div>
+  </main>
+  <script type="module" src="/controller.js"></script>
+</body>
+</html>

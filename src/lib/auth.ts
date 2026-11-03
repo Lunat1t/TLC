@@ -1,13 +1,14 @@
 import {
   AVATAR_PRESETS,
+  ORB_EXPRESSIONS,
   resolveOrbConfig,
   type AvatarPreset,
+  type OrbExpressionId,
   type LiveOrbVariant,
 } from "@/components/ui/live-orb"
 import { createClient as createSupabaseBrowserClient } from "@/utils/supabase/client"
 
 export const AUTH_STORAGE_KEY = "tlc.auth.v1"
-export const PENDING_ACCOUNTS_KEY = "tlc.supabase.accounts.v1"
 
 export interface UserSession {
   id?: string
@@ -23,6 +24,7 @@ export interface AvatarState {
   color: string
   eyeColor: string
   colors: string[]
+  expression: OrbExpressionId
 }
 
 export interface AuthState {
@@ -102,6 +104,8 @@ export function normalizeAvatarState(rawAvatar?: Partial<AvatarState> | null): A
     presetId: rawAvatar?.presetId || preset.id,
     name: rawAvatar?.name || preset.name,
     ...orb,
+    expression:
+      ORB_EXPRESSIONS.find((item) => item.id === rawAvatar?.expression)?.id || "happy",
   }
 }
 
@@ -130,46 +134,6 @@ export function loadAuthState(storage?: Storage | null): AuthState {
     }
   } catch {
     return { user: null, avatar: fallbackAvatar }
-  }
-}
-
-function saveVerifiedAccountCache(
-  storage: Storage | null | undefined,
-  loginKey: string,
-  record: {
-    id?: string
-    login: string
-    nickname: string
-    password: string
-    avatar: AvatarState
-  }
-) {
-  if (!storage) return
-  try {
-    const existing = JSON.parse(storage.getItem(PENDING_ACCOUNTS_KEY) || "{}")
-    existing[loginKey.toLowerCase()] = record
-    storage.setItem(PENDING_ACCOUNTS_KEY, JSON.stringify(existing))
-  } catch {
-    // ignore storage quota errors
-  }
-}
-
-function getVerifiedAccountCache(
-  storage: Storage | null | undefined,
-  loginKey: string
-): {
-  id?: string
-  login: string
-  nickname: string
-  password: string
-  avatar: AvatarState
-} | null {
-  if (!storage) return null
-  try {
-    const existing = JSON.parse(storage.getItem(PENDING_ACCOUNTS_KEY) || "{}")
-    return existing[loginKey.toLowerCase()] || null
-  } catch {
-    return null
   }
 }
 
@@ -206,13 +170,13 @@ export async function registerStudentWithSupabase(
     if (msg.includes("already registered")) {
       throw new Error("Этот логин уже занят. Выберите другой логин или войдите в аккаунт.")
     }
-    // Если сработал лимит писем Supabase (rate limit), не блокируем ученика
-    if (!msg.includes("rate limit") && !msg.includes("email")) {
-      throw new Error(`Ошибка регистрации: ${error.message}`)
-    }
+    throw new Error(`Ошибка регистрации: ${error.message}`)
   }
 
-  const userId = data?.user?.id || globalThis.crypto?.randomUUID?.()
+  if (!data?.user?.id || !data.session) {
+    throw new Error("Регистрация создана, но вход ещё не подтверждён. Проверьте настройки подтверждения в Supabase.")
+  }
+  const userId = data.user.id
 
   try {
     await supabase.from("profiles").upsert(
@@ -229,14 +193,6 @@ export async function registerStudentWithSupabase(
     // Таблица profiles опциональна, основные метаданные уже в auth.users
   }
 
-  saveVerifiedAccountCache(storage, login, {
-    id: userId,
-    login,
-    nickname,
-    password,
-    avatar,
-  })
-
   const nextState: AuthState = {
     user: {
       id: userId,
@@ -247,6 +203,7 @@ export async function registerStudentWithSupabase(
     avatar,
   }
   storage?.setItem(AUTH_STORAGE_KEY, JSON.stringify(nextState))
+  storage?.removeItem?.("tlc.supabase.accounts.v1")
 
   return { state: nextState, supabaseUserId: userId }
 }
@@ -267,24 +224,7 @@ export async function signInStudentWithSupabase(
   })
 
   if (error) {
-    const cached = getVerifiedAccountCache(storage, login)
-    if (cached && cached.password === password) {
-      const confirmedState: AuthState = {
-        user: {
-          id: cached.id,
-          login: cached.login,
-          nickname: cached.nickname,
-          loggedInAt: now.toISOString(),
-        },
-        avatar: normalizeAvatarState(cached.avatar),
-      }
-      storage?.setItem(AUTH_STORAGE_KEY, JSON.stringify(confirmedState))
-      return confirmedState
-    }
-
-    throw new Error(
-      "Неверный логин или пароль. Если у вас ещё нет аккаунта, нажмите «Регистрация»."
-    )
+    throw new Error("Неверный логин или пароль. Проверьте данные и подключение к сети.")
   }
 
   const meta = data.user?.user_metadata || {}
@@ -322,6 +262,7 @@ export async function signInStudentWithSupabase(
     avatar: nextAvatar,
   }
   storage?.setItem(AUTH_STORAGE_KEY, JSON.stringify(next))
+  storage?.removeItem?.("tlc.supabase.accounts.v1")
   return next
 }
 

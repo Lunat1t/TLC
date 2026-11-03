@@ -1,0 +1,390 @@
+{
+  "license": "TLC-owned synthetic test fixtures",
+  "instructions": [
+    {
+      "slug": "tlc-demo-01",
+      "title": "Учебная модель 01 SPIKE Prime",
+      "summary": "Собственная демонстрационная инструкция TLC для проверки каталога.",
+      "kit": "spike",
+      "topics": [
+        "учебная",
+        "модель"
+      ],
+      "cover": "spike-step-01.svg",
+      "steps": [
+        {
+          "position": 1,
+          "caption": "Шаг 1: установите деталь 1",
+          "asset": "spike-step-01.svg"
+        },
+        {
+          "position": 2,
+          "caption": "Шаг 2: установите деталь 2",
+          "asset": "spike-step-01.svg"
+        },
+        {
+          "position": 3,
+          "caption": "Шаг 3: установите деталь 3",
+          "asset": "spike-step-01.svg"
+        },
+        {
+          "position": 4,
+          "caption": "Шаг 4: установите деталь 4",
+          "asset": "spike-step-01.svg"
+        },
+        {
+          "position": 5,
+          "caption": "Шаг 5: установите деталь 5",
+          "asset": "spike-step-01.svg"
+        },
+        {
+          "position": 6,
+          "caption": "Шаг 6: установите деталь 6",
+          "asset": "spike-step-01.svg"
+        },
+        {
+          "position": 7,
+          "caption": "Шаг 7: установите деталь 7",
+          "asset": "spike-step-01.svg"
+        },
+        {
+          "position": 8,
+          "caption": "Шаг 8: установите деталь 8",
+          "asset": "spike-step-01.svg"
+        },
+        {
+          "position": 9,
+          "caption": "Шаг 9: установите деталь 9",
+          "asset": "spike-step-01.svg"
+        },
+        {
+          "position": 10,
+          "caption": "Шаг 10: установите деталь 10",
+          "asset": "spike-step-01.svg"
+        }
+      ],
+      "document": null,
+      "rights": "Created by TLC as synthetic test material"
+    },
+    {
+      "slug": "tlc-demo-02",
+      "title": "Учебная модель 02 SPIKE Prime",
+      "summary": "Собственная демонстрационная инструкция TLC для проверки каталога.",
+      "kit": "spike",
+      "topics": [
+        "учебная",
+        "модель"
+      ],
+      "cover": "spike-step-01.svg",
+      "steps": [
+        {
+          "position": 1,
+          "caption": "Шаг 1: соберите учебную модель",
+          "asset": "spike-step-01.svg"
+        }
+      ],
+      "document": null,
+      "rights": "Created by TLC as synthetic test material"
+    },
+    {
+      "slug": "tlc-demo-03",
+      "title": "Учебная модель 03 SPIKE Prime",
+      "summary": "Собственная демонстрационная инструкция TLC для проверки каталога.",
+      "kit": "spike",
+      "topics": [
+        "учебная",
+        "модель"
+      ],
+      "cover": "spike-step-01.svg",
+      "steps": [
+        {
+          "position": 1,
+          "caption": "Шаг 1: соберите учебную модель",
+          "asset": "spike-step-01.svg"
+        }
+      ],
+      "document": null,
+      "rights": "Created by TLC as synthetic test material"
+    },
+    {
+      "slug": "tlc-demo-04",
+      "title": "Учебная модель 04 SPIKE Prime",
+      "summary": "Собственная демонстрационная инструкция TLC для проверки каталога.",
+      "kit": "spike",
+      "topics": [
+        "учебная",
+        "модель"
+      ],
+      "cover": "spike-step-01.svg",
+      "steps": [
+        {
+          "position": 1,
+          "caption": "Шаг 1: соберите учебную модель",
+          "asset": "spike-step-01.svg"
+        }
+      ],
+      "document": null,
+      "rights": "Created by TLC as synthetic test material"
+    },
+    {
+      "slug": "tlc-demo-05",
+      "title": "Учебная модель 05 SPIKE Prime",
+      "summary": "Собственная демонстрационная инструкция TLC для проверки каталога.",
+      "kit": "spike",
+      "topics": [
+        "учебная",
+        "модель"
+      ],
+      "cover": "spike-step-01.svg",
+      "steps": [
+        {
+          "position": 1,
+          "caption": "Шаг 1: соберите учебную модель",
+          "asset": "spike-step-01.svg"
+        }
+      ],
+      "document": null,
+      "rights": "Created by TLC as synthetic test material"
+    },
+    {
+      "slug": "tlc-demo-06",
+      "title": "Учебная модель 06 SPIKE Prime",
+      "summary": "Собственная демонстрационная инструкция TLC для проверки каталога.",
+      "kit": "spike",
+      "topics": [
+        "учебная",
+        "модель"
+      ],
+      "cover": "spike-step-01.svg",
+      "steps": [
+        {
+          "position": 1,
+          "caption": "Шаг 1: соберите учебную модель",
+          "asset": "spike-step-01.svg"
+        }
+      ],
+      "document": null,
+      "rights": "Created by TLC as synthetic test material"
+    },
+    {
+      "slug": "tlc-demo-07",
+      "title": "Учебная модель 07 SPIKE Prime",
+      "summary": "Собственная демонстрационная инструкция TLC для проверки каталога.",
+      "kit": "spike",
+      "topics": [
+        "учебная",
+        "модель"
+      ],
+      "cover": "spike-step-01.svg",
+      "steps": [
+        {
+          "position": 1,
+          "caption": "Шаг 1: соберите учебную модель",
+          "asset": "spike-step-01.svg"
+        }
+      ],
+      "document": null,
+      "rights": "Created by TLC as synthetic test material"
+    },
+    {
+      "slug": "tlc-demo-08",
+      "title": "Учебная модель 08 SPIKE Prime",
+      "summary": "Собственная демонстрационная инструкция TLC для проверки каталога.",
+      "kit": "spike",
+      "topics": [
+        "учебная",
+        "модель"
+      ],
+      "cover": "spike-step-01.svg",
+      "steps": [
+        {
+          "position": 1,
+          "caption": "Шаг 1: соберите учебную модель",
+          "asset": "spike-step-01.svg"
+        }
+      ],
+      "document": null,
+      "rights": "Created by TLC as synthetic test material"
+    },
+    {
+      "slug": "tlc-demo-09",
+      "title": "Учебная модель 09 SPIKE Prime",
+      "summary": "Собственная демонстрационная инструкция TLC для проверки каталога.",
+      "kit": "spike",
+      "topics": [
+        "учебная",
+        "модель"
+      ],
+      "cover": "spike-step-01.svg",
+      "steps": [
+        {
+          "position": 1,
+          "caption": "Шаг 1: соберите учебную модель",
+          "asset": "spike-step-01.svg"
+        }
+      ],
+      "document": null,
+      "rights": "Created by TLC as synthetic test material"
+    },
+    {
+      "slug": "tlc-demo-10",
+      "title": "Учебная модель 10 SPIKE Prime",
+      "summary": "Собственная демонстрационная инструкция TLC для проверки каталога.",
+      "kit": "spike",
+      "topics": [
+        "учебная",
+        "модель"
+      ],
+      "cover": "spike-step-01.svg",
+      "steps": [
+        {
+          "position": 1,
+          "caption": "Шаг 1: соберите учебную модель",
+          "asset": "spike-step-01.svg"
+        }
+      ],
+      "document": null,
+      "rights": "Created by TLC as synthetic test material"
+    },
+    {
+      "slug": "tlc-demo-11",
+      "title": "Учебная модель 11 EV3",
+      "summary": "Собственная демонстрационная инструкция TLC для проверки каталога.",
+      "kit": "ev3",
+      "topics": [
+        "учебная",
+        "модель"
+      ],
+      "cover": "spike-step-01.svg",
+      "steps": [],
+      "document": "ev3-demo.pdf",
+      "rights": "Created by TLC as synthetic test material"
+    },
+    {
+      "slug": "tlc-demo-12",
+      "title": "Учебная модель 12 EV3",
+      "summary": "Собственная демонстрационная инструкция TLC для проверки каталога.",
+      "kit": "ev3",
+      "topics": [
+        "учебная",
+        "модель"
+      ],
+      "cover": "spike-step-01.svg",
+      "steps": [],
+      "document": "ev3-demo.pdf",
+      "rights": "Created by TLC as synthetic test material"
+    },
+    {
+      "slug": "tlc-demo-13",
+      "title": "Учебная модель 13 EV3",
+      "summary": "Собственная демонстрационная инструкция TLC для проверки каталога.",
+      "kit": "ev3",
+      "topics": [
+        "учебная",
+        "модель"
+      ],
+      "cover": "spike-step-01.svg",
+      "steps": [],
+      "document": "ev3-demo.pdf",
+      "rights": "Created by TLC as synthetic test material"
+    },
+    {
+      "slug": "tlc-demo-14",
+      "title": "Учебная модель 14 EV3",
+      "summary": "Собственная демонстрационная инструкция TLC для проверки каталога.",
+      "kit": "ev3",
+      "topics": [
+        "учебная",
+        "модель"
+      ],
+      "cover": "spike-step-01.svg",
+      "steps": [],
+      "document": "ev3-demo.pdf",
+      "rights": "Created by TLC as synthetic test material"
+    },
+    {
+      "slug": "tlc-demo-15",
+      "title": "Учебная модель 15 EV3",
+      "summary": "Собственная демонстрационная инструкция TLC для проверки каталога.",
+      "kit": "ev3",
+      "topics": [
+        "учебная",
+        "модель"
+      ],
+      "cover": "spike-step-01.svg",
+      "steps": [],
+      "document": "ev3-demo.pdf",
+      "rights": "Created by TLC as synthetic test material"
+    },
+    {
+      "slug": "tlc-demo-16",
+      "title": "Учебная модель 16 EV3",
+      "summary": "Собственная демонстрационная инструкция TLC для проверки каталога.",
+      "kit": "ev3",
+      "topics": [
+        "учебная",
+        "модель"
+      ],
+      "cover": "spike-step-01.svg",
+      "steps": [],
+      "document": "ev3-demo.pdf",
+      "rights": "Created by TLC as synthetic test material"
+    },
+    {
+      "slug": "tlc-demo-17",
+      "title": "Учебная модель 17 EV3",
+      "summary": "Собственная демонстрационная инструкция TLC для проверки каталога.",
+      "kit": "ev3",
+      "topics": [
+        "учебная",
+        "модель"
+      ],
+      "cover": "spike-step-01.svg",
+      "steps": [],
+      "document": "ev3-demo.pdf",
+      "rights": "Created by TLC as synthetic test material"
+    },
+    {
+      "slug": "tlc-demo-18",
+      "title": "Учебная модель 18 EV3",
+      "summary": "Собственная демонстрационная инструкция TLC для проверки каталога.",
+      "kit": "ev3",
+      "topics": [
+        "учебная",
+        "модель"
+      ],
+      "cover": "spike-step-01.svg",
+      "steps": [],
+      "document": "ev3-demo.pdf",
+      "rights": "Created by TLC as synthetic test material"
+    },
+    {
+      "slug": "tlc-demo-19",
+      "title": "Учебная модель 19 EV3",
+      "summary": "Собственная демонстрационная инструкция TLC для проверки каталога.",
+      "kit": "ev3",
+      "topics": [
+        "учебная",
+        "модель"
+      ],
+      "cover": "spike-step-01.svg",
+      "steps": [],
+      "document": "ev3-demo.pdf",
+      "rights": "Created by TLC as synthetic test material"
+    },
+    {
+      "slug": "tlc-demo-20",
+      "title": "Учебная модель 20 EV3",
+      "summary": "Собственная демонстрационная инструкция TLC для проверки каталога.",
+      "kit": "ev3",
+      "topics": [
+        "учебная",
+        "модель"
+      ],
+      "cover": "spike-step-01.svg",
+      "steps": [],
+      "document": "ev3-demo.pdf",
+      "rights": "Created by TLC as synthetic test material"
+    }
+  ]
+}

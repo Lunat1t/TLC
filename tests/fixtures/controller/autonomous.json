@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "name": "Fixture",
+  "hub": "spike",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "devices": [],
+  "id": "fixture-auto",
+  "workspace": {
+    "sheets": [
+      {
+        "id": "sheet-main",
+        "name": "Основная",
+        "blocks": [
+          {
+            "id": "start",
+            "type": "start",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "motor",
+            "type": "drive",
+            "parentId": "start",
+            "x": 0,
+            "y": 54,
+            "motor": "A",
+            "direction": "forward",
+            "modules": [
+              "speed",
+              "travel"
+            ],
+            "speed": 360,
+            "value": 1,
+            "unit": "rotations"
+          }
+        ]
+      }
+    ],
+    "activeSheetId": "sheet-main"
+  }
+}

@@ -110,6 +110,7 @@ export default function LoginPage() {
                 color={auth.avatar.color}
                 eyeColor={auth.avatar.eyeColor}
                 colors={auth.avatar.colors}
+                expression={auth.avatar.expression}
                 lookOverride={lookOverride}
                 blinkCount={blinkCount}
               />

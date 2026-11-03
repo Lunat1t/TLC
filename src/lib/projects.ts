@@ -100,3 +100,61 @@ export function importProject(
     updatedAt: date.toISOString(),
   })
 }
+
+/** Migration is prepared before readSheets; the original array is backed up first. */
+export async function prepareEditorProjects(storage: Storage, projectId: string, locks: LockManager | undefined): Promise<{projects: RobotProject[]; raw: string | null; readOnly?: boolean}> {
+  if (!locks) {
+    const raw=storage.getItem(STORAGE_KEY)
+    if (raw === null) return {projects:[],raw,readOnly:true}
+    const parsed:unknown=JSON.parse(raw)
+    if (!Array.isArray(parsed)) throw new Error('Список проектов повреждён. Исходные данные сохранены.')
+    const clean=parsed.map(validateProject)
+    const index=clean.findIndex(p=>p.id===projectId)
+    if (index >= 0) {
+      const {migrateControlWorkspace}=await import('./control-workspace.ts')
+      clean[index]=validateProject(migrateControlWorkspace(parsed[index] as RobotProject).project)
+    }
+    return {projects:clean,raw,readOnly:true}
+  }
+  return locks.request('tlc-project-storage', async () => {
+    const raw = storage.getItem(STORAGE_KEY)
+    if (raw === null) return {projects: [], raw}
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) throw new Error('Список проектов повреждён. Исходные данные сохранены.')
+    const clean = parsed.map(validateProject)
+    const index = clean.findIndex(p => p.id === projectId)
+    if (index < 0) return {projects:clean,raw}
+    const {migrateControlWorkspace} = await import('./control-workspace.ts')
+    // Keep all unrecognised fields in the original JSON during migration.
+    const original = parsed[index] as RobotProject
+    const result = migrateControlWorkspace(original)
+    if (!result.changed) return {projects:clean,raw}
+    const backupKey = `${STORAGE_KEY}.backup.${projectId}`
+    if (storage.getItem(backupKey) === null) storage.setItem(backupKey, raw)
+    if (storage.getItem(backupKey) !== raw) throw new Error('Не удалось подтвердить резервную копию. Сохранение остановлено.')
+    if (storage.getItem(STORAGE_KEY) !== raw) throw new Error('Проекты изменены в другой вкладке. Перезагрузите страницу.')
+    const next = parsed.slice(); next[index] = result.project
+    const newRaw=JSON.stringify(next)
+    storage.setItem(STORAGE_KEY,newRaw)
+    return {projects:next.map(validateProject),raw:newRaw}
+  })
+}
+
+/** Refuse stale writes; the caller updates its expected raw after each write. */
+export async function saveEditorProjects(storage: Storage, projects: RobotProject[], expectedRaw: string | null, locks: LockManager | undefined): Promise<string> {
+  if (!locks) throw new Error('Безопасное сохранение недоступно.')
+  return locks.request('tlc-project-storage', () => {
+    const raw=storage.getItem(STORAGE_KEY)
+    if(raw!==expectedRaw) throw new Error('Проекты изменены в другой вкладке. Перезагрузите страницу.')
+    const next=JSON.stringify(projects.map(validateProject))
+    // Retain a recoverable copy of the pre-edit array before the first write.
+    const backupKey=`${STORAGE_KEY}.backup.before-edit`
+    if (raw !== null && storage.getItem(backupKey) === null) {
+      storage.setItem(backupKey, raw)
+      if (storage.getItem(backupKey) !== raw) throw new Error('Не удалось подтвердить резервную копию.')
+    }
+    if (storage.getItem(STORAGE_KEY) !== raw) throw new Error('Проекты изменены в другой вкладке. Перезагрузите страницу.')
+    storage.setItem(STORAGE_KEY,next)
+    return next
+  })
+}
