@@ -1493,7 +1493,9 @@ function EditorWorkspace() {
                     className={`absolute touch-none select-none cursor-grab ${
                       isMoving
                         ? "z-30 cursor-grabbing scale-[1.02] shadow-2xl"
-                        : "z-10 transition-[left,top,box-shadow] duration-200 ease-out"
+                        : checking && isMotorButtons
+                          ? "z-40 transition-[left,top,box-shadow] duration-200 ease-out"
+                          : "z-10 transition-[left,top,box-shadow] duration-200 ease-out"
                     } ${
                       openMenuBlockId === block.id ? "z-40" : ""
                     } ${radiusClass} ${
