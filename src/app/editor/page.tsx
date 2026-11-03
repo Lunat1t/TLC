@@ -37,7 +37,6 @@ import {
   type BlockType,
   type BranchSlot,
   type MotorDirection,
-  type MotorModule,
   type SheetState,
   type TravelUnit,
   type WorkspaceBlock,
@@ -402,7 +401,6 @@ function EditorWorkspace() {
       activeSheetId: id,
     }
     setSelectedId(null)
-    setOpenMenuBlockId(null)
     if (persistSheets(nextState)) {
       const targetSheet = nextState.sheets.find((s) => s.id === id)
       const board = boardRef.current
@@ -506,7 +504,6 @@ function EditorWorkspace() {
       className="flex flex-col h-dvh min-h-[360px] bg-[#f5f8fa] text-[#18313b] select-none overflow-hidden"
       onPointerDown={(e) => {
         if (!(e.target as HTMLElement).closest("[data-module-picker]")) {
-          setOpenMenuBlockId(null)
         }
       }}
     >
