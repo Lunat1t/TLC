@@ -1,15 +1,17 @@
 import type { RobotProject } from './projects'
 
-export type ControlKind = 'drivetrain' | 'motor' | 'motor-group' | 'legacy-buttons' | 'motor-panel'
+export type ControlKind = 'drivetrain' | 'motor' | 'motor-group' | 'legacy-buttons' | 'motor-panel' | 'joystick' | 'dpad'
 export interface ControlArea { id: string; sheetId: string; title: string; x: number; y: number; width: number; height: number }
 export interface ControlInstance { id: string; areaId: string; kind: ControlKind; label: string; x: number; y: number; width: number; height: number; keyBindings?: Record<string, string>; inputs?: readonly string[] }
 export interface ControlLayout { version: 1; areas: ControlArea[]; controls: ControlInstance[]; migration?: {source: 'legacy-button-events'; version: 1} }
 export const CONTROL_INPUTS: Record<ControlKind, readonly string[]> = {
   drivetrain: ['up', 'down', 'left', 'right'], motor: ['forward', 'backward'],
   'motor-group': ['forward', 'backward'], 'legacy-buttons': ['up','down','left','right','a','b','x','y','l','r'], 'motor-panel': ['blue','red','green','yellow'],
+  joystick: ['up','down','left','right'], dpad: ['up','down','left','right'],
 }
 export const CONTROL_MIN: Record<ControlKind, [number, number]> = {
   drivetrain: [160, 160], motor: [144, 96], 'motor-group': [144, 96], 'legacy-buttons': [300, 200], 'motor-panel': [144, 112],
+  joystick: [160, 160], dpad: [160, 160],
 }
 export const EMPTY_LAYOUT: ControlLayout = {version: 1, areas: [], controls: []}
 const obj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v)
