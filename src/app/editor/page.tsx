@@ -39,7 +39,6 @@ import {
   type BranchSlot,
   type MotorDirection,
   type MotorModule,
-  type MotorButtonModule,
   type SheetState,
   type TravelUnit,
   type WorkspaceBlock,
@@ -1465,17 +1464,53 @@ function EditorWorkspace() {
                     {/* Block Content */}
                     {isMotorButtons ? (
                       <div className="relative flex h-full w-full flex-col">
-                        <div data-panel-drag className="flex h-8 shrink-0 items-center rounded-t-[13px] bg-[#e7f3f8] px-2 text-xs font-extrabold text-[#31525f]">Управление мотором</div>
-                        <div className="flex min-h-0 flex-1 flex-wrap items-center justify-center gap-2 p-2">
-                          {(["blue", ...(block.controlModules||[])] as const).map(color=>{
-                            const paint:Record<string,{face:string;shade:string}>={blue:{face:"#1687b3",shade:"#0e688a"},red:{face:"#d9473d",shade:"#a92b26"},green:{face:"#32a66a",shade:"#21804e"},yellow:{face:"#edc13d",shade:"#c59b24"}}
-                            return <span key={color} aria-label={`${color} кнопка`} className="block h-8 w-8 rounded-full border border-black/10" style={{background:paint[color].face,boxShadow:`inset 0 -4px ${paint[color].shade},0 2px 3px #78909a`}} />
-                          })}
-                          {((block.controlModules||[]).length<3)&&<div data-module-picker="true" className="relative">
-                            <button type="button" aria-label="Добавить кнопку в панель" onClick={()=>setOpenMenuBlockId(prev=>prev===block.id?null:block.id)} className="grid h-8 w-8 place-items-center rounded-full border border-[#b9d0da] bg-white text-lg font-bold text-[#31525f]">+</button>
-                            {openMenuBlockId===block.id&&<div className="absolute left-0 top-[calc(100%+6px)] z-50 w-44 rounded-lg border bg-white p-2 shadow-xl"><p className="px-2 py-1 text-xs font-bold">Добавить кнопку</p>{(["red","green","yellow"] as MotorButtonModule[]).filter(color=>!(block.controlModules||[]).includes(color)).map(color=><button key={color} type="button" onClick={()=>{if(!project)return;saveBlocks(blocks.map(item=>item.id===block.id?{...item,controlModules:[...(item.controlModules||[]),color]}:item));setOpenMenuBlockId(null)}} className="flex w-full items-center gap-2 rounded p-2 text-left text-xs hover:bg-slate-100"><i className="h-4 w-4 rounded-full" style={{background:{red:"#d9473d",green:"#32a66a",yellow:"#edc13d"}[color]}}/>{({red:"Красная кнопка",green:"Зелёная кнопка",yellow:"Жёлтая кнопка"})[color]}</button>)}</div>}
-                          </div>}
-                        </div>
+                        <div data-panel-drag className="flex h-8 shrink-0 items-center rounded-t-[13px] bg-[#e7f3f8] px-2 text-xs font-extrabold text-[#31525f]">Управление моторами</div>
+                        {(() => {
+                          const colors = ["blue", ...(block.controlModules || [])] as const
+                          const paint: Record<string, { face: string; shade: string }> = {
+                            blue: { face: "#1687b3", shade: "#0e688a" },
+                            red: { face: "#d9473d", shade: "#a92b26" },
+                            green: { face: "#32a66a", shade: "#21804e" },
+                            yellow: { face: "#edc13d", shade: "#c59b24" },
+                          }
+                          const fourButtonPositions: Record<string, string> = {
+                            red: "col-start-2 row-start-1",
+                            blue: "col-start-1 row-start-2",
+                            green: "col-start-3 row-start-2",
+                            yellow: "col-start-2 row-start-3",
+                          }
+                          const nextColor = (["red", "green", "yellow"] as const).find(
+                            (color) => !(block.controlModules || []).includes(color)
+                          )
+                          return (
+                            <div className={colors.length === 4
+                              ? "grid min-h-0 flex-1 grid-cols-[28px_28px_28px] grid-rows-[28px_28px_28px] content-center justify-center gap-0.5 p-1"
+                              : "flex min-h-0 flex-1 items-center justify-center gap-2 p-2"}>
+                              {colors.map((color) => (
+                                <span
+                                  key={color}
+                                  aria-label={`${color} кнопка`}
+                                  className={`block h-7 w-7 rounded-full border border-black/10 ${colors.length === 4 ? fourButtonPositions[color] : ""}`}
+                                  style={{ background: paint[color].face, boxShadow: `inset 0 -4px ${paint[color].shade},0 2px 3px #78909a` }}
+                                />
+                              ))}
+                              {nextColor && (
+                                <button
+                                  type="button"
+                                  aria-label="Добавить кнопку в панель"
+                                  data-module-picker="true"
+                                  onClick={() => {
+                                    if (!project) return
+                                    saveBlocks(blocks.map((item) => item.id === block.id
+                                      ? { ...item, controlModules: [...(item.controlModules || []), nextColor] }
+                                      : item))
+                                  }}
+                                  className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-[#b9d0da] bg-white text-lg font-bold text-[#31525f]"
+                                >+</button>
+                              )}
+                            </div>
+                          )
+                        })()}
                         <button type="button" aria-label="Изменить размер панели кнопок" onPointerDown={e=>{e.preventDefault();e.stopPropagation();const startX=e.clientX,startY=e.clientY,startW=block.width||180,startH=block.height||132;const move=(ev:PointerEvent)=>setPanelResize({id:block.id,width:Math.min(420,Math.max(144,startW+ev.clientX-startX)),height:Math.min(320,Math.max(112,startH+ev.clientY-startY))});const finish=(ev:PointerEvent)=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",finish);window.removeEventListener("pointercancel",finish);const width=Math.min(420,Math.max(144,Math.round(startW+ev.clientX-startX))),height=Math.min(320,Math.max(112,Math.round(startH+ev.clientY-startY)));setPanelResize(null);if(project)saveBlocks(blocks.map(item=>item.id===block.id?{...item,width,height}:item))};window.addEventListener("pointermove",move);window.addEventListener("pointerup",finish,{once:true});window.addEventListener("pointercancel",finish,{once:true})}} className="absolute bottom-0 right-0 z-20 grid h-6 w-6 cursor-nwse-resize place-items-center rounded-tl bg-white/80 text-sm text-[#31525f]">◢</button>
                       </div>
                     ) : isIfBlock ? (
