@@ -22,6 +22,7 @@ export type MotorDirection = "forward" | "backward"
 export type TravelUnit = "rotations" | "degrees" | "seconds"
 export type MotorModule = "speed" | "power" | "travel"
 export type MotorButtonModule = "red" | "green" | "yellow"
+export type MotorPanelButton = "blue" | MotorButtonModule
 export type BranchSlot = "body" | "else"
 
 export const IF_TOP_HEIGHT = 58
@@ -43,6 +44,7 @@ export interface WorkspaceBlock {
   direction2?: MotorDirection
   modules?: MotorModule[]
   controlModules?: MotorButtonModule[]
+  hiddenControlButtons?: MotorPanelButton[]
   width?: number
   height?: number
   speed?: number
@@ -338,14 +340,19 @@ export function readBlocks(
 
       if (type === "motor-buttons") {
         const allowed: MotorButtonModule[] = ["red", "green", "yellow"]
+        const allowedButtons: MotorPanelButton[] = ["blue", ...allowed]
         const controlModules = Array.isArray(block.controlModules)
           ? allowed.filter(color => (block.controlModules as unknown[]).includes(color))
+          : []
+        const hiddenControlButtons = Array.isArray(block.hiddenControlButtons)
+          ? allowedButtons.filter(color => (block.hiddenControlButtons as unknown[]).includes(color))
           : []
         return {
           ...base,
           width: Number.isFinite(block.width) ? Math.min(420, Math.max(144, Math.round(Number(block.width)))) : 180,
           height: Number.isFinite(block.height) ? Math.min(320, Math.max(112, Math.round(Number(block.height)))) : 132,
           controlModules,
+          hiddenControlButtons,
         }
       }
 
@@ -484,7 +491,7 @@ export function addBlock(
     Object.assign(block, { motor: "A" })
   }
   if (type === "motor-buttons") {
-    Object.assign(block, { width: 180, height: 132, controlModules: [] })
+    Object.assign(block, { width: 180, height: 132, controlModules: [], hiddenControlButtons: [] })
   }
   return [...blocks, block]
 }

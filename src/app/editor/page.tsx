@@ -39,6 +39,7 @@ import {
   type BranchSlot,
   type MotorDirection,
   type MotorModule,
+  type MotorPanelButton,
   type SheetState,
   type TravelUnit,
   type WorkspaceBlock,
@@ -121,6 +122,15 @@ function EditorWorkspace() {
 
   const [gesture, setGesture] = React.useState<DragGesture | null>(null)
   const [panelResize, setPanelResize] = React.useState<{id:string;width:number;height:number}|null>(null)
+  const [buttonDrag, setButtonDrag] = React.useState<{
+    blockId: string
+    color: MotorPanelButton
+    pointerId: number
+    startX: number
+    startY: number
+    dx: number
+    dy: number
+  } | null>(null)
   const [snapTargetSlot, setSnapTargetSlot] = React.useState<{
     id: string
     branch?: BranchSlot
@@ -1397,7 +1407,7 @@ function EditorWorkspace() {
                       isIfBlock
                         ? "pointer-events-none text-white"
                         : isMotorButtons
-                          ? "overflow-hidden rounded-[14px] border border-[#b9d0da] bg-[#f4f8fa] text-[#18313b] shadow-[inset_0_-4px_#d6e4e9,0_8px_18px_rgba(20,105,123,0.12)]"
+                          ? `${buttonDrag?.blockId === block.id ? "overflow-visible" : "overflow-hidden"} rounded-[14px] border border-[#b9d0da] bg-[#f4f8fa] text-[#18313b] shadow-[inset_0_-4px_#d6e4e9,0_8px_18px_rgba(20,105,123,0.12)]`
                         : isButtonBlock
                           ? "w-max min-h-[58px] bg-[#e85d2a] text-white shadow-[inset_0_-4px_#c2410c,0_8px_18px_rgba(232,93,42,0.16)]"
                           : isStopBlock
@@ -1463,11 +1473,13 @@ function EditorWorkspace() {
 
                     {/* Block Content */}
                     {isMotorButtons ? (
-                      <div className="relative flex h-full w-full flex-col">
+                      <div data-button-panel="true" className="relative flex h-full w-full flex-col">
                         <div data-panel-drag className="flex h-8 shrink-0 items-center rounded-t-[13px] bg-[#e7f3f8] px-2 text-xs font-extrabold text-[#31525f]">Управление моторами</div>
                         {(() => {
-                          const colors = ["blue", ...(block.controlModules || [])] as const
-                          const paint: Record<string, { face: string; shade: string }> = {
+                          const hiddenButtons = block.hiddenControlButtons || []
+                          const colors: MotorPanelButton[] = ["blue", ...(block.controlModules || [])]
+                            .filter(color => !hiddenButtons.includes(color))
+                          const paint: Record<MotorPanelButton, { face: string; shade: string }> = {
                             blue: { face: "#1687b3", shade: "#0e688a" },
                             red: { face: "#d9473d", shade: "#a92b26" },
                             green: { face: "#32a66a", shade: "#21804e" },
@@ -1479,19 +1491,75 @@ function EditorWorkspace() {
                             green: "col-start-3 row-start-2",
                             yellow: "col-start-2 row-start-3",
                           }
-                          const nextColor = (["red", "green", "yellow"] as const).find(
-                            (color) => !(block.controlModules || []).includes(color)
+                          const nextColor = (["blue", "red", "green", "yellow"] as const).find(
+                            (color) => !colors.includes(color)
                           )
+                          const panelWidth = panelResize?.id === block.id ? panelResize.width : block.width || 180
+                          const panelHeight = panelResize?.id === block.id ? panelResize.height : block.height || 132
+                          const isCross = colors.length === 4
+                          const itemCount = colors.length + (nextColor ? 1 : 0)
+                          const buttonSize = Math.max(20, Math.min(
+                            64,
+                            isCross
+                              ? Math.floor(Math.min((panelWidth - 24) / 3, (panelHeight - 44) / 3))
+                              : Math.floor(Math.min(
+                                  (panelWidth - 16 - 8 * Math.max(0, itemCount - 1)) / Math.max(1, itemCount),
+                                  panelHeight - 44
+                                ))
+                          ))
+                          const startButtonDrag = (e: React.PointerEvent<HTMLSpanElement>, color: MotorPanelButton) => {
+                            if (e.button !== 0) return
+                            e.preventDefault()
+                            e.stopPropagation()
+                            e.currentTarget.setPointerCapture(e.pointerId)
+                            setSelectedId(block.id)
+                            setButtonDrag({blockId:block.id,color,pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,dx:0,dy:0})
+                          }
+                          const moveButtonDrag = (e: React.PointerEvent<HTMLSpanElement>) => {
+                            setButtonDrag(prev => prev?.blockId === block.id && prev.pointerId === e.pointerId
+                              ? {...prev,dx:e.clientX-prev.startX,dy:e.clientY-prev.startY}
+                              : prev)
+                          }
+                          const finishButtonDrag = (e: React.PointerEvent<HTMLSpanElement>) => {
+                            const drag = buttonDrag
+                            if (!drag || drag.blockId !== block.id || drag.pointerId !== e.pointerId) return
+                            const panelRect = e.currentTarget.closest("[data-button-panel]")?.getBoundingClientRect()
+                            const dragged = Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY) > 5
+                            const outside = !panelRect || e.clientX < panelRect.left || e.clientX > panelRect.right || e.clientY < panelRect.top || e.clientY > panelRect.bottom
+                            setButtonDrag(null)
+                            if (!dragged || !outside || !project) return
+                            saveBlocks(blocks.map(item => {
+                              if (item.id !== block.id) return item
+                              if (drag.color === "blue") return {...item,hiddenControlButtons:[...new Set([...(item.hiddenControlButtons||[]),drag.color])]}
+                              return {...item,controlModules:(item.controlModules||[]).filter(color=>color!==drag.color)}
+                            }))
+                          }
                           return (
-                            <div className={colors.length === 4
-                              ? "grid min-h-0 flex-1 grid-cols-[28px_28px_28px] grid-rows-[28px_28px_28px] content-center justify-center gap-0.5 p-1"
-                              : "flex min-h-0 flex-1 items-center justify-center gap-2 p-2"}>
+                            <div
+                              className={isCross
+                                ? "grid min-h-0 flex-1 content-center justify-center gap-0.5 p-1"
+                                : "flex min-h-0 flex-1 items-center justify-center gap-2 p-2"}
+                              style={isCross ? {gridTemplateColumns:`repeat(3, ${buttonSize}px)`,gridTemplateRows:`repeat(3, ${buttonSize}px)`} : undefined}
+                            >
                               {colors.map((color) => (
                                 <span
                                   key={color}
-                                  aria-label={`${color} кнопка`}
-                                  className={`block h-7 w-7 rounded-full border border-black/10 ${colors.length === 4 ? fourButtonPositions[color] : ""}`}
-                                  style={{ background: paint[color].face, boxShadow: `inset 0 -4px ${paint[color].shade},0 2px 3px #78909a` }}
+                                  aria-label={`${color} кнопка. Перетащите за пределы панели, чтобы удалить`}
+                                  title="Перетащите за пределы панели, чтобы удалить"
+                                  className={`block touch-none rounded-full border border-black/10 cursor-grab ${isCross ? fourButtonPositions[color] : ""} ${buttonDrag?.blockId === block.id && buttonDrag.color === color ? "z-30 cursor-grabbing opacity-80" : ""}`}
+                                  style={{
+                                    width: buttonSize,
+                                    height: buttonSize,
+                                    background: paint[color].face,
+                                    boxShadow: `inset 0 -${Math.max(3,Math.round(buttonSize*0.12))}px ${paint[color].shade},0 2px 3px #78909a`,
+                                    transform: buttonDrag?.blockId === block.id && buttonDrag.color === color
+                                      ? `translate(${buttonDrag.dx/zoom}px,${buttonDrag.dy/zoom}px) scale(1.08)`
+                                      : undefined,
+                                  }}
+                                  onPointerDown={e=>startButtonDrag(e,color)}
+                                  onPointerMove={moveButtonDrag}
+                                  onPointerUp={finishButtonDrag}
+                                  onPointerCancel={e=>setButtonDrag(prev=>prev?.blockId===block.id&&prev.pointerId===e.pointerId?null:prev)}
                                 />
                               ))}
                               {nextColor && (
@@ -1501,11 +1569,14 @@ function EditorWorkspace() {
                                   data-module-picker="true"
                                   onClick={() => {
                                     if (!project) return
-                                    saveBlocks(blocks.map((item) => item.id === block.id
-                                      ? { ...item, controlModules: [...(item.controlModules || []), nextColor] }
-                                      : item))
+                                    saveBlocks(blocks.map(item => {
+                                      if (item.id !== block.id) return item
+                                      if (nextColor === "blue") return {...item,hiddenControlButtons:(item.hiddenControlButtons||[]).filter(color=>color!=="blue")}
+                                      return {...item,controlModules:[...(item.controlModules||[]),nextColor]}
+                                    }))
                                   }}
-                                  className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-[#b9d0da] bg-white text-lg font-bold text-[#31525f]"
+                                  style={{width:buttonSize,height:buttonSize}}
+                                  className="grid shrink-0 place-items-center rounded-full border border-[#b9d0da] bg-white text-lg font-bold text-[#31525f]"
                                 >+</button>
                               )}
                             </div>
