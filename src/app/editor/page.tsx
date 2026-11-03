@@ -93,6 +93,9 @@ function EditorWorkspace() {
   const [panY, setPanY] = React.useState(220)
   const [zoom, setZoom] = React.useState(1)
   const [selectedId, setSelectedId] = React.useState<string | null>(null)
+  const [openMenuBlockId, setOpenMenuBlockId] = React.useState<string | null>(
+    null
+  )
   const [paletteOpen, setPaletteOpen] = React.useState(false)
   const [categoryOpen, setCategoryOpen] = React.useState(true)
 
@@ -1090,7 +1093,7 @@ function EditorWorkspace() {
                         ? "z-30 cursor-grabbing scale-[1.02] shadow-2xl"
                         : "z-10 transition-[left,top,box-shadow] duration-200 ease-out"
                     } ${
-                      ""
+                      openMenuBlockId === block.id ? "z-40" : ""
                     } ${radiusClass} ${
                       isIfBlock
                         ? "pointer-events-none text-white"
@@ -1476,28 +1479,69 @@ function EditorWorkspace() {
                           ))}
 
                         {/* Module Picker (+) */}
-                        <div data-module-picker="true" className="shrink-0 flex items-center ml-1">
+                        <div
+                          data-module-picker="true"
+                          className="relative shrink-0 flex items-center ml-1"
+                        >
                           <button
                             type="button"
                             aria-label="Добавить модуль мотора"
-                            disabled={modules.length >= 3}
-                            onClick={() => {
-                              if (!project) return
-                              const nextModule = (["speed", "power", "travel"] as const)
-                                .find((item) => !modules.includes(item))
-                              if (!nextModule) return
-                              const filtered = modules.filter(
-                                (item) => !(nextModule === "power" && item === "speed") && !(nextModule === "speed" && item === "power")
+                            aria-expanded={openMenuBlockId === block.id}
+                            onClick={() =>
+                              setOpenMenuBlockId((prev) =>
+                                prev === block.id ? null : block.id
                               )
-                              saveBlocks(updateDrive(blocks, block.id, {
-                                modules: [...filtered, nextModule],
-                                ...(nextModule === "power" ? { unit: "seconds" as const } : {}),
-                              }, project.hub))
-                            }}
+                            }
                             className="w-[36px] h-[36px] rounded-full border border-white/55 bg-white/15 hover:bg-white/30 text-white text-xl leading-none font-black grid place-items-center"
                           >
                             +
                           </button>
+
+                          {openMenuBlockId === block.id && (
+                            <div className="absolute top-[calc(100%+8px)] right-0 z-50 w-[240px] p-2.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-1.5">
+                              {(
+                                [
+                                  ["speed", "со скоростью"],
+                                  ["power", "с мощностью"],
+                                  ["travel", "на [значение] [ед. изм.]"],
+                                ] as const
+                              ).map(([modName, label]) => (
+                                <button
+                                  key={modName}
+                                  type="button"
+                                  disabled={modules.includes(modName)}
+                                  onClick={() => {
+                                    if (!project) return
+                                    const filtered = modules.filter(
+                                      (m) =>
+                                        !(modName === "speed" && m === "power") &&
+                                        !(modName === "power" && m === "speed")
+                                    )
+                                    saveBlocks(
+                                      updateDrive(
+                                        blocks,
+                                        block.id,
+                                        {
+                                          modules: [
+                                            ...filtered,
+                                            modName as MotorModule,
+                                          ],
+                                          ...(modName === "power"
+                                            ? { unit: "seconds" }
+                                            : {}),
+                                        },
+                                        project.hub
+                                      )
+                                    )
+                                    setOpenMenuBlockId(null)
+                                  }}
+                                  className="text-left px-3.5 py-2.5 rounded-lg bg-[#eff8fb] hover:bg-[#dff2f8] text-sm font-extrabold text-[#18313b] disabled:opacity-45"
+                                >
+                                  {label}
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
