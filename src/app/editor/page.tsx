@@ -89,6 +89,7 @@ function EditorWorkspace() {
   const projectId = searchParams.get("id")
 
   const boardRef = React.useRef<HTMLDivElement | null>(null)
+  const paletteRef = React.useRef<HTMLElement | null>(null)
   const storageRawRef = React.useRef<string | null>(null)
   const saveBusyRef = React.useRef(false)
   const [projects, setProjects] = React.useState<RobotProject[]>([])
@@ -106,6 +107,7 @@ function EditorWorkspace() {
     null
   )
   const [paletteOpen, setPaletteOpen] = React.useState(false)
+  const [libraryDropTarget, setLibraryDropTarget] = React.useState(false)
   const [categoryOpen, setCategoryOpen] = React.useState(true)
   const [controllerCategoryOpen, setControllerCategoryOpen] = React.useState(true)
 
@@ -398,7 +400,7 @@ function EditorWorkspace() {
     const move=(ev:PointerEvent)=>{if(Math.hypot(ev.clientX-sx,ev.clientY-sy)>5)moved=true}
     const clean=()=>{element.removeEventListener("pointermove",move);element.removeEventListener("pointerup",up);element.removeEventListener("pointercancel",cancel)}
     const cancel=()=>clean()
-    const up=(ev:PointerEvent)=>{clean();if(!moved){if(kind==="area")addControlArea();else addControl(kind);return}const rect=boardRef.current?.getBoundingClientRect();if(!rect||ev.clientX<rect.left||ev.clientX>rect.right||ev.clientY<rect.top||ev.clientY>rect.bottom)return;const world={x:(ev.clientX-rect.left-panX)/zoom,y:(ev.clientY-rect.top-panY)/zoom};if(kind==="area")addControlArea(world);else addControl(kind,world)}
+    const up=(ev:PointerEvent)=>{clean();if(!moved)return;const rect=boardRef.current?.getBoundingClientRect();if(!rect||ev.clientX<rect.left||ev.clientX>rect.right||ev.clientY<rect.top||ev.clientY>rect.bottom)return;const world={x:(ev.clientX-rect.left-panX)/zoom,y:(ev.clientY-rect.top-panY)/zoom};if(kind==="area")addControlArea(world);else addControl(kind,world)}
     element.addEventListener("pointermove",move);element.addEventListener("pointerup",up);element.addEventListener("pointercancel",cancel)
   }
 
@@ -531,38 +533,6 @@ function EditorWorkspace() {
     ]
   )
 
-  const addBlockAtCenter = React.useCallback(
-    (
-      type: BlockType = "start",
-      initialOverrides?: Partial<WorkspaceBlock>
-    ) => {
-      const rect = boardRef.current?.getBoundingClientRect()
-      if (!rect) return
-      if (type === "motor-buttons") {
-        const area = controlLayout.areas.find((candidate) => candidate.sheetId === currentSheet.id)
-        if (!area) {
-          setSaveMessage({text:"Сначала добавьте область «Управление».",isError:true})
-          return
-        }
-        addBlockAtClient(
-          rect.left + panX + (area.x + area.width / 2) * zoom,
-          rect.top + panY + (area.y + area.height / 2) * zoom,
-          type,
-          initialOverrides
-        )
-        return
-      }
-      addBlockAtClient(
-        rect.left + rect.width / 2,
-        rect.top + rect.height / 2,
-        type,
-        initialOverrides
-      )
-    },
-    [addBlockAtClient, controlLayout.areas, currentSheet.id, panX, panY, zoom]
-  )
-
-
   React.useEffect(() => {
     if (!gesture || gesture.kind !== "palette") return
     const handleMove = (e: PointerEvent) => {
@@ -605,8 +575,6 @@ function EditorWorkspace() {
         e.clientY <= rect.bottom
       ) {
         addBlockAtClient(e.clientX, e.clientY, type, initialOverrides)
-      } else {
-        addBlockAtCenter(type, initialOverrides)
       }
     }
     window.addEventListener("pointermove", handleMove)
@@ -615,7 +583,7 @@ function EditorWorkspace() {
       window.removeEventListener("pointermove", handleMove)
       window.removeEventListener("pointerup", handleUp)
     }
-  }, [gesture, blocks, worldFromClient, addBlockAtClient, addBlockAtCenter])
+  }, [gesture, blocks, worldFromClient, addBlockAtClient])
 
   function handleZoom(nextZoom: number) {
     const clamped = Math.min(2, Math.max(0.5, nextZoom))
@@ -786,8 +754,9 @@ function EditorWorkspace() {
       <div className="flex flex-1 min-h-0 relative">
         {/* Block Palette Sidebar */}
         <aside
+          ref={paletteRef}
           aria-label="Меню блоков"
-          className={`w-[270px] shrink-0 p-5 bg-white border-r border-[#dce8ec] z-20 overflow-y-auto transition-transform max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:shadow-2xl ${
+          className={`w-[270px] shrink-0 p-5 bg-white border-r border-[#dce8ec] z-20 overflow-y-auto transition-[transform,background-color,box-shadow] max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:shadow-2xl ${libraryDropTarget ? "bg-red-50 ring-4 ring-inset ring-red-300" : ""} ${
             checking ? "pointer-events-none opacity-50 max-md:-translate-x-full" : paletteOpen ? "max-md:translate-x-0" : "max-md:-translate-x-full"
           }`}
         >
@@ -807,6 +776,12 @@ function EditorWorkspace() {
               ×
             </button>
           </div>
+
+          {libraryDropTarget && (
+            <div className="mb-3 rounded-[10px] bg-red-100 px-3 py-2 text-center text-xs font-extrabold text-red-800">
+              Отпустите, чтобы удалить блок
+            </div>
+          )}
 
           <button
             type="button"
@@ -843,12 +818,6 @@ function EditorWorkspace() {
                     clientY: e.clientY,
                   })
                 }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault()
-                    addBlockAtCenter("start")
-                  }
-                }}
                 className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left flex flex-col gap-2 hover:border-[#d97706] hover:bg-[#fffbeb] transition-colors disabled:opacity-50 cursor-grab active:cursor-grabbing"
               >
                 <span
@@ -878,12 +847,6 @@ function EditorWorkspace() {
                     clientY: e.clientY,
                   })
                 }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault()
-                    addBlockAtCenter("drive")
-                  }
-                }}
                 className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left flex flex-col gap-2 hover:border-[#0589b1] hover:bg-[#f2fbfe] transition-colors disabled:opacity-50 cursor-grab active:cursor-grabbing"
               >
                 <span
@@ -907,9 +870,6 @@ function EditorWorkspace() {
                   e.preventDefault()
                   setGesture({kind:"palette",type:"stop",clientX:e.clientX,clientY:e.clientY})
                 }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {e.preventDefault();addBlockAtCenter("stop")}
-                }}
                 className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left flex flex-col gap-2 hover:border-[#b1372c] hover:bg-[#fef2f2] transition-colors disabled:opacity-50 cursor-grab active:cursor-grabbing"
               >
                 <span aria-hidden="true" className="grid place-items-center w-[106px] h-[33px] rounded-[8px] bg-[#b1372c] text-white text-base font-black shadow-[inset_0_-4px_#8f2a21]">■</span>
@@ -931,12 +891,6 @@ function EditorWorkspace() {
                     clientX: e.clientX,
                     clientY: e.clientY,
                   })
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault()
-                    addBlockAtCenter("pair")
-                  }
                 }}
                 className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left flex flex-col gap-2 hover:border-[#107e79] hover:bg-[#f2fbfa] transition-colors disabled:opacity-50 cursor-grab active:cursor-grabbing"
               >
@@ -966,12 +920,6 @@ function EditorWorkspace() {
                     clientX: e.clientX,
                     clientY: e.clientY,
                   })
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault()
-                    addBlockAtCenter("if")
-                  }
                 }}
                 className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left flex flex-col gap-2 hover:border-[#7c3aed] hover:bg-[#f5f3ff] transition-colors disabled:opacity-50 cursor-grab active:cursor-grabbing"
               >
@@ -1007,8 +955,8 @@ function EditorWorkspace() {
 
           {controllerCategoryOpen && (
             <div className="py-3 px-1 space-y-2.5">
-              <button type="button" disabled={!project||controlLayout.areas.some(area=>area.sheetId===currentSheet.id)} title={controlLayout.areas.some(area=>area.sheetId===currentSheet.id)?"На этом листе уже есть область «Управление»":""} onPointerDown={e=>dragControlFromPalette(e,"area")} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();addControlArea()}}} className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left text-[#18313b] font-extrabold touch-none hover:border-[#d97706] hover:bg-[#fffbeb] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">▦ Область «Управление»</button>
-              <button type="button" disabled={!project} aria-label="Добавить кнопки моторов только внутрь области управления" onPointerDown={e=>{if(!project||e.button!==0)return;e.preventDefault();setGesture({kind:"palette",type:"motor-buttons",clientX:e.clientX,clientY:e.clientY})}} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();addBlockAtCenter("motor-buttons")}}} className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left text-[#18313b] font-extrabold touch-none hover:border-[#d97706] hover:bg-[#fffbeb] transition-colors disabled:opacity-50">
+              <button type="button" disabled={!project||controlLayout.areas.some(area=>area.sheetId===currentSheet.id)} title={controlLayout.areas.some(area=>area.sheetId===currentSheet.id)?"На этом листе уже есть область «Управление»":""} onPointerDown={e=>dragControlFromPalette(e,"area")} className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left text-[#18313b] font-extrabold touch-none hover:border-[#d97706] hover:bg-[#fffbeb] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">▦ Область «Управление»</button>
+              <button type="button" disabled={!project} aria-label="Добавить кнопки моторов только внутрь области управления" onPointerDown={e=>{if(!project||e.button!==0)return;e.preventDefault();setGesture({kind:"palette",type:"motor-buttons",clientX:e.clientX,clientY:e.clientY})}} className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left text-[#18313b] font-extrabold touch-none hover:border-[#d97706] hover:bg-[#fffbeb] transition-colors disabled:opacity-50">
                 <span aria-hidden="true" className="mr-2 inline-grid grid-cols-2 gap-0.5 align-middle">
                   <span className="h-2.5 w-2.5 rounded-[3px] bg-sky-600 shadow-[inset_0_-2px_#075985]" />
                   <span className="h-2.5 w-2.5 rounded-[3px] bg-red-600 shadow-[inset_0_-2px_#991b1b]" />
@@ -1130,6 +1078,15 @@ function EditorWorkspace() {
                   gesture.originY + dy
                 )
                 setSnapTargetSlot(target)
+                const libraryRect = paletteRef.current?.getBoundingClientRect()
+                setLibraryDropTarget(Boolean(
+                  libraryRect &&
+                  libraryRect.width > 0 &&
+                  e.clientX >= Math.max(0, libraryRect.left) &&
+                  e.clientX <= Math.min(window.innerWidth, libraryRect.right) &&
+                  e.clientY >= Math.max(0, libraryRect.top) &&
+                  e.clientY <= Math.min(window.innerHeight, libraryRect.bottom)
+                ))
               }
             }}
             onPointerUp={(e) => {
@@ -1138,12 +1095,27 @@ function EditorWorkspace() {
                 const { id, originX, originY, startX, startY, moved } = gesture
                 setGesture(null)
                 setSnapTargetSlot(null)
+                setLibraryDropTarget(false)
                 if (moved) {
-                  finishBlockMove(
-                    id,
-                    originX + (e.clientX - startX) / zoom,
-                    originY + (e.clientY - startY) / zoom
+                  const libraryRect = paletteRef.current?.getBoundingClientRect()
+                  const droppedInLibrary = Boolean(
+                    libraryRect &&
+                    libraryRect.width > 0 &&
+                    e.clientX >= Math.max(0, libraryRect.left) &&
+                    e.clientX <= Math.min(window.innerWidth, libraryRect.right) &&
+                    e.clientY >= Math.max(0, libraryRect.top) &&
+                    e.clientY <= Math.min(window.innerHeight, libraryRect.bottom)
                   )
+                  if (droppedInLibrary) {
+                    setSelectedId(null)
+                    saveBlocks(removeBlock(blocks, id))
+                  } else {
+                    finishBlockMove(
+                      id,
+                      originX + (e.clientX - startX) / zoom,
+                      originY + (e.clientY - startY) / zoom
+                    )
+                  }
                 }
               } else if (gesture.kind === "pan") {
                 setGesture(null)
@@ -1355,6 +1327,7 @@ function EditorWorkspace() {
                         return
                       e.preventDefault()
                       e.stopPropagation()
+                      e.currentTarget.setPointerCapture(e.pointerId)
                       setSelectedId(block.id)
                       setGesture({
                         kind: "block",
