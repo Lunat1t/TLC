@@ -318,7 +318,7 @@ function EditorWorkspace() {
   const keyTargets = React.useMemo(() => {
     const visible=new Set(controlLayout.areas.filter(a=>a.sheetId===currentSheet.id).map(a=>a.id))
     const controls=controlLayout.controls.filter(c=>visible.has(c.areaId))
-    const first=controls.find(c=>c.kind==="drivetrain"||c.kind==="legacy-buttons")
+    const first=controls.find(c=>c.kind==="drivetrain"||c.kind==="joystick"||c.kind==="dpad"||c.kind==="legacy-buttons")
     const defaults:Record<string,string>={up:"ArrowUp",down:"ArrowDown",left:"ArrowLeft",right:"ArrowRight",a:"KeyJ",b:"KeyK",x:"KeyU",y:"KeyI",l:"KeyQ",r:"KeyE"}
     const map:Record<string,{controlId:string;input:string}[]>={}
     for(const c of controls){const bindings=c.keyBindings || (c.id===first?.id?defaults:{})
@@ -399,7 +399,8 @@ function EditorWorkspace() {
       if(!siblings.some(c=>x<c.x+c.width&&x+width>c.x&&y<c.y+c.height&&y+height>c.y)){spot={x,y};break}
     }
     if(!spot){setSaveMessage({text:"Увеличьте область: свободного места нет.",isError:true});return}
-    const label=kind==="drivetrain"?"Drivetrain":kind==="motor"?"Мотор":"Группа моторов"
+    const labels:Record<Exclude<ControlKind,"legacy-buttons"|"motor-panel">,string>={drivetrain:"Drivetrain",joystick:"Стик",dpad:"Крестовина",motor:"Мотор","motor-group":"Группа моторов"}
+    const label=labels[kind]
     void saveLayout({...controlLayout,controls:[...controlLayout.controls,{id:newId(),areaId:area.id,kind,label,x:spot.x,y:spot.y,width,height}]})
   }
 
@@ -1117,6 +1118,8 @@ function EditorWorkspace() {
           {controllerCategoryOpen && (
             <div className="py-3 px-1 space-y-2.5">
               <button type="button" disabled={!project} onPointerDown={e=>dragControlFromPalette(e,"area")} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();addControlArea()}}} className="w-full rounded-xl border border-orange-300 bg-orange-50 p-3 text-left font-bold touch-none">▦ Область «Управление»</button>
+              <button type="button" disabled={!project} onPointerDown={e=>dragControlFromPalette(e,"joystick")} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();addControl("joystick")}}} className="w-full rounded-xl border border-orange-200 bg-white p-3 text-left font-bold touch-none disabled:opacity-50">🕹 Стик</button>
+              <button type="button" disabled={!project} onPointerDown={e=>dragControlFromPalette(e,"dpad")} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();addControl("dpad")}}} className="w-full rounded-xl border border-orange-200 bg-white p-3 text-left font-bold touch-none disabled:opacity-50">✥ Крестовина</button>
               <button type="button" disabled={!project} aria-label="Добавить панель моторов только внутрь области управления" onPointerDown={e=>{if(!project||e.button!==0)return;e.preventDefault();setGesture({kind:"palette",type:"motor-buttons",clientX:e.clientX,clientY:e.clientY})}} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();addBlockAtCenter("motor-buttons")}}} className="w-full rounded-xl border border-sky-300 bg-sky-50 p-3 text-left font-bold touch-none disabled:opacity-50">🔘 Панель управления моторами <small className="mt-1 block text-xs font-normal text-slate-500">Добавьте или переместите её внутрь области «Управление»</small></button>
 
             </div>
