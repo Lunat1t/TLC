@@ -1477,7 +1477,7 @@ function EditorWorkspace() {
                         <div data-panel-drag className="flex h-8 shrink-0 items-center rounded-t-[13px] bg-[#e7f3f8] px-2 text-xs font-extrabold text-[#31525f]">Управление моторами</div>
                         {(() => {
                           const hiddenButtons = block.hiddenControlButtons || []
-                          const colors: MotorPanelButton[] = ["blue", ...(block.controlModules || [])]
+                          const colors = (["blue", ...(block.controlModules || [])] as MotorPanelButton[])
                             .filter(color => !hiddenButtons.includes(color))
                           const paint: Record<MotorPanelButton, { face: string; shade: string }> = {
                             blue: { face: "#1687b3", shade: "#0e688a" },
