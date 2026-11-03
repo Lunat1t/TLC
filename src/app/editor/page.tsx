@@ -53,7 +53,7 @@ import { ControlAreaView } from "@/components/editor/control-area"
 import { useRobotSession } from "@/components/editor/robot-session"
 import { CONTROL_INPUTS } from "@/lib/control-workspace"
 import { controllerRuntimeErrors } from "@/lib/controller-program"
-import { CONTROL_MIN, validateControlLayout, cloneControlSheet, cloneControlArea, type ControlLayout, type ControlKind } from "@/lib/control-workspace"
+import { CONTROL_MIN, validateControlLayout, cloneControlSheet, cloneControlArea, type ControlInstance, type ControlLayout, type ControlKind } from "@/lib/control-workspace"
 
 function newId() {
   return (
@@ -131,6 +131,7 @@ function EditorWorkspace() {
     dx: number
     dy: number
   } | null>(null)
+  const [pressedPanelButtons, setPressedPanelButtons] = React.useState<string[]>([])
   const [snapTargetSlot, setSnapTargetSlot] = React.useState<{
     id: string
     branch?: BranchSlot
@@ -151,6 +152,9 @@ function EditorWorkspace() {
     if(event==="pressed" && (robotState.program==="trial-running"||robotState.program==="live-running")) inputStarted.current=performance.now()
     sessionRef.current?.dispatch(target,event)
   },[robotState.program,sessionRef])
+  React.useEffect(()=>{
+    if (!checking || !["trial-running","live-running"].includes(robotState.program)) setPressedPanelButtons([])
+  },[checking,robotState.program])
   React.useLayoutEffect(()=>{
     if(inputStarted.current===null)return
     const start=inputStarted.current;inputStarted.current=null
@@ -302,7 +306,15 @@ function EditorWorkspace() {
   )
 
   const controlLayout = (project?.workspace?.controlLayout as ControlLayout | undefined) || {version:1 as const, areas:[], controls:[]}
-  const controllerProgram = React.useMemo(() => project ? compileControllerProgram({...project,workspace:{...project.workspace,...snapshotSheets()}}) : null, [project,snapshotSheets])
+  const motorPanelControls = React.useMemo<ControlInstance[]>(() => blocks.flatMap(block => {
+    if (block.type !== "motor-buttons" || !block.controlAreaId) return []
+    const area = controlLayout.areas.find(candidate => candidate.id === block.controlAreaId && candidate.sheetId === currentSheet.id)
+    if (!area) return []
+    const inputs = (["blue", ...(block.controlModules || [])] as const).filter(color => !(block.hiddenControlButtons || []).includes(color))
+    return [{id:block.id,areaId:area.id,kind:"motor-panel",label:"Панель моторов",x:0,y:0,width:block.width||180,height:block.height||132,inputs}]
+  }), [blocks,controlLayout.areas,currentSheet.id])
+  const controllerControls = React.useMemo(() => [...controlLayout.controls,...motorPanelControls], [controlLayout.controls,motorPanelControls])
+  const controllerProgram = React.useMemo(() => project ? compileControllerProgram({...project,workspace:{...project.workspace,...snapshotSheets(),controlLayout:{...controlLayout,controls:controllerControls}}}) : null, [project,snapshotSheets,controlLayout,controllerControls])
   const keyTargets = React.useMemo(() => {
     const visible=new Set(controlLayout.areas.filter(a=>a.sheetId===currentSheet.id).map(a=>a.id))
     const controls=controlLayout.controls.filter(c=>visible.has(c.areaId))
@@ -374,7 +386,7 @@ function EditorWorkspace() {
     const y = ((board?.clientHeight || 360)/2 - panY)/zoom - 180
     void saveLayout({...controlLayout, areas:[...controlLayout.areas,{id:newId(),sheetId:currentSheet.id,title:"Управление",x:location ? location.x-320 : x,y:location ? location.y-20 : y,width:640,height:360}]})
   }
-  function addControl(kind: Exclude<ControlKind,"legacy-buttons">, location?:{x:number;y:number}) {
+  function addControl(kind: Exclude<ControlKind,"legacy-buttons"|"motor-panel">, location?:{x:number;y:number}) {
     if (!project) return
     const area=controlLayout.areas.find(a=>a.sheetId===currentSheet.id && (!location || (location.x>=a.x && location.x<=a.x+a.width && location.y>=a.y+44 && location.y<=a.y+a.height)))
     if (!area) {setSaveMessage({text:"Сначала добавьте область «Управление».",isError:true});return}
@@ -391,7 +403,7 @@ function EditorWorkspace() {
     void saveLayout({...controlLayout,controls:[...controlLayout.controls,{id:newId(),areaId:area.id,kind,label,x:spot.x,y:spot.y,width,height}]})
   }
 
-  function dragControlFromPalette(e:React.PointerEvent<HTMLButtonElement>,kind:"area"|Exclude<ControlKind,"legacy-buttons">) {
+  function dragControlFromPalette(e:React.PointerEvent<HTMLButtonElement>,kind:"area"|Exclude<ControlKind,"legacy-buttons"|"motor-panel">) {
     if(!project || e.button!==0)return
     e.preventDefault();const element=e.currentTarget,sx=e.clientX,sy=e.clientY;let moved=false
     element.setPointerCapture(e.pointerId)
@@ -1588,20 +1600,29 @@ function EditorWorkspace() {
                                   panelHeight - 44
                                 ))
                           ))
-                          const startButtonDrag = (e: React.PointerEvent<HTMLSpanElement>, color: MotorPanelButton) => {
+                          const startButtonDrag = (e: React.PointerEvent<HTMLButtonElement>, color: MotorPanelButton) => {
                             if (e.button !== 0) return
                             e.preventDefault()
                             e.stopPropagation()
+                            if (checking) {
+                              if (!['trial-running','live-running'].includes(robotState.program)) return
+                              const key = `${block.id}:${color}`
+                              if (inputErrors[key]) return
+                              e.currentTarget.setPointerCapture(e.pointerId)
+                              setPressedPanelButtons(previous => previous.includes(key) ? previous : [...previous,key])
+                              dispatchControl({controlId:block.id,input:color},'pressed')
+                              return
+                            }
                             e.currentTarget.setPointerCapture(e.pointerId)
                             setSelectedId(block.id)
                             setButtonDrag({blockId:block.id,color,pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,dx:0,dy:0})
                           }
-                          const moveButtonDrag = (e: React.PointerEvent<HTMLSpanElement>) => {
+                          const moveButtonDrag = (e: React.PointerEvent<HTMLButtonElement>) => {
                             setButtonDrag(prev => prev?.blockId === block.id && prev.pointerId === e.pointerId
                               ? {...prev,dx:e.clientX-prev.startX,dy:e.clientY-prev.startY}
                               : prev)
                           }
-                          const finishButtonDrag = (e: React.PointerEvent<HTMLSpanElement>) => {
+                          const finishButtonDrag = (e: React.PointerEvent<HTMLButtonElement>) => {
                             const drag = buttonDrag
                             if (!drag || drag.blockId !== block.id || drag.pointerId !== e.pointerId) return
                             const panelRect = e.currentTarget.closest("[data-button-panel]")?.getBoundingClientRect()
@@ -1623,11 +1644,13 @@ function EditorWorkspace() {
                               style={isCross ? {gridTemplateColumns:`repeat(3, ${buttonSize}px)`,gridTemplateRows:`repeat(3, ${buttonSize}px)`} : undefined}
                             >
                               {colors.map((color) => (
-                                <span
+                                <button
+                                  type="button"
                                   key={color}
-                                  aria-label={`${color} кнопка. Перетащите за пределы панели, чтобы удалить`}
-                                  title="Перетащите за пределы панели, чтобы удалить"
-                                  className={`block touch-none rounded-full border border-black/10 cursor-grab ${isCross ? fourButtonPositions[color] : ""} ${buttonDrag?.blockId === block.id && buttonDrag.color === color ? "z-30 cursor-grabbing opacity-80" : ""}`}
+                                  aria-label={`${({blue:"Синяя",red:"Красная",green:"Зелёная",yellow:"Жёлтая"} as Record<MotorPanelButton,string>)[color]} кнопка${checking?"":". Перетащите за пределы панели, чтобы удалить"}`}
+                                  aria-pressed={pressedPanelButtons.includes(`${block.id}:${color}`)}
+                                  title={checking?"Нажмите для управления":"Перетащите за пределы панели, чтобы удалить"}
+                                  className={`block touch-none appearance-none p-0 rounded-full border border-black/10 ${checking?"cursor-pointer":"cursor-grab"} ${isCross ? fourButtonPositions[color] : ""} ${buttonDrag?.blockId === block.id && buttonDrag.color === color ? "z-30 cursor-grabbing opacity-80" : ""}`}
                                   style={{
                                     width: buttonSize,
                                     height: buttonSize,
@@ -1635,12 +1658,37 @@ function EditorWorkspace() {
                                     boxShadow: `inset 0 -${Math.max(3,Math.round(buttonSize*0.12))}px ${paint[color].shade},0 2px 3px #78909a`,
                                     transform: buttonDrag?.blockId === block.id && buttonDrag.color === color
                                       ? `translate(${buttonDrag.dx/zoom}px,${buttonDrag.dy/zoom}px) scale(1.08)`
+                                      : pressedPanelButtons.includes(`${block.id}:${color}`) ? "translateY(3px) scale(0.96)"
                                       : undefined,
                                   }}
                                   onPointerDown={e=>startButtonDrag(e,color)}
                                   onPointerMove={moveButtonDrag}
-                                  onPointerUp={finishButtonDrag}
-                                  onPointerCancel={e=>setButtonDrag(prev=>prev?.blockId===block.id&&prev.pointerId===e.pointerId?null:prev)}
+                                  onPointerUp={e=>{
+                                    if (checking) {
+                                      e.stopPropagation()
+                                      const key=`${block.id}:${color}`
+                                      setPressedPanelButtons(previous=>previous.filter(item=>item!==key))
+                                      dispatchControl({controlId:block.id,input:color},'released')
+                                    } else finishButtonDrag(e)
+                                  }}
+                                  onPointerCancel={e=>{
+                                    const key=`${block.id}:${color}`
+                                    if (checking) {setPressedPanelButtons(previous=>previous.filter(item=>item!==key));dispatchControl({controlId:block.id,input:color},'released')}
+                                    else setButtonDrag(prev=>prev?.blockId===block.id&&prev.pointerId===e.pointerId?null:prev)
+                                  }}
+                                  onKeyDown={e=>{
+                                    if (!checking || (e.key!==" "&&e.key!=="Enter") || e.repeat) return
+                                    e.preventDefault();const key=`${block.id}:${color}`
+                                    if (inputErrors[key]) return
+                                    setPressedPanelButtons(previous=>previous.includes(key)?previous:[...previous,key])
+                                    dispatchControl({controlId:block.id,input:color},'pressed')
+                                  }}
+                                  onKeyUp={e=>{
+                                    if (!checking || (e.key!==" "&&e.key!=="Enter")) return
+                                    e.preventDefault();const key=`${block.id}:${color}`
+                                    setPressedPanelButtons(previous=>previous.filter(item=>item!==key))
+                                    dispatchControl({controlId:block.id,input:color},'released')
+                                  }}
                                 />
                               ))}
                               {nextColor && block.controlAreaId && (
@@ -1749,7 +1797,7 @@ function EditorWorkspace() {
                     ) : isButtonBlock ? (
                       <ControllerButtonBlock
                         block={block}
-                        controls={controlLayout.controls}
+                        controls={controllerControls}
                         ports={motorPorts}
                         isConnected={isConnected}
                         hasChild={hasChild}

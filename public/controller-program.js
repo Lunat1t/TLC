@@ -13,6 +13,10 @@ export const BUTTON_LABELS = Object.freeze({
   y: 'Y',
   l: 'L',
   r: 'R',
+  blue: 'Синяя',
+  red: 'Красная',
+  green: 'Зелёная',
+  yellow: 'Жёлтая',
 });
 
 export const BUTTON_KEYS = Object.freeze({
@@ -175,7 +179,7 @@ export function compileControllerProgram(project) {
     if (target) {
       const controls = project.workspace?.controlLayout?.controls || [];
       const control = controls.find(c => c.id === target.controlId);
-      const inputs = {drivetrain:['up','down','left','right'],motor:['forward','backward'],'motor-group':['forward','backward'],'legacy-buttons':CONTROLLER_BUTTONS};
+      const inputs = {drivetrain:['up','down','left','right'],motor:['forward','backward'],'motor-group':['forward','backward'],'legacy-buttons':CONTROLLER_BUTTONS,'motor-panel':['blue','red','green','yellow']};
       if (!control) result.errors.push({blockId:root.id, target, code:'missing-control', message:'Выберите существующий элемент управления'});
       else if (!inputs[control.kind]?.includes(target.input)) result.errors.push({blockId:root.id, target, code:'invalid-input', message:'Выберите доступную кнопку элемента'});
     }

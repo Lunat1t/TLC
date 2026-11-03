@@ -24,6 +24,10 @@ const BUTTON_DESCRIPTIONS: Record<ControllerButton, string> = {
   y: "Y",
   l: "L (плечо)",
   r: "R (плечо)",
+  blue: "Синяя кнопка",
+  red: "Красная кнопка",
+  green: "Зелёная кнопка",
+  yellow: "Жёлтая кнопка",
 }
 
 export function ControllerButtonBlock({
@@ -55,7 +59,7 @@ export function ControllerButtonBlock({
           </select>
           <select value={block.target?.input || ""} aria-label="Выбрать кнопку элемента" onChange={e=>onChange({target:{controlId:block.target?.controlId || "",input:e.target.value}})} className="h-[36px] max-w-[100px] px-2 rounded-[9px] bg-white text-[#18313b] font-black text-sm border-2 border-[#c2410c]">
             <option value="">Кнопка</option>
-            {(() => {const c=controls.find(item=>item.id===block.target?.controlId);return c ? CONTROL_INPUTS[c.kind].map(input=><option key={input} value={input}>{({up:'▲',down:'▼',left:'◀',right:'▶',forward:'▲',backward:'▼'} as Record<string,string>)[input] || input.toUpperCase()}</option>) : null})()}
+            {(() => {const c=controls.find(item=>item.id===block.target?.controlId);return c ? (c.inputs || CONTROL_INPUTS[c.kind]).map(input=><option key={input} value={input}>{({up:'▲',down:'▼',left:'◀',right:'▶',forward:'▲',backward:'▼',blue:'🔵 Синяя',red:'🔴 Красная',green:'🟢 Зелёная',yellow:'🟡 Жёлтая'} as Record<string,string>)[input] || input.toUpperCase()}</option>) : null})()}
           </select>
         </> : <select
           value={currentButton}

@@ -15,6 +15,10 @@ export type ControllerButton =
   | "y"
   | "l"
   | "r"
+  | "blue"
+  | "red"
+  | "green"
+  | "yellow"
 export type ControllerEvent = "pressed" | "released"
 
 export type BlockType = "start" | "drive" | "pair" | "if" | "button" | "stop" | "motor-buttons"
