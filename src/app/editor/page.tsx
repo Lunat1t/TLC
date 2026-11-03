@@ -4,8 +4,6 @@ import * as React from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import {
   HUBS,
@@ -19,20 +17,16 @@ import {
   IF_INDENT,
   IF_MID_HEIGHT,
   IF_TOP_HEIGHT,
-  MAX_SHEETS,
   addBlock,
-  addSheet,
   attachChain,
   blockTotalHeight,
   chainIds,
-  deleteSheet,
   generatePybricks,
   ifInnerHeight,
   layoutChains,
   moveChain,
   readSheets,
   removeBlock,
-  renameSheet,
   snapTargetInfo,
   updateDrive,
   type BlockType,
@@ -53,7 +47,7 @@ import { ControlAreaView } from "@/components/editor/control-area"
 import { useRobotSession } from "@/components/editor/robot-session"
 import { CONTROL_INPUTS } from "@/lib/control-workspace"
 import { controllerRuntimeErrors } from "@/lib/controller-program"
-import { CONTROL_MIN, validateControlLayout, cloneControlSheet, cloneControlArea, type ControlInstance, type ControlLayout, type ControlKind } from "@/lib/control-workspace"
+import { CONTROL_MIN, validateControlLayout, cloneControlArea, type ControlInstance, type ControlLayout, type ControlKind } from "@/lib/control-workspace"
 
 function newId() {
   return (
@@ -165,13 +159,6 @@ function EditorWorkspace() {
     title: string
     code: string
   }>({ open: false, title: "", code: "" })
-
-  const [sheetModal, setSheetModal] = React.useState<{
-    open: boolean
-    action: "add" | "rename" | "delete"
-    name: string
-    error: string | null
-  }>({ open: false, action: "rename", name: "", error: null })
 
   const currentSheet = React.useMemo(
     () =>
@@ -380,6 +367,7 @@ function EditorWorkspace() {
   }
   function addControlArea(location?: {x:number;y:number}) {
     if (!project) return
+    if (controlLayout.areas.some(area=>area.sheetId===currentSheet.id)) {setSaveMessage({text:"На одном листе можно создать только одну область «Управление».",isError:true});return}
     if (controlLayout.areas.length >= 12) {setSaveMessage({text:"Можно добавить не более 12 областей.",isError:true});return}
     const board = boardRef.current
     const x = ((board?.clientWidth || 640)/2 - panX)/zoom - 320
@@ -399,7 +387,7 @@ function EditorWorkspace() {
       if(!siblings.some(c=>x<c.x+c.width&&x+width>c.x&&y<c.y+c.height&&y+height>c.y)){spot={x,y};break}
     }
     if(!spot){setSaveMessage({text:"Увеличьте область: свободного места нет.",isError:true});return}
-    const label=kind==="joystick"?"Стик":kind==="dpad"?"Крестовина":kind==="drivetrain"?"Drivetrain":kind==="motor"?"Мотор":"Группа моторов"
+    const label=kind==="drivetrain"?"Drivetrain":kind==="motor"?"Мотор":"Группа моторов"
     void saveLayout({...controlLayout,controls:[...controlLayout.controls,{id:newId(),areaId:area.id,kind,label,x:spot.x,y:spot.y,width,height}]})
   }
 
@@ -648,87 +636,6 @@ function EditorWorkspace() {
     setPanY(board ? Math.round(board.clientHeight / 2) : 240)
   }
 
-  async function switchSheet(id: string) {
-    if (gesture || id === sheetState.activeSheetId) return
-    await sessionRef.current?.stop("Лист изменён. Запустите программу снова.")
-    const nextState: SheetState = {
-      ...snapshotSheets(),
-      activeSheetId: id,
-    }
-    setSelectedId(null)
-    setOpenMenuBlockId(null)
-    if (await persistSheets(nextState)) {
-      const targetSheet = nextState.sheets.find((s) => s.id === id)
-      const board = boardRef.current
-      setPanX(
-        targetSheet?.view?.panX ?? (board ? Math.round(board.clientWidth / 2) : 360)
-      )
-      setPanY(
-        targetSheet?.view?.panY ?? (board ? Math.round(board.clientHeight / 2) : 240)
-      )
-      setZoom(targetSheet?.view?.zoom ?? 1)
-    }
-  }
-
-  async function copySheet() {
-    try {
-      await sessionRef.current?.stop("Лист скопирован. Запустите программу снова.")
-      let suffix=1, name=""
-      do {name=`${currentSheet.name.slice(0,28)} (копия${suffix===1?"":` ${suffix}`})`;suffix++} while(sheetState.sheets.some(s=>s.name.toLocaleLowerCase()===name.toLocaleLowerCase()))
-      const copied=cloneControlSheet(snapshotSheets(),controlLayout,currentSheet.id,newId(),name,newId)
-      if(await persistSheets(copied.state,copied.layout)){setSelectedId(null);setSaveMessage({text:"Лист скопирован",isError:false})}
-    } catch(error) {setSaveMessage({text:error instanceof Error?error.message:"Не удалось скопировать лист",isError:true})}
-  }
-
-  function openSheetDialog(action: "add" | "rename" | "delete") {
-    if (!project) return
-    let number = sheetState.sheets.length + 1
-    while (sheetState.sheets.some((s) => s.name === `Лист ${number}`)) {
-      number++
-    }
-    setSheetModal({
-      open: true,
-      action,
-      name: action === "add" ? `Лист ${number}` : currentSheet.name,
-      error: null,
-    })
-  }
-
-  async function handleSheetSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    try {
-      await sessionRef.current?.stop("Листы изменены. Запустите программу снова.")
-      const state = snapshotSheets()
-      const removedAreaIds = new Set(sheetModal.action === "delete" ? controlLayout.areas.filter(a=>a.sheetId===state.activeSheetId).map(a=>a.id) : [])
-      const nextLayout:ControlLayout = {...controlLayout,areas:controlLayout.areas.filter(a=>!removedAreaIds.has(a.id)),controls:controlLayout.controls.filter(c=>!removedAreaIds.has(c.areaId))}
-      const next =
-        sheetModal.action === "add"
-          ? addSheet(state, newId(), sheetModal.name)
-          : sheetModal.action === "rename"
-            ? renameSheet(state, state.activeSheetId, sheetModal.name)
-            : deleteSheet(state, state.activeSheetId)
-      setSelectedId(null)
-      if (await persistSheets(next, nextLayout)) {
-        const active =
-          next.sheets.find((s) => s.id === next.activeSheetId) || next.sheets[0]
-        const board = boardRef.current
-        setPanX(
-          active?.view?.panX ?? (board ? Math.round(board.clientWidth / 2) : 360)
-        )
-        setPanY(
-          active?.view?.panY ?? (board ? Math.round(board.clientHeight / 2) : 240)
-        )
-        setZoom(active?.view?.zoom ?? 1)
-        setSheetModal((prev) => ({ ...prev, open: false }))
-      }
-    } catch (err) {
-      setSheetModal((prev) => ({
-        ...prev,
-        error: err instanceof Error ? err.message : "Ошибка листа",
-      }))
-    }
-  }
-
   function handleExportCode() {
     if (!project) return
     try {
@@ -953,9 +860,6 @@ function EditorWorkspace() {
                 <span className="text-[13px] font-extrabold text-[#18313b]">
                   Когда программа запускается
                 </span>
-                <small className="text-[11px] text-[#78909a]">
-                  Точка старта программы
-                </small>
               </button>
 
               {/* Блок 2: Движение мотора */}
@@ -991,9 +895,6 @@ function EditorWorkspace() {
                 <span className="text-[13px] font-extrabold text-[#18313b]">
                   Движение мотора
                 </span>
-                <small className="text-[11px] text-[#78909a]">
-                  Перетащите на доску
-                </small>
               </button>
 
               <button
@@ -1013,7 +914,6 @@ function EditorWorkspace() {
               >
                 <span aria-hidden="true" className="grid place-items-center w-[106px] h-[33px] rounded-[8px] bg-[#b1372c] text-white text-base font-black shadow-[inset_0_-4px_#8f2a21]">■</span>
                 <span className="text-[13px] font-extrabold text-[#18313b]">Стоп мотора</span>
-                <small className="text-[11px] text-[#78909a]">Остановка мотора (тормоз)</small>
               </button>
 
               {/* Блок 3: Связанные моторы */}
@@ -1049,9 +949,6 @@ function EditorWorkspace() {
                 <span className="text-[13px] font-extrabold text-[#18313b]">
                   Связанные моторы
                 </span>
-                <small className="text-[11px] text-[#78909a]">
-                  Два мотора, общие модули
-                </small>
               </button>
 
               {/* Блок 4: Если / Иначе (if / else) */}
@@ -1087,9 +984,6 @@ function EditorWorkspace() {
                 <span className="text-[13px] font-extrabold text-[#18313b]">
                   Если … то / Иначе
                 </span>
-                <small className="text-[11px] text-[#78909a]">
-                  Ветвление программы (if / else)
-                </small>
               </button>
             </div>
           )}
@@ -1098,12 +992,9 @@ function EditorWorkspace() {
             type="button"
             aria-expanded={controllerCategoryOpen}
             onClick={() => setControllerCategoryOpen((v) => !v)}
-            className="flex items-center justify-between w-full rounded-[11px] bg-[#fff5ed] hover:bg-[#ffede0] px-4 py-3 text-[#9a3412] font-extrabold text-sm transition-colors mt-3"
+            className="flex items-center justify-between w-full rounded-[11px] bg-[#eff8fb] px-4 py-3 text-[#284653] font-extrabold text-sm mt-3"
           >
-            <span className="flex items-center gap-2">
-              <span aria-hidden="true">🎮</span>
-              <span>Пульт</span>
-            </span>
+            <span>Пульт</span>
             <span
               aria-hidden="true"
               className={`text-lg leading-none transition-transform ${
@@ -1116,10 +1007,16 @@ function EditorWorkspace() {
 
           {controllerCategoryOpen && (
             <div className="py-3 px-1 space-y-2.5">
-              <button type="button" disabled={!project} onPointerDown={e=>dragControlFromPalette(e,"area")} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();addControlArea()}}} className="w-full rounded-xl border border-orange-300 bg-orange-50 p-3 text-left font-bold touch-none">▦ Область «Управление»</button>
-              <button type="button" disabled={!project} onPointerDown={e=>dragControlFromPalette(e,"joystick")} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();addControl("joystick")}}} className="w-full rounded-xl border border-orange-300 bg-orange-50 p-3 text-left font-bold touch-none disabled:opacity-50">🕹️ Стик <small className="mt-1 block text-xs font-normal text-slate-500">Перемещается и возвращается в центр как на геймпаде</small></button>
-              <button type="button" disabled={!project} onPointerDown={e=>dragControlFromPalette(e,"dpad")} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();addControl("dpad")}}} className="w-full rounded-xl border border-orange-300 bg-orange-50 p-3 text-left font-bold touch-none disabled:opacity-50">✚ Крестовина</button>
-              <button type="button" disabled={!project} aria-label="Добавить панель моторов только внутрь области управления" onPointerDown={e=>{if(!project||e.button!==0)return;e.preventDefault();setGesture({kind:"palette",type:"motor-buttons",clientX:e.clientX,clientY:e.clientY})}} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();addBlockAtCenter("motor-buttons")}}} className="w-full rounded-xl border border-sky-300 bg-sky-50 p-3 text-left font-bold touch-none disabled:opacity-50">🔘 Панель управления моторами <small className="mt-1 block text-xs font-normal text-slate-500">Добавьте или переместите её внутрь области «Управление»</small></button>
+              <button type="button" disabled={!project||controlLayout.areas.some(area=>area.sheetId===currentSheet.id)} title={controlLayout.areas.some(area=>area.sheetId===currentSheet.id)?"На этом листе уже есть область «Управление»":""} onPointerDown={e=>dragControlFromPalette(e,"area")} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();addControlArea()}}} className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left text-[#18313b] font-extrabold touch-none hover:border-[#d97706] hover:bg-[#fffbeb] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">▦ Область «Управление»</button>
+              <button type="button" disabled={!project} aria-label="Добавить кнопки моторов только внутрь области управления" onPointerDown={e=>{if(!project||e.button!==0)return;e.preventDefault();setGesture({kind:"palette",type:"motor-buttons",clientX:e.clientX,clientY:e.clientY})}} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();addBlockAtCenter("motor-buttons")}}} className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left text-[#18313b] font-extrabold touch-none hover:border-[#d97706] hover:bg-[#fffbeb] transition-colors disabled:opacity-50">
+                <span aria-hidden="true" className="mr-2 inline-grid grid-cols-2 gap-0.5 align-middle">
+                  <span className="h-2.5 w-2.5 rounded-[3px] bg-sky-600 shadow-[inset_0_-2px_#075985]" />
+                  <span className="h-2.5 w-2.5 rounded-[3px] bg-red-600 shadow-[inset_0_-2px_#991b1b]" />
+                  <span className="h-2.5 w-2.5 rounded-[3px] bg-emerald-600 shadow-[inset_0_-2px_#065f46]" />
+                  <span className="h-2.5 w-2.5 rounded-[3px] bg-amber-400 shadow-[inset_0_-2px_#b45309]" />
+                </span>
+                Кнопки моторов
+              </button>
 
             </div>
           )}
@@ -1433,7 +1330,7 @@ function EditorWorkspace() {
                         : isButtonBlock
                           ? "Когда кнопка пульта. Перетащите за заголовок"
                         : isMotorButtons
-                          ? "Панель управления мотором. Перетащите за заголовок"
+                          ? "Кнопки моторов. Перетащите за заголовок"
                           : isStopBlock
                             ? "Стоп мотора. Перетащите за заголовок"
                             : motorBlock
@@ -1571,7 +1468,7 @@ function EditorWorkspace() {
                     {/* Block Content */}
                     {isMotorButtons ? (
                       <div data-button-panel="true" className="relative flex h-full w-full flex-col">
-                        <div data-panel-drag className="flex h-8 shrink-0 items-center rounded-t-[13px] bg-[#e7f3f8] px-2 text-xs font-extrabold text-[#31525f]">Управление моторами</div>
+                        <div data-panel-drag className="flex h-8 shrink-0 items-center rounded-t-[13px] bg-[#e7f3f8] px-2 text-xs font-extrabold text-[#31525f]">Кнопки моторов</div>
                         {(() => {
                           const hiddenButtons = block.hiddenControlButtons || []
                           const colors = (["blue", ...(block.controlModules || [])] as MotorPanelButton[])
@@ -2163,75 +2060,6 @@ function EditorWorkspace() {
             )}
           </div>
 
-          {/* Sheets Bar */}
-          <div
-            aria-label="Листы проекта"
-            inert={checking || undefined}
-            className="flex items-center shrink-0 gap-1.5 px-3 py-2 min-h-[48px] border-t border-[#dce8ec] bg-[#edf4f6]"
-          >
-            <div
-              role="tablist"
-              aria-label="Листы"
-              className="flex gap-1 overflow-x-auto min-w-0 flex-1"
-            >
-              {sheetState.sheets.map((sheet) => {
-                const active = sheet.id === sheetState.activeSheetId
-                return (
-                  <button
-                    key={sheet.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => switchSheet(sheet.id)}
-                    onDoubleClick={() => {
-                      switchSheet(sheet.id)
-                      openSheetDialog("rename")
-                    }}
-                    className={`px-3 py-1.5 min-h-[33px] rounded-[7px] border border-[#d4e1e9] bg-white text-xs whitespace-nowrap max-w-[220px] truncate ${
-                      active
-                        ? "text-[#087996] border-b-[3px] border-b-[#087996] font-extrabold"
-                        : "text-[#31525f] font-semibold"
-                    }`}
-                  >
-                    {sheet.name}
-                  </button>
-                )
-              })}
-            </div>
-            <button
-              type="button"
-              disabled={sheetState.sheets.length >= MAX_SHEETS}
-              onClick={() => openSheetDialog("add")}
-              aria-label="Добавить лист"
-              className="px-3 py-1.5 min-h-[33px] rounded-[7px] border border-[#d4e1e9] bg-white text-[#31525f] font-extrabold disabled:opacity-40"
-            >
-              +
-            </button>
-            <button type="button" aria-label="Копировать активный лист" onClick={()=>void copySheet()} className="h-8 px-2 rounded border bg-white text-xs">⧉</button>
-            <button
-              type="button"
-              onClick={() => openSheetDialog("rename")}
-              aria-label="Переименовать активный лист"
-              className="px-3 py-1.5 min-h-[33px] rounded-[7px] border border-[#d4e1e9] bg-white text-[#31525f] font-extrabold"
-            >
-              ✎
-            </button>
-            <button
-              type="button"
-              disabled={sheetState.sheets.length <= 1}
-              onClick={() => openSheetDialog("delete")}
-              aria-label="Удалить активный лист"
-              className="px-3 py-1.5 min-h-[33px] rounded-[7px] border border-[#d4e1e9] bg-white text-[#31525f] font-extrabold disabled:opacity-40"
-            >
-              ×
-            </button>
-          </div>
-
-          <div className="shrink-0 text-[11px] leading-normal bg-white text-[#66818c] px-3 py-1.5">
-            Лист: <strong>{currentSheet?.name}</strong> · Соедините блоки:
-            поднесите верх блока к низу блока «Когда программа запускается» или
-            внутрь скобки «Если … то». Цепочки выполняются сверху вниз.
-          </div>
         </main>
       </div>
 
@@ -2272,67 +2100,6 @@ function EditorWorkspace() {
 
       {codeModal.open && <div role="dialog" aria-modal="true" aria-label={codeModal.title} className="fixed inset-0 z-50 bg-[#112a36]/50 grid place-items-center p-4"><div className="w-full max-w-[600px] rounded-[18px] bg-white p-6 shadow-2xl"><h2 className="text-xl font-black mb-3">{codeModal.title}</h2><p className="text-sm mb-3">Загрузите файл в Pybricks Code и запустите на хабе.</p><textarea readOnly aria-label="Код программы Pybricks" value={codeModal.code} className="w-full h-[210px] p-3 border rounded-lg font-mono text-sm"/><div className="flex justify-end gap-3 mt-4"><Button type="button" variant="outline" onClick={handleDownloadPy}>Скачать .py</Button><Button type="button" onClick={()=>setCodeModal(prev=>({...prev,open:false}))}>Закрыть</Button></div></div></div>}
 
-      {/* Sheet Add/Rename/Delete Modal */}
-      {sheetModal.open && (
-        <div className="fixed inset-0 z-50 bg-[#112a36]/50 grid place-items-center p-4">
-          <div className="w-full max-w-[420px] rounded-[18px] border border-[#dce8ec] bg-white p-6 shadow-2xl">
-            <form onSubmit={handleSheetSubmit}>
-              <h2 className="text-xl font-black mb-4">
-                {sheetModal.action === "add"
-                  ? "Новый лист"
-                  : sheetModal.action === "delete"
-                    ? "Удалить лист?"
-                    : "Переименовать лист"}
-              </h2>
-              {sheetModal.action !== "delete" ? (
-                <div className="grid gap-2">
-                  <Label htmlFor="sheetNameInput">Название листа</Label>
-                  <Input
-                    id="sheetNameInput"
-                    maxLength={40}
-                    autoFocus
-                    value={sheetModal.name}
-                    onChange={(e) =>
-                      setSheetModal((prev) => ({
-                        ...prev,
-                        name: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-              ) : (
-                <p className="text-sm text-[#53707c]">
-                  Удалить «{currentSheet?.name}» вместе с блоками?
-                </p>
-              )}
-              {sheetModal.error && (
-                <p role="alert" className="text-xs font-bold text-[#b1372c] mt-3">
-                  {sheetModal.error}
-                </p>
-              )}
-              <div className="flex items-center justify-end gap-3 mt-6">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() =>
-                    setSheetModal((prev) => ({ ...prev, open: false }))
-                  }
-                >
-                  Отмена
-                </Button>
-                <Button
-                  type="submit"
-                  variant={
-                    sheetModal.action === "delete" ? "destructive" : "default"
-                  }
-                >
-                  {sheetModal.action === "delete" ? "Удалить" : "Сохранить"}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

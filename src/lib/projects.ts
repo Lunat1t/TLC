@@ -129,7 +129,11 @@ export async function prepareEditorProjects(storage: Storage, projectId: string,
     const original = parsed[index] as RobotProject
     const result = migrateControlWorkspace(original)
     if (!result.changed) return {projects:clean,raw}
-    const backupKey = `${STORAGE_KEY}.backup.${projectId}`
+    const backupPrefix = `${STORAGE_KEY}.backup.${projectId}`
+    let backupKey = backupPrefix
+    if (storage.getItem(backupKey) !== null && storage.getItem(backupKey) !== raw) {
+      backupKey = `${backupPrefix}.${Date.now()}`
+    }
     if (storage.getItem(backupKey) === null) storage.setItem(backupKey, raw)
     if (storage.getItem(backupKey) !== raw) throw new Error('Не удалось подтвердить резервную копию. Сохранение остановлено.')
     if (storage.getItem(STORAGE_KEY) !== raw) throw new Error('Проекты изменены в другой вкладке. Перезагрузите страницу.')

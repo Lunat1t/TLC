@@ -22,6 +22,7 @@ export type ControllerButton =
 export type ControllerEvent = "pressed" | "released"
 
 export type BlockType = "start" | "drive" | "pair" | "if" | "button" | "stop" | "motor-buttons"
+const LIBRARY_BLOCK_TYPES = new Set<BlockType>(["start", "drive", "pair", "if", "stop", "motor-buttons"])
 export type MotorDirection = "forward" | "backward"
 export type TravelUnit = "rotations" | "degrees" | "seconds"
 export type MotorModule = "speed" | "power" | "travel"
@@ -313,9 +314,7 @@ export function readBlocks(
       (block): block is Record<string, unknown> =>
         Boolean(block) &&
         typeof block === "object" &&
-        ["start", "drive", "pair", "if", "button", "stop", "motor-buttons"].includes(
-          String((block as { type?: unknown }).type)
-        ) &&
+        LIBRARY_BLOCK_TYPES.has(String((block as { type?: unknown }).type) as BlockType) &&
         typeof (block as { id?: unknown }).id === "string" &&
         Number.isFinite((block as { x?: unknown }).x) &&
         Number.isFinite((block as { y?: unknown }).y)

@@ -9,10 +9,10 @@
 ## Локальный запуск
 
 ```sh
-npm start
+npm run dev
 ```
 
-Откройте `http://localhost:8080/`. Для проверок: `npm test`, `npm run test:hub`, `npm run test:full`.
+Откройте `http://localhost:3000/`. Для запуска собранной версии выполните `npm run build`, затем `npm start` и откройте `http://localhost:8080/`. Для проверок: `npm test`, `npm run test:hub`, `npm run test:full`.
 
 ## Проекты
 
