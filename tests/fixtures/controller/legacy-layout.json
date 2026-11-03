@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "hub": "prime",
+  "ports": {
+    "A": {
+      "speed": 45,
+      "reverse": false
+    },
+    "B": {
+      "speed": 45,
+      "reverse": false
+    },
+    "C": {
+      "speed": 45,
+      "reverse": false
+    },
+    "D": {
+      "speed": 45,
+      "reverse": false
+    },
+    "E": {
+      "speed": 45,
+      "reverse": false
+    },
+    "F": {
+      "speed": 45,
+      "reverse": false
+    }
+  },
+  "devices": [
+    {
+      "id": "drive",
+      "type": "drivetrain",
+      "name": "Привод",
+      "leftPorts": [
+        "A"
+      ],
+      "rightPorts": [
+        "D"
+      ]
+    },
+    {
+      "id": "action",
+      "type": "motor",
+      "name": "Мотор действия",
+      "ports": [
+        "B"
+      ]
+    }
+  ],
+  "moduleLayout": [
+    {
+      "deviceId": "drive",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "deviceId": "action",
+      "x": 0.5,
+      "y": 0
+    }
+  ],
+  "gamepad": {
+    "driveId": "drive",
+    "actionDeviceId": "action",
+    "leftPort": "A",
+    "rightPort": "D",
+    "actionPort": "B",
+    "actionDirection": 1
+  },
+  "controls": [
+    {
+      "id": "drive-a",
+      "type": "pair",
+      "label": "Мотор A",
+      "port": "A",
+      "x": 0,
+      "y": 1,
+      "direction": 1
+    },
+    {
+      "id": "drive-d",
+      "type": "pair",
+      "label": "Мотор D",
+      "port": "D",
+      "x": 3,
+      "y": 1,
+      "direction": 1
+    }
+  ]
+}

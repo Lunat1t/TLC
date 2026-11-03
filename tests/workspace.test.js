@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {addBlock, moveBlock, readBlocks, removeBlock} from '../dist/workspace.js';
+import {addBlock, moveBlock, readBlocks, removeBlock} from '../src/lib/workspace.ts';
 
 test('start blocks keep their positions when saved and reopened', () => {
   const placed = addBlock([], 'block-1', 31.4, -18.6);
@@ -17,8 +17,17 @@ test('invalid imported blocks and removed empty blocks are ignored', () => {
   assert.throws(() => addBlock([], 'old', 0, 0, 'empty'));
 });
 
+test('motor button panel persists size and allows at most three added color modules', () => {
+  const panel = addBlock([], 'panel', 20, 30, 'motor-buttons');
+  assert.deepEqual(panel[0], {id:'panel',type:'motor-buttons',x:20,y:30,width:180,height:132,controlModules:[]});
+  const saved = readBlocks({blocks:[{...panel[0],width:222,height:176,controlModules:['red','green','yellow','blue','red']} ]});
+  assert.equal(saved[0].width,222);
+  assert.equal(saved[0].height,176);
+  assert.deepEqual(saved[0].controlModules,['red','green','yellow']);
+});
+
 test('drive blocks persist settings and generate ordered Pybricks commands for both hubs', async () => {
-  const {updateDrive, generatePybricks} = await import('../dist/workspace.js');
+  const {updateDrive, generatePybricks} = await import('../src/lib/workspace.ts');
   let blocks = addBlock([], 'first', 10, 100, 'drive');
   blocks = updateDrive(blocks, 'first', {motor:'D', direction:'backward', modules:['travel'], value:1.5, unit:'rotations'}, 'spike');
   blocks = addBlock(blocks, 'second', 10, 10, 'drive');
@@ -35,7 +44,7 @@ test('drive blocks persist settings and generate ordered Pybricks commands for b
 
 
 test('motor modules preserve settings and reject unsafe combinations', async () => {
-  const {updateDrive, generatePybricks} = await import('../dist/workspace.js');
+  const {updateDrive, generatePybricks} = await import('../src/lib/workspace.ts');
   let b = addBlock([], 'motor', 0, 0, 'drive');
   assert.deepEqual(b[0].modules, []);
   assert.throws(() => generatePybricks(b, 'spike'), /остановку/);
@@ -51,7 +60,7 @@ test('motor modules preserve settings and reject unsafe combinations', async () 
 
 
 test('parameter module order does not change motor execution', async () => {
-  const {generatePybricks} = await import('../dist/workspace.js');
+  const {generatePybricks} = await import('../src/lib/workspace.ts');
   const base = {...addBlock([], 'motor', 0, 0, 'drive')[0], speed:450, power:35, value:2, unit:'seconds'};
   for (const mode of ['speed','power']) {
     for (const hub of ['spike','ev3']) {
@@ -62,7 +71,7 @@ test('parameter module order does not change motor execution', async () => {
 });
 
 test('paired motors restore both ports, directions and module order', async () => {
-  const {updateDrive, generatePybricks} = await import('../dist/workspace.js');
+  const {updateDrive, generatePybricks} = await import('../src/lib/workspace.ts');
   let b = addBlock([], 'pair', 10, 20, 'pair');
   b = updateDrive(b,'pair',{motor:'D',motor2:'B',direction:'backward',direction2:'forward',modules:['travel','speed'],speed:420,value:2},'spike');
   assert.deepEqual(readBlocks(JSON.parse(JSON.stringify({blocks:b}))), b);
@@ -78,7 +87,7 @@ test('paired motors restore both ports, directions and module order', async () =
 });
 
 test('generated pair programs start both before waiting and brake both on failure', async () => {
-  const {generatePybricks} = await import('../dist/workspace.js');
+  const {generatePybricks} = await import('../src/lib/workspace.ts');
   const {execFileSync} = await import('node:child_process');
   for (const hub of ['spike','ev3']) for (const unit of ['rotations','degrees','seconds']) for (const failure of [false,true]) {
     const b={...addBlock([],'pair',0,0,'pair')[0],modules:['speed','travel'],unit,value:2};
@@ -126,7 +135,7 @@ assert [e for e in log if e[0]=='start']==[('start','A',360),('start','B',-360)]
 });
 
 test('paired power uses common time and mixed single/pair programs reuse motors', async () => {
-  const {generatePybricks} = await import('../dist/workspace.js');
+  const {generatePybricks} = await import('../src/lib/workspace.ts');
   const b={...addBlock([],'pair',0,0,'pair')[0],modules:['power','travel'],power:45,value:1.5,unit:'seconds'};
   const single={...addBlock([],'single',0,100,'drive')[0],modules:['travel']};
   const code=generatePybricks([b,single],'spike');
@@ -136,12 +145,12 @@ test('paired power uses common time and mixed single/pair programs reuse motors'
 });
 
 test('LEGO connections insert chains, move descendants and reconnect after deletion', async () => {
-  const {attachChain,moveChain,chainIds,removeBlock,blockHeight} = await import('../dist/workspace.js');
+  const {attachChain,moveChain,chainIds,removeBlock,blockHeight} = await import('../src/lib/workspace.ts');
   let b=addBlock([], 'a',0,0,'drive');
   b=addBlock(b,'b',300,10,'pair'); b=addBlock(b,'c',400,20);
   b=attachChain(b,'b','a'); b=attachChain(b,'c','a');
   assert.deepEqual(chainIds(b,'a'),['a','c','b']);
-  assert.equal(b.find(x=>x.id==='c').y,blockHeight(b[0])+6);
+  assert.equal(b.find(x=>x.id==='c').y,60);
   b=moveChain(b,'a',50,60);
   assert.ok(b.every(x=>x.x===50));
   assert.equal(b[0].y,60);
@@ -153,12 +162,12 @@ test('LEGO connections insert chains, move descendants and reconnect after delet
 });
 
 test('connections survive parameter edits; snapping and execution respect whole chains', async () => {
-  const {attachChain,snapTarget,updateDrive,generatePybricks} = await import('../dist/workspace.js');
+  const {attachChain,snapTarget,updateDrive,generatePybricks} = await import('../src/lib/workspace.ts');
   let b=addBlock([], 'a',0,0,'drive'); b=addBlock(b,'b',100,500,'drive'); b=addBlock(b,'c',400,50,'drive');
   b=updateDrive(b,'a',{modules:['travel'],motor:'A'},'spike');
   b=updateDrive(b,'b',{modules:['travel'],motor:'B'},'spike');
   b=updateDrive(b,'c',{modules:['travel'],motor:'C'},'spike');
-  assert.equal(snapTarget(b,'b',10,110),'a');
+  assert.equal(snapTarget(b,'b',10,60),'a');
   assert.equal(snapTarget(b,'b',500,500),null);
   b=attachChain(b,'b','a');
   assert.equal(snapTarget(b,'a',0,212),null);
@@ -171,7 +180,7 @@ test('connections survive parameter edits; snapping and execution respect whole 
 });
 
 test('import sanitizes cycles, missing links, duplicate IDs and forks', async () => {
-  const {executionOrder} = await import('../dist/workspace.js');
+  const {executionOrder} = await import('../src/lib/workspace.ts');
   const raw=[{id:'a',parentId:'b'},{id:'b',parentId:'a'},{id:'c',parentId:'a'},{id:'d',parentId:'missing'},{id:'a'}].map(x=>({...x,type:'start',x:0,y:0}));
   const clean=readBlocks({blocks:raw});
   assert.equal(clean.length,4);
@@ -181,7 +190,7 @@ test('import sanitizes cycles, missing links, duplicate IDs and forks', async ()
 });
 
 test('sheets migrate legacy projects and preserve isolated blocks on export/import', async () => {
-  const {readSheets,addSheet,renameSheet,deleteSheet,attachChain} = await import('../dist/workspace.js');
+  const {readSheets,addSheet,renameSheet,deleteSheet,attachChain} = await import('../src/lib/workspace.ts');
   const {makeProject,importProject,saveProjects,loadProjects} = await import('../dist/projects.js');
   let b=addBlock([], 'a',0,0); b=addBlock(b,'b',20,300); b=attachChain(b,'b','a');
   let state=readSheets({blocks:b});
@@ -201,7 +210,7 @@ test('sheets migrate legacy projects and preserve isolated blocks on export/impo
 });
 
 test('sheets recover invalid active ids and limit imported views and sheet count', async () => {
-  const {readSheets,addSheet,MAX_SHEETS}=await import('../dist/workspace.js');
+  const {readSheets,addSheet,MAX_SHEETS}=await import('../src/lib/workspace.ts');
   const state=readSheets({activeSheetId:'missing',sheets:[{id:'one',name:'One',blocks:[],view:{panX:10,panY:20,zoom:20}},{id:'one',name:'duplicate'},null]});
   assert.equal(state.activeSheetId,'one'); assert.equal(state.sheets.length,1); assert.equal(state.sheets[0].view.zoom,2);
   let full=state;
@@ -210,7 +219,7 @@ test('sheets recover invalid active ids and limit imported views and sheet count
 });
 
 test('if/else block supports empty condition, body and else branches, and Pybricks code generation', async () => {
-  const {attachChain,updateDrive,generatePybricks}=await import('../dist/workspace.js');
+  const {attachChain,updateDrive,generatePybricks}=await import('../src/lib/workspace.ts');
   let b=addBlock([],'start-1',0,0,'start');
   b=addBlock(b,'if-1',0,100,'if');
   b=addBlock(b,'inner-body',100,200,'drive');
@@ -234,5 +243,69 @@ test('if/else block supports empty condition, body and else branches, and Pybric
   assert.match(code,/else:/);
   assert.match(code,/    motor_c\.run_angle\(360, 360, then=Stop\.BRAKE\)/);
   assert.match(code,/\nmotor_b\.run_time\(360, 1000, then=Stop\.BRAKE\)/);
+});
+
+test('controller button and stop blocks: persistence, snap rules, and Pybricks exclusion', async () => {
+  const {addBlock, updateDrive, attachChain, snapTargetInfo, readBlocks, generatePybricks} = await import('../src/lib/workspace.ts');
+
+  // 1. Creation and defaults
+  let b = addBlock([], 'btn-1', 0, 0, 'button');
+  assert.equal(b[0].type, 'button');
+  assert.equal(b[0].button, 'up');
+  assert.equal(b[0].event, 'pressed');
+
+  b = addBlock(b, 'stop-1', 100, 100, 'stop');
+  assert.equal(b[1].type, 'stop');
+  assert.equal(b[1].motor, 'A');
+
+  // 2. updateDrive supports button and stop
+  b = updateDrive(b, 'btn-1', {button: 'a', event: 'released'}, 'spike');
+  assert.equal(b[0].button, 'a');
+  assert.equal(b[0].event, 'released');
+
+  b = updateDrive(b, 'stop-1', {motor: 'B', motor2: 'C'}, 'spike');
+  assert.equal(b[1].motor, 'B');
+  assert.equal(b[1].motor2, 'C');
+
+  // 3. Button header cannot have parent
+  b = attachChain(b, 'btn-1', 'stop-1');
+  assert.equal(b.find(x => x.id === 'btn-1').parentId, undefined);
+  assert.equal(snapTargetInfo(b, 'btn-1', 100, 150), null);
+
+  // 4. Attach drive and stop under button
+  b = addBlock(b, 'drive-1', 0, 100, 'drive');
+  b = updateDrive(b, 'drive-1', {motor: 'A', modules: ['travel'], value: 1, unit: 'rotations'}, 'spike');
+  b = attachChain(b, 'drive-1', 'btn-1');
+  assert.equal(b.find(x => x.id === 'drive-1').parentId, 'btn-1');
+
+  b = attachChain(b, 'stop-1', 'drive-1');
+  assert.equal(b.find(x => x.id === 'stop-1').parentId, 'drive-1');
+
+  // 5. if cannot be attached under button chain
+  b = addBlock(b, 'if-bad', 0, 300, 'if');
+  b = attachChain(b, 'if-bad', 'stop-1');
+  assert.equal(b.find(x => x.id === 'if-bad').parentId, undefined);
+
+  // 6. Pybricks generation skips button chains completely
+  // Autonomous chain:
+  b = addBlock(b, 'start-1', 300, 0, 'start');
+  b = addBlock(b, 'auto-drive', 300, 60, 'drive');
+  b = updateDrive(b, 'auto-drive', {motor: 'D', modules: ['travel'], value: 3, unit: 'rotations'}, 'spike');
+  b = attachChain(b, 'auto-drive', 'start-1');
+
+  // Also test autonomous stop
+  b = addBlock(b, 'auto-stop', 300, 120, 'stop');
+  b = updateDrive(b, 'auto-stop', {motor: 'D'}, 'spike');
+  b = attachChain(b, 'auto-stop', 'auto-drive');
+
+  const code = generatePybricks(b, 'spike');
+  // Must contain motor D
+  assert.match(code, /motor_d = Motor\(Port\.D\)/);
+  assert.match(code, /motor_d\.run_angle\(360, 1080, then=Stop\.BRAKE\)/);
+  assert.match(code, /motor_d\.brake\(\)/);
+  // Must NOT contain motor A, B, C from the button chain!
+  assert.doesNotMatch(code, /motor_a/);
+  assert.doesNotMatch(code, /motor_b/);
+  assert.doesNotMatch(code, /motor_c/);
 });
 

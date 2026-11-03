@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "name": "Fixture",
+  "hub": "spike",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "devices": [],
+  "id": "fixture-controller",
+  "workspace": {
+    "sheets": [
+      {
+        "id": "sheet-main",
+        "name": "Основная",
+        "blocks": [
+          {
+            "id": "press",
+            "type": "button",
+            "x": 0,
+            "y": 0,
+            "button": "up",
+            "event": "pressed"
+          },
+          {
+            "id": "drive",
+            "type": "drive",
+            "parentId": "press",
+            "x": 0,
+            "y": 54,
+            "motor": "A",
+            "direction": "forward",
+            "modules": []
+          },
+          {
+            "id": "release",
+            "type": "button",
+            "x": 200,
+            "y": 0,
+            "button": "up",
+            "event": "released"
+          },
+          {
+            "id": "stop",
+            "type": "stop",
+            "parentId": "release",
+            "x": 200,
+            "y": 54,
+            "motor": "A"
+          }
+        ]
+      }
+    ],
+    "activeSheetId": "sheet-main"
+  }
+}

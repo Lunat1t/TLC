@@ -5,6 +5,63 @@ import { cn } from "@/lib/utils"
 
 export type LiveOrbVariant = "white" | "black" | "webgl" | "custom"
 
+export const ORB_EXPRESSIONS = [
+  { id: "happy", name: "Радость", eyes: "round", brows: "none", mouth: "smile" },
+  { id: "laugh", name: "Смех", eyes: "closed", brows: "none", mouth: "laugh" },
+  { id: "love", name: "Восторг", eyes: "spark", brows: "lifted", mouth: "open" },
+  { id: "curious", name: "Любопытство", eyes: "round", brows: "raised", mouth: "small" },
+  { id: "sleepy", name: "Сонный", eyes: "closed", brows: "flat", mouth: "small" },
+  { id: "sad", name: "Грусть", eyes: "soft", brows: "sad", mouth: "frown" },
+  { id: "angry", name: "Сердитый", eyes: "narrow", brows: "angry", mouth: "flat" },
+  { id: "surprised", name: "Удивление", eyes: "round", brows: "raised", mouth: "open" },
+  { id: "shy", name: "Смущение", eyes: "soft", brows: "none", mouth: "smile" },
+  { id: "skeptical", name: "Сомнение", eyes: "uneven", brows: "uneven", mouth: "side" },
+  { id: "confused", name: "Растерянность", eyes: "round", brows: "uneven", mouth: "side" },
+  { id: "dizzy", name: "Кружится голова", eyes: "cross", brows: "none", mouth: "wavy" },
+] as const
+
+export type OrbExpressionId = (typeof ORB_EXPRESSIONS)[number]["id"]
+export const DEFAULT_ORB_EXPRESSION: OrbExpressionId = "happy"
+
+export function OrbExpressionFace({ expression, eyeColor }: { expression: OrbExpressionId; eyeColor: string }) {
+  const face = ORB_EXPRESSIONS.find((item) => item.id === expression) ?? ORB_EXPRESSIONS[0]
+  const stroke = { fill: "none", stroke: eyeColor, strokeWidth: 5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const }
+  const eye = (x: number, kind: string) => {
+    if (kind === "closed") return <path d={`M${x - 6} 43 Q${x} 49 ${x + 6} 43`} {...stroke} />
+    if (kind === "soft") return <path d={`M${x - 5} 42 Q${x} 47 ${x + 5} 42`} {...stroke} />
+    if (kind === "narrow") return <path d={`M${x - 7} 42 L${x + 7} 45`} {...stroke} />
+    if (kind === "spark") return <><path d={`M${x - 6} 39 L${x + 6} 51 M${x + 6} 39 L${x - 6} 51`} {...stroke} /><circle cx={x} cy="45" r="8" fill={eyeColor} /></>
+    if (kind === "cross") return <><path d={`M${x - 6} 39 L${x + 6} 51 M${x + 6} 39 L${x - 6} 51`} {...stroke} /></>
+    if (kind === "uneven" && x === 66) return <ellipse cx={x} cy="45" rx="4" ry="6" fill={eyeColor} />
+    return <ellipse cx={x} cy="45" rx={kind === "uneven" ? 4 : 5} ry={kind === "uneven" ? 7 : 8} fill={eyeColor} />
+  }
+  const brow = (x: number, kind: string) => {
+    if (kind === "none") return null
+    if (kind === "angry") return <path d={x < 50 ? "M25 31 L43 36" : "M57 36 L75 31"} {...stroke} />
+    if (kind === "sad") return <path d={x < 50 ? "M27 34 Q34 27 42 35" : "M58 35 Q66 27 73 34"} {...stroke} />
+    if (kind === "raised") return <path d={`M${x - 8} 31 Q${x} 25 ${x + 8} 31`} {...stroke} />
+    if (kind === "lifted") return <path d={`M${x - 7} 32 Q${x} 27 ${x + 7} 32`} {...stroke} />
+    if (kind === "uneven" && x === 34) return <path d="M25 34 Q34 29 42 32" {...stroke} />
+    if (kind === "uneven") return <path d="M59 30 Q67 28 75 32" {...stroke} />
+    return <path d={`M${x - 8} 32 L${x + 8} 32`} {...stroke} />
+  }
+
+  return (
+    <svg className="orb-expression-face" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+      {eye(34, face.eyes)}{eye(66, face.eyes)}
+      {brow(34, face.brows)}{brow(66, face.brows)}
+      {face.mouth === "smile" && <path d="M39 62 Q50 74 61 62" {...stroke} />}
+      {face.mouth === "laugh" && <path d="M39 60 Q50 78 61 60 Q59 74 50 74 Q41 74 39 60Z" fill={eyeColor} />}
+      {face.mouth === "open" && <ellipse cx="50" cy="65" rx="7" ry="10" fill={eyeColor} />}
+      {face.mouth === "small" && <path d="M46 64 Q50 66 54 64" {...stroke} />}
+      {face.mouth === "frown" && <path d="M40 72 Q50 59 60 72" {...stroke} />}
+      {face.mouth === "flat" && <path d="M42 66 L58 66" {...stroke} />}
+      {face.mouth === "side" && <path d="M43 68 Q50 63 58 66" {...stroke} />}
+      {face.mouth === "wavy" && <path d="M39 65 Q44 60 49 65 T60 65" {...stroke} />}
+    </svg>
+  )
+}
+
 export interface AvatarPreset {
   id: string
   name: string
@@ -156,6 +213,7 @@ uniform float u_time;
 uniform float u_speed;
 uniform vec2 u_look;
 uniform float u_blink;
+uniform float u_faceMode;
 uniform float u_mode;
 uniform vec3 u_body;
 uniform vec3 u_eye;
@@ -256,6 +314,7 @@ void main() {
     eyeMask(n, eL, right, up, halfH, rad),
     eyeMask(n, eR, right, up, halfH, rad)
   );
+  if (u_faceMode > 0.5) eyes = 0.0;
 
   vec3 body = u_mode > 0.5 ? wash(n, u_time * u_speed) : u_body;
   vec3 col = mix(body, u_eye, clamp(eyes, 0.0, 1.0));
@@ -287,6 +346,7 @@ export interface LiveOrbProps {
   blink?: boolean
   lookOverride?: { x: number; y: number; squint?: number } | null
   blinkCount?: number
+  expression?: OrbExpressionId
 }
 
 export function LiveOrb({
@@ -300,6 +360,7 @@ export function LiveOrb({
   blink = true,
   lookOverride = null,
   blinkCount = 0,
+  expression,
 }: LiveOrbProps) {
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null)
   const optsRef = React.useRef({
@@ -310,6 +371,7 @@ export function LiveOrb({
     interactive,
     blink,
     lookOverride,
+    expression,
   })
   optsRef.current = {
     variant,
@@ -319,6 +381,7 @@ export function LiveOrb({
     interactive,
     blink,
     lookOverride,
+    expression,
   }
 
   const blinkStateRef = React.useRef(0)
@@ -382,6 +445,7 @@ export function LiveOrb({
               speed: gl.getUniformLocation(program, "u_speed"),
               look: gl.getUniformLocation(program, "u_look"),
               blink: gl.getUniformLocation(program, "u_blink"),
+              faceMode: gl.getUniformLocation(program, "u_faceMode"),
               mode: gl.getUniformLocation(program, "u_mode"),
               body: gl.getUniformLocation(program, "u_body"),
               eye: gl.getUniformLocation(program, "u_eye"),
@@ -499,6 +563,7 @@ export function LiveOrb({
         gl.uniform1f(uniforms.speed, 1.0)
         gl.uniform2f(uniforms.look, currentLook.x, -currentLook.y)
         gl.uniform1f(uniforms.blink, curOpts.lookOverride?.squint ?? blinkAmount)
+        gl.uniform1f(uniforms.faceMode, curOpts.expression ? 1 : 0)
         gl.uniform1f(uniforms.mode, cfg.mode)
         gl.uniform3fv(uniforms.body, hexToRgb(cfg.color))
         gl.uniform3fv(uniforms.eye, hexToRgb(cfg.eyeColor))
@@ -527,20 +592,22 @@ export function LiveOrb({
         }
         ctx2d.fill()
 
-        const offsetX = currentLook.x * r * 0.34
-        const offsetY = currentLook.y * r * 0.3
-        const eyeSpacing = r * 0.29
-        const eyeW = r * 0.115
-        const effectiveBlink = curOpts.lookOverride?.squint ?? blinkAmount
-        const eyeH = Math.max(r * 0.04, r * 0.34 * (1 - effectiveBlink * 0.88))
+        if (!curOpts.expression) {
+          const offsetX = currentLook.x * r * 0.34
+          const offsetY = currentLook.y * r * 0.3
+          const eyeSpacing = r * 0.29
+          const eyeW = r * 0.115
+          const effectiveBlink = curOpts.lookOverride?.squint ?? blinkAmount
+          const eyeH = Math.max(r * 0.04, r * 0.34 * (1 - effectiveBlink * 0.88))
 
-        ctx2d.fillStyle = cfg.eyeColor
-        for (const dir of [-1, 1]) {
-          const ex = cx + dir * eyeSpacing + offsetX
-          const ey = cy - r * 0.04 + offsetY
-          ctx2d.beginPath()
-          ctx2d.roundRect(ex - eyeW, ey - eyeH, eyeW * 2, eyeH * 2, eyeW)
-          ctx2d.fill()
+          ctx2d.fillStyle = cfg.eyeColor
+          for (const dir of [-1, 1]) {
+            const ex = cx + dir * eyeSpacing + offsetX
+            const ey = cy - r * 0.04 + offsetY
+            ctx2d.beginPath()
+            ctx2d.roundRect(ex - eyeW, ey - eyeH, eyeW * 2, eyeH * 2, eyeW)
+            ctx2d.fill()
+          }
         }
         ctx2d.restore()
       }
@@ -558,16 +625,19 @@ export function LiveOrb({
   }, [size])
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={size * 2}
-      height={size * 2}
-      onClick={() => {
-        blinkStateRef.current = 1
-      }}
-      style={{ width: size, height: size }}
-      className={cn("block cursor-pointer select-none", className)}
-      aria-label="Интерактивный аватар Live Orb"
-    />
+    <span className="live-orb-face-wrap" style={{ width: size, height: size, display: "inline-block", position: "relative" }}>
+      <canvas
+        ref={canvasRef}
+        width={size * 2}
+        height={size * 2}
+        onClick={() => {
+          blinkStateRef.current = 1
+        }}
+        style={{ width: size, height: size }}
+        className={cn("block cursor-pointer select-none", className)}
+        aria-label={expression ? `Live Orb, выражение: ${ORB_EXPRESSIONS.find((item) => item.id === expression)?.name}` : "Интерактивный аватар Live Orb"}
+      />
+      {expression && <OrbExpressionFace expression={expression} eyeColor={eyeColor ?? WHITE.eyeColor} />}
+    </span>
   )
 }

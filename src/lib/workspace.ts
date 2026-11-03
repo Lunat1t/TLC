@@ -4,10 +4,24 @@ export const MAX_BLOCKS = 200
 export const MOTOR_SPEED = 360
 export const MAX_SHEETS = 32
 
-export type BlockType = "start" | "drive" | "pair" | "if"
+export type ControllerButton =
+  | "up"
+  | "down"
+  | "left"
+  | "right"
+  | "a"
+  | "b"
+  | "x"
+  | "y"
+  | "l"
+  | "r"
+export type ControllerEvent = "pressed" | "released"
+
+export type BlockType = "start" | "drive" | "pair" | "if" | "button" | "stop" | "motor-buttons"
 export type MotorDirection = "forward" | "backward"
 export type TravelUnit = "rotations" | "degrees" | "seconds"
 export type MotorModule = "speed" | "power" | "travel"
+export type MotorButtonModule = "red" | "green" | "yellow"
 export type BranchSlot = "body" | "else"
 
 export const IF_TOP_HEIGHT = 58
@@ -28,10 +42,16 @@ export interface WorkspaceBlock {
   direction?: MotorDirection
   direction2?: MotorDirection
   modules?: MotorModule[]
+  controlModules?: MotorButtonModule[]
+  width?: number
+  height?: number
   speed?: number
   power?: number
   value?: number
   unit?: TravelUnit
+  button?: ControllerButton
+  target?: { controlId: string; input: string }
+  event?: ControllerEvent
 }
 
 export interface SheetView {
@@ -59,7 +79,17 @@ const PORTS: Record<HubType, string[]> = {
 
 const UNITS: TravelUnit[] = ["rotations", "degrees", "seconds"]
 
-export function blockHeight(block: Pick<WorkspaceBlock, "type">): number {
+function findChainRoot(blocks: WorkspaceBlock[], id: string): WorkspaceBlock | undefined {
+  let curr = blocks.find((b) => b.id === id)
+  const seen = new Set<string>()
+  while (curr?.parentId && !seen.has(curr.id)) {
+    seen.add(curr.id)
+    curr = blocks.find((b) => b.id === curr!.parentId)
+  }
+  return curr
+}
+
+export function blockHeight(block: Pick<WorkspaceBlock, "type" | "height">): number {
   if (block.type === "if")
     return (
       IF_TOP_HEIGHT +
@@ -68,6 +98,9 @@ export function blockHeight(block: Pick<WorkspaceBlock, "type">): number {
       IF_EMPTY_MOUTH +
       IF_FOOT_HEIGHT
     )
+  if (block.type === "button") return 58
+  if (block.type === "stop") return 58
+  if (block.type === "motor-buttons") return block.height ?? 132
   return block.type === "pair" ? 64 : block.type === "drive" ? 64 : 58
 }
 
@@ -118,6 +151,11 @@ export function cleanLinks(blocks: WorkspaceBlock[]): WorkspaceBlock[] {
   const occupied = new Set<string>()
   const clean = blocks.map((b) => {
     const next: WorkspaceBlock = { ...b }
+    if (next.type === "button") {
+      delete next.parentId
+      delete next.branch
+      return next
+    }
     const parent = next.parentId ? byId.get(next.parentId) : undefined
     if (next.branch && parent?.type !== "if") {
       delete next.branch
@@ -153,6 +191,17 @@ export function cleanLinks(blocks: WorkspaceBlock[]): WorkspaceBlock[] {
       current = map.get(current.parentId)
     }
   }
+
+  for (const block of clean) {
+    if (block.parentId && !["drive", "pair", "stop"].includes(block.type)) {
+      const root = findChainRoot(clean, block.id)
+      if (root?.type === "button") {
+        delete block.parentId
+        delete block.branch
+      }
+    }
+  }
+
   return clean
 }
 
@@ -257,7 +306,7 @@ export function readBlocks(
       (block): block is Record<string, unknown> =>
         Boolean(block) &&
         typeof block === "object" &&
-        ["start", "drive", "pair", "if"].includes(
+        ["start", "drive", "pair", "if", "button", "stop", "motor-buttons"].includes(
           String((block as { type?: unknown }).type)
         ) &&
         typeof (block as { id?: unknown }).id === "string" &&
@@ -286,6 +335,62 @@ export function readBlocks(
         ...(branchVal ? { branch: branchVal } : {}),
       }
       if (type === "start" || type === "if") return base
+
+      if (type === "motor-buttons") {
+        const allowed: MotorButtonModule[] = ["red", "green", "yellow"]
+        const controlModules = Array.isArray(block.controlModules)
+          ? allowed.filter(color => (block.controlModules as unknown[]).includes(color))
+          : []
+        return {
+          ...base,
+          width: Number.isFinite(block.width) ? Math.min(420, Math.max(144, Math.round(Number(block.width)))) : 180,
+          height: Number.isFinite(block.height) ? Math.min(320, Math.max(112, Math.round(Number(block.height)))) : 132,
+          controlModules,
+        }
+      }
+
+      if (type === "button") {
+        const allowedButtons: ControllerButton[] = [
+          "up",
+          "down",
+          "left",
+          "right",
+          "a",
+          "b",
+          "x",
+          "y",
+          "l",
+          "r",
+        ]
+        const btn = allowedButtons.includes(block.button as ControllerButton)
+          ? (block.button as ControllerButton)
+          : "up"
+        const ev: ControllerEvent =
+          block.event === "released" ? "released" : "pressed"
+        return {
+          ...base,
+          button: btn,
+          ...(block.target && typeof block.target === "object" && typeof (block.target as {controlId?:unknown}).controlId === "string" && typeof (block.target as {input?:unknown}).input === "string" ? {target: {controlId: (block.target as {controlId:string}).controlId, input: (block.target as {input:string}).input}} : {}),
+          event: ev,
+        }
+      }
+
+      if (type === "stop") {
+        const motor = PORTS[hub]?.includes(String(block.motor))
+          ? String(block.motor)
+          : "A"
+        const motor2 =
+          block.motor2 &&
+          PORTS[hub]?.includes(String(block.motor2)) &&
+          block.motor2 !== motor
+            ? String(block.motor2)
+            : undefined
+        return {
+          ...base,
+          motor,
+          ...(motor2 ? { motor2 } : {}),
+        }
+      }
 
       const rawModules = Array.isArray(block.modules)
         ? ([
@@ -350,7 +455,7 @@ export function addBlock(
     throw new Error("На доске слишком много блоков.")
   if (!Number.isFinite(x) || !Number.isFinite(y))
     throw new Error("Не удалось определить место блока.")
-  if (!["start", "drive", "pair", "if"].includes(type))
+  if (!["start", "drive", "pair", "if", "button", "stop", "motor-buttons"].includes(type))
     throw new Error("Неизвестный блок.")
   const block: WorkspaceBlock = {
     id,
@@ -371,6 +476,15 @@ export function addBlock(
   }
   if (type === "pair") {
     Object.assign(block, { motor2: "B", direction2: "backward" })
+  }
+  if (type === "button") {
+    Object.assign(block, { button: "up", event: "pressed" })
+  }
+  if (type === "stop") {
+    Object.assign(block, { motor: "A" })
+  }
+  if (type === "motor-buttons") {
+    Object.assign(block, { width: 180, height: 132, controlModules: [] })
   }
   return [...blocks, block]
 }
@@ -421,7 +535,7 @@ export function updateDrive(
   return readBlocks(
     {
       blocks: blocks.map((block) =>
-        block.id === id && ["drive", "pair", "if"].includes(block.type)
+        block.id === id && ["drive", "pair", "if", "button", "stop"].includes(block.type)
           ? { ...block, ...changes }
           : block
       ),
@@ -467,6 +581,9 @@ export function attachChain(
   parentId: string,
   branch?: BranchSlot
 ): WorkspaceBlock[] {
+  const movingBlock = blocks.find((b) => b.id === id)
+  if (movingBlock?.type === "button") return blocks
+
   const moving = chainIds(blocks, id)
   const parent = blocks.find((b) => b.id === parentId)
   if (
@@ -476,6 +593,13 @@ export function attachChain(
   ) {
     return blocks
   }
+  const rootOfParent = findChainRoot(blocks, parentId)
+  if (rootOfParent?.type === "button") {
+    if (movingBlock && !["drive", "pair", "stop"].includes(movingBlock.type)) {
+      return blocks
+    }
+  }
+
   const effectiveBranch =
     (branch === "body" || branch === "else") && parent.type === "if"
       ? branch
@@ -514,11 +638,23 @@ export function snapTargetInfo(
   y: number,
   threshold = 48
 ): { id: string; branch?: BranchSlot } | null {
+  const movingBlock = blocks.find((b) => b.id === id)
+  if (movingBlock?.type === "button" || movingBlock?.type === "motor-buttons") return null
+
   const moving = new Set(chainIds(blocks, id))
   let best: { id: string; branch?: BranchSlot } | null = null
   let distance = Infinity
   for (const b of blocks) {
+    if (b.type === "motor-buttons") continue
     if (moving.has(b.id)) continue
+
+    const rootOfB = findChainRoot(blocks, b.id)
+    if (rootOfB?.type === "button") {
+      if (movingBlock && !["drive", "pair", "stop"].includes(movingBlock.type)) {
+        continue
+      }
+    }
+
     if (b.type === "if") {
       const innerDx = Math.abs(b.x + IF_INDENT - x)
       const bodyDy = Math.abs(b.y + IF_TOP_HEIGHT - 4 - y)
@@ -569,9 +705,12 @@ export function generatePybricks(
 ): string {
   if (!PORTS[hub]) throw new Error("Неизвестный тип робота.")
   const clean = readBlocks({ blocks }, hub)
-  const ordered = executionOrder(clean)
+  const autonomousBlocks = clean.filter(
+    (b) => findChainRoot(clean, b.id)?.type !== "button"
+  )
+  const ordered = executionOrder(autonomousBlocks)
   const driveBlocks = ordered.filter((block) =>
-    ["drive", "pair"].includes(block.type)
+    ["drive", "pair", "stop"].includes(block.type)
   )
   if (!driveBlocks.length)
     throw new Error("Добавьте на доску блок движения.")
@@ -579,7 +718,7 @@ export function generatePybricks(
   const used = [
     ...new Set(
       driveBlocks.flatMap((block) =>
-        block.type === "pair"
+        block.type === "pair" || (block.type === "stop" && block.motor2)
           ? [block.motor || "A", block.motor2 || "B"]
           : [block.motor || "A"]
       )
@@ -601,7 +740,16 @@ export function generatePybricks(
   ]
 
   function emitBlock(block: WorkspaceBlock, indent: string) {
-    if (block.type === "start") return
+    if (block.type === "start" || block.type === "button") return
+    if (block.type === "stop") {
+      const motor = `motor_${(block.motor || "A").toLowerCase()}`
+      lines.push(`${indent}${motor}.brake()`)
+      if (block.motor2) {
+        const motor2 = `motor_${block.motor2.toLowerCase()}`
+        lines.push(`${indent}${motor2}.brake()`)
+      }
+      return
+    }
     if (block.type === "if") {
       lines.push(`${indent}if True:`)
       const firstBody = clean.find(
@@ -723,12 +871,12 @@ export function generatePybricks(
     }
   }
 
-  const roots = clean
+  const roots = autonomousBlocks
     .filter((b) => !b.parentId)
     .sort((a, b) => a.y - b.y || a.x - b.x)
   for (const root of roots) {
-    for (const id of outerChainIds(clean, root.id)) {
-      const b = clean.find((x) => x.id === id)
+    for (const id of outerChainIds(autonomousBlocks, root.id)) {
+      const b = autonomousBlocks.find((x) => x.id === id)
       if (b) emitBlock(b, "")
     }
   }

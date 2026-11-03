@@ -49,6 +49,8 @@ html, body { overflow-x: clip; }
 .home-sidebar-bottom { margin-top: auto; padding: 16px 12px 0; border-top: 1px solid var(--home-line); }
 .home-import { display: flex; align-items: center; gap: 8px; min-height: 42px; width: 100%; text-align: left; font-size: 13px; font-weight: 650; border-radius: 8px; padding: 8px; }
 .home-import:hover { background: var(--home-paper); }
+.home-install { display: flex; align-items: center; gap: 8px; min-height: 42px; width: 100%; margin-bottom: 6px; padding: 8px; border-radius: 8px; color: var(--home-blue); font-size: 13px; font-weight: 750; text-align: left; }
+.home-install:hover { background: var(--home-paper); }
 .home-sidebar-bottom p { color: var(--home-muted); font-size: 11px; line-height: 1.4; margin: 12px 8px 0; }
 .home-content { min-width: 0; }
 .home-header { display: flex; align-items: center; justify-content: flex-end; min-height: 76px; padding: 12px clamp(24px, 5vw, 72px); border-bottom: 1px solid var(--home-line); background: var(--home-paper); }
