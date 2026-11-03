@@ -2,11 +2,13 @@
 
 import * as React from 'react'
 import {CONTROL_INPUTS, CONTROL_MIN, type ControlArea, type ControlInstance} from '@/lib/control-workspace'
+import type {WorkspaceBlock} from '@/lib/workspace'
 
 const LABELS:Record<string,string>={up:'▲',down:'▼',left:'◀',right:'▶',forward:'▲',backward:'▼',a:'A',b:'B',x:'X',y:'Y',l:'L',r:'R'}
 type Props = {
   area: ControlArea
   controls: ControlInstance[]
+  attachedPanels: WorkspaceBlock[]
   editing: boolean
   zoom: number
   errors?: Record<string,string>
@@ -20,7 +22,7 @@ type Props = {
 }
 
 /** Visual container only: controls emit input events and never send motor commands. */
-export function ControlAreaView({area,controls,editing,zoom,errors={},onAreaChange,onControlChange,onDeleteControl,onDeleteArea,onCopyArea,onInput,onCancel}:Props) {
+export function ControlAreaView({area,controls,attachedPanels,editing,zoom,errors={},onAreaChange,onControlChange,onDeleteControl,onDeleteArea,onCopyArea,onInput,onCancel}:Props) {
   const [preview,setPreview]=React.useState<ControlArea|null>(null)
   const [rename,setRename]=React.useState<{id:string,value:string}|null>(null)
   const [moving,setMoving]=React.useState<ControlInstance|null>(null)
@@ -33,14 +35,15 @@ export function ControlAreaView({area,controls,editing,zoom,errors={},onAreaChan
     const target=e.currentTarget
     const move=(ev:PointerEvent)=>{
       const dx=(ev.clientX-startX)/zoom,dy=(ev.clientY-startY)/zoom
-      const minWidth=Math.max(320,...controls.map(c=>c.x+c.width))
-      const minHeight=Math.max(240,...controls.map(c=>c.y+c.height+44))
+      const minWidth=Math.max(320,...controls.map(c=>c.x+c.width),...attachedPanels.map(b=>b.x-area.x+(b.width||180)))
+      const minHeight=Math.max(240,...controls.map(c=>c.y+c.height+44),...attachedPanels.map(b=>b.y-area.y+(b.height||132)+44))
       setPreview(resize?{...start,width:Math.min(2400,Math.max(minWidth,start.width+dx)),height:Math.min(2400,Math.max(minHeight,start.height+dy))}:{...start,x:start.x+dx,y:start.y+dy})
     }
     const end=(ev:PointerEvent)=>{
       target.removeEventListener('pointermove',move);target.removeEventListener('pointerup',end);target.removeEventListener('pointercancel',cancel)
       const dx=(ev.clientX-startX)/zoom,dy=(ev.clientY-startY)/zoom
-      const minWidth=Math.max(320,...controls.map(c=>c.x+c.width)),minHeight=Math.max(240,...controls.map(c=>c.y+c.height+44))
+      const minWidth=Math.max(320,...controls.map(c=>c.x+c.width),...attachedPanels.map(b=>b.x-area.x+(b.width||180)))
+      const minHeight=Math.max(240,...controls.map(c=>c.y+c.height+44),...attachedPanels.map(b=>b.y-area.y+(b.height||132)+44))
       onAreaChange(resize?{...start,width:Math.min(2400,Math.max(minWidth,start.width+dx)),height:Math.min(2400,Math.max(minHeight,start.height+dy))}:{...start,x:start.x+dx,y:start.y+dy});setPreview(null)
     }
     const cancel=()=>{target.removeEventListener('pointermove',move);target.removeEventListener('pointerup',end);target.removeEventListener('pointercancel',cancel);setPreview(null)}

@@ -37,6 +37,7 @@ export interface WorkspaceBlock {
   x: number
   y: number
   parentId?: string
+  controlAreaId?: string
   branch?: BranchSlot
   motor?: string
   motor2?: string
@@ -334,6 +335,7 @@ export function readBlocks(
         x: Math.round(Number(block.x)),
         y: Math.round(Number(block.y)),
         ...(typeof block.parentId === "string" ? { parentId: block.parentId } : {}),
+        ...(typeof block.controlAreaId === "string" ? { controlAreaId: block.controlAreaId } : {}),
         ...(branchVal ? { branch: branchVal } : {}),
       }
       if (type === "start" || type === "if") return base
