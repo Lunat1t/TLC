@@ -1,10 +1,15 @@
+import { join } from "node:path"
+import { pathToFileURL } from "node:url"
+
 export const MAX_AUTO_PREVIEW_PDF_BYTES = 30 * 1024 * 1024
 
 export async function renderFirstPagePreview(pdfBytes: Uint8Array) {
-  const [{ getDocument }, { createCanvas }] = await Promise.all([
+  const [{ GlobalWorkerOptions, getDocument }, { createCanvas }] = await Promise.all([
     import("pdfjs-dist/legacy/build/pdf.mjs"),
     import("@napi-rs/canvas"),
   ])
+  const workerPath = join(process.cwd(), "node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs")
+  GlobalWorkerOptions.workerSrc = pathToFileURL(workerPath).href
   const loadingTask = getDocument({
     data: pdfBytes,
     useSystemFonts: true,
