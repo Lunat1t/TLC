@@ -3,6 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { GoogleSignIn } from "@/components/google-signin"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -53,7 +54,7 @@ export default function LoginPage() {
         isError: false,
       })
       setTimeout(() => {
-        router.push(new URLSearchParams(window.location.search).get("next") === "/admin/instructions/drive" ? "/admin/instructions/drive" : "/")
+        router.push(sessionStorage.getItem("tlc.pending-student") ? "/profile" : new URLSearchParams(window.location.search).get("next") === "/admin/instructions/drive" ? "/admin/instructions/drive" : "/")
       }, 500)
     } catch (err) {
       setStatus({
@@ -101,7 +102,7 @@ export default function LoginPage() {
           <CardContent>
             <form id="loginForm" onSubmit={handleSubmit} className="grid gap-4" noValidate>
               <div className="grid gap-2">
-                <Label htmlFor="loginInput">Логин ученика</Label>
+                <Label htmlFor="loginInput">Имя / логин</Label>
                 <Input
                   id="loginInput"
                   name="login"
@@ -116,16 +117,19 @@ export default function LoginPage() {
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="passwordInput">Пароль</Label>
+                <Label htmlFor="passwordInput">Код из 4 цифр</Label>
                 <Input
                   id="passwordInput"
                   name="password"
                   type="password"
                   required
                   autoComplete="current-password"
-                  placeholder="Введите пароль"
+                  placeholder="0000"
+                  inputMode="numeric"
+                  pattern="[0-9]{4}"
+                  maxLength={4}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => setPassword(e.target.value.replace(/\D/g, "").slice(0,4))}
                 />
               </div>
 
@@ -150,6 +154,7 @@ export default function LoginPage() {
               </div>
             </form>
 
+            <div className="mt-4"><GoogleSignIn /></div>
             <div className="flex items-center gap-3 my-5 text-xs font-bold uppercase tracking-wider text-[#8299a3]">
               <span className="h-px flex-1 bg-[#e1ecef]" />
               <span>или</span>

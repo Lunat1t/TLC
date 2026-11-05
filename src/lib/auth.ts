@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/live-orb"
 import { createClient as createSupabaseBrowserClient } from "@/utils/supabase/client"
 
-export const AUTH_STORAGE_KEY = "tlc.auth.v1"
+export const AUTH_STORAGE_KEY = "tlc.auth.v2"
 
 export interface UserSession {
   id?: string
@@ -63,8 +63,8 @@ export function validateLoginInput({
   if (cleanLogin.length > 64) {
     throw new Error("Логин слишком длинный.")
   }
-  if (cleanPassword.length < 4) {
-    throw new Error("Пароль должен содержать минимум 4 символа.")
+  if (!/^\d{4}$/.test(cleanPassword)) {
+    throw new Error("Введите код из четырёх цифр.")
   }
   return { login: cleanLogin }
 }
@@ -84,13 +84,12 @@ export function validateRegistrationInput({
   if (cleanLogin.length > 64) {
     throw new Error("Логин слишком длинный.")
   }
-  if (cleanPassword.length < 6) {
-    throw new Error("Пароль должен содержать минимум 6 символов.")
-  }
+  if (!/^[A-Za-z][A-Za-z0-9_-]{0,31}$/.test(cleanLogin)) throw new Error("Напишите имя латиницей, без пробелов (до 32 символов).");
+  if (!/^\d{4}$/.test(cleanPassword)) throw new Error("Введите код из четырёх цифр.");
   return {
     login: cleanLogin,
     email: loginToSupabaseEmail(cleanLogin),
-    password: cleanPassword,
+    password: pinPassword(cleanPassword),
   }
 }
 
@@ -142,13 +141,18 @@ export async function registerStudentWithSupabase(
   input: {
     login: string
     password: string
-    avatar: Partial<AvatarState>
+    avatar?: Partial<AvatarState>
+    age: number
+    disciplines?: string[]
+    role: "student" | "teacher" | "parent"
   }
 ): Promise<{ state: AuthState; supabaseUserId?: string }> {
   const { login, email, password } = validateRegistrationInput({
     login: input.login,
     password: input.password,
   })
+  if (!Number.isInteger(input.age) || input.age < 1 || input.age > 120) throw new Error("Укажите возраст от 1 до 120 лет.");
+  if (!["student", "teacher", "parent"].includes(input.role)) throw new Error("Выберите роль.");
   const nickname = login
   const avatar = normalizeAvatarState(input.avatar)
 
@@ -161,6 +165,10 @@ export async function registerStudentWithSupabase(
         login,
         nickname,
         avatar,
+        disciplines: input.disciplines || [],
+        age: input.age,
+        role: input.role,
+        onboarding_complete: true,
       },
     },
   })
@@ -173,6 +181,11 @@ export async function registerStudentWithSupabase(
     throw new Error(`Ошибка регистрации: ${error.message}`)
   }
 
+  if (data?.user?.id && !data.session) {
+    const signedIn = await supabase.auth.signInWithPassword({ email, password });
+    if (signedIn.error || !signedIn.data.session) throw new Error("Аккаунт создан, но вход не выполнен. Попробуйте войти по имени и коду.");
+    data.session = signedIn.data.session;
+  }
   if (!data?.user?.id || !data.session) {
     throw new Error("Регистрация создана, но вход ещё не подтверждён. Проверьте настройки подтверждения в Supabase.")
   }
@@ -214,10 +227,11 @@ export async function signInStudentWithSupabase(
   now: Date = new Date()
 ): Promise<AuthState> {
   const { login } = validateLoginInput(credentials)
-  const password = String(credentials.password || "")
-  const email = loginToSupabaseEmail(login)
-
+  const password = pinPassword(String(credentials.password || ""))
   const supabase = createSupabaseBrowserClient()
+  const resolved = await supabase.rpc("resolve_tlc_pin_login", { p_login: login, p_pin: String(credentials.password || "") });
+  if (resolved.error || typeof resolved.data !== "string") throw new Error("Неверное имя или код. После нескольких попыток подождите 15 минут.");
+  const email = resolved.data
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -276,7 +290,9 @@ export async function syncSessionFromSupabase(
     const supabase = createSupabaseBrowserClient()
     const { data } = await supabase.auth.getUser()
     if (!data?.user) {
-      return local
+      const empty = loadAuthState(null);
+      storage?.setItem(AUTH_STORAGE_KEY, JSON.stringify(empty));
+      return empty
     }
     const meta = data.user.user_metadata || {}
     const loginName = String(
@@ -364,4 +380,9 @@ export function signInStudent(
   }
   storage?.setItem(AUTH_STORAGE_KEY, JSON.stringify(next))
   return next
+}
+
+export function pinPassword(pin: string) {
+  if (!/^\d{4}$/.test(pin)) throw new Error("Введите код из четырёх цифр.");
+  return `tlc-pin-v1-${pin}`;
 }

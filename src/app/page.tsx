@@ -279,6 +279,7 @@ export default function HomePage() {
             {auth.user ? <details className="home-profile-dropdown">
               <summary className="home-profile"><UserRound size={18} aria-hidden="true" /><span>{auth.user.nickname}</span><ChevronDown size={14} aria-hidden="true" /></summary>
               <div className="home-profile-menu">
+                <Link href="/profile" className="home-profile-menu-item">Профиль</Link>
                 {isInstructionAdmin && <Link href="/admin/instructions/drive" className="home-profile-menu-item">Панель учителя</Link>}
                 <button type="button" className="home-profile-menu-item" onClick={async () => {
                   const next = await signOutFromSupabase(window.localStorage)
