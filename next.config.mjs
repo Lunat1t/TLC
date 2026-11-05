@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  serverExternalPackages: ["@napi-rs/canvas", "pdfjs-dist"],
   async redirects() {
     return [
       { source: '/controller.html', has: [{ type: 'query', key: 'project', value: '(?<projectId>.+)' }], destination: '/editor?id=:projectId', permanent: false },
