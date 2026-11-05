@@ -262,39 +262,8 @@ export default function HomePage() {
 
   return (
     <div className="home-shell">
-      <aside className="home-sidebar" aria-label="Проекты">
-        <Link href="/" className="home-brand">TLC<span>studio</span></Link>
-        <button type="button" onClick={openNewModal} className="home-new-button">
-          <Plus size={19} aria-hidden="true" /> Новый проект
-        </button>
-        <div className="home-sidebar-heading">
-          <h2>Мои проекты</h2>
-          <span>{countLabel(projects.length)}</span>
-        </div>
-        <nav className="home-project-list" aria-label="Список проектов">
-          {sortedProjects.length === 0 ? (
-            <p className="home-empty">Здесь появятся ваши проекты. Создайте первый, чтобы начать.</p>
-          ) : sortedProjects.map((project) => (
-            <div key={project.id} className="home-project-item">
-              <Link href={`/editor?id=${encodeURIComponent(project.id)}`} className="home-project-row" title={`Открыть проект ${project.name}`}>
-                <FolderOpen size={17} aria-hidden="true" />
-                <span className="home-project-copy"><strong>{project.name}</strong><small>{HUBS[project.hub]} · {formatDate(project.updatedAt)}</small></span>
-              </Link>
-              <button type="button" onClick={() => setSelectedId(project.id)} className="home-project-menu" aria-label={`Действия с проектом ${project.name}`} title="Действия с проектом"><MoreHorizontal size={18} aria-hidden="true" /></button>
-            </div>
-          ))}
-        </nav>
-        <div className="home-sidebar-bottom">
-          <InstallAppButton />
-          <button type="button" onClick={() => fileInputRef.current?.click()} className="home-import"><Upload size={17} aria-hidden="true" /> Открыть файл проекта</button>
-          <input ref={fileInputRef} type="file" accept=".json,.robotproj.json,application/json" onChange={handleFileImport} hidden />
-          <p>Проекты сохраняются в этом браузере.</p>
-        </div>
-      </aside>
-
       <div className="home-content">
         <header className="home-header">
-          <span className="home-mobile-brand">TLC studio</span>
           <div className="home-header-actions">
             <label className="home-hub-label">Робот
               <select aria-label="Робот для нового проекта" value={hubChoice} onChange={(e) => setHubChoice(e.target.value as HubType)}>
@@ -314,6 +283,33 @@ export default function HomePage() {
         </header>
 
         <main className="home-main">
+          <div className="home-main-toolbar">
+            <button type="button" onClick={openNewModal} className="home-new-button">
+              <Plus size={19} aria-hidden="true" /> Новый проект
+            </button>
+            <div className="home-secondary-actions">
+              <InstallAppButton />
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="home-import"><Upload size={17} aria-hidden="true" /> Открыть файл проекта</button>
+              <input ref={fileInputRef} type="file" accept=".json,.robotproj.json,application/json" onChange={handleFileImport} hidden />
+            </div>
+          </div>
+          <div className="home-projects-heading">
+            <h1>Мои проекты</h1>
+            <span>{countLabel(projects.length)}</span>
+          </div>
+          <nav className="home-project-list" aria-label="Список проектов">
+            {sortedProjects.length === 0 ? (
+              <p className="home-empty">Здесь появятся ваши проекты. Создайте первый, чтобы начать.</p>
+            ) : sortedProjects.map((project) => (
+              <div key={project.id} className="home-project-item">
+                <Link href={`/editor?id=${encodeURIComponent(project.id)}`} className="home-project-row" title={`Открыть проект ${project.name}`}>
+                  <FolderOpen size={19} aria-hidden="true" />
+                  <span className="home-project-copy"><strong>{project.name}</strong><small>{HUBS[project.hub]} · {formatDate(project.updatedAt)}</small></span>
+                </Link>
+                <button type="button" onClick={() => setSelectedId(project.id)} className="home-project-menu" aria-label={`Действия с проектом ${project.name}`} title="Действия с проектом"><MoreHorizontal size={18} aria-hidden="true" /></button>
+              </div>
+            ))}
+          </nav>
           {notice && <p role="status" className={`home-notice ${notice.isError ? "home-notice-error" : "home-notice-success"}`}>{notice.text}</p>}
         </main>
       </div>
