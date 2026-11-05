@@ -10,7 +10,7 @@
 <body>
   <div class="editor-shell">
     <header class="editor-topbar">
-      <a class="back-link" href="/" aria-label="К списку проектов">← <span>Проекты</span></a>
+      <a class="back-link" href="index.html" aria-label="К списку проектов">← <span>Проекты</span></a>
       <div class="project-heading"><strong id="projectTitle">Проект</strong><span id="projectHub"></span></div>
       <span id="saveState" class="save-state" role="status">Сохранено</span>
       <button id="exportCode" class="export-code" type="button">Программа Pybricks</button>
@@ -22,7 +22,7 @@
         <div class="palette-heading"><div><small>БИБЛИОТЕКА</small><h2>Блоки</h2></div><button id="closePalette" class="icon-button close-palette" type="button" aria-label="Закрыть меню">×</button></div>
         <button id="categoryToggle" class="category-toggle" type="button" aria-expanded="true" aria-controls="blockCategory"><span>Основные</span><span id="categoryChevron" aria-hidden="true">⌄</span></button>
         <div id="blockCategory" class="block-category">
-          <button id="startBlock" class="palette-block start-palette" type="button" aria-label="Добавить блок Когда программа запускается. Можно перетащить на доску"><span class="start-preview" aria-hidden="true">▶</span><span>Когда программа запускается</span><small>Точка старта программы</small></button>
+          <button id="emptyBlock" class="palette-block" type="button" aria-label="Добавить пустой блок. Можно перетащить на доску"><span class="block-preview" aria-hidden="true"></span><span>Пустой блок</span><small>Перетащите на доску</small></button>
           <button id="driveBlock" class="palette-block drive-palette" type="button" aria-label="Добавить блок движения. Можно перетащить на доску"><span class="drive-preview" aria-hidden="true">↗</span><span>Движение мотора</span><small>Перетащите на доску</small></button>
           <button id="pairBlock" class="palette-block drive-palette" type="button" aria-label="Добавить связанные моторы. Можно перетащить на доску"><span class="drive-preview pair-preview" aria-hidden="true">⇉</span><span>Связанные моторы</span><small>Два мотора, общие модули</small></button>
         </div>
@@ -32,15 +32,12 @@
       <main class="board-panel">
         <div class="board-toolbar"><button id="openPalette" class="icon-button menu-button" type="button" aria-label="Открыть меню блоков" aria-expanded="false">☰</button><span class="board-title">Рабочая область</span><span class="toolbar-spacer"></span><button id="zoomOut" class="icon-button" type="button" aria-label="Уменьшить масштаб">−</button><span id="zoomValue" class="zoom-value">100%</span><button id="zoomIn" class="icon-button" type="button" aria-label="Увеличить масштаб">+</button><button id="resetView" class="reset-view" type="button">По центру</button></div>
         <div id="board" class="board" aria-label="Доска для блоков"><div id="blockLayer" class="block-layer"></div><div id="boardHint" class="board-hint">Перетащите блок из меню на доску<br><small>Доску можно двигать, удерживая пустое место</small></div></div>
-        <div class="sheet-bar" aria-label="Листы проекта"><div id="sheetTabs" class="sheet-tabs" role="tablist" aria-label="Листы"></div><button id="addSheet" type="button" aria-label="Добавить лист">+</button><button id="renameSheet" type="button" aria-label="Переименовать активный лист">✎</button><button id="deleteSheet" type="button" aria-label="Удалить активный лист">×</button></div>
-        <div class="execution-hint">Лист: <strong id="activeSheetName"></strong> · Соедините блоки: поднесите верх блока к низу другого. Цепочки выполняются сверху вниз. Экспортируется активный лист.</div>
       </main>
     </div>
   </div>
 
   <dialog id="bluetoothDialog" class="info-dialog" aria-labelledby="bluetoothTitle"><h2 id="bluetoothTitle">Bluetooth</h2><p id="bluetoothMessage">Подключение робота в редакторе появится позже. Блоки сейчас сохраняются без соединения с хабом.</p><div class="dialog-actions"><a id="legacyController" href="controller.html">Открыть прежний пульт</a><button id="closeBluetooth" type="button">Понятно</button></div></dialog>
-  <dialog id="codeDialog" class="info-dialog code-dialog" aria-labelledby="codeTitle"><h2 id="codeTitle">Программа Pybricks</h2><p>Экспортируется активный лист. Цепочки выполняются сверху вниз, затем следующая цепочка по положению её верхнего блока. Загрузите файл в Pybricks Code и запустите на хабе. Параметры задаются модулями. Связанные моторы запускаются вместе; обороты и градусы относятся к каждому валу, а не к повороту робота.</p><textarea id="codeOutput" readonly aria-label="Код программы Pybricks"></textarea><div class="dialog-actions"><button id="downloadCode" type="button">Скачать .py</button><button id="closeCode" type="button">Закрыть</button></div></dialog>
-  <dialog id="sheetDialog" class="info-dialog" aria-labelledby="sheetDialogTitle"><form id="sheetForm"><h2 id="sheetDialogTitle">Лист</h2><label id="sheetNameLabel">Название листа<input id="sheetName" maxlength="40" autocomplete="off"></label><p id="sheetDeleteMessage" hidden></p><p id="sheetDialogError" role="alert"></p><div class="dialog-actions"><button id="sheetCancel" type="button">Отмена</button><button id="sheetConfirm" type="submit">Сохранить</button></div></form></dialog>
+  <dialog id="codeDialog" class="info-dialog code-dialog" aria-labelledby="codeTitle"><h2 id="codeTitle">Программа Pybricks</h2><p>Команды выполняются сверху вниз. Загрузите файл в Pybricks Code и запустите на хабе. Параметры задаются модулями. Связанные моторы запускаются вместе; обороты и градусы относятся к каждому валу, а не к повороту робота.</p><textarea id="codeOutput" readonly aria-label="Код программы Pybricks"></textarea><div class="dialog-actions"><button id="downloadCode" type="button">Скачать .py</button><button id="closeCode" type="button">Закрыть</button></div></dialog>
   <script type="module" src="editor.js"></script>
 </body>
 </html>
