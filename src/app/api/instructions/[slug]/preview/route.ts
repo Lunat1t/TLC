@@ -54,7 +54,8 @@ export async function GET(_request: Request, context: { params: Promise<{ slug: 
         "X-Content-Type-Options": "nosniff",
       },
     })
-  } catch {
-    return fallbackResponse(phase)
+  } catch (error) {
+    const detail = error instanceof Error ? error.message.replace(/[^\w .:/-]/g, "").slice(0, 100) : "unknown"
+    return fallbackResponse(`${phase}: ${detail}`)
   }
 }
