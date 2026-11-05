@@ -6,7 +6,7 @@ Use the existing `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABL
 
 ## Google Drive PDF links
 
-The teacher page `/admin/instructions/drive` accepts the title, LEGO kit and a Google Drive PDF share URL. Teachers first upload the PDF to their own Drive and set general access to **Anyone with the link — Viewer**. TLC anonymously checks the PDF signature and size (up to 100 MB), requires a publication-rights checkbox and a verified instruction administrator, then atomically publishes metadata plus the Drive file reference.
+The teacher page `/admin/instructions/drive` accepts the title, LEGO kit, a Google Drive PDF share URL and a cover image. Teachers first upload the PDF to their own Drive and set general access to **Anyone with the link — Viewer**. TLC anonymously checks the PDF signature and size (up to 100 MB), verifies the cover image (JPG, PNG or WebP, up to 3 MB), requires a publication-rights checkbox and a verified instruction administrator, then saves the cover in Supabase Storage and atomically publishes metadata plus both asset references. Published catalog cards show the uploaded cover; PDF bytes remain in Google Drive and download directly from there.
 
 Downloads redirect to `https://drive.google.com/uc?export=download&id=FILE_ID`. PDF bytes are served by Google; downloading and publishing links need no Google service-account private key. Google may show a confirmation or quota page for large or heavily downloaded files. The source file must remain accessible by link.
 

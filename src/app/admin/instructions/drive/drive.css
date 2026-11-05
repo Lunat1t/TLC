@@ -98,6 +98,17 @@
   opacity: 1;
 }
 
+.teacher-upload-field input[type="file"] {
+  padding: 9px;
+  cursor: pointer;
+}
+
+.teacher-upload-help {
+  color: #6a828d;
+  font-size: 12px;
+  font-weight: 400;
+}
+
 .teacher-upload-rights {
   display: flex;
   align-items: flex-start;
