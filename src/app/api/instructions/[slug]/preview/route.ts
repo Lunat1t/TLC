@@ -11,7 +11,7 @@ const fallbackCover = `<svg xmlns="http://www.w3.org/2000/svg" width="720" heigh
 function fallbackResponse(reason: string) {
   console.error("instruction_preview_fallback", reason)
   return new NextResponse(fallbackCover, {
-    headers: { "Content-Type": "image/svg+xml; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
+    headers: { "Content-Type": "image/svg+xml; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "X-TLC-Preview-Fallback": reason },
   })
 }
 
