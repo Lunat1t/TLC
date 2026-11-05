@@ -9,7 +9,12 @@
     "start": "next start -p 8080",
     "test": "node --experimental-strip-types tests/run.js && python3 -B tests/test_controller_hub.py",
     "test:hub": "python3 -B tests/test_one_motor.py",
-    "test:full": "python3 -B tests/test_full.py"
+    "test:full": "python3 -B tests/test_full.py",
+    "android:init": "npm run build && npx cap add android && npx cap sync android",
+    "android:sync": "npm run build && npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:run": "npm run android:sync && npx cap run android",
+    "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -21,7 +26,12 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwind-merge": "^2.6.0",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/filesystem": "^8.0.0",
+    "@capacitor/share": "^8.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
@@ -30,6 +40,7 @@
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "@capacitor/cli": "^8.0.0"
   }
 }

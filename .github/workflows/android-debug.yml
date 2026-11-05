@@ -1,0 +1,38 @@
+name: Android debug APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+jobs:
+  apk:
+    if: ${{ vars.TLC_ANDROID_SERVER_URL != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - name: Require hosted TLC URL
+        run: test -n "$TLC_ANDROID_SERVER_URL"
+        env:
+          TLC_ANDROID_SERVER_URL: ${{ vars.TLC_ANDROID_SERVER_URL }}
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+      - run: npx cap add android
+      - name: Sync Android app with hosted TLC
+        run: npx cap sync android
+        env:
+          TLC_ANDROID_SERVER_URL: ${{ vars.TLC_ANDROID_SERVER_URL }}
+      - run: cd android && chmod +x gradlew && ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tlc-android-debug
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
