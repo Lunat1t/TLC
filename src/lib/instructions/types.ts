@@ -30,9 +30,13 @@ export interface InstructionAsset {
   id: string
   instruction_id: string
   kind: "cover" | "step_image" | "document"
-  object_key: string
+  object_key: string | null
   mime_type: string
   byte_size: number
+  source_provider?: "google_drive" | null
+  source_file_id?: string | null
+  source_revision?: string | null
+  source_revision_verified?: boolean
   created_at: string
 }
 

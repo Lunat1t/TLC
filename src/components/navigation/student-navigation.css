@@ -1,0 +1,76 @@
+.tlc-student-navigation-root {
+  flex: 1;
+  min-height: 100dvh;
+  touch-action: pan-y;
+}
+
+.tlc-bottom-nav {
+  position: fixed;
+  z-index: 50;
+  left: 50%;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100vw - 28px);
+  min-height: 60px;
+  padding: 6px;
+  border: 1px solid #d4e8ed;
+  border-radius: 999px;
+  background: rgb(252 254 254 / 96%);
+  box-shadow: 0 12px 36px rgb(7 52 66 / 18%);
+  transform: translateX(-50%);
+  backdrop-filter: blur(14px);
+}
+
+.tlc-bottom-nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0;
+  width: 48px;
+  min-width: 48px;
+  min-height: 46px;
+  padding: 0 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  color: #58717a;
+  white-space: nowrap;
+  transition: width 220ms ease, background-color 180ms ease, color 180ms ease, gap 180ms ease;
+}
+
+.tlc-bottom-nav-item svg { flex: 0 0 auto; }
+
+.tlc-bottom-nav-item span {
+  overflow: hidden;
+  max-width: 0;
+  opacity: 0;
+  font-size: 13px;
+  font-weight: 750;
+  transition: max-width 220ms ease, opacity 160ms ease;
+}
+
+.tlc-bottom-nav-item.is-active {
+  gap: 9px;
+  width: 142px;
+  background: #e6f2f6;
+  color: #006e87;
+}
+
+.tlc-bottom-nav-item.is-active span {
+  max-width: 90px;
+  opacity: 1;
+}
+
+.tlc-bottom-nav-item:focus-visible {
+  outline: 3px solid #005d83;
+  outline-offset: 3px;
+}
+
+.home-main { padding-bottom: calc(112px + env(safe-area-inset-bottom)); }
+.instruction-page { padding-bottom: calc(112px + env(safe-area-inset-bottom)); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tlc-bottom-nav-item,
+  .tlc-bottom-nav-item span { transition: none; }
+}

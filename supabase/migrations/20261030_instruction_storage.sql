@@ -1,7 +1,7 @@
--- A private bucket. Media is served only via checked TLC routes.
+-- A private image bucket. PDFs remain in Google Drive and are never copied here.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('instruction-assets', 'instruction-assets', false, 26214400,
-  array['image/png','image/jpeg','image/webp','image/svg+xml','application/pdf'])
+  array['image/png','image/jpeg','image/webp','image/svg+xml'])
 on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 

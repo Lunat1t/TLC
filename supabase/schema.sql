@@ -11,9 +11,9 @@ create table if not exists public.profiles (
 
 alter table public.profiles enable row level security;
 
-create policy "Публичное чтение профилей"
-  on public.profiles for select
-  using (true);
+create policy "Пользователь читает свой профиль"
+  on public.profiles for select to authenticated
+  using (auth.uid() = id);
 
 create policy "Пользователь может обновлять свой профиль"
   on public.profiles for update
@@ -46,6 +46,8 @@ begin
   return new;
 end;
 $$;
+
+revoke all on function public.handle_new_tlc_user() from public, anon, authenticated;
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created

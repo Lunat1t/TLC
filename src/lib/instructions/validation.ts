@@ -29,9 +29,9 @@ export function asSlug(value: unknown) {
 }
 
 export function validateUpload(file: File) {
-  const limit = file.type === "application/pdf" ? 25 * 1024 * 1024 : 8 * 1024 * 1024
+  const limit = file.type === "application/pdf" ? 100_000_000 : 8 * 1024 * 1024
   if (!(allowedImages.has(file.type) || file.type === "application/pdf") || file.size <= 0 || file.size > limit) {
-    throw new InstructionError(400, "invalid_file", "Допустимы изображения до 8 МБ и PDF до 25 МБ.")
+    throw new InstructionError(400, "invalid_file", "Допустимы изображения до 8 МБ и PDF до 100 000 000 байт.")
   }
   return { mimeType: file.type, byteSize: file.size }
 }

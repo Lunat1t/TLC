@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import "./globals.css"
 import "./avatar/orb-emotions.css"
+import { StudentNavigation } from "@/components/navigation/student-navigation"
 
 export const metadata: Metadata = {
   title: "TLC — программирование роботов",
@@ -15,6 +16,7 @@ export const viewport: Viewport = {
   themeColor: "#02c7ea",
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover",
 }
 
 export default function RootLayout({
@@ -24,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
-      <body className="min-h-dvh flex flex-col">{children}</body>
+      <body className="min-h-dvh flex flex-col"><StudentNavigation>{children}</StudentNavigation></body>
     </html>
   )
 }

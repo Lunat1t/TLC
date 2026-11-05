@@ -14,10 +14,12 @@ as $$
   select exists(select 1 from public.instruction_admins where user_id = auth.uid());
 $$;
 revoke all on function public.is_instruction_admin() from public;
+revoke all on function public.is_instruction_admin() from anon;
 grant execute on function public.is_instruction_admin() to authenticated;
 
 -- Do this before exposing /admin/students. The base schema allowed anyone to list logins/nicknames.
 drop policy if exists "Публичное чтение профилей" on public.profiles;
+drop policy if exists "Пользователь читает свой профиль" on public.profiles;
 drop policy if exists "Пользователь читает свой профиль или администратор" on public.profiles;
 create policy "Пользователь читает свой профиль или администратор"
   on public.profiles for select to authenticated
