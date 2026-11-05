@@ -33,11 +33,11 @@ export default function InstructionDrivePage() {
         <label className="teacher-upload-field">Название инструкции<input name="title" required maxLength={120} placeholder="Например, LEGO SPIKE 0297" /></label>
         <label className="teacher-upload-field">Набор LEGO<select name="kit" defaultValue="spike"><option value="spike">SPIKE Prime</option><option value="ev3">LEGO EV3</option></select></label>
         <label className="teacher-upload-field">Ссылка на PDF в Google Drive<input name="url" type="url" required placeholder="https://drive.google.com/file/d/…/view" /></label>
-        <label><input type="checkbox" name="rights" required /> Подтверждаю право на публикацию этой инструкции.</label>
+        <label className="teacher-upload-rights"><input type="checkbox" name="rights" required /><span>Подтверждаю право на публикацию этой инструкции.</span></label>
         {error && <p className="teacher-upload-error" role="alert">{error}</p>}
         {notice && <p className="teacher-upload-success" role="status">{notice}</p>}
         <button className="teacher-upload-submit" disabled={saving}>{saving ? "Проверяю PDF…" : "Опубликовать инструкцию"}</button>
-        <Link href="/login?next=/admin/instructions/drive">Войти в аккаунт учителя</Link>
+        <Link className="teacher-upload-signin" href="/login?next=/admin/instructions/drive">Войти в аккаунт учителя</Link>
       </form>
     </section>
   </main>
