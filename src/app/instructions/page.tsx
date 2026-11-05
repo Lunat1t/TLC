@@ -2,7 +2,6 @@ import Link from "next/link"
 import { listCatalog } from "@/lib/instructions/catalog"
 import { driveDownloadPath } from "@/lib/instructions/drive-links"
 import "./instructions.css"
-import "./admin-link.css"
 
 export default async function InstructionsPage({ searchParams }: { searchParams: Promise<{ kit?: string; q?: string; cursor?: string }> }) {
   const params = await searchParams
@@ -16,9 +15,6 @@ export default async function InstructionsPage({ searchParams }: { searchParams:
   if (q) next.set("q", q)
   if (result.nextCursor) next.set("cursor", result.nextCursor)
   return <main className="instruction-page">
-    <Link href="/" className="instruction-back">← На главную</Link>
-    <Link href="/admin/instructions/drive" className="instruction-admin-link">Панель учителя</Link>
-    <header className="instruction-heading"><p>Библиотека TLC</p><h1>Инструкции для роботов</h1><span>Нажмите на инструкцию — PDF сразу скачается с Google Drive.</span></header>
     <form action="/instructions" className="instruction-filters">
       <label>Набор<select name="kit" defaultValue={kit}><option value="">Все наборы</option><option value="spike">SPIKE Prime</option><option value="ev3">EV3</option></select></label>
       <label>Поиск<input name="q" type="search" defaultValue={q} placeholder="Название или тема" /></label>

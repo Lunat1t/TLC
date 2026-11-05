@@ -147,16 +147,6 @@ export default function LoginPage() {
                   Войти в аккаунт <span aria-hidden="true">→</span>
                 </Button>
 
-                <Button
-                  id="teacherLoginBtn"
-                  type="button"
-                  variant="secondary"
-                  className="w-full"
-                  onClick={() => router.push("/admin/instructions/drive")}
-                >
-                  <span>Панель учителя</span>
-                  <span aria-hidden="true">→</span>
-                </Button>
               </div>
             </form>
 

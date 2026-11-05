@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Download, FolderOpen, Plus, Upload, MoreHorizontal, UserRound } from "lucide-react"
+import { ChevronDown, Download, FolderOpen, Plus, Upload, MoreHorizontal, UserRound } from "lucide-react"
 import "./home.css"
 import {
   loadAuthState,
@@ -108,6 +108,7 @@ export default function HomePage() {
   const router = useRouter()
   const [projects, setProjects] = React.useState<RobotProject[]>([])
   const [auth, setAuth] = React.useState<AuthState>(() => loadAuthState(null))
+  const [isInstructionAdmin, setIsInstructionAdmin] = React.useState(false)
   const [notice, setNotice] = React.useState<{
     text: string
     isError: boolean
@@ -141,6 +142,19 @@ export default function HomePage() {
       })
     }
   }, [])
+
+  React.useEffect(() => {
+    let active = true
+    if (!auth.user?.id) {
+      setIsInstructionAdmin(false)
+      return
+    }
+    void fetch("/api/instructions/admin-status", { cache: "no-store" })
+      .then(async (response) => response.ok ? (await response.json()).isAdmin === true : false)
+      .then((isAdmin) => { if (active) setIsInstructionAdmin(isAdmin) })
+      .catch(() => { if (active) setIsInstructionAdmin(false) })
+    return () => { active = false }
+  }, [auth.user?.id])
 
   const selectedProject = React.useMemo(
     () => projects.find((p) => p.id === selectedId) || null,
@@ -262,12 +276,17 @@ export default function HomePage() {
       <div className="home-content">
         <header className="home-header">
           <div className="home-header-actions">
-            {auth.user ? <span className="home-profile"><UserRound size={18} aria-hidden="true" /><span>{auth.user.nickname}</span></span> : <Link href="/login" className="home-profile"><UserRound size={18} aria-hidden="true" /><span>Войти</span></Link>}
-            {auth.user && <button type="button" className="home-signout" onClick={async () => {
-              const next = await signOutFromSupabase(window.localStorage)
-              setAuth(next)
-              setNotice({ text: "Вы вышли из аккаунта.", isError: false })
-            }}>Выйти</button>}
+            {auth.user ? <details className="home-profile-dropdown">
+              <summary className="home-profile"><UserRound size={18} aria-hidden="true" /><span>{auth.user.nickname}</span><ChevronDown size={14} aria-hidden="true" /></summary>
+              <div className="home-profile-menu">
+                {isInstructionAdmin && <Link href="/admin/instructions/drive" className="home-profile-menu-item">Панель учителя</Link>}
+                <button type="button" className="home-profile-menu-item" onClick={async () => {
+                  const next = await signOutFromSupabase(window.localStorage)
+                  setAuth(next)
+                  setNotice({ text: "Вы вышли из аккаунта.", isError: false })
+                }}>Выйти</button>
+              </div>
+            </details> : <Link href="/login" className="home-profile"><UserRound size={18} aria-hidden="true" /><span>Войти</span></Link>}
           </div>
         </header>
 
