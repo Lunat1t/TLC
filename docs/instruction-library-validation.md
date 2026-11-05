@@ -22,6 +22,8 @@ Target: Supabase project `TLC-test` (`bjegtxrgsdderxacadtx`) in organization `TL
 | `20261104_instruction_drive_source` | Applied; Drive file/revision metadata. |
 | `20261105_security_cleanup` | Applied; removes duplicate profile policy and revokes direct execution of the profile trigger. |
 | `20261105_instruction_admin_acl` | Applied; removes anonymous execution of the admin-check function. |
+| `20261105_instruction_drive_revisions` | Applied historically; revision columns are removed by the direct-download migration below. |
+| `instruction_drive_download` | Applied after the original schema check; exposes `has_pdf` for published cards and adds the server-resolved Drive download route contract. |
 
 ### After applying
 
@@ -64,7 +66,7 @@ The repeatable fixture seed command's 10-card and 20-card dry runs pass. Applyin
 
 ### Scope not yet verified
 
-This migration set does not create student sessions, selections, launches or progress. There are no corresponding migration files in the repository yet. Auth sign-in/refresh, admin provisioning, live catalog routes, Drive service-account access, immutable Drive revision retention, student launch, PDF streaming/range, tablet reconnection and device-level performance remain unverified. Keep the Drive revision gate closed until a real test folder and suitable Drive permissions prove retention across source edits/deletion.
+This migration set does not create student sessions, selections, launches or progress. There are no corresponding migration files in the repository yet. Auth sign-in/refresh, admin provisioning, live catalog routes, Drive service-account access, direct PDF download, student launch, tablet reconnection and device-level performance remain unverified.
 
 ### 2026-11-05 — Drive upload foundation
 
@@ -73,3 +75,19 @@ This migration set does not create student sessions, selections, launches or pro
 - The existing Drive folder and its `Черновики`, `SPIKE Prime`, and `LEGO EV3` subfolders were found through the connected Drive integration. The parent folder ID was placed in ignored `.env.local`; no file was uploaded.
 - `GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL` and `GOOGLE_DRIVE_PRIVATE_KEY` are not configured. The upload API also requires a verified TLC teacher/admin session. Therefore the UI opens publicly, but an actual upload has not been run; Drive permission, resumable transfer, revision retention after edits/deletion, and cleanup on failure remain unverified.
 - Current-code checks after the direct-to-Drive resumable refactor: `npx tsc --noEmit`, `npm run build`, and `git diff --check` passed. The latest `npm test` run had 59/67 passing; eight failures are in pre-existing workspace/controller tests. Because the Node test command failed, the chained Python controller tests did not run. The upload itself remains unverified until service-account credentials and a teacher/admin role are configured.
+
+### 2026-11-05 — Direct Google Drive download redesign
+
+- The user changed the desired PDF flow to immediate download from Google Drive when a student clicks a published instruction card. TLC no longer previews PDF pages, streams PDF bytes, or holds PDF progress; step-image assembly remains a separate workflow.
+- Admin upload and Drive import now set `anyone:reader`, which enables download without a Google account. This makes any copied Drive URL public to its holder and it remains live after catalog unpublish until revoked in Drive.
+- New migration `20261105_instruction_drive_download.sql` removes revision-retention metadata and exposes only a `has_pdf` flag for published catalog results; a server route resolves Drive `webContentLink` on click.
+- The migration was applied to the empty non-production `TLC-test` database as `instruction_drive_download`. No production schema was changed.
+- `npm run build` and `git diff --check` pass. No browser download or real Drive permission test has been run: production Supabase schema/Vercel env are still absent, and local service-account email/private key and a teacher/admin identity are still missing.
+
+## 2026-11-05 — Production setup and public Drive link publication
+
+- Production TLC initialized with the base schema and the reviewed catalog/storage/Drive migration sequence; public-link publication RPC and existing-profile backfill applied to test and production.
+- Vercel Production Supabase URL/publishable key configured; public downloads and teacher link publication do not require a Google service-account private key.
+- `npm run build` and `git diff --check` passed. `npm test`: 60/67 pass; the same 7 failures reproduced against clean HEAD `a4bc9fd` in an isolated baseline directory. These failures concern controller/workspace behavior predating this change.
+- Google Drive returned “В настоящее время предоставить доступ нельзя. Повторите попытку позже.” for the supplied PDF. Anonymous download remains unverified; example 0297 stays draft until Drive grants public-reader access.
+- Production contains only student Auth accounts; assigning a teacher requires the owner's explicit TLC login. No student was promoted automatically.

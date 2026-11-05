@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto"
 import { NextResponse } from "next/server"
 import { errorResponse, InstructionError, requireAdmin } from "@/lib/instructions/access"
 import { asKit, asText } from "@/lib/instructions/validation"
-import { deleteDriveFile, MAX_PDF_BYTES, ownedUploadPdf, pinConfiguredPdfRevision } from "@/lib/instructions/google-drive"
+import { deleteDriveFile, ensurePublicDriveRead, MAX_PDF_BYTES, ownedUploadPdf, verifyPdfSignature } from "@/lib/instructions/google-drive"
 
 export const runtime = "nodejs"
 
@@ -33,9 +33,9 @@ export async function POST(request: Request) {
       throw new InstructionError(413, "file_too_large", "PDF должен быть размером до 100 000 000 байт.")
     }
 
-    const ownedFile = await ownedUploadPdf(fileId, uploadId)
-    driveFileId = ownedFile.id
-    const { file, revisionId, revisionVerified } = await pinConfiguredPdfRevision(fileId, uploadId)
+    const file = await ownedUploadPdf(fileId, uploadId)
+    driveFileId = file.id
+    await verifyPdfSignature(file)
     if (Number(file.size || 0) !== expectedSize) {
       throw new InstructionError(400, "size_mismatch", "Размер файла в Google Drive не совпал с выбранным PDF.")
     }
@@ -46,6 +46,8 @@ export async function POST(request: Request) {
       driveFileId = null
       throw new InstructionError(409, "already_imported", "Этот PDF уже добавлен в библиотеку.")
     }
+
+    await ensurePublicDriveRead(file.id)
 
     const { data: draft, error: draftError } = await client.from("instructions").insert({
       slug: makeSlug(title), title, summary: "", kit, topics: [], status: "draft",
@@ -60,9 +62,7 @@ export async function POST(request: Request) {
       byte_size: expectedSize,
       source_provider: "google_drive",
       source_file_id: file.id,
-      source_revision: revisionId,
-      source_revision_verified: revisionVerified,
-    }).select("id,instruction_id,byte_size,source_revision_verified").single()
+    }).select("id,instruction_id,byte_size").single()
     if (assetError || !asset) {
       await client.from("instructions").delete().eq("id", draft.id)
       throw new InstructionError(503, "asset_save_failed", "Не удалось сохранить PDF в каталоге.")

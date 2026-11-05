@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { listCatalog } from "@/lib/instructions/catalog"
+import { driveDownloadPath } from "@/lib/instructions/drive-links"
 import "./instructions.css"
 import "./admin-link.css"
 
@@ -17,7 +18,7 @@ export default async function InstructionsPage({ searchParams }: { searchParams:
   return <main className="instruction-page">
     <Link href="/" className="instruction-back">← На главную</Link>
     <Link href="/admin/instructions/drive" className="instruction-admin-link">Панель учителя</Link>
-    <header className="instruction-heading"><p>Библиотека TLC</p><h1>Инструкции для роботов</h1><span>Выберите модель. Шаги сборки откроет преподаватель.</span></header>
+    <header className="instruction-heading"><p>Библиотека TLC</p><h1>Инструкции для роботов</h1><span>Нажмите на инструкцию — PDF сразу скачается с Google Drive.</span></header>
     <form action="/instructions" className="instruction-filters">
       <label>Набор<select name="kit" defaultValue={kit}><option value="">Все наборы</option><option value="spike">SPIKE Prime</option><option value="ev3">EV3</option></select></label>
       <label>Поиск<input name="q" type="search" defaultValue={q} placeholder="Название или тема" /></label>
@@ -25,10 +26,16 @@ export default async function InstructionsPage({ searchParams }: { searchParams:
       {(kit || q) && <Link href="/instructions">Сбросить</Link>}
     </form>
     {error ? <p role="alert" className="instruction-message">Каталог пока недоступен. Попробуйте позже.</p> : result.items.length === 0 ? <p className="instruction-message">Инструкции не найдены. Измените запрос или <Link href="/instructions">сбросьте фильтр</Link>.</p> :
-      <div className="instruction-grid">{result.items.map((item) => <Link key={item.id} href={`/instructions/${item.slug}`} className="instruction-card">
-        <div className="instruction-cover">{item.coverAssetId ? <img src={`/api/instruction-media/${item.id}/${item.coverAssetId}`} alt="" /> : <span aria-hidden="true">◈</span>}</div>
-        <div className="instruction-card-copy"><small>{item.kit === "spike" ? "SPIKE Prime" : "EV3"}</small><h2>{item.title}</h2><p>{item.summary}</p><div className="instruction-topics">{item.topics.map((topic) => <span key={topic}>{topic}</span>)}</div></div>
-      </Link>)}</div>}
+      <div className="instruction-grid">{result.items.map((item) => {
+        const downloadUrl = driveDownloadPath(item.slug, item.hasPdf)
+        const content = <>
+          <div className="instruction-cover">{item.coverAssetId ? <img src={`/api/instruction-media/${item.id}/${item.coverAssetId}`} alt="" /> : <span aria-hidden="true">◈</span>}</div>
+          <div className="instruction-card-copy"><small>{item.kit === "spike" ? "SPIKE Prime" : "EV3"}</small><h2>{item.title}</h2><p>{item.summary}</p><div className="instruction-topics">{item.topics.map((topic) => <span key={topic}>{topic}</span>)}</div><span className="instruction-download-hint">{downloadUrl ? "Нажмите, чтобы скачать PDF с Google Drive" : "Открыть инструкцию"}</span></div>
+        </>
+        return downloadUrl
+          ? <a key={item.id} href={downloadUrl} className="instruction-card" rel="noreferrer" referrerPolicy="no-referrer">{content}</a>
+          : <Link key={item.id} href={`/instructions/${item.slug}`} className="instruction-card">{content}</Link>
+      })}</div>}
     {result.nextCursor && <Link className="instruction-next" href={`/instructions?${next.toString()}`}>Показать ещё</Link>}
   </main>
 }

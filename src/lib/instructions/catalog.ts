@@ -2,7 +2,7 @@ import { serverClient, InstructionError } from "./access"
 import { asKit } from "./validation"
 import type { CatalogCard, Kit } from "./types"
 
-interface CatalogRow extends CatalogCard { cover_asset_id: string | null; published_at: string }
+interface CatalogRow extends CatalogCard { cover_asset_id: string | null; has_pdf: boolean; published_at: string }
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 function decodeCursor(cursor?: string | null) {
@@ -33,6 +33,7 @@ export async function listCatalog(input: { kit?: string | null; q?: string | nul
   const items: CatalogCard[] = rows.slice(0, 20).map((row) => ({
     id: row.id, slug: row.slug, title: row.title, summary: row.summary,
     kit: row.kit, topics: row.topics || [], coverAssetId: row.cover_asset_id,
+    hasPdf: row.has_pdf === true,
   }))
   const last = rows[19]
   const nextCursor = rows.length > 20 && last

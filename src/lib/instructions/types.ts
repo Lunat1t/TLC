@@ -35,8 +35,6 @@ export interface InstructionAsset {
   byte_size: number
   source_provider?: "google_drive" | null
   source_file_id?: string | null
-  source_revision?: string | null
-  source_revision_verified?: boolean
   created_at: string
 }
 
@@ -104,4 +102,5 @@ export interface CatalogCard {
   kit: Kit
   topics: string[]
   coverAssetId: string | null
+  hasPdf: boolean
 }

@@ -13,7 +13,6 @@ type DriveFile = {
   mimeType: string
   size?: string
   modifiedTime?: string
-  headRevisionId?: string
   appProperties?: Record<string, string>
   parents?: string[]
 }
@@ -80,7 +79,7 @@ async function driveFetch(url: string, init?: RequestInit, scope?: string) {
       throw new InstructionError(503, "drive_rate_limited", "Google Drive временно ограничил запросы. Подождите и попробуйте ещё раз.")
     }
     if (response.status === 403) {
-      throw new InstructionError(503, "drive_folder_unavailable", "Google Drive не видит папку. Проверьте ID папки и доступ service account.")
+      throw new InstructionError(503, "drive_access_forbidden", "Google Drive отказал в доступе. Проверьте права service account и разрешение на доступ по ссылке.")
     }
     if (response.status === 404) throw new InstructionError(404, "drive_file_not_found", "Файл или папка не найдены в Google Drive.")
     throw new InstructionError(503, "drive_unavailable", "Google Drive временно недоступен.")
@@ -95,7 +94,7 @@ async function children(folderId: string) {
     const query = new URLSearchParams({
       q: `'${folderId.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}' in parents and trashed = false`,
       pageSize: "100",
-      fields: "nextPageToken,files(id,name,mimeType,size,modifiedTime,headRevisionId,appProperties,parents)",
+      fields: "nextPageToken,files(id,name,mimeType,size,modifiedTime,appProperties,parents)",
       orderBy: "name",
       supportsAllDrives: "true",
       includeItemsFromAllDrives: "true",
@@ -152,84 +151,54 @@ export async function ownedUploadPdf(fileId: string, uploadId: string) {
   return file
 }
 
-export async function pinConfiguredPdfRevision(fileId: string, expectedUploadId?: string) {
-  const file = expectedUploadId ? await ownedUploadPdf(fileId, expectedUploadId) : await configuredPdf(fileId)
-  if (!file.headRevisionId) throw new InstructionError(503, "drive_revision_missing", "Google Drive не вернул идентификатор версии PDF.")
-  const response = await driveFetch(
-    `${DRIVE_API}/files/${encodeURIComponent(file.id)}/revisions/${encodeURIComponent(file.headRevisionId)}?fields=id,keepForever`,
-    { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ keepForever: true }) },
-    DRIVE_WRITE_SCOPE,
-  )
-  const revision = await response.json() as { id?: string; keepForever?: boolean }
-  if (revision.id !== file.headRevisionId || revision.keepForever !== true) {
-    throw new InstructionError(503, "drive_revision_not_retained", "Не удалось закрепить версию PDF в Google Drive.")
-  }
-  const signature = await driveFetch(
-    `${DRIVE_API}/files/${encodeURIComponent(file.id)}/revisions/${encodeURIComponent(revision.id)}?alt=media`,
-    { headers: { Range: "bytes=0-4" } },
-  )
+export async function verifyPdfSignature(file: Pick<DriveFile, "id">) {
+  const signature = await driveFetch(`${DRIVE_API}/files/${encodeURIComponent(file.id)}?alt=media`, {
+    headers: { Range: "bytes=0-4" },
+  })
   if (signature.status !== 206 || signature.headers.get("Content-Length") !== "5") {
     await signature.body?.cancel()
     throw new InstructionError(503, "drive_signature_check_failed", "Google Drive не смог безопасно проверить начало PDF.")
   }
   const header = Buffer.from(await signature.arrayBuffer()).subarray(0, 5).toString("ascii")
   if (header !== "%PDF-") throw new InstructionError(415, "invalid_pdf", "Загруженный файл не прошёл проверку PDF.")
-  return { file, revisionId: revision.id, revisionVerified: true as const }
-}
-
-export async function streamConfiguredPdfRevision(fileId: string, revisionId: string, rangeHeader: string | null) {
-  const file = await configuredPdf(fileId)
-  if (!revisionId || revisionId.length > 256) throw new InstructionError(404, "drive_revision_not_found", "Версия PDF не найдена.")
-  const metadataResponse = await driveFetch(`${DRIVE_API}/files/${encodeURIComponent(file.id)}/revisions/${encodeURIComponent(revisionId)}?fields=id,mimeType,size,keepForever`)
-  const metadata = await metadataResponse.json() as { id?: string; mimeType?: string; size?: string; keepForever?: boolean }
-  const totalSize = Number(metadata.size || 0)
-  if (metadata.id !== revisionId || metadata.mimeType !== "application/pdf" || metadata.keepForever !== true) {
-    throw new InstructionError(409, "drive_revision_not_retained", "Закреплённая версия PDF сейчас недоступна.")
-  }
-  if (!Number.isSafeInteger(totalSize) || totalSize <= 0 || totalSize > MAX_PDF_BYTES) {
-    throw new InstructionError(413, "invalid_file_size", "PDF должен быть размером до 100 000 000 байт.")
-  }
-
-  let requestedRange: { start: number; end: number } | null = null
-  if (rangeHeader) {
-    const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader.trim())
-    if (!match || (!match[1] && !match[2])) {
-      return { status: 416, body: null, size: totalSize, contentRange: `bytes */${totalSize}`, contentLength: null }
-    }
-    if (!match[1]) {
-      const suffix = Number(match[2])
-      if (!Number.isSafeInteger(suffix) || suffix <= 0) {
-        return { status: 416, body: null, size: totalSize, contentRange: `bytes */${totalSize}`, contentLength: null }
-      }
-      requestedRange = { start: Math.max(0, totalSize - suffix), end: totalSize - 1 }
-    } else {
-      const start = Number(match[1])
-      const end = match[2] ? Number(match[2]) : totalSize - 1
-      if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start >= totalSize || end < start) {
-        return { status: 416, body: null, size: totalSize, contentRange: `bytes */${totalSize}`, contentLength: null }
-      }
-      requestedRange = { start, end: Math.min(end, totalSize - 1) }
-    }
-  }
-
-  const headers = requestedRange
-    ? { Range: `bytes=${requestedRange.start}-${requestedRange.end}` }
-    : undefined
-  const response = await driveFetch(
-    `${DRIVE_API}/files/${encodeURIComponent(file.id)}/revisions/${encodeURIComponent(revisionId)}?alt=media`,
-    { headers, signal: AbortSignal.timeout(10 * 60_000) },
-  )
-  if (requestedRange && response.status !== 206) throw new InstructionError(503, "drive_range_unsupported", "Google Drive не выдал запрошенный диапазон PDF.")
-  return {
-    status: requestedRange ? 206 : 200,
-    body: response.body,
-    size: totalSize,
-    contentRange: response.headers.get("Content-Range"),
-    contentLength: response.headers.get("Content-Length"),
-  }
 }
 
 const DRIVE_WRITE_SCOPE = "https://www.googleapis.com/auth/drive"
+
+export async function publicDriveDownloadUrl(fileId: string) {
+  if (!/^[a-zA-Z0-9_-]{10,200}$/.test(fileId)) {
+    throw new InstructionError(404, "drive_file_not_found", "PDF не найден в Google Drive.")
+  }
+  // Public files download directly from Drive; no service-account token is needed.
+  const url = new URL("https://drive.google.com/uc")
+  url.searchParams.set("export", "download")
+  url.searchParams.set("id", fileId)
+  return url.toString()
+}
+
+export async function ensurePublicDriveRead(fileId: string) {
+  const base = `${DRIVE_API}/files/${encodeURIComponent(fileId)}/permissions?supportsAllDrives=true`
+  const listed = await driveFetch(`${base}&fields=permissions(id,type,role,allowFileDiscovery)`, undefined, DRIVE_WRITE_SCOPE)
+  const { permissions = [] } = await listed.json() as { permissions?: Array<{ id?: string; type?: string; role?: string; allowFileDiscovery?: boolean }> }
+  const anyonePermission = permissions.find((permission) => permission.type === "anyone")
+  if (anyonePermission?.role === "reader" && anyonePermission.allowFileDiscovery !== true) return
+
+  const created = anyonePermission?.id
+    ? await driveFetch(`${DRIVE_API}/files/${encodeURIComponent(fileId)}/permissions/${encodeURIComponent(anyonePermission.id)}?supportsAllDrives=true&fields=id,type,role`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: "reader", allowFileDiscovery: false }),
+    }, DRIVE_WRITE_SCOPE)
+    : await driveFetch(`${base}&fields=id,type,role`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "anyone", role: "reader", allowFileDiscovery: false }),
+    }, DRIVE_WRITE_SCOPE)
+  const permission = await created.json() as { type?: string; role?: string }
+  if (permission.type !== "anyone" || permission.role !== "reader") {
+    throw new InstructionError(503, "drive_public_access_failed", "Не удалось включить скачивание PDF по ссылке в Google Drive.")
+  }
+}
 
 function safeDriveName(name: string) {
   return name.replace(/[\\/\u0000-\u001f]/g, "_").trim().slice(0, 180) || "instruction.pdf"
@@ -246,7 +215,7 @@ export async function createPdfUploadSession(name: string, size: number) {
   )
   const destinationFolderId = draftFolder?.id || folderId
   const uploadId = randomUUID()
-  const start = await fetch(`${DRIVE_API}/files?uploadType=resumable&supportsAllDrives=true&fields=id,name,size,mimeType,modifiedTime,headRevisionId`, {
+  const start = await fetch(`${DRIVE_API}/files?uploadType=resumable&supportsAllDrives=true&fields=id,name,size,mimeType,modifiedTime`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,

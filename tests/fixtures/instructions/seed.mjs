@@ -86,7 +86,6 @@ for (const item of instructions) {
       instruction_id: card.id, kind: 'document', object_key: null,
       mime_type: 'application/pdf', byte_size: bytes.length,
       source_provider: 'google_drive', source_file_id: sourceFileId,
-      source_revision: 'tlc-fixture-revision-1',
     }
     const { error } = source.data
       ? await supabase.from('instruction_assets').update(documentRow).eq('id', source.data.id)

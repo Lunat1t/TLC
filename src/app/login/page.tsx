@@ -65,7 +65,7 @@ export default function LoginPage() {
         isError: false,
       })
       setTimeout(() => {
-        router.push("/")
+        router.push(new URLSearchParams(window.location.search).get("next") === "/admin/instructions/drive" ? "/admin/instructions/drive" : "/")
       }, 500)
     } catch (err) {
       setStatus({

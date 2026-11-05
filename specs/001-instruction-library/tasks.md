@@ -109,7 +109,7 @@ All paths below are relative to the TLC repository root. `[US1]`–`[US4]` map t
 **Independent Test**: Create an owned 10-step draft, publish it, reorder/replace files, archive it, verify public removal and new-launch denial while an already opened build retains its original snapshot.
 
 - [ ] T040 [P] [US4] Implement admin-only draft/list/detail/update endpoints and `draft|published|archived` validation in `src/app/api/admin/instructions/route.ts` and `src/app/api/admin/instructions/[id]/route.ts`; keep `slug` unchanged on rename.
-- [ ] T041 [P] [US4] Implement validated private image upload with safe object keys and streaming PDF upload into the configured private Drive folder from the simple teacher form; persist the Drive file ID and confirmed pinned revision in Supabase, preserve the draft and clean orphaned uploads after failure, never overwrite an asset referenced by an open snapshot.
+- [ ] T041 [P] [US4] Implement validated private image upload with safe object keys and direct-to-Drive PDF upload from the simple teacher form; persist the Drive file ID and catalog metadata in Supabase, grant link-read permission for the download, preserve the draft and clean orphaned uploads after failure.
 - [ ] T042 [US4] Implement atomic publish/archive in `src/app/api/admin/instructions/[id]/publish/route.ts` and `src/lib/instructions/publication.ts`; require title, summary, kit, rights attestation and at least one ordered step or document, preserve `slug`, supersede pending launches on archive and retain assets used by opened launches.
 - [ ] T043 [US4] Build admin list/editor, rights confirmation, media upload, step reordering, preview and publish/archive controls in `src/app/admin/instructions/page.tsx` and `src/app/admin/instructions/[id]/page.tsx`; show upload/publish errors without losing a draft.
 - [ ] T044 [P] [US4] Document the trusted operator grant/revoke procedure for `instruction_admins`, rights-cleared content intake and media export/migration in `docs/instruction-library-setup.md`; do not expose role assignment in student signup.
@@ -175,8 +175,8 @@ Setup T001–T003
 - [ ] T055 [P] Исправить асинхронное ожидание проверки пользователя и обновления cookies в `src/utils/supabase/middleware.ts` и `src/middleware.ts`; проверить вход, выход и обновление истёкшей сессии.
 - [X] T056 Убрать неявный fallback к другому Supabase-проекту и выдавать диагностируемую ошибку отсутствующей конфигурации в `src/utils/supabase/client.ts`, `src/utils/supabase/server.ts` и `src/utils/supabase/middleware.ts` после T055.
 - [X] T057 Различать отказ роли, устаревший планшет и недоступность RPC в `src/lib/instructions/access.ts`; сохранить серверную проверку пользователя и не выдавать внутренние детали клиенту.
-- [ ] T058 Подготовить тестовый service account, папку Drive и серверные переменные в `docs/instruction-library-setup.md`; проверить доступ на чтение и указать необходимые права для управления ревизиями, без размещения ключей в Git или чате.
-- [ ] T059 Проверить варианты сохранения доступной PDF-ревизии после изменения и удаления источника, права writer, retention и восстановление в отдельной тестовой папке Drive; записать фактические результаты и выбранную политику в `specs/001-instruction-library/backend-plan/research.md`. Пока проверка не доказана, gate неизменяемости остаётся открытым.
+- [ ] T058 Подготовить тестовый service account, папку Drive и серверные переменные в `docs/instruction-library-setup.md`; проверить upload и разрешение `anyone:reader`, не размещая ключи в Git или чате.
+- [SUPERSEDED 2026-11-05] T059 Revision retention is no longer part of the PDF download path; Drive file IDs point to the current file contents.
 
 ### User Story 1: каталог
 
@@ -185,18 +185,18 @@ Setup T001–T003
 
 ### User Story 2: запуск занятия
 
-- [ ] T062 [US2] После T059 и T020 сохранить в неизменяемом снимке запуска Drive file ID и подтверждённый revision ID; при отсутствии подтверждённой версии блокировать запуск в `src/lib/instructions/launch.ts` и `supabase/migrations/20261030_instruction_launches.sql`.
-- [ ] T063 [US2] После T021 и T062 обеспечить проверку владельца, статуса `opened`, текущей `generation` и asset из snapshot при PDF-запросе в `src/app/api/student/launches/[id]/media/[assetId]/route.ts`; исключить обход через прямой Data API.
+- [SUPERSEDED FOR PDF] T062 PDF file IDs/revisions no longer need to be copied into an assembly snapshot; image launch snapshots remain separate.
+- [ ] T063 [US2] После T021 обеспечить проверку владельца, статуса `opened`, текущей `generation` и image asset из snapshot при запросе шаговых изображений; PDF скачивается напрямую с Google Drive и не входит в launch-media endpoint.
 
 ### User Story 3: просмотр и прогресс
 
-- [ ] T064 [US3] После T063 реализовать передачу закреплённой PDF-ревизии с потоковой обработкой Range и ответами `200|206|416`, лимитами и fallback в `src/lib/instructions/google-drive.ts` и `src/app/api/student/launches/[id]/media/[assetId]/route.ts`.
-- [ ] T065 [US3] Проверить возобновление страницы PDF после смены планшета, потерю доступа после закрытия, недоступную ревизию и ограничения Drive на тестовых устройствах; результаты записать в `docs/instruction-library-validation.md`.
+- [SUPERSEDED 2026-11-05] T064 Do not stream or proxy PDF revisions through TLC; published cards use a direct Drive download URL.
+- [SUPERSEDED FOR PDF] T065 PDF page progress and page-resume checks are no longer required; keep network recovery checks for step-based assembly.
 
 ### User Story 4: публикация
 
-- [ ] T066 [US4] После T059 проверить и закрепить политику версий при публикации, права на материал, retention открытых запусков и отказ при недоступной ревизии в `src/lib/instructions/publication.ts` и `src/app/api/admin/instructions/[id]/publish/route.ts`.
-- [ ] T067 [US4] После T058 и аудита данных добавить согласованные ограничения источника: Drive file/revision ID для PDF либо Storage object key для изображения; подготовить новую миграцию в `supabase/migrations/` и обновить `src/lib/instructions/types.ts`.
+- [SUPERSEDED FOR PDF REVISION POLICY] T066 Revision retention is no longer a PDF publication gate. Direct Drive links remain valid after unpublish until manually revoked.
+- [ ] T067 [US4] После T058 и аудита данных добавить согласованные ограничения источника: Drive file ID для PDF либо Storage object key для изображения; подготовить миграцию в `supabase/migrations/` и обновить `src/lib/instructions/types.ts`.
 - [ ] T068 [US4] Доработать список Drive и привязку к черновику с пределом 100 000 000 байт включительно вместо 25 МиБ; показывать файл сверх предела с понятным отказом и сохранять черновик; явно сообщать о лимитах глубины 4 и 500 PDF до их пересмотра, обрабатывать 403/404/429 и таймаут в `src/lib/instructions/google-drive.ts` и `src/app/api/admin/instruction-drive/route.ts`.
 
 ### Общая эксплуатация
@@ -206,18 +206,19 @@ Setup T001–T003
 
 ### Зависимости дополнения
 
-T053 → T054 → T060/T018; T055 → T056 → T057; T058 → T059 → T062 → T063 → T064/T065. T066 зависит от T059 и T042; T067 требует аудита T053 и идёт до применения новой миграции; T068 следует за T058. T069 и T070 выполняются после определения окружений. Существующие T019–T039 остаются необходимыми; нельзя помечать US2/US3 готовыми, пока T059 и проверка версий не пройдены. T041 теперь относится к загрузке изображений и привязке PDF в Drive.
+T053 → T054 → T060/T018; T055 → T056 → T057; T058 → T067/T068 → T076. T063 остаётся нужной для launch-scoped image assets. Проверка PDF revision и page-progress задачами T059/T062/T064/T065/T066/T074/T075 заменена прямой выдачей из Drive; не включать PDF bytes в Vercel/Storage. T069 и T070 выполняются после определения окружений. Существующие T019–T039 остаются необходимыми для пошаговых сборок с изображениями; PDF скачивается отдельно.
 
-Параллельно после T053 можно готовить T055 и документацию T058; после готовности общих контрактов US1 T060 и подготовка UI публикации US4 выполняются в разных файлах. T064 начинается только после T063; задачи, изменяющие один файл, выполняются последовательно. MVP — работающий доступный каталог US1 с тестовыми данными после T053–T057; ученический PDF и публикация проходят отдельные проверки US2–US4.
+Параллельно после T053 можно готовить T055 и документацию T058; после готовности общих контрактов US1 T060 и подготовка UI публикации US4 выполняются в разных файлах. Задачи, изменяющие один файл, выполняются последовательно. MVP — работающий каталог и проверенное скачивание PDF из Drive без Google-входа; пошаговые сборки с изображениями проходят отдельные проверки US2–US4.
 
 
 ## Уточнения после 2026-11-05: экран ученика и PDF
 
+- Решение пользователя от 2026-11-05 заменяет для PDF задачи удержания Drive-ревизий и прокси-просмотра: T059/T062/T064/T065/T066/T074/T075 больше не блокируют PDF-загрузку из каталога. Для скачивания используется Drive ID опубликованного документа и прямой download URL; ссылка доступна всем, у кого она есть, и может остаться действительной после unpublish. T076 должен проверять публичное скачивание и границы размера вместо потоковой выдачи/переключения страниц.
 - [X] T071 [US1] Изучить выбранный компонент `https://21st.dev/r/arunachalam/bottom-nav-bar`, его исходный registry, зависимости и лицензию перед интеграцией; записать результат в `specs/001-instruction-library/backend-plan/research.md` без запуска удалённого кода до проверки.
 - [X] T072 [US1] После T071 реализовать нижнюю навигацию главного экрана ученика с кнопкой библиотеки и свайпом между страницами в `src/app/page.tsx`, `src/app/home.css` и `src/components/`; сохранить существующие проекты и не возвращать удалённые блоки, будущие уровень и косметику не реализовывать.
 - [X] T073 [US1] Проверить кнопку и свайп к библиотеке, подписи, клавиатуру, фокус, touch и отсутствие конфликтов жестов с прокруткой на планшете в `docs/instruction-library-validation.md`; согласовать критерий SC-001 с T061.
-- [ ] T074 [US3] После T036 и T063 сохранять версионированную текущую страницу PDF как целое число от 1 до числа страниц для открытого запуска в `src/lib/instructions/progress.ts` и `src/app/api/student/launches/[id]/progress/route.ts`; отказать устаревшей generation/version и восстановить страницу после обновления или смены планшета.
-- [ ] T075 [US3] После T064 и T074 показывать PDF по одной странице с переходом вперёд и назад, сообщать об отсутствии сети и после восстановления получать последний сохранённый прогресс в `src/app/assembly/[launchId]/page.tsx` и `src/app/assembly/assembly.css`; не обещать сохранение неподтверждённой страницы.
-- [ ] T076 [US3] Проверить 100 000 000 и 100 000 001 байт, сохранение черновика при отказе, потоковую обработку, переключение страниц, обрыв сети, обновление и замену планшета в `docs/instruction-library-validation.md`; отдельный тест PDF выдачи выполняется после закрытия T059.
+- [SUPERSEDED 2026-11-05] T074 PDF pages are downloaded from Google Drive and do not use TLC page-progress storage.
+- [SUPERSEDED 2026-11-05] T075 TLC does not render or paginate PDF documents; keep the assembly experience for image steps.
+- [ ] T076 [US1/US4] Verify 100 000 000 and 100 000 001 byte boundaries, `anyone:reader` permission, direct Drive download without Google login, blocked-sharing behavior, and link behavior after unpublish; record real Drive and browser results in `docs/instruction-library-validation.md`.
 
 Зависимости уточнения: T071 → T072 → T073; T059 → T062 → T025/T063 → T064 → T074 → T075 → T076; T068 и T076 проверяют обе границы FR-022. T029 определяет общий контракт материалов, T063 — авторизацию, T064 — потоковую передачу PDF; не считать US2/US3 завершёнными до проверки сохранённой ревизии. Параллельно после T071 можно проектировать навигацию и работу над Supabase в разных файлах; задачи, изменяющие одни файлы, выполняются последовательно.
