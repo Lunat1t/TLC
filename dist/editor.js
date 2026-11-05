@@ -93,17 +93,17 @@ function world(clientX, clientY) {
   const rect = board.getBoundingClientRect();
   return {x: (clientX - rect.left - panX) / zoom, y: (clientY - rect.top - panY) / zoom};
 }
-function addAt(clientX, clientY, type = 'start') {
+function addAt(clientX, clientY, type = 'empty') {
   const point = world(clientX, clientY);
   try {
-    const id=newId(), x=point.x-(type!=='start'?135:135), y=point.y-28;
+    const id=newId(), x=point.x-(type!=='empty'?135:87), y=point.y-28;
     let next=addBlock(blocks,id,x,y,type);
     const target=snapTarget(next,id,x,y); if(target) next=attachChain(next,id,target);
     selectedId=id; save(next); closePalette();
   }
   catch (error) { status(error.message, true); }
 }
-function addAtCenter(type = 'start') {
+function addAtCenter(type = 'empty') {
   const rect = board.getBoundingClientRect();
   addAt(rect.left + rect.width / 2, rect.top + rect.height / 2, type);
 }
@@ -116,11 +116,11 @@ function renderBlocks() {
     const paired = block.type === 'pair';
     const motorBlock = block.type === 'drive' || paired;
     const element = document.createElement('div');
-    element.className = 'canvas-block' + (motorBlock ? ' drive-block' + (paired ? ' pair-block' : '') : ' start-block') + (block.id === selectedId ? ' selected' : '');
+    element.className = 'canvas-block' + (motorBlock ? ' drive-block' + (paired ? ' pair-block' : '') : '') + (block.id === selectedId ? ' selected' : '');
     element.dataset.blockId=block.id;
     element.tabIndex = 0;
     element.setAttribute('role', motorBlock ? 'group' : 'button');
-    element.setAttribute('aria-label', motorBlock ? (paired ? 'Связанные моторы. Перетащите за заголовок' : 'Блок движения мотора. Перетащите за заголовок') : 'Когда программа запускается. Стрелки перемещают, Delete удаляет');
+    element.setAttribute('aria-label', motorBlock ? (paired ? 'Связанные моторы. Перетащите за заголовок' : 'Блок движения мотора. Перетащите за заголовок') : 'Пустой блок. Стрелки перемещают, Delete удаляет');
     element.style.left = block.x + 'px';
     element.style.top = block.y + 'px';
     const remove = document.createElement('button');
@@ -137,12 +137,6 @@ function renderBlocks() {
       element.classList.add('connected');
       const detach=document.createElement('button'); detach.type='button'; detach.className='block-detach'; detach.textContent='↗'; detach.setAttribute('aria-label','Отсоединить блок с цепочкой');
       detach.addEventListener('click',()=>finishBlockMove(block.id,block.x+60,block.y,false)); element.append(detach);
-    }
-    if (!motorBlock) {
-      const startTitle = document.createElement('div');
-      startTitle.className = 'start-title';
-      startTitle.textContent = '▶  Когда программа запускается';
-      element.append(startTitle);
     }
     if (motorBlock) {
       const title = document.createElement('div');
@@ -270,7 +264,7 @@ try {
 } catch (error) {
   $('projectTitle').textContent = 'Проект недоступен';
   $('boardHint').textContent = error.message;
-  $('startBlock').disabled = true;
+  $('emptyBlock').disabled = true;
   $('driveBlock').disabled = true;
   $('pairBlock').disabled = true;
   $('exportCode').disabled = true;
@@ -286,13 +280,13 @@ $('openPalette').addEventListener('click', openPalette);
 $('closePalette').addEventListener('click', closePalette);
 $('paletteBackdrop').addEventListener('click', closePalette);
 
-for (const [id, type] of [['startBlock', 'start'], ['driveBlock', 'drive'], ['pairBlock', 'pair']]) {
+for (const [id, type] of [['emptyBlock', 'empty'], ['driveBlock', 'drive'], ['pairBlock', 'pair']]) {
   const button = $(id);
   button.addEventListener('pointerdown', event => {
     if (!project || event.button !== 0) return;
     event.preventDefault();
     const ghost = document.createElement('div');
-    ghost.className = 'drag-ghost ' + (type === 'start' ? 'start-ghost' : 'drive-ghost');
+    ghost.className = 'drag-ghost' + (type !== 'empty' ? ' drive-ghost' : '');
     ghost.style.left = event.clientX + 'px'; ghost.style.top = event.clientY + 'px';
     document.body.append(ghost);
     gesture = {kind:'palette', ghost, type};
