@@ -28,8 +28,11 @@ export default async function InstructionsPage({ searchParams }: { searchParams:
     {error ? <p role="alert" className="instruction-message">Каталог пока недоступен. Попробуйте позже.</p> : result.items.length === 0 ? <p className="instruction-message">Инструкции не найдены. Измените запрос или <Link href="/instructions">сбросьте фильтр</Link>.</p> :
       <div className="instruction-grid">{result.items.map((item) => {
         const downloadUrl = driveDownloadPath(item.slug, item.hasPdf)
+        const coverUrl = item.coverAssetId
+          ? `/api/instruction-media/${item.id}/${item.coverAssetId}`
+          : item.hasPdf ? `/api/instructions/${encodeURIComponent(item.slug)}/preview` : null
         const content = <>
-          <div className="instruction-cover">{item.coverAssetId ? <img src={`/api/instruction-media/${item.id}/${item.coverAssetId}`} alt="" /> : <span aria-hidden="true">◈</span>}</div>
+          <div className="instruction-cover">{coverUrl ? <img src={coverUrl} alt="" /> : <span aria-hidden="true">◈</span>}</div>
           <div className="instruction-card-copy"><small>{item.kit === "spike" ? "SPIKE Prime" : "EV3"}</small><h2>{item.title}</h2><p>{item.summary}</p><div className="instruction-topics">{item.topics.map((topic) => <span key={topic}>{topic}</span>)}</div><span className="instruction-download-hint">{downloadUrl ? "Нажмите, чтобы скачать PDF с Google Drive" : "Открыть инструкцию"}</span></div>
         </>
         return downloadUrl

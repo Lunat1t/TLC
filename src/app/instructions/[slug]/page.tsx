@@ -9,10 +9,13 @@ export default async function InstructionCardPage({ params }: { params: Promise<
   const card = await publishedCard(slug)
   if (!card) notFound()
   const downloadUrl = driveDownloadPath(card.slug, card.hasPdf)
+  const coverUrl = card.coverAssetId
+    ? `/api/instruction-media/${card.id}/${card.coverAssetId}`
+    : card.hasPdf ? `/api/instructions/${encodeURIComponent(card.slug)}/preview` : null
   return <main className="instruction-page instruction-detail">
     <Link href="/instructions" className="instruction-back">← К инструкциям</Link>
     <div className="instruction-detail-layout">
-      <div className="instruction-cover instruction-detail-cover">{card.coverAssetId ? <img src={`/api/instruction-media/${card.id}/${card.coverAssetId}`} alt="" /> : <span aria-hidden="true">◈</span>}</div>
+      <div className="instruction-cover instruction-detail-cover">{coverUrl ? <img src={coverUrl} alt="" /> : <span aria-hidden="true">◈</span>}</div>
       <div><p className="instruction-kit">{card.kit === "spike" ? "SPIKE Prime" : "LEGO EV3"}</p><h1>{card.title}</h1><p>{card.summary}</p><div className="instruction-topics">{card.topics.map((topic) => <span key={topic}>{topic}</span>)}</div>{downloadUrl ? <a href={downloadUrl} className="instruction-next" rel="noreferrer" referrerPolicy="no-referrer">Скачать PDF с Google Drive</a> : <p className="instruction-message">Для этой инструкции пока не подключён PDF.</p>}</div>
     </div>
   </main>
