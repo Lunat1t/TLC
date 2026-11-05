@@ -15,7 +15,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import {
   loadAuthState,
   signInStudentWithSupabase,
@@ -185,13 +184,11 @@ export default function LoginPage() {
                   id="teacherLoginBtn"
                   type="button"
                   variant="secondary"
-                  disabled
-                  aria-disabled="true"
-                  title="Вход для учителей будет доступен в следующем обновлении"
                   className="w-full"
+                  onClick={() => router.push("/admin/instructions/drive")}
                 >
-                  <span>Вход для учителей</span>
-                  <Badge variant="secondary">Скоро</Badge>
+                  <span>Панель учителя</span>
+                  <span aria-hidden="true">→</span>
                 </Button>
               </div>
             </form>

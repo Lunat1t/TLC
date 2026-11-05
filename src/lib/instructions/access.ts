@@ -20,21 +20,33 @@ export async function serverClient() {
 export async function verifiedUser() {
   const client = await serverClient()
   const { data, error } = await client.auth.getUser()
-  if (error || !data.user) throw new InstructionError(401, "unauthenticated", "Войдите в TLC.")
+  if (error) {
+    if (typeof error.status === "number" && error.status >= 400 && error.status < 500) {
+      throw new InstructionError(401, "unauthenticated", "Войдите в TLC.")
+    }
+    throw new InstructionError(503, "dependency_unavailable", "Проверка входа временно недоступна.")
+  }
+  if (!data.user) throw new InstructionError(401, "unauthenticated", "Войдите в TLC.")
   return { client, user: data.user }
 }
 
 export async function requireAdmin() {
   const { client, user } = await verifiedUser()
   const { data, error } = await client.rpc("is_instruction_admin")
-  if (error || data !== true) throw new InstructionError(403, "forbidden", "Нужен доступ администратора.")
+  if (error) {
+    throw new InstructionError(503, "dependency_unavailable", "Не удалось проверить права доступа. Повторите позже.")
+  }
+  if (data !== true) throw new InstructionError(403, "forbidden", "Нужен доступ администратора.")
   return { client, user }
 }
 
 export async function requireCurrentDevice(sessionId: string, generation: number) {
   const { client, user } = await verifiedUser()
   const { data, error } = await client.rpc("is_current_student_device", { p_session_id: sessionId, p_generation: generation })
-  if (error || data !== true) throw new InstructionError(409, "stale_device", "Этот планшет больше не активен. Войдите снова.")
+  if (error) {
+    throw new InstructionError(503, "dependency_unavailable", "Не удалось проверить активный планшет. Повторите позже.")
+  }
+  if (data !== true) throw new InstructionError(409, "stale_device", "Этот планшет больше не активен. Войдите снова.")
   return { client, user }
 }
 

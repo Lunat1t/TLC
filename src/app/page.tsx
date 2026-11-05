@@ -7,7 +7,7 @@ import { LiveOrb } from "@/components/ui/live-orb"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ArrowUpRight, BookOpen, Download, FolderOpen, Plus, Upload, Globe2, MoreHorizontal } from "lucide-react"
+import { Download, FolderOpen, Plus, Upload, MoreHorizontal } from "lucide-react"
 import "./home.css"
 import {
   loadAuthState,
@@ -314,22 +314,6 @@ export default function HomePage() {
         </header>
 
         <main className="home-main">
-          <div className="home-intro"><h1>Выберите, что создать</h1><p>Соберите робота по инструкции или начните свой проект в TLC.</p></div>
-          <section className="home-instructions" aria-labelledby="home-instructions-title">
-            <div className="home-section-heading"><div><h2 id="home-instructions-title">Инструкции</h2><p>Доступные каталоги сборок для ваших роботов</p></div><BookOpen size={25} aria-hidden="true" /></div>
-            <div className="home-instruction-list">
-              <Link href="/instructions?kit=spike" className="home-instruction-row"><span aria-hidden="true" className="home-instruction-mark home-instruction-mark-spike"><BookOpen size={22} /></span><div><strong>SPIKE Prime</strong><small>Схемы сборки роботов и моделей</small></div><ArrowUpRight size={20} aria-hidden="true" /></Link>
-              <Link href="/instructions?kit=ev3" className="home-instruction-row"><span aria-hidden="true" className="home-instruction-mark home-instruction-mark-ev3"><BookOpen size={22} /></span><div><strong>Роботы EV3</strong><small>Схемы сборки роботов и механизмов LEGO</small></div><ArrowUpRight size={20} aria-hidden="true" /></Link>
-            </div>
-            <p className="home-source">Выберите модель внутри TLC; шаги откроет преподаватель.</p>
-          </section>
-
-          <section className="home-world" aria-labelledby="home-world-title">
-            <div className="home-world-symbol"><Globe2 size={34} aria-hidden="true" /></div>
-            <div><h2 id="home-world-title">TCL World</h2><p>Будущая игровая среда: играйте дома и создавайте собственные миры на языке TCL.</p></div>
-            <button type="button" disabled aria-label="TCL World скоро появится" className="home-world-button">TCL World · скоро</button>
-          </section>
-
           {notice && <p role="status" className={`home-notice ${notice.isError ? "home-notice-error" : "home-notice-success"}`}>{notice.text}</p>}
         </main>
       </div>

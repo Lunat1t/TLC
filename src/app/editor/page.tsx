@@ -4,8 +4,6 @@ import * as React from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import {
   HUBS,
@@ -19,27 +17,23 @@ import {
   IF_INDENT,
   IF_MID_HEIGHT,
   IF_TOP_HEIGHT,
-  MAX_SHEETS,
   addBlock,
-  addSheet,
   attachChain,
   blockTotalHeight,
   chainIds,
-  deleteSheet,
   generatePybricks,
   ifInnerHeight,
   layoutChains,
   moveChain,
   readSheets,
   removeBlock,
-  renameSheet,
   snapTargetInfo,
   updateDrive,
   type BlockType,
   type BranchSlot,
   type MotorDirection,
   type MotorModule,
-  type MotorButtonModule,
+  type MotorPanelButton,
   type SheetState,
   type TravelUnit,
   type WorkspaceBlock,
@@ -53,7 +47,7 @@ import { ControlAreaView } from "@/components/editor/control-area"
 import { useRobotSession } from "@/components/editor/robot-session"
 import { CONTROL_INPUTS } from "@/lib/control-workspace"
 import { controllerRuntimeErrors } from "@/lib/controller-program"
-import { CONTROL_MIN, validateControlLayout, cloneControlSheet, cloneControlArea, type ControlLayout, type ControlKind } from "@/lib/control-workspace"
+import { CONTROL_MIN, validateControlLayout, cloneControlArea, type ControlInstance, type ControlLayout, type ControlKind } from "@/lib/control-workspace"
 
 function newId() {
   return (
@@ -95,6 +89,7 @@ function EditorWorkspace() {
   const projectId = searchParams.get("id")
 
   const boardRef = React.useRef<HTMLDivElement | null>(null)
+  const paletteRef = React.useRef<HTMLElement | null>(null)
   const storageRawRef = React.useRef<string | null>(null)
   const saveBusyRef = React.useRef(false)
   const [projects, setProjects] = React.useState<RobotProject[]>([])
@@ -112,6 +107,7 @@ function EditorWorkspace() {
     null
   )
   const [paletteOpen, setPaletteOpen] = React.useState(false)
+  const [libraryDropTarget, setLibraryDropTarget] = React.useState(false)
   const [categoryOpen, setCategoryOpen] = React.useState(true)
   const [controllerCategoryOpen, setControllerCategoryOpen] = React.useState(true)
 
@@ -122,6 +118,16 @@ function EditorWorkspace() {
 
   const [gesture, setGesture] = React.useState<DragGesture | null>(null)
   const [panelResize, setPanelResize] = React.useState<{id:string;width:number;height:number}|null>(null)
+  const [buttonDrag, setButtonDrag] = React.useState<{
+    blockId: string
+    color: MotorPanelButton
+    pointerId: number
+    startX: number
+    startY: number
+    dx: number
+    dy: number
+  } | null>(null)
+  const [pressedPanelButtons, setPressedPanelButtons] = React.useState<string[]>([])
   const [snapTargetSlot, setSnapTargetSlot] = React.useState<{
     id: string
     branch?: BranchSlot
@@ -142,6 +148,9 @@ function EditorWorkspace() {
     if(event==="pressed" && (robotState.program==="trial-running"||robotState.program==="live-running")) inputStarted.current=performance.now()
     sessionRef.current?.dispatch(target,event)
   },[robotState.program,sessionRef])
+  React.useEffect(()=>{
+    if (!checking || !["trial-running","live-running"].includes(robotState.program)) setPressedPanelButtons([])
+  },[checking,robotState.program])
   React.useLayoutEffect(()=>{
     if(inputStarted.current===null)return
     const start=inputStarted.current;inputStarted.current=null
@@ -152,13 +161,6 @@ function EditorWorkspace() {
     title: string
     code: string
   }>({ open: false, title: "", code: "" })
-
-  const [sheetModal, setSheetModal] = React.useState<{
-    open: boolean
-    action: "add" | "rename" | "delete"
-    name: string
-    error: string | null
-  }>({ open: false, action: "rename", name: "", error: null })
 
   const currentSheet = React.useMemo(
     () =>
@@ -293,7 +295,15 @@ function EditorWorkspace() {
   )
 
   const controlLayout = (project?.workspace?.controlLayout as ControlLayout | undefined) || {version:1 as const, areas:[], controls:[]}
-  const controllerProgram = React.useMemo(() => project ? compileControllerProgram({...project,workspace:{...project.workspace,...snapshotSheets()}}) : null, [project,snapshotSheets])
+  const motorPanelControls = React.useMemo<ControlInstance[]>(() => blocks.flatMap(block => {
+    if (block.type !== "motor-buttons" || !block.controlAreaId) return []
+    const area = controlLayout.areas.find(candidate => candidate.id === block.controlAreaId && candidate.sheetId === currentSheet.id)
+    if (!area) return []
+    const inputs = (["blue", ...(block.controlModules || [])] as const).filter(color => !(block.hiddenControlButtons || []).includes(color))
+    return [{id:block.id,areaId:area.id,kind:"motor-panel",label:"Панель моторов",x:0,y:0,width:block.width||180,height:block.height||132,inputs}]
+  }), [blocks,controlLayout.areas,currentSheet.id])
+  const controllerControls = React.useMemo(() => [...controlLayout.controls,...motorPanelControls], [controlLayout.controls,motorPanelControls])
+  const controllerProgram = React.useMemo(() => project ? compileControllerProgram({...project,workspace:{...project.workspace,...snapshotSheets(),controlLayout:{...controlLayout,controls:controllerControls}}}) : null, [project,snapshotSheets,controlLayout,controllerControls])
   const keyTargets = React.useMemo(() => {
     const visible=new Set(controlLayout.areas.filter(a=>a.sheetId===currentSheet.id).map(a=>a.id))
     const controls=controlLayout.controls.filter(c=>visible.has(c.areaId))
@@ -359,13 +369,14 @@ function EditorWorkspace() {
   }
   function addControlArea(location?: {x:number;y:number}) {
     if (!project) return
+    if (controlLayout.areas.some(area=>area.sheetId===currentSheet.id)) {setSaveMessage({text:"На одном листе можно создать только одну область «Управление».",isError:true});return}
     if (controlLayout.areas.length >= 12) {setSaveMessage({text:"Можно добавить не более 12 областей.",isError:true});return}
     const board = boardRef.current
     const x = ((board?.clientWidth || 640)/2 - panX)/zoom - 320
     const y = ((board?.clientHeight || 360)/2 - panY)/zoom - 180
     void saveLayout({...controlLayout, areas:[...controlLayout.areas,{id:newId(),sheetId:currentSheet.id,title:"Управление",x:location ? location.x-320 : x,y:location ? location.y-20 : y,width:640,height:360}]})
   }
-  function addControl(kind: Exclude<ControlKind,"legacy-buttons">, location?:{x:number;y:number}) {
+  function addControl(kind: Exclude<ControlKind,"legacy-buttons"|"motor-panel">, location?:{x:number;y:number}) {
     if (!project) return
     const area=controlLayout.areas.find(a=>a.sheetId===currentSheet.id && (!location || (location.x>=a.x && location.x<=a.x+a.width && location.y>=a.y+44 && location.y<=a.y+a.height)))
     if (!area) {setSaveMessage({text:"Сначала добавьте область «Управление».",isError:true});return}
@@ -382,14 +393,14 @@ function EditorWorkspace() {
     void saveLayout({...controlLayout,controls:[...controlLayout.controls,{id:newId(),areaId:area.id,kind,label,x:spot.x,y:spot.y,width,height}]})
   }
 
-  function dragControlFromPalette(e:React.PointerEvent<HTMLButtonElement>,kind:"area"|Exclude<ControlKind,"legacy-buttons">) {
+  function dragControlFromPalette(e:React.PointerEvent<HTMLButtonElement>,kind:"area"|Exclude<ControlKind,"legacy-buttons"|"motor-panel">) {
     if(!project || e.button!==0)return
     e.preventDefault();const element=e.currentTarget,sx=e.clientX,sy=e.clientY;let moved=false
     element.setPointerCapture(e.pointerId)
     const move=(ev:PointerEvent)=>{if(Math.hypot(ev.clientX-sx,ev.clientY-sy)>5)moved=true}
     const clean=()=>{element.removeEventListener("pointermove",move);element.removeEventListener("pointerup",up);element.removeEventListener("pointercancel",cancel)}
     const cancel=()=>clean()
-    const up=(ev:PointerEvent)=>{clean();if(!moved){if(kind==="area")addControlArea();else addControl(kind);return}const rect=boardRef.current?.getBoundingClientRect();if(!rect||ev.clientX<rect.left||ev.clientX>rect.right||ev.clientY<rect.top||ev.clientY>rect.bottom)return;const world={x:(ev.clientX-rect.left-panX)/zoom,y:(ev.clientY-rect.top-panY)/zoom};if(kind==="area")addControlArea(world);else addControl(kind,world)}
+    const up=(ev:PointerEvent)=>{clean();if(!moved)return;const rect=boardRef.current?.getBoundingClientRect();if(!rect||ev.clientX<rect.left||ev.clientX>rect.right||ev.clientY<rect.top||ev.clientY>rect.bottom)return;const world={x:(ev.clientX-rect.left-panX)/zoom,y:(ev.clientY-rect.top-panY)/zoom};if(kind==="area")addControlArea(world);else addControl(kind,world)}
     element.addEventListener("pointermove",move);element.addEventListener("pointerup",up);element.addEventListener("pointercancel",cancel)
   }
 
@@ -423,6 +434,21 @@ function EditorWorkspace() {
 
   const finishBlockMove = React.useCallback(
     (id: string, x: number, y: number, snap = true) => {
+      const movingBlock = blocks.find((block) => block.id === id)
+      if (movingBlock?.type === "motor-buttons") {
+        const width = movingBlock.width || 180
+        const height = movingBlock.height || 132
+        const area = movingBlock.controlAreaId
+          ? controlLayout.areas.find((candidate) => candidate.id === movingBlock.controlAreaId && candidate.sheetId === currentSheet.id)
+          : controlLayout.areas.find((candidate) => candidate.sheetId === currentSheet.id && x + width / 2 >= candidate.x && x + width / 2 <= candidate.x + candidate.width && y + height / 2 >= candidate.y + 44 && y + height / 2 <= candidate.y + candidate.height)
+        if (!area) return
+        x = Math.max(area.x, Math.min(area.x + area.width - width, x))
+        y = Math.max(area.y + 44, Math.min(area.y + area.height - height, y))
+        const withArea = blocks.map((block) => block.id === id ? { ...block, controlAreaId: area.id } : block)
+        const next = moveChain(withArea, id, x, y)
+        saveBlocks(next)
+        return
+      }
       let next = moveChain(blocks, id, x, y)
       const target = snap ? snapTargetInfo(next, id, x, y) : null
       if (target) {
@@ -431,7 +457,7 @@ function EditorWorkspace() {
       }
       saveBlocks(next)
     },
-    [blocks, saveBlocks, triggerSnapAnimation]
+    [blocks, controlLayout.areas, currentSheet.id, saveBlocks, triggerSnapAnimation]
   )
 
   const worldFromClient = React.useCallback(
@@ -456,9 +482,21 @@ function EditorWorkspace() {
       if (!project) return
       const point = worldFromClient(clientX, clientY)
       try {
+        let x = point.x - 135
+        let y = point.y - 28
+        if (type === "motor-buttons") {
+          const width = initialOverrides?.width ?? 180
+          const height = initialOverrides?.height ?? 132
+          const area = controlLayout.areas.find((candidate) => candidate.sheetId === currentSheet.id && point.x >= candidate.x && point.x <= candidate.x + candidate.width && point.y >= candidate.y + 44 && point.y <= candidate.y + candidate.height)
+          if (!area) {
+            setSaveMessage({text:"Панель моторов можно добавить только внутрь области «Управление».",isError:true})
+            return
+          }
+          x = Math.max(area.x, Math.min(area.x + area.width - width, point.x - width / 2))
+          y = Math.max(area.y + 44, Math.min(area.y + area.height - height, point.y - height / 2))
+          initialOverrides = { ...initialOverrides, controlAreaId: area.id }
+        }
         const id = newId()
-        const x = point.x - 135
-        const y = point.y - 28
         let next = addBlock(blocks, id, x, y, type)
         if (initialOverrides) {
           next = next.map((b) =>
@@ -487,29 +525,13 @@ function EditorWorkspace() {
       project,
       worldFromClient,
       blocks,
+      controlLayout.areas,
+      currentSheet.id,
       saveBlocks,
       triggerSnapAnimation,
       triggerSpawnAnimation,
     ]
   )
-
-  const addBlockAtCenter = React.useCallback(
-    (
-      type: BlockType = "start",
-      initialOverrides?: Partial<WorkspaceBlock>
-    ) => {
-      const rect = boardRef.current?.getBoundingClientRect()
-      if (!rect) return
-      addBlockAtClient(
-        rect.left + rect.width / 2,
-        rect.top + rect.height / 2,
-        type,
-        initialOverrides
-      )
-    },
-    [addBlockAtClient]
-  )
-
 
   React.useEffect(() => {
     if (!gesture || gesture.kind !== "palette") return
@@ -553,8 +575,6 @@ function EditorWorkspace() {
         e.clientY <= rect.bottom
       ) {
         addBlockAtClient(e.clientX, e.clientY, type, initialOverrides)
-      } else {
-        addBlockAtCenter(type, initialOverrides)
       }
     }
     window.addEventListener("pointermove", handleMove)
@@ -563,7 +583,7 @@ function EditorWorkspace() {
       window.removeEventListener("pointermove", handleMove)
       window.removeEventListener("pointerup", handleUp)
     }
-  }, [gesture, blocks, worldFromClient, addBlockAtClient, addBlockAtCenter])
+  }, [gesture, blocks, worldFromClient, addBlockAtClient])
 
   function handleZoom(nextZoom: number) {
     const clamped = Math.min(2, Math.max(0.5, nextZoom))
@@ -582,87 +602,6 @@ function EditorWorkspace() {
     setZoom(1)
     setPanX(board ? Math.round(board.clientWidth / 2) : 360)
     setPanY(board ? Math.round(board.clientHeight / 2) : 240)
-  }
-
-  async function switchSheet(id: string) {
-    if (gesture || id === sheetState.activeSheetId) return
-    await sessionRef.current?.stop("Лист изменён. Запустите программу снова.")
-    const nextState: SheetState = {
-      ...snapshotSheets(),
-      activeSheetId: id,
-    }
-    setSelectedId(null)
-    setOpenMenuBlockId(null)
-    if (await persistSheets(nextState)) {
-      const targetSheet = nextState.sheets.find((s) => s.id === id)
-      const board = boardRef.current
-      setPanX(
-        targetSheet?.view?.panX ?? (board ? Math.round(board.clientWidth / 2) : 360)
-      )
-      setPanY(
-        targetSheet?.view?.panY ?? (board ? Math.round(board.clientHeight / 2) : 240)
-      )
-      setZoom(targetSheet?.view?.zoom ?? 1)
-    }
-  }
-
-  async function copySheet() {
-    try {
-      await sessionRef.current?.stop("Лист скопирован. Запустите программу снова.")
-      let suffix=1, name=""
-      do {name=`${currentSheet.name.slice(0,28)} (копия${suffix===1?"":` ${suffix}`})`;suffix++} while(sheetState.sheets.some(s=>s.name.toLocaleLowerCase()===name.toLocaleLowerCase()))
-      const copied=cloneControlSheet(snapshotSheets(),controlLayout,currentSheet.id,newId(),name,newId)
-      if(await persistSheets(copied.state,copied.layout)){setSelectedId(null);setSaveMessage({text:"Лист скопирован",isError:false})}
-    } catch(error) {setSaveMessage({text:error instanceof Error?error.message:"Не удалось скопировать лист",isError:true})}
-  }
-
-  function openSheetDialog(action: "add" | "rename" | "delete") {
-    if (!project) return
-    let number = sheetState.sheets.length + 1
-    while (sheetState.sheets.some((s) => s.name === `Лист ${number}`)) {
-      number++
-    }
-    setSheetModal({
-      open: true,
-      action,
-      name: action === "add" ? `Лист ${number}` : currentSheet.name,
-      error: null,
-    })
-  }
-
-  async function handleSheetSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    try {
-      await sessionRef.current?.stop("Листы изменены. Запустите программу снова.")
-      const state = snapshotSheets()
-      const removedAreaIds = new Set(sheetModal.action === "delete" ? controlLayout.areas.filter(a=>a.sheetId===state.activeSheetId).map(a=>a.id) : [])
-      const nextLayout:ControlLayout = {...controlLayout,areas:controlLayout.areas.filter(a=>!removedAreaIds.has(a.id)),controls:controlLayout.controls.filter(c=>!removedAreaIds.has(c.areaId))}
-      const next =
-        sheetModal.action === "add"
-          ? addSheet(state, newId(), sheetModal.name)
-          : sheetModal.action === "rename"
-            ? renameSheet(state, state.activeSheetId, sheetModal.name)
-            : deleteSheet(state, state.activeSheetId)
-      setSelectedId(null)
-      if (await persistSheets(next, nextLayout)) {
-        const active =
-          next.sheets.find((s) => s.id === next.activeSheetId) || next.sheets[0]
-        const board = boardRef.current
-        setPanX(
-          active?.view?.panX ?? (board ? Math.round(board.clientWidth / 2) : 360)
-        )
-        setPanY(
-          active?.view?.panY ?? (board ? Math.round(board.clientHeight / 2) : 240)
-        )
-        setZoom(active?.view?.zoom ?? 1)
-        setSheetModal((prev) => ({ ...prev, open: false }))
-      }
-    } catch (err) {
-      setSheetModal((prev) => ({
-        ...prev,
-        error: err instanceof Error ? err.message : "Ошибка листа",
-      }))
-    }
   }
 
   function handleExportCode() {
@@ -703,6 +642,39 @@ function EditorWorkspace() {
     () => (project?.hub === "ev3" ? ["A", "B", "C", "D"] : ["A", "B", "C", "D", "E", "F"]),
     [project?.hub]
   )
+
+  function resizeMotorPanel(e: React.PointerEvent<HTMLButtonElement>, block: WorkspaceBlock) {
+    if (!project || !block.controlAreaId) return
+    const area = controlLayout.areas.find((candidate) => candidate.id === block.controlAreaId && candidate.sheetId === currentSheet.id)
+    if (!area) return
+    e.preventDefault()
+    e.stopPropagation()
+    const startX = e.clientX
+    const startY = e.clientY
+    const startW = block.width || 180
+    const startH = block.height || 132
+    const maxW = Math.min(420, area.x + area.width - block.x)
+    const maxH = Math.min(320, area.y + area.height - 44 - block.y)
+    const widthAt = (clientX: number) => Math.min(maxW, Math.max(144, Math.round(startW + (clientX - startX) / zoom)))
+    const heightAt = (clientY: number) => Math.min(maxH, Math.max(112, Math.round(startH + (clientY - startY) / zoom)))
+    const move = (ev: PointerEvent) => setPanelResize({id:block.id,width:widthAt(ev.clientX),height:heightAt(ev.clientY)})
+    const cleanup = () => {
+      window.removeEventListener("pointermove", move)
+      window.removeEventListener("pointerup", finish)
+      window.removeEventListener("pointercancel", cancel)
+    }
+    const finish = (ev: PointerEvent) => {
+      cleanup()
+      const width = widthAt(ev.clientX)
+      const height = heightAt(ev.clientY)
+      setPanelResize(null)
+      saveBlocks(blocks.map((item) => item.id === block.id ? {...item,width,height} : item))
+    }
+    const cancel = () => {cleanup();setPanelResize(null)}
+    window.addEventListener("pointermove", move)
+    window.addEventListener("pointerup", finish, {once:true})
+    window.addEventListener("pointercancel", cancel, {once:true})
+  }
 
   return (
     <div
@@ -782,8 +754,9 @@ function EditorWorkspace() {
       <div className="flex flex-1 min-h-0 relative">
         {/* Block Palette Sidebar */}
         <aside
+          ref={paletteRef}
           aria-label="Меню блоков"
-          className={`w-[270px] shrink-0 p-5 bg-white border-r border-[#dce8ec] z-20 overflow-y-auto transition-transform max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:shadow-2xl ${
+          className={`w-[270px] shrink-0 p-5 bg-white border-r border-[#dce8ec] z-20 overflow-y-auto transition-[transform,background-color,box-shadow] max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:shadow-2xl ${libraryDropTarget ? "bg-red-50 ring-4 ring-inset ring-red-300" : ""} ${
             checking ? "pointer-events-none opacity-50 max-md:-translate-x-full" : paletteOpen ? "max-md:translate-x-0" : "max-md:-translate-x-full"
           }`}
         >
@@ -803,6 +776,12 @@ function EditorWorkspace() {
               ×
             </button>
           </div>
+
+          {libraryDropTarget && (
+            <div className="mb-3 rounded-[10px] bg-red-100 px-3 py-2 text-center text-xs font-extrabold text-red-800">
+              Отпустите, чтобы удалить блок
+            </div>
+          )}
 
           <button
             type="button"
@@ -839,12 +818,6 @@ function EditorWorkspace() {
                     clientY: e.clientY,
                   })
                 }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault()
-                    addBlockAtCenter("start")
-                  }
-                }}
                 className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left flex flex-col gap-2 hover:border-[#d97706] hover:bg-[#fffbeb] transition-colors disabled:opacity-50 cursor-grab active:cursor-grabbing"
               >
                 <span
@@ -856,9 +829,6 @@ function EditorWorkspace() {
                 <span className="text-[13px] font-extrabold text-[#18313b]">
                   Когда программа запускается
                 </span>
-                <small className="text-[11px] text-[#78909a]">
-                  Точка старта программы
-                </small>
               </button>
 
               {/* Блок 2: Движение мотора */}
@@ -877,12 +847,6 @@ function EditorWorkspace() {
                     clientY: e.clientY,
                   })
                 }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault()
-                    addBlockAtCenter("drive")
-                  }
-                }}
                 className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left flex flex-col gap-2 hover:border-[#0589b1] hover:bg-[#f2fbfe] transition-colors disabled:opacity-50 cursor-grab active:cursor-grabbing"
               >
                 <span
@@ -894,31 +858,6 @@ function EditorWorkspace() {
                 <span className="text-[13px] font-extrabold text-[#18313b]">
                   Движение мотора
                 </span>
-                <small className="text-[11px] text-[#78909a]">
-                  Перетащите на доску
-                </small>
-              </button>
-
-              <button
-                id="motorButtonsBlock"
-                type="button"
-                disabled={!project}
-                aria-label="Добавить блок Управление мотором"
-                onPointerDown={(e) => {
-                  if (!project || e.button !== 0) return
-                  e.preventDefault()
-                  setGesture({kind:"palette",type:"motor-buttons",clientX:e.clientX,clientY:e.clientY})
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {e.preventDefault();addBlockAtCenter("motor-buttons")}
-                }}
-                className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left flex flex-col gap-2 hover:border-[#0589b1] hover:bg-[#f2fbfe] transition-colors disabled:opacity-50 cursor-grab active:cursor-grabbing"
-              >
-                <span aria-hidden="true" className="flex items-center gap-1.5 rounded-[8px] bg-[#e7f3f8] p-2 w-max shadow-[inset_0_-3px_#c6e0ea]">
-                  {[["#1687b3","#0e688a"],["#d9473d","#a92b26"],["#32a66a","#21804e"],["#edc13d","#c59b24"]].map(([color,shade])=><i key={color} className="block w-5 h-5 rounded-full" style={{background:color,boxShadow:`inset 0 -3px ${shade},0 1px 2px #78909a`}}/>)}
-                </span>
-                <span className="text-[13px] font-extrabold text-[#18313b]">Управление мотором</span>
-                <small className="text-[11px] text-[#78909a]">Панель цветных кнопок</small>
               </button>
 
               <button
@@ -931,14 +870,10 @@ function EditorWorkspace() {
                   e.preventDefault()
                   setGesture({kind:"palette",type:"stop",clientX:e.clientX,clientY:e.clientY})
                 }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {e.preventDefault();addBlockAtCenter("stop")}
-                }}
                 className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left flex flex-col gap-2 hover:border-[#b1372c] hover:bg-[#fef2f2] transition-colors disabled:opacity-50 cursor-grab active:cursor-grabbing"
               >
                 <span aria-hidden="true" className="grid place-items-center w-[106px] h-[33px] rounded-[8px] bg-[#b1372c] text-white text-base font-black shadow-[inset_0_-4px_#8f2a21]">■</span>
                 <span className="text-[13px] font-extrabold text-[#18313b]">Стоп мотора</span>
-                <small className="text-[11px] text-[#78909a]">Остановка мотора (тормоз)</small>
               </button>
 
               {/* Блок 3: Связанные моторы */}
@@ -957,12 +892,6 @@ function EditorWorkspace() {
                     clientY: e.clientY,
                   })
                 }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault()
-                    addBlockAtCenter("pair")
-                  }
-                }}
                 className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left flex flex-col gap-2 hover:border-[#107e79] hover:bg-[#f2fbfa] transition-colors disabled:opacity-50 cursor-grab active:cursor-grabbing"
               >
                 <span
@@ -974,9 +903,6 @@ function EditorWorkspace() {
                 <span className="text-[13px] font-extrabold text-[#18313b]">
                   Связанные моторы
                 </span>
-                <small className="text-[11px] text-[#78909a]">
-                  Два мотора, общие модули
-                </small>
               </button>
 
               {/* Блок 4: Если / Иначе (if / else) */}
@@ -995,12 +921,6 @@ function EditorWorkspace() {
                     clientY: e.clientY,
                   })
                 }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault()
-                    addBlockAtCenter("if")
-                  }
-                }}
                 className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left flex flex-col gap-2 hover:border-[#7c3aed] hover:bg-[#f5f3ff] transition-colors disabled:opacity-50 cursor-grab active:cursor-grabbing"
               >
                 <span
@@ -1012,9 +932,6 @@ function EditorWorkspace() {
                 <span className="text-[13px] font-extrabold text-[#18313b]">
                   Если … то / Иначе
                 </span>
-                <small className="text-[11px] text-[#78909a]">
-                  Ветвление программы (if / else)
-                </small>
               </button>
             </div>
           )}
@@ -1023,12 +940,9 @@ function EditorWorkspace() {
             type="button"
             aria-expanded={controllerCategoryOpen}
             onClick={() => setControllerCategoryOpen((v) => !v)}
-            className="flex items-center justify-between w-full rounded-[11px] bg-[#fff5ed] hover:bg-[#ffede0] px-4 py-3 text-[#9a3412] font-extrabold text-sm transition-colors mt-3"
+            className="flex items-center justify-between w-full rounded-[11px] bg-[#eff8fb] px-4 py-3 text-[#284653] font-extrabold text-sm mt-3"
           >
-            <span className="flex items-center gap-2">
-              <span aria-hidden="true">🎮</span>
-              <span>Пульт</span>
-            </span>
+            <span>Пульт</span>
             <span
               aria-hidden="true"
               className={`text-lg leading-none transition-transform ${
@@ -1041,7 +955,16 @@ function EditorWorkspace() {
 
           {controllerCategoryOpen && (
             <div className="py-3 px-1 space-y-2.5">
-              <button type="button" disabled={!project} onPointerDown={e=>dragControlFromPalette(e,"area")} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();addControlArea()}}} className="w-full rounded-xl border border-orange-300 bg-orange-50 p-3 text-left font-bold touch-none">▦ Область «Управление»</button>
+              <button type="button" disabled={!project||controlLayout.areas.some(area=>area.sheetId===currentSheet.id)} title={controlLayout.areas.some(area=>area.sheetId===currentSheet.id)?"На этом листе уже есть область «Управление»":""} onPointerDown={e=>dragControlFromPalette(e,"area")} className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left text-[#18313b] font-extrabold touch-none hover:border-[#d97706] hover:bg-[#fffbeb] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">▦ Область «Управление»</button>
+              <button type="button" disabled={!project} aria-label="Добавить кнопки моторов только внутрь области управления" onPointerDown={e=>{if(!project||e.button!==0)return;e.preventDefault();setGesture({kind:"palette",type:"motor-buttons",clientX:e.clientX,clientY:e.clientY})}} className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left text-[#18313b] font-extrabold touch-none hover:border-[#d97706] hover:bg-[#fffbeb] transition-colors disabled:opacity-50">
+                <span aria-hidden="true" className="mr-2 inline-grid grid-cols-2 gap-0.5 align-middle">
+                  <span className="h-2.5 w-2.5 rounded-[3px] bg-sky-600 shadow-[inset_0_-2px_#075985]" />
+                  <span className="h-2.5 w-2.5 rounded-[3px] bg-red-600 shadow-[inset_0_-2px_#991b1b]" />
+                  <span className="h-2.5 w-2.5 rounded-[3px] bg-emerald-600 shadow-[inset_0_-2px_#065f46]" />
+                  <span className="h-2.5 w-2.5 rounded-[3px] bg-amber-400 shadow-[inset_0_-2px_#b45309]" />
+                </span>
+                Кнопки моторов
+              </button>
 
             </div>
           )}
@@ -1155,6 +1078,15 @@ function EditorWorkspace() {
                   gesture.originY + dy
                 )
                 setSnapTargetSlot(target)
+                const libraryRect = paletteRef.current?.getBoundingClientRect()
+                setLibraryDropTarget(Boolean(
+                  libraryRect &&
+                  libraryRect.width > 0 &&
+                  e.clientX >= Math.max(0, libraryRect.left) &&
+                  e.clientX <= Math.min(window.innerWidth, libraryRect.right) &&
+                  e.clientY >= Math.max(0, libraryRect.top) &&
+                  e.clientY <= Math.min(window.innerHeight, libraryRect.bottom)
+                ))
               }
             }}
             onPointerUp={(e) => {
@@ -1163,12 +1095,27 @@ function EditorWorkspace() {
                 const { id, originX, originY, startX, startY, moved } = gesture
                 setGesture(null)
                 setSnapTargetSlot(null)
+                setLibraryDropTarget(false)
                 if (moved) {
-                  finishBlockMove(
-                    id,
-                    originX + (e.clientX - startX) / zoom,
-                    originY + (e.clientY - startY) / zoom
+                  const libraryRect = paletteRef.current?.getBoundingClientRect()
+                  const droppedInLibrary = Boolean(
+                    libraryRect &&
+                    libraryRect.width > 0 &&
+                    e.clientX >= Math.max(0, libraryRect.left) &&
+                    e.clientX <= Math.min(window.innerWidth, libraryRect.right) &&
+                    e.clientY >= Math.max(0, libraryRect.top) &&
+                    e.clientY <= Math.min(window.innerHeight, libraryRect.bottom)
                   )
+                  if (droppedInLibrary) {
+                    setSelectedId(null)
+                    saveBlocks(removeBlock(blocks, id))
+                  } else {
+                    finishBlockMove(
+                      id,
+                      originX + (e.clientX - startX) / zoom,
+                      originY + (e.clientY - startY) / zoom
+                    )
+                  }
                 }
               } else if (gesture.kind === "pan") {
                 setGesture(null)
@@ -1185,7 +1132,22 @@ function EditorWorkspace() {
               }}
               className="absolute top-0 left-0 w-0 h-0"
             >
-              {controlLayout.areas.filter(a=>a.sheetId===currentSheet.id).map(area=><ControlAreaView key={area.id} area={area} controls={controlLayout.controls.filter(c=>c.areaId===area.id)} editing={!checking} zoom={zoom} errors={inputErrors} onAreaChange={changed=>void saveLayout({...controlLayout,areas:controlLayout.areas.map(a=>a.id===changed.id?changed:a)})} onControlChange={changed=>void saveLayout({...controlLayout,controls:controlLayout.controls.map(c=>c.id===changed.id?changed:c)})} onDeleteControl={id=>void saveLayout({...controlLayout,controls:controlLayout.controls.filter(c=>c.id!==id)})} onDeleteArea={id=>void saveLayout({...controlLayout,areas:controlLayout.areas.filter(a=>a.id!==id),controls:controlLayout.controls.filter(c=>c.areaId!==id)})} onCopyArea={id=>{try{void saveLayout(cloneControlArea(controlLayout,id,newId))}catch(error){setSaveMessage({text:error instanceof Error?error.message:"Не удалось скопировать область",isError:true})}}} onInput={(controlId,input,event)=>dispatchControl({controlId,input},event)} onCancel={()=>void sessionRef.current?.stop("Нажатие отменено.")} />)}
+              {controlLayout.areas.filter(a=>a.sheetId===currentSheet.id).map(area=><ControlAreaView key={area.id} area={area} controls={controlLayout.controls.filter(c=>c.areaId===area.id)} attachedPanels={blocks.filter(b=>b.type==="motor-buttons"&&b.controlAreaId===area.id)} editing={!checking} zoom={zoom} errors={inputErrors} onAreaChange={changed=>{
+                const dx=changed.x-area.x,dy=changed.y-area.y
+                const nextBlocks=dx||dy?blocks.map(b=>b.type==="motor-buttons"&&b.controlAreaId===area.id?{...b,x:b.x+dx,y:b.y+dy}:b):blocks
+                const nextLayout={...controlLayout,areas:controlLayout.areas.map(a=>a.id===changed.id?changed:a)}
+                void persistSheets(snapshotSheets(nextBlocks),nextLayout)
+              }} onControlChange={changed=>void saveLayout({...controlLayout,controls:controlLayout.controls.map(c=>c.id===changed.id?changed:c)})} onDeleteControl={id=>void saveLayout({...controlLayout,controls:controlLayout.controls.filter(c=>c.id!==id)})} onDeleteArea={id=>{
+                const nextBlocks=blocks.filter(b=>!(b.type==="motor-buttons"&&b.controlAreaId===id))
+                const nextLayout={...controlLayout,areas:controlLayout.areas.filter(a=>a.id!==id),controls:controlLayout.controls.filter(c=>c.areaId!==id)}
+                void persistSheets(snapshotSheets(nextBlocks),nextLayout)
+              }} onCopyArea={id=>{try{
+                const nextLayout=cloneControlArea(controlLayout,id,newId)
+                const copiedArea=nextLayout.areas.find(a=>!controlLayout.areas.some(old=>old.id===a.id))
+                const sourceArea=controlLayout.areas.find(a=>a.id===id)
+                const copiedPanels=copiedArea&&sourceArea?blocks.filter(b=>b.type==="motor-buttons"&&b.controlAreaId===id).map(b=>({...b,id:newId(),controlAreaId:copiedArea.id,x:b.x+copiedArea.x-sourceArea.x,y:b.y+copiedArea.y-sourceArea.y})):[]
+                void persistSheets(snapshotSheets([...blocks,...copiedPanels]),nextLayout)
+              }catch(error){setSaveMessage({text:error instanceof Error?error.message:"Не удалось скопировать область",isError:true})}}} onInput={(controlId,input,event)=>dispatchControl({controlId,input},event)} onCancel={()=>void sessionRef.current?.stop("Нажатие отменено.")} />)}
               {/* Magnetic LEGO socket preview under or inside snapTarget */}
               {snapTargetSlot &&
                 (() => {
@@ -1273,12 +1235,23 @@ function EditorWorkspace() {
                   }
                 }
 
-                const displayX = isMoving
+                const panelArea = block.type === "motor-buttons" && block.controlAreaId
+                  ? controlLayout.areas.find((area) => area.id === block.controlAreaId && area.sheetId === currentSheet.id)
+                  : undefined
+                const panelWidth = block.width || 180
+                const panelHeight = block.height || 132
+                const rawDisplayX = isMoving
                   ? Math.round(block.x + gesture.dx + magneticPullX)
                   : block.x
-                const displayY = isMoving
+                const rawDisplayY = isMoving
                   ? Math.round(block.y + gesture.dy + magneticPullY)
                   : block.y
+                const displayX = panelArea && isMoving
+                  ? Math.max(panelArea.x, Math.min(panelArea.x + panelArea.width - panelWidth, rawDisplayX))
+                  : rawDisplayX
+                const displayY = panelArea && isMoving
+                  ? Math.max(panelArea.y + 44, Math.min(panelArea.y + panelArea.height - panelHeight, rawDisplayY))
+                  : rawDisplayY
                 const paired = block.type === "pair"
                 const isIfBlock = block.type === "if"
                 const motorBlock = block.type === "drive" || paired
@@ -1329,7 +1302,7 @@ function EditorWorkspace() {
                         : isButtonBlock
                           ? "Когда кнопка пульта. Перетащите за заголовок"
                         : isMotorButtons
-                          ? "Панель управления мотором. Перетащите за заголовок"
+                          ? "Кнопки моторов. Перетащите за заголовок"
                           : isStopBlock
                             ? "Стоп мотора. Перетащите за заголовок"
                             : motorBlock
@@ -1341,7 +1314,7 @@ function EditorWorkspace() {
                     style={{
                       left: `${displayX}px`,
                       top: `${displayY}px`,
-                      ...(isMotorButtons ? {width:panelResize?.id===block.id?panelResize.width:(block.width||180),height:panelResize?.id===block.id?panelResize.height:(block.height||132)} : {}),
+                      ...(isMotorButtons ? {width:panelResize?.id===block.id?panelResize.width:panelWidth,height:panelResize?.id===block.id?panelResize.height:panelHeight} : {}),
                     }}
                     onPointerDown={(e) => {
                       if (
@@ -1354,6 +1327,7 @@ function EditorWorkspace() {
                         return
                       e.preventDefault()
                       e.stopPropagation()
+                      e.currentTarget.setPointerCapture(e.pointerId)
                       setSelectedId(block.id)
                       setGesture({
                         kind: "block",
@@ -1391,14 +1365,16 @@ function EditorWorkspace() {
                     className={`absolute touch-none select-none cursor-grab ${
                       isMoving
                         ? "z-30 cursor-grabbing scale-[1.02] shadow-2xl"
-                        : "z-10 transition-[left,top,box-shadow] duration-200 ease-out"
+                        : checking && isMotorButtons
+                          ? "z-40 transition-[left,top,box-shadow] duration-200 ease-out"
+                          : "z-10 transition-[left,top,box-shadow] duration-200 ease-out"
                     } ${
                       openMenuBlockId === block.id ? "z-40" : ""
                     } ${radiusClass} ${
                       isIfBlock
                         ? "pointer-events-none text-white"
                         : isMotorButtons
-                          ? "overflow-hidden rounded-[14px] border border-[#b9d0da] bg-[#f4f8fa] text-[#18313b] shadow-[inset_0_-4px_#d6e4e9,0_8px_18px_rgba(20,105,123,0.12)]"
+                          ? `${buttonDrag?.blockId === block.id ? "overflow-visible" : "overflow-hidden"} rounded-[14px] border border-[#b9d0da] bg-[#f4f8fa] text-[#18313b] shadow-[inset_0_-4px_#d6e4e9,0_8px_18px_rgba(20,105,123,0.12)]`
                         : isButtonBlock
                           ? "w-max min-h-[58px] bg-[#e85d2a] text-white shadow-[inset_0_-4px_#c2410c,0_8px_18px_rgba(232,93,42,0.16)]"
                           : isStopBlock
@@ -1464,19 +1440,152 @@ function EditorWorkspace() {
 
                     {/* Block Content */}
                     {isMotorButtons ? (
-                      <div className="relative flex h-full w-full flex-col">
-                        <div data-panel-drag className="flex h-8 shrink-0 items-center rounded-t-[13px] bg-[#e7f3f8] px-2 text-xs font-extrabold text-[#31525f]">Управление мотором</div>
-                        <div className="flex min-h-0 flex-1 flex-wrap items-center justify-center gap-2 p-2">
-                          {(["blue", ...(block.controlModules||[])] as const).map(color=>{
-                            const paint:Record<string,{face:string;shade:string}>={blue:{face:"#1687b3",shade:"#0e688a"},red:{face:"#d9473d",shade:"#a92b26"},green:{face:"#32a66a",shade:"#21804e"},yellow:{face:"#edc13d",shade:"#c59b24"}}
-                            return <span key={color} aria-label={`${color} кнопка`} className="block h-8 w-8 rounded-full border border-black/10" style={{background:paint[color].face,boxShadow:`inset 0 -4px ${paint[color].shade},0 2px 3px #78909a`}} />
-                          })}
-                          {((block.controlModules||[]).length<3)&&<div data-module-picker="true" className="relative">
-                            <button type="button" aria-label="Добавить кнопку в панель" onClick={()=>setOpenMenuBlockId(prev=>prev===block.id?null:block.id)} className="grid h-8 w-8 place-items-center rounded-full border border-[#b9d0da] bg-white text-lg font-bold text-[#31525f]">+</button>
-                            {openMenuBlockId===block.id&&<div className="absolute left-0 top-[calc(100%+6px)] z-50 w-44 rounded-lg border bg-white p-2 shadow-xl"><p className="px-2 py-1 text-xs font-bold">Добавить кнопку</p>{(["red","green","yellow"] as MotorButtonModule[]).filter(color=>!(block.controlModules||[]).includes(color)).map(color=><button key={color} type="button" onClick={()=>{if(!project)return;saveBlocks(blocks.map(item=>item.id===block.id?{...item,controlModules:[...(item.controlModules||[]),color]}:item));setOpenMenuBlockId(null)}} className="flex w-full items-center gap-2 rounded p-2 text-left text-xs hover:bg-slate-100"><i className="h-4 w-4 rounded-full" style={{background:{red:"#d9473d",green:"#32a66a",yellow:"#edc13d"}[color]}}/>{({red:"Красная кнопка",green:"Зелёная кнопка",yellow:"Жёлтая кнопка"})[color]}</button>)}</div>}
-                          </div>}
-                        </div>
-                        <button type="button" aria-label="Изменить размер панели кнопок" onPointerDown={e=>{e.preventDefault();e.stopPropagation();const startX=e.clientX,startY=e.clientY,startW=block.width||180,startH=block.height||132;const move=(ev:PointerEvent)=>setPanelResize({id:block.id,width:Math.min(420,Math.max(144,startW+ev.clientX-startX)),height:Math.min(320,Math.max(112,startH+ev.clientY-startY))});const finish=(ev:PointerEvent)=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",finish);window.removeEventListener("pointercancel",finish);const width=Math.min(420,Math.max(144,Math.round(startW+ev.clientX-startX))),height=Math.min(320,Math.max(112,Math.round(startH+ev.clientY-startY)));setPanelResize(null);if(project)saveBlocks(blocks.map(item=>item.id===block.id?{...item,width,height}:item))};window.addEventListener("pointermove",move);window.addEventListener("pointerup",finish,{once:true});window.addEventListener("pointercancel",finish,{once:true})}} className="absolute bottom-0 right-0 z-20 grid h-6 w-6 cursor-nwse-resize place-items-center rounded-tl bg-white/80 text-sm text-[#31525f]">◢</button>
+                      <div data-button-panel="true" className="relative flex h-full w-full flex-col">
+                        <div data-panel-drag className="flex h-8 shrink-0 items-center rounded-t-[13px] bg-[#e7f3f8] px-2 text-xs font-extrabold text-[#31525f]">Кнопки моторов</div>
+                        {(() => {
+                          const hiddenButtons = block.hiddenControlButtons || []
+                          const colors = (["blue", ...(block.controlModules || [])] as MotorPanelButton[])
+                            .filter(color => !hiddenButtons.includes(color))
+                          const paint: Record<MotorPanelButton, { face: string; shade: string }> = {
+                            blue: { face: "#1687b3", shade: "#0e688a" },
+                            red: { face: "#d9473d", shade: "#a92b26" },
+                            green: { face: "#32a66a", shade: "#21804e" },
+                            yellow: { face: "#edc13d", shade: "#c59b24" },
+                          }
+                          const fourButtonPositions: Record<string, string> = {
+                            red: "col-start-2 row-start-1",
+                            blue: "col-start-1 row-start-2",
+                            green: "col-start-3 row-start-2",
+                            yellow: "col-start-2 row-start-3",
+                          }
+                          const nextColor = (["blue", "red", "green", "yellow"] as const).find(
+                            (color) => !colors.includes(color)
+                          )
+                          const panelWidth = panelResize?.id === block.id ? panelResize.width : block.width || 180
+                          const panelHeight = panelResize?.id === block.id ? panelResize.height : block.height || 132
+                          const isCross = colors.length === 4
+                          const itemCount = colors.length + (nextColor ? 1 : 0)
+                          const buttonSize = Math.max(20, Math.min(
+                            64,
+                            isCross
+                              ? Math.floor(Math.min((panelWidth - 24) / 3, (panelHeight - 44) / 3))
+                              : Math.floor(Math.min(
+                                  (panelWidth - 16 - 8 * Math.max(0, itemCount - 1)) / Math.max(1, itemCount),
+                                  panelHeight - 44
+                                ))
+                          ))
+                          const startButtonDrag = (e: React.PointerEvent<HTMLButtonElement>, color: MotorPanelButton) => {
+                            if (e.button !== 0) return
+                            e.preventDefault()
+                            e.stopPropagation()
+                            if (checking) {
+                              if (!['trial-running','live-running'].includes(robotState.program)) return
+                              const key = `${block.id}:${color}`
+                              if (inputErrors[key]) return
+                              e.currentTarget.setPointerCapture(e.pointerId)
+                              setPressedPanelButtons(previous => previous.includes(key) ? previous : [...previous,key])
+                              dispatchControl({controlId:block.id,input:color},'pressed')
+                              return
+                            }
+                            e.currentTarget.setPointerCapture(e.pointerId)
+                            setSelectedId(block.id)
+                            setButtonDrag({blockId:block.id,color,pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,dx:0,dy:0})
+                          }
+                          const moveButtonDrag = (e: React.PointerEvent<HTMLButtonElement>) => {
+                            setButtonDrag(prev => prev?.blockId === block.id && prev.pointerId === e.pointerId
+                              ? {...prev,dx:e.clientX-prev.startX,dy:e.clientY-prev.startY}
+                              : prev)
+                          }
+                          const finishButtonDrag = (e: React.PointerEvent<HTMLButtonElement>) => {
+                            const drag = buttonDrag
+                            if (!drag || drag.blockId !== block.id || drag.pointerId !== e.pointerId) return
+                            const panelRect = e.currentTarget.closest("[data-button-panel]")?.getBoundingClientRect()
+                            const dragged = Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY) > 5
+                            const outside = !panelRect || e.clientX < panelRect.left || e.clientX > panelRect.right || e.clientY < panelRect.top || e.clientY > panelRect.bottom
+                            setButtonDrag(null)
+                            if (!dragged || !outside || !project) return
+                            saveBlocks(blocks.map(item => {
+                              if (item.id !== block.id) return item
+                              if (drag.color === "blue") return {...item,hiddenControlButtons:[...new Set([...(item.hiddenControlButtons||[]),drag.color])]}
+                              return {...item,controlModules:(item.controlModules||[]).filter(color=>color!==drag.color)}
+                            }))
+                          }
+                          return (
+                            <div
+                              className={isCross
+                                ? "grid min-h-0 flex-1 content-center justify-center gap-0.5 p-1"
+                                : "flex min-h-0 flex-1 items-center justify-center gap-2 p-2"}
+                              style={isCross ? {gridTemplateColumns:`repeat(3, ${buttonSize}px)`,gridTemplateRows:`repeat(3, ${buttonSize}px)`} : undefined}
+                            >
+                              {colors.map((color) => (
+                                <button
+                                  type="button"
+                                  key={color}
+                                  aria-label={`${({blue:"Синяя",red:"Красная",green:"Зелёная",yellow:"Жёлтая"} as Record<MotorPanelButton,string>)[color]} кнопка${checking?"":". Перетащите за пределы панели, чтобы удалить"}`}
+                                  aria-pressed={pressedPanelButtons.includes(`${block.id}:${color}`)}
+                                  title={checking?"Нажмите для управления":"Перетащите за пределы панели, чтобы удалить"}
+                                  className={`block touch-none appearance-none p-0 rounded-full border border-black/10 ${checking?"cursor-pointer":"cursor-grab"} ${isCross ? fourButtonPositions[color] : ""} ${buttonDrag?.blockId === block.id && buttonDrag.color === color ? "z-30 cursor-grabbing opacity-80" : ""}`}
+                                  style={{
+                                    width: buttonSize,
+                                    height: buttonSize,
+                                    background: paint[color].face,
+                                    boxShadow: `inset 0 -${Math.max(3,Math.round(buttonSize*0.12))}px ${paint[color].shade},0 2px 3px #78909a`,
+                                    transform: buttonDrag?.blockId === block.id && buttonDrag.color === color
+                                      ? `translate(${buttonDrag.dx/zoom}px,${buttonDrag.dy/zoom}px) scale(1.08)`
+                                      : pressedPanelButtons.includes(`${block.id}:${color}`) ? "translateY(3px) scale(0.96)"
+                                      : undefined,
+                                  }}
+                                  onPointerDown={e=>startButtonDrag(e,color)}
+                                  onPointerMove={moveButtonDrag}
+                                  onPointerUp={e=>{
+                                    if (checking) {
+                                      e.stopPropagation()
+                                      const key=`${block.id}:${color}`
+                                      setPressedPanelButtons(previous=>previous.filter(item=>item!==key))
+                                      dispatchControl({controlId:block.id,input:color},'released')
+                                    } else finishButtonDrag(e)
+                                  }}
+                                  onPointerCancel={e=>{
+                                    const key=`${block.id}:${color}`
+                                    if (checking) {setPressedPanelButtons(previous=>previous.filter(item=>item!==key));dispatchControl({controlId:block.id,input:color},'released')}
+                                    else setButtonDrag(prev=>prev?.blockId===block.id&&prev.pointerId===e.pointerId?null:prev)
+                                  }}
+                                  onKeyDown={e=>{
+                                    if (!checking || (e.key!==" "&&e.key!=="Enter") || e.repeat) return
+                                    e.preventDefault();const key=`${block.id}:${color}`
+                                    if (inputErrors[key]) return
+                                    setPressedPanelButtons(previous=>previous.includes(key)?previous:[...previous,key])
+                                    dispatchControl({controlId:block.id,input:color},'pressed')
+                                  }}
+                                  onKeyUp={e=>{
+                                    if (!checking || (e.key!==" "&&e.key!=="Enter")) return
+                                    e.preventDefault();const key=`${block.id}:${color}`
+                                    setPressedPanelButtons(previous=>previous.filter(item=>item!==key))
+                                    dispatchControl({controlId:block.id,input:color},'released')
+                                  }}
+                                />
+                              ))}
+                              {nextColor && block.controlAreaId && (
+                                <button
+                                  type="button"
+                                  aria-label="Добавить кнопку в панель"
+                                  data-module-picker="true"
+                                  onClick={() => {
+                                    if (!project) return
+                                    saveBlocks(blocks.map(item => {
+                                      if (item.id !== block.id) return item
+                                      if (nextColor === "blue") return {...item,hiddenControlButtons:(item.hiddenControlButtons||[]).filter(color=>color!=="blue")}
+                                      return {...item,controlModules:[...(item.controlModules||[]),nextColor]}
+                                    }))
+                                  }}
+                                  style={{width:buttonSize,height:buttonSize}}
+                                  className="grid shrink-0 place-items-center rounded-full border border-[#b9d0da] bg-white text-lg font-bold text-[#31525f]"
+                                >+</button>
+                              )}
+                            </div>
+                          )
+                        })()}
+                        <button type="button" aria-label="Изменить размер панели кнопок" onPointerDown={e=>resizeMotorPanel(e,block)} className="absolute bottom-0 right-0 z-20 grid h-6 w-6 cursor-nwse-resize place-items-center rounded-tl bg-white/80 text-sm text-[#31525f]">◢</button>
                       </div>
                     ) : isIfBlock ? (
                       <div className="flex flex-col items-start">
@@ -1562,7 +1671,7 @@ function EditorWorkspace() {
                     ) : isButtonBlock ? (
                       <ControllerButtonBlock
                         block={block}
-                        controls={controlLayout.controls}
+                        controls={controllerControls}
                         ports={motorPorts}
                         isConnected={isConnected}
                         hasChild={hasChild}
@@ -1908,91 +2017,8 @@ function EditorWorkspace() {
             </div>
 
             {loadError && !project && <div className="absolute inset-0 z-30 overflow-y-auto bg-white p-6"><h2 className="text-lg font-bold">{loadError}</h2><div className="flex flex-col gap-2 mt-4">{projects.map(p=><Link key={p.id} className="rounded-lg border p-3 text-[#086985]" href={`/editor?id=${encodeURIComponent(p.id)}`}>{p.name}</Link>)}{projects.length===0&&<Link href="/" className="text-[#086985] underline">К списку проектов</Link>}</div></div>}
-            {!checking && !loadError && blocks.length === 0 && (
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-6 py-4 text-center border border-dashed border-[#c9d9df] rounded-[14px] bg-white/80 text-[#66818c] text-sm leading-relaxed pointer-events-none">
-                {loadError || (
-                  <>
-                    Перетащите блок «Когда программа запускается» из меню на
-                    доску
-                    <br />
-                    <small className="text-[#8aa0a9]">
-                      Доску можно двигать, удерживая пустое место
-                    </small>
-                  </>
-                )}
-              </div>
-            )}
           </div>
 
-          {/* Sheets Bar */}
-          <div
-            aria-label="Листы проекта"
-            inert={checking || undefined}
-            className="flex items-center shrink-0 gap-1.5 px-3 py-2 min-h-[48px] border-t border-[#dce8ec] bg-[#edf4f6]"
-          >
-            <div
-              role="tablist"
-              aria-label="Листы"
-              className="flex gap-1 overflow-x-auto min-w-0 flex-1"
-            >
-              {sheetState.sheets.map((sheet) => {
-                const active = sheet.id === sheetState.activeSheetId
-                return (
-                  <button
-                    key={sheet.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => switchSheet(sheet.id)}
-                    onDoubleClick={() => {
-                      switchSheet(sheet.id)
-                      openSheetDialog("rename")
-                    }}
-                    className={`px-3 py-1.5 min-h-[33px] rounded-[7px] border border-[#d4e1e9] bg-white text-xs whitespace-nowrap max-w-[220px] truncate ${
-                      active
-                        ? "text-[#087996] border-b-[3px] border-b-[#087996] font-extrabold"
-                        : "text-[#31525f] font-semibold"
-                    }`}
-                  >
-                    {sheet.name}
-                  </button>
-                )
-              })}
-            </div>
-            <button
-              type="button"
-              disabled={sheetState.sheets.length >= MAX_SHEETS}
-              onClick={() => openSheetDialog("add")}
-              aria-label="Добавить лист"
-              className="px-3 py-1.5 min-h-[33px] rounded-[7px] border border-[#d4e1e9] bg-white text-[#31525f] font-extrabold disabled:opacity-40"
-            >
-              +
-            </button>
-            <button type="button" aria-label="Копировать активный лист" onClick={()=>void copySheet()} className="h-8 px-2 rounded border bg-white text-xs">⧉</button>
-            <button
-              type="button"
-              onClick={() => openSheetDialog("rename")}
-              aria-label="Переименовать активный лист"
-              className="px-3 py-1.5 min-h-[33px] rounded-[7px] border border-[#d4e1e9] bg-white text-[#31525f] font-extrabold"
-            >
-              ✎
-            </button>
-            <button
-              type="button"
-              disabled={sheetState.sheets.length <= 1}
-              onClick={() => openSheetDialog("delete")}
-              aria-label="Удалить активный лист"
-              className="px-3 py-1.5 min-h-[33px] rounded-[7px] border border-[#d4e1e9] bg-white text-[#31525f] font-extrabold disabled:opacity-40"
-            >
-              ×
-            </button>
-          </div>
-
-          <div className="shrink-0 text-[11px] leading-normal bg-white text-[#66818c] px-3 py-1.5">
-            Лист: <strong>{currentSheet?.name}</strong> · Соедините блоки:
-            поднесите верх блока к низу блока «Когда программа запускается» или
-            внутрь скобки «Если … то». Цепочки выполняются сверху вниз.
-          </div>
         </main>
       </div>
 
@@ -2033,67 +2059,6 @@ function EditorWorkspace() {
 
       {codeModal.open && <div role="dialog" aria-modal="true" aria-label={codeModal.title} className="fixed inset-0 z-50 bg-[#112a36]/50 grid place-items-center p-4"><div className="w-full max-w-[600px] rounded-[18px] bg-white p-6 shadow-2xl"><h2 className="text-xl font-black mb-3">{codeModal.title}</h2><p className="text-sm mb-3">Загрузите файл в Pybricks Code и запустите на хабе.</p><textarea readOnly aria-label="Код программы Pybricks" value={codeModal.code} className="w-full h-[210px] p-3 border rounded-lg font-mono text-sm"/><div className="flex justify-end gap-3 mt-4"><Button type="button" variant="outline" onClick={handleDownloadPy}>Скачать .py</Button><Button type="button" onClick={()=>setCodeModal(prev=>({...prev,open:false}))}>Закрыть</Button></div></div></div>}
 
-      {/* Sheet Add/Rename/Delete Modal */}
-      {sheetModal.open && (
-        <div className="fixed inset-0 z-50 bg-[#112a36]/50 grid place-items-center p-4">
-          <div className="w-full max-w-[420px] rounded-[18px] border border-[#dce8ec] bg-white p-6 shadow-2xl">
-            <form onSubmit={handleSheetSubmit}>
-              <h2 className="text-xl font-black mb-4">
-                {sheetModal.action === "add"
-                  ? "Новый лист"
-                  : sheetModal.action === "delete"
-                    ? "Удалить лист?"
-                    : "Переименовать лист"}
-              </h2>
-              {sheetModal.action !== "delete" ? (
-                <div className="grid gap-2">
-                  <Label htmlFor="sheetNameInput">Название листа</Label>
-                  <Input
-                    id="sheetNameInput"
-                    maxLength={40}
-                    autoFocus
-                    value={sheetModal.name}
-                    onChange={(e) =>
-                      setSheetModal((prev) => ({
-                        ...prev,
-                        name: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-              ) : (
-                <p className="text-sm text-[#53707c]">
-                  Удалить «{currentSheet?.name}» вместе с блоками?
-                </p>
-              )}
-              {sheetModal.error && (
-                <p role="alert" className="text-xs font-bold text-[#b1372c] mt-3">
-                  {sheetModal.error}
-                </p>
-              )}
-              <div className="flex items-center justify-end gap-3 mt-6">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() =>
-                    setSheetModal((prev) => ({ ...prev, open: false }))
-                  }
-                >
-                  Отмена
-                </Button>
-                <Button
-                  type="submit"
-                  variant={
-                    sheetModal.action === "delete" ? "destructive" : "default"
-                  }
-                >
-                  {sheetModal.action === "delete" ? "Удалить" : "Сохранить"}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

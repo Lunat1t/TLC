@@ -1,14 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
+import { getSupabaseConfig } from "@/utils/supabase/config";
 
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ||
-  "https://gayjaicglasjnhmjljzp.supabase.co";
-const supabaseKey =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-  "sb_publishable_jElhFzJVfqdz7fN87oU7rA_AdkP49Lw";
-
-export const createClient = (request: NextRequest) => {
+export const createClient = async (request: NextRequest) => {
+  const { url, publishableKey } = getSupabaseConfig();
   // Create an unmodified response
   let supabaseResponse = NextResponse.next({
     request: {
@@ -17,8 +12,8 @@ export const createClient = (request: NextRequest) => {
   });
 
   const supabase = createServerClient(
-    supabaseUrl!,
-    supabaseKey!,
+    url,
+    publishableKey,
     {
       cookies: {
         getAll() {
@@ -39,7 +34,7 @@ export const createClient = (request: NextRequest) => {
     }
   );
 
-  void supabase.auth.getUser();
+  await supabase.auth.getUser();
 
   return supabaseResponse;
 };

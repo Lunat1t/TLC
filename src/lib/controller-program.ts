@@ -12,6 +12,10 @@ export type ControllerButton =
   | "y"
   | "l"
   | "r"
+  | "blue"
+  | "red"
+  | "green"
+  | "yellow"
 
 export type ControllerEvent = "pressed" | "released"
 

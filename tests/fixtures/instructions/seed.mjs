@@ -21,12 +21,24 @@ if (!process.argv.includes('--apply')) {
 const url = process.env.SUPABASE_TEST_URL
 const key = process.env.SUPABASE_TEST_SERVICE_ROLE_KEY
 const adminId = process.env.SUPABASE_TEST_ADMIN_ID
-if (!url || !key || !adminId) throw new Error('Set SUPABASE_TEST_URL, SUPABASE_TEST_SERVICE_ROLE_KEY and SUPABASE_TEST_ADMIN_ID')
+const expectedProjectRef = process.env.SUPABASE_TEST_PROJECT_REF
+if (!url || !key || !adminId || !expectedProjectRef) {
+  throw new Error('Set SUPABASE_TEST_URL, SUPABASE_TEST_PROJECT_REF, SUPABASE_TEST_SERVICE_ROLE_KEY and SUPABASE_TEST_ADMIN_ID')
+}
 if (!/^[0-9a-f-]{36}$/i.test(adminId)) throw new Error('SUPABASE_TEST_ADMIN_ID must be a user UUID')
+const projectUrl = new URL(url)
+const projectRef = projectUrl.hostname.split('.')[0]
+if (projectUrl.protocol !== 'https:' || !projectUrl.hostname.endsWith('.supabase.co')) {
+  throw new Error('SUPABASE_TEST_URL must be an HTTPS Supabase project URL')
+}
+if (projectRef !== expectedProjectRef) throw new Error('SUPABASE_TEST_PROJECT_REF does not match SUPABASE_TEST_URL')
+if (projectRef === 'gayjaicglasjnhmjljzp') throw new Error('Refusing to seed the TLC production project')
 const localEnv = readFileSync(path.join(rootDir, '.env.local'), 'utf8')
 const configuredUrl = localEnv.match(/^NEXT_PUBLIC_SUPABASE_URL=(.*)$/m)?.[1]?.replace(/^['"]|['"]$/g, '').trim()
 if (configuredUrl && new URL(url).origin === new URL(configuredUrl).origin) {
-  throw new Error('Refusing to seed the TLC configured project. Use a separate non-production Supabase project.')
+  if (!process.argv.includes('--allow-configured-test-project')) {
+    throw new Error('This is the configured Supabase project. Add --allow-configured-test-project only after confirming it is a non-production test project.')
+  }
 }
 const supabase = createClient(url, key, { auth: { persistSession: false } })
 const upload = async (instructionId, filename, mimeType, objectName = filename) => {
@@ -65,11 +77,20 @@ for (const item of instructions) {
     if (stepsError) throw stepsError
   }
   if (item.document) {
-    const document = await upload(card.id, item.document, 'application/pdf')
-    const { error } = await supabase.from('instruction_assets').upsert({
-      instruction_id: card.id, kind: 'document', object_key: document.objectKey,
-      mime_type: 'application/pdf', byte_size: document.byteSize,
-    }, { onConflict: 'object_key' })
+    const bytes = readFileSync(path.join(fixtureDir, item.document))
+    const sourceFileId = `tlc-fixture:${item.slug}`
+    const source = await supabase.from('instruction_assets')
+      .select('id').eq('source_provider', 'google_drive').eq('source_file_id', sourceFileId).maybeSingle()
+    if (source.error) throw source.error
+    const documentRow = {
+      instruction_id: card.id, kind: 'document', object_key: null,
+      mime_type: 'application/pdf', byte_size: bytes.length,
+      source_provider: 'google_drive', source_file_id: sourceFileId,
+      source_revision: 'tlc-fixture-revision-1',
+    }
+    const { error } = source.data
+      ? await supabase.from('instruction_assets').update(documentRow).eq('id', source.data.id)
+      : await supabase.from('instruction_assets').insert(documentRow)
     if (error) throw error
   }
   const { error: publishError } = await supabase.from('instructions').update({

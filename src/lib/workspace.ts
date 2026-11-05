@@ -15,13 +15,19 @@ export type ControllerButton =
   | "y"
   | "l"
   | "r"
+  | "blue"
+  | "red"
+  | "green"
+  | "yellow"
 export type ControllerEvent = "pressed" | "released"
 
 export type BlockType = "start" | "drive" | "pair" | "if" | "button" | "stop" | "motor-buttons"
+const LIBRARY_BLOCK_TYPES = new Set<BlockType>(["start", "drive", "pair", "if", "stop", "motor-buttons"])
 export type MotorDirection = "forward" | "backward"
 export type TravelUnit = "rotations" | "degrees" | "seconds"
 export type MotorModule = "speed" | "power" | "travel"
 export type MotorButtonModule = "red" | "green" | "yellow"
+export type MotorPanelButton = "blue" | MotorButtonModule
 export type BranchSlot = "body" | "else"
 
 export const IF_TOP_HEIGHT = 58
@@ -36,6 +42,7 @@ export interface WorkspaceBlock {
   x: number
   y: number
   parentId?: string
+  controlAreaId?: string
   branch?: BranchSlot
   motor?: string
   motor2?: string
@@ -43,6 +50,7 @@ export interface WorkspaceBlock {
   direction2?: MotorDirection
   modules?: MotorModule[]
   controlModules?: MotorButtonModule[]
+  hiddenControlButtons?: MotorPanelButton[]
   width?: number
   height?: number
   speed?: number
@@ -306,9 +314,7 @@ export function readBlocks(
       (block): block is Record<string, unknown> =>
         Boolean(block) &&
         typeof block === "object" &&
-        ["start", "drive", "pair", "if", "button", "stop", "motor-buttons"].includes(
-          String((block as { type?: unknown }).type)
-        ) &&
+        LIBRARY_BLOCK_TYPES.has(String((block as { type?: unknown }).type) as BlockType) &&
         typeof (block as { id?: unknown }).id === "string" &&
         Number.isFinite((block as { x?: unknown }).x) &&
         Number.isFinite((block as { y?: unknown }).y)
@@ -332,20 +338,26 @@ export function readBlocks(
         x: Math.round(Number(block.x)),
         y: Math.round(Number(block.y)),
         ...(typeof block.parentId === "string" ? { parentId: block.parentId } : {}),
+        ...(typeof block.controlAreaId === "string" ? { controlAreaId: block.controlAreaId } : {}),
         ...(branchVal ? { branch: branchVal } : {}),
       }
       if (type === "start" || type === "if") return base
 
       if (type === "motor-buttons") {
         const allowed: MotorButtonModule[] = ["red", "green", "yellow"]
+        const allowedButtons: MotorPanelButton[] = ["blue", ...allowed]
         const controlModules = Array.isArray(block.controlModules)
           ? allowed.filter(color => (block.controlModules as unknown[]).includes(color))
+          : []
+        const hiddenControlButtons = Array.isArray(block.hiddenControlButtons)
+          ? allowedButtons.filter(color => (block.hiddenControlButtons as unknown[]).includes(color))
           : []
         return {
           ...base,
           width: Number.isFinite(block.width) ? Math.min(420, Math.max(144, Math.round(Number(block.width)))) : 180,
           height: Number.isFinite(block.height) ? Math.min(320, Math.max(112, Math.round(Number(block.height)))) : 132,
           controlModules,
+          hiddenControlButtons,
         }
       }
 
@@ -484,7 +496,7 @@ export function addBlock(
     Object.assign(block, { motor: "A" })
   }
   if (type === "motor-buttons") {
-    Object.assign(block, { width: 180, height: 132, controlModules: [] })
+    Object.assign(block, { width: 180, height: 132, controlModules: [], hiddenControlButtons: [] })
   }
   return [...blocks, block]
 }
