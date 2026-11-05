@@ -3,7 +3,6 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { LiveOrb } from "@/components/ui/live-orb"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,7 +10,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -26,12 +24,6 @@ export default function LoginPage() {
   const [auth, setAuth] = React.useState<AuthState>(() => loadAuthState(null))
   const [login, setLogin] = React.useState("")
   const [password, setPassword] = React.useState("")
-  const [lookOverride, setLookOverride] = React.useState<{
-    x: number
-    y: number
-    squint?: number
-  } | null>(null)
-  const [blinkCount, setBlinkCount] = React.useState(0)
   const [status, setStatus] = React.useState<{
     message: string
     isError: boolean
@@ -46,10 +38,7 @@ export default function LoginPage() {
   }, [])
 
   function handleLoginChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const val = e.target.value
-    setLogin(val)
-    const x = Math.min(0.45, Math.max(-0.45, (val.length - 12) * 0.035))
-    setLookOverride({ x, y: 0.35 })
+    setLogin(e.target.value)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -59,7 +48,6 @@ export default function LoginPage() {
         login,
         password,
       })
-      setBlinkCount((c) => c + 1)
       setStatus({
         message: `Добро пожаловать, ${next.user?.nickname}! Переходим к проектам...`,
         isError: false,
@@ -98,22 +86,6 @@ export default function LoginPage() {
       <main className="flex-1 grid place-items-center px-4 py-10">
         <Card className="w-full max-w-[460px]">
           <CardHeader className="items-center text-center pb-2">
-            <div
-              onClick={() => setBlinkCount((c) => c + 1)}
-              title="Нажмите, чтобы орб моргнул"
-              className="w-[116px] h-[116px] rounded-full grid place-items-center bg-[radial-gradient(circle_at_50%_50%,#e5f9fd_0%,#f5fbfd_72%)] border border-[#d4ecf3] shadow-[0_14px_32px_rgba(0,152,184,0.12)] mb-3 transition-transform hover:scale-105 cursor-pointer"
-            >
-              <LiveOrb
-                size={100}
-                variant={auth.avatar.variant}
-                color={auth.avatar.color}
-                eyeColor={auth.avatar.eyeColor}
-                colors={auth.avatar.colors}
-                expression={auth.avatar.expression}
-                lookOverride={lookOverride}
-                blinkCount={blinkCount}
-              />
-            </div>
             <p className="text-[11px] font-black tracking-[0.16em] uppercase text-[#008da9]">
               АВТОРИЗАЦИЯ УЧЕНИКА
             </p>
@@ -140,7 +112,6 @@ export default function LoginPage() {
                   placeholder="Например, Alua"
                   value={login}
                   onChange={handleLoginChange}
-                  onBlur={() => setLookOverride(null)}
                 />
               </div>
 
@@ -155,10 +126,6 @@ export default function LoginPage() {
                   placeholder="Введите пароль"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  onFocus={() =>
-                    setLookOverride({ x: 0, y: -0.55, squint: 0.82 })
-                  }
-                  onBlur={() => setLookOverride(null)}
                 />
               </div>
 
@@ -205,24 +172,18 @@ export default function LoginPage() {
                   Ещё нет аккаунта?
                 </strong>
                 <small className="text-xs text-[#587580]">
-                  Начните с выбора живого 3D-аватара
+                  Создайте аккаунт ученика
                 </small>
               </div>
               <Link
                 id="registerRedirect"
-                href="/avatar"
+                href="/register"
                 className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-full bg-[#02c7ea] text-[#042b36] text-sm font-extrabold shadow-[0_8px_20px_rgba(2,199,234,0.25)] hover:bg-[#00b4d6] transition-transform hover:-translate-y-0.5 whitespace-nowrap"
               >
                 Регистрация <span aria-hidden="true">↗</span>
               </Link>
             </div>
           </CardContent>
-          <CardFooter className="justify-center pt-0 pb-6">
-            <span className="text-xs text-[#788d95]">
-              Аватар:{" "}
-              <strong className="text-[#23424d]">{auth.avatar.name}</strong>
-            </span>
-          </CardFooter>
         </Card>
       </main>
     </div>

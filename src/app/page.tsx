@@ -3,11 +3,10 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { LiveOrb } from "@/components/ui/live-orb"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Download, FolderOpen, Plus, Upload, MoreHorizontal } from "lucide-react"
+import { Download, FolderOpen, Plus, Upload, MoreHorizontal, UserRound } from "lucide-react"
 import "./home.css"
 import {
   loadAuthState,
@@ -107,7 +106,6 @@ function InstallAppButton() {
 
 export default function HomePage() {
   const router = useRouter()
-  const [hubChoice, setHubChoice] = React.useState<HubType>("spike")
   const [projects, setProjects] = React.useState<RobotProject[]>([])
   const [auth, setAuth] = React.useState<AuthState>(() => loadAuthState(null))
   const [notice, setNotice] = React.useState<{
@@ -156,7 +154,6 @@ export default function HomePage() {
 
   function openNewModal() {
     setNewName("")
-    setNewHub(hubChoice)
     setFormError(null)
     setNewOpen(true)
   }
@@ -265,15 +262,7 @@ export default function HomePage() {
       <div className="home-content">
         <header className="home-header">
           <div className="home-header-actions">
-            <label className="home-hub-label">Робот
-              <select aria-label="Робот для нового проекта" value={hubChoice} onChange={(e) => setHubChoice(e.target.value as HubType)}>
-                <option value="spike">SPIKE Prime</option><option value="ev3">LEGO EV3</option>
-              </select>
-            </label>
-            <Link href={auth.user ? "/avatar" : "/login"} className="home-profile">
-              <LiveOrb size={30} variant={auth.avatar.variant} color={auth.avatar.color} eyeColor={auth.avatar.eyeColor} colors={auth.avatar.colors} expression={auth.avatar.expression} />
-              <span>{auth.user?.nickname || "Войти"}</span>
-            </Link>
+            {auth.user ? <span className="home-profile"><UserRound size={18} aria-hidden="true" /><span>{auth.user.nickname}</span></span> : <Link href="/login" className="home-profile"><UserRound size={18} aria-hidden="true" /><span>Войти</span></Link>}
             {auth.user && <button type="button" className="home-signout" onClick={async () => {
               const next = await signOutFromSupabase(window.localStorage)
               setAuth(next)

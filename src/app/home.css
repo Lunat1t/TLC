@@ -27,8 +27,6 @@ html, body { overflow-x: clip; }
 .home-content { min-width: 0; }
 .home-header { display: flex; align-items: center; justify-content: flex-end; min-height: 76px; padding: 12px clamp(24px, 5vw, 72px); border-bottom: 1px solid var(--home-line); background: var(--home-paper); }
 .home-header-actions { display: flex; align-items: center; gap: 12px; }
-.home-hub-label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 650; }
-.home-hub-label select { min-height: 42px; border: 1px solid var(--home-line); border-radius: 10px; background: var(--home-paper); color: var(--home-ink); padding: 0 12px; font-weight: 700; }
 .home-profile { display: flex; align-items: center; gap: 8px; min-height: 42px; border-radius: 22px; padding: 4px 12px 4px 4px; background: var(--home-dark); color: var(--home-paper); font-size: 13px; font-weight: 750; }
 .home-profile:hover { background: var(--home-blue); }
 .home-signout { font-size: 12px; font-weight: 650; padding: 8px; border-radius: 8px; }
@@ -60,7 +58,6 @@ html, body { overflow-x: clip; }
 .home-notice-success { background: var(--home-success-bg); color: var(--home-success); }
 @media (max-width: 650px) {
   .home-header { justify-content: flex-end; min-height: 62px; padding: 8px 16px; }
-  .home-hub-label { display: none; }
   .home-main { padding: 28px 18px 64px; }
   .home-main-toolbar { align-items: stretch; flex-direction: column; gap: 8px; margin-bottom: 36px; }
   .home-new-button { width: 100%; }

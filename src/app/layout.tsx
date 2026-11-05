@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next"
 import "./globals.css"
-import "./avatar/orb-emotions.css"
 import { StudentNavigation } from "@/components/navigation/student-navigation"
 
 export const metadata: Metadata = {
