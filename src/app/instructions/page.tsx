@@ -32,8 +32,8 @@ export default async function InstructionsPage({ searchParams }: { searchParams:
           ? `/api/instruction-media/${item.id}/${item.coverAssetId}`
           : item.hasPdf ? `/api/instructions/${encodeURIComponent(item.slug)}/preview` : null
         const content = <>
-          <div className="instruction-cover">{coverUrl ? <img src={coverUrl} alt="" /> : <span aria-hidden="true">◈</span>}</div>
-          <div className="instruction-card-copy"><small>{item.kit === "spike" ? "SPIKE Prime" : "EV3"}</small><h2>{item.title}</h2><p>{item.summary}</p><div className="instruction-topics">{item.topics.map((topic) => <span key={topic}>{topic}</span>)}</div><span className="instruction-download-hint">{downloadUrl ? "Нажмите, чтобы скачать PDF с Google Drive" : "Открыть инструкцию"}</span></div>
+          <div className="instruction-cover">{coverUrl ? <img src={coverUrl} alt="" loading="lazy" decoding="async" /> : <span aria-hidden="true">◈</span>}</div>
+          <div className="instruction-card-copy"><h2>{item.title}</h2><p>{item.summary}</p><div className="instruction-topics">{item.topics.map((topic) => <span key={topic}>{topic}</span>)}</div></div>
         </>
         return downloadUrl
           ? <a key={item.id} href={downloadUrl} className="instruction-card" rel="noreferrer" referrerPolicy="no-referrer">{content}</a>

@@ -12,6 +12,6 @@ export async function GET(_request: Request, context: { params: Promise<{ instru
     if (!objectKey) throw new InstructionError(404, "not_found", "Файл не найден.")
     const { data: blob, error } = await client.storage.from(instructionBucket).download(objectKey)
     if (error || !blob) throw new InstructionError(503, "media_unavailable", "Файл временно недоступен.")
-    return new NextResponse(await blob.arrayBuffer(), { headers: { "Content-Type": blob.type || "image/jpeg", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" } })
+    return new NextResponse(await blob.arrayBuffer(), { headers: { "Content-Type": blob.type || "image/jpeg", "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800", "X-Content-Type-Options": "nosniff" } })
   } catch (error) { return errorResponse(error) }
 }
