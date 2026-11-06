@@ -53,3 +53,11 @@ export async function requireCurrentDevice(sessionId: string, generation: number
 export function noStoreHeaders() {
   return { "Cache-Control": "private, no-store" }
 }
+
+export async function requireInstructionPublisher() {
+  const { client, user } = await verifiedUser()
+  const { data, error } = await client.rpc("can_publish_instruction")
+  if (error) throw new InstructionError(503, "dependency_unavailable", "Не удалось проверить права публикации.")
+  if (data !== true) throw new InstructionError(403, "forbidden", "Добавлять инструкции может только учитель.")
+  return { client, user }
+}

@@ -14,7 +14,8 @@
     "android:sync": "npm run build && npx cap sync android",
     "android:open": "npx cap open android",
     "android:run": "npm run android:sync && npx cap run android",
-    "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug"
+    "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug",
+    "test:accounts": "node --experimental-strip-types --test tests/account-credentials.test.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",

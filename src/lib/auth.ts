@@ -1,3 +1,4 @@
+import { validateAccountPassword } from "./account-credentials"
 import {
   AVATAR_PRESETS,
   ORB_EXPRESSIONS,
@@ -63,9 +64,7 @@ export function validateLoginInput({
   if (cleanLogin.length > 64) {
     throw new Error("Логин слишком длинный.")
   }
-  if (!/^\d{4}$/.test(cleanPassword)) {
-    throw new Error("Введите код из четырёх цифр.")
-  }
+  if (!/^\d{4}$/.test(cleanPassword)) validateAccountPassword(cleanPassword)
   return { login: cleanLogin }
 }
 
@@ -85,11 +84,11 @@ export function validateRegistrationInput({
     throw new Error("Логин слишком длинный.")
   }
   if (!/^[A-Za-z][A-Za-z0-9_-]{0,31}$/.test(cleanLogin)) throw new Error("Напишите имя латиницей, без пробелов (до 32 символов).");
-  if (!/^\d{4}$/.test(cleanPassword)) throw new Error("Введите код из четырёх цифр.");
+  validateAccountPassword(cleanPassword)
   return {
     login: cleanLogin,
     email: loginToSupabaseEmail(cleanLogin),
-    password: pinPassword(cleanPassword),
+    password: cleanPassword,
   }
 }
 
@@ -142,7 +141,9 @@ export async function registerStudentWithSupabase(
     login: string
     password: string
     avatar?: Partial<AvatarState>
-    age: number
+    age: number | null
+    firstName?: string
+    lastName?: string
     disciplines?: string[]
     role: "student" | "teacher" | "parent"
   }
@@ -151,9 +152,9 @@ export async function registerStudentWithSupabase(
     login: input.login,
     password: input.password,
   })
-  if (!Number.isInteger(input.age) || input.age < 1 || input.age > 120) throw new Error("Укажите возраст от 1 до 120 лет.");
+  if (input.role !== "parent" && (!Number.isInteger(input.age) || input.age === null || input.age < 1 || input.age > 120)) throw new Error("Укажите возраст от 1 до 120 лет.");
   if (!["student", "teacher", "parent"].includes(input.role)) throw new Error("Выберите роль.");
-  const nickname = login
+  const nickname = input.firstName && input.lastName ? `${input.firstName.trim()} ${input.lastName.trim()}` : login
   const avatar = normalizeAvatarState(input.avatar)
 
   const supabase = createSupabaseBrowserClient()
@@ -166,7 +167,9 @@ export async function registerStudentWithSupabase(
         nickname,
         avatar,
         disciplines: input.disciplines || [],
-        age: input.age,
+        age: input.role === "parent" ? null : input.age,
+        first_name: input.firstName?.trim(),
+        last_name: input.lastName?.trim(),
         role: input.role,
         onboarding_complete: true,
       },
@@ -175,15 +178,15 @@ export async function registerStudentWithSupabase(
 
   if (error) {
     const msg = error.message.toLowerCase()
-    if (msg.includes("already registered")) {
-      throw new Error("Этот логин уже занят. Выберите другой логин или войдите в аккаунт.")
+    if (msg.includes("already registered") || msg.includes("duplicate")) {
+      throw new Error("Такое сочетание имени и фамилии уже используется. Уточните имя или войдите в свой аккаунт.")
     }
     throw new Error(`Ошибка регистрации: ${error.message}`)
   }
 
   if (data?.user?.id && !data.session) {
     const signedIn = await supabase.auth.signInWithPassword({ email, password });
-    if (signedIn.error || !signedIn.data.session) throw new Error("Аккаунт создан, но вход не выполнен. Попробуйте войти по имени и коду.");
+    if (signedIn.error || !signedIn.data.session) throw new Error("Аккаунт создан, но вход не выполнен. Попробуйте войти по логину и паролю.");
     data.session = signedIn.data.session;
   }
   if (!data?.user?.id || !data.session) {
@@ -227,10 +230,11 @@ export async function signInStudentWithSupabase(
   now: Date = new Date()
 ): Promise<AuthState> {
   const { login } = validateLoginInput(credentials)
-  const password = pinPassword(String(credentials.password || ""))
+  const rawPassword = String(credentials.password || "")
+  const password = /^\d{4}$/.test(rawPassword) ? pinPassword(rawPassword) : rawPassword
   const supabase = createSupabaseBrowserClient()
   const resolved = await supabase.rpc("resolve_tlc_pin_login", { p_login: login, p_pin: String(credentials.password || "") });
-  if (resolved.error || typeof resolved.data !== "string") throw new Error("Неверное имя или код. После нескольких попыток подождите 15 минут.");
+  if (resolved.error || typeof resolved.data !== "string") throw new Error("Неверный логин или пароль. После нескольких попыток подождите 15 минут.");
   const email = resolved.data
   const { data, error } = await supabase.auth.signInWithPassword({
     email,

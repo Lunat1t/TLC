@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto"
 import { NextResponse } from "next/server"
-import { requireAdmin, errorResponse, InstructionError } from "@/lib/instructions/access"
+import { requireInstructionPublisher, errorResponse, InstructionError } from "@/lib/instructions/access"
 import { publicDriveDownloadUrl, MAX_PDF_BYTES } from "@/lib/instructions/google-drive"
 import { instructionBucket } from "@/lib/instructions/validation"
 import { MAX_AUTO_PREVIEW_PDF_BYTES, renderFirstPagePreview } from "@/lib/instructions/pdf-preview"
@@ -16,7 +16,7 @@ const coverTypes = {
 
 export async function POST(request: Request) {
   try {
-    const { client } = await requireAdmin()
+    const { client } = await requireInstructionPublisher()
     const body = await request.formData()
     const title = String(body.get("title") || "").trim()
     const kit = String(body.get("kit") || "")

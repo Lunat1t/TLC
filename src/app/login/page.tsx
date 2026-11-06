@@ -102,7 +102,7 @@ export default function LoginPage() {
           <CardContent>
             <form id="loginForm" onSubmit={handleSubmit} className="grid gap-4" noValidate>
               <div className="grid gap-2">
-                <Label htmlFor="loginInput">Имя / логин</Label>
+                <Label htmlFor="loginInput">Логин</Label>
                 <Input
                   id="loginInput"
                   name="login"
@@ -110,26 +110,24 @@ export default function LoginPage() {
                   maxLength={64}
                   required
                   autoComplete="username"
-                  placeholder="Например, Alua"
+                  placeholder="Например, Alua_Serik"
                   value={login}
                   onChange={handleLoginChange}
                 />
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="passwordInput">Код из 4 цифр</Label>
+                <Label htmlFor="passwordInput">Пароль</Label>
                 <Input
                   id="passwordInput"
                   name="password"
                   type="password"
                   required
                   autoComplete="current-password"
-                  placeholder="0000"
-                  inputMode="numeric"
-                  pattern="[0-9]{4}"
-                  maxLength={4}
+                  placeholder="Введите пароль"
+                  maxLength={72}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value.replace(/\D/g, "").slice(0,4))}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
 
