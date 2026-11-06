@@ -5,6 +5,7 @@ import { Check, Eye, Gem, UserRound } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { DEFAULT_AVATAR_COLORS, type AvatarState } from "@/lib/auth"
 import { MixMatchAccessoryArt } from "./mix-match-accessory-art"
+import { useAvatarMotion } from "./use-avatar-motion"
 import "./avatar-editor.css"
 
 type Part = "body" | "eyes" | "accessory"
@@ -23,6 +24,7 @@ const PALETTE = [
 ]
 
 export function AvatarEditor({ initialAvatar }: { initialAvatar: Partial<AvatarState> | null }) {
+  const { characterRef, gazeRef, eyelidsRef } = useAvatarMotion()
   const [avatar, setAvatar] = useState({
     bodyColor: initialAvatar?.bodyColor || DEFAULT_AVATAR_COLORS.bodyColor,
     characterEyeColor: initialAvatar?.characterEyeColor || DEFAULT_AVATAR_COLORS.characterEyeColor,
@@ -123,7 +125,7 @@ export function AvatarEditor({ initialAvatar }: { initialAvatar: Partial<AvatarS
             <h2 id="avatar-editor-title">Настрой аватар</h2>
           </div>
           <div className="avatar-character-wrap" aria-label="Предпросмотр персонажа">
-            <svg className="avatar-character" viewBox={accessoryEquipped ? "0 -120 620 1020" : "0 0 620 900"} role="img" aria-label="Персонаж с выбранными цветами">
+            <svg ref={characterRef} className="avatar-character" viewBox={accessoryEquipped ? "0 -120 620 1020" : "0 0 620 900"} role="img" aria-label="Персонаж с выбранными цветами">
               {accessoryEquipped && <MixMatchAccessoryArt transform="translate(232 -100)" />}
               <g className="avatar-body-shape" fill={avatar.bodyColor}>
                 <g data-part="feet">
@@ -140,9 +142,11 @@ export function AvatarEditor({ initialAvatar }: { initialAvatar: Partial<AvatarS
                 </g>
                 <path d="M105 20H515C551 20 580 49 580 85V500H40V85C40 49 69 20 105 20Z" />
               </g>
-              <g className="avatar-face" fill={avatar.characterEyeColor} aria-hidden="true">
+              <g ref={gazeRef} className="avatar-face" fill={avatar.characterEyeColor} aria-hidden="true">
+                <g ref={eyelidsRef} className="avatar-eyelids">
                 <rect x="212" y="92" width="58" height="136" rx="29" />
                 <rect x="350" y="92" width="58" height="136" rx="29" />
+                </g>
               </g>
             </svg>
           </div>
