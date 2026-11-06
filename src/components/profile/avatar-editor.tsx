@@ -123,16 +123,26 @@ export function AvatarEditor({ initialAvatar }: { initialAvatar: Partial<AvatarS
             <h2 id="avatar-editor-title">Настрой аватар</h2>
           </div>
           <div className="avatar-character-wrap" aria-label="Предпросмотр персонажа">
-            <svg className="avatar-character" viewBox={accessoryEquipped ? "0 -120 566 1015" : "0 0 566 895"} role="img" aria-label="Персонаж с выбранными цветами">
-              {accessoryEquipped && <MixMatchAccessoryArt transform="translate(205 -110)" />}
+            <svg className="avatar-character" viewBox={accessoryEquipped ? "0 -120 620 1020" : "0 0 620 900"} role="img" aria-label="Персонаж с выбранными цветами">
+              {accessoryEquipped && <MixMatchAccessoryArt transform="translate(232 -100)" />}
               <g className="avatar-body-shape" fill={avatar.bodyColor}>
-                <path d="M60 0h446a60 60 0 0 1 60 60v433H0V60A60 60 0 0 1 60 0Z" />
-                <path d="M0 493h88v69c0 27-18 45-44 45S0 589 0 562zM478 493h88v69c0 27-18 45-44 45s-44-18-44-45z" />
-                <path d="M147 493h106v402H110c-24 0-43-19-43-43v-37c0-24 19-43 43-43h37zM312 493h106v279h37c24 0 43 19 43 43v37c0 24-19 43-43 43H312z" />
+                <g data-part="feet">
+                  <path d="M170 760H280V890H130C101 890 78 867 78 838V812C78 783 101 760 130 760Z" />
+                  <path d="M340 760H490C519 760 542 783 542 812V838C542 867 519 890 490 890H340Z" />
+                </g>
+                <g data-part="legs">
+                  <path d="M175 475H280V790H175Z" />
+                  <path d="M340 475H445V790H340Z" />
+                </g>
+                <g data-part="arms">
+                  <path d="M40 465H150V555C150 588 124 615 92 615C59 615 40 589 40 558Z" />
+                  <path d="M470 465H580V558C580 589 561 615 528 615C496 615 470 588 470 555Z" />
+                </g>
+                <path d="M105 20H515C551 20 580 49 580 85V500H40V85C40 49 69 20 105 20Z" />
               </g>
               <g className="avatar-face" fill={avatar.characterEyeColor} aria-hidden="true">
-                <rect x="195" y="92" width="58" height="133" rx="29" />
-                <rect x="312" y="92" width="58" height="133" rx="29" />
+                <rect x="212" y="92" width="58" height="136" rx="29" />
+                <rect x="350" y="92" width="58" height="136" rx="29" />
               </g>
             </svg>
           </div>
