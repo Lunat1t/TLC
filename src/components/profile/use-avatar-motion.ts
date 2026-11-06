@@ -52,6 +52,7 @@ export function useAvatarMotion() {
       clearTimeout(blinkTimer)
       if (reducedMotion.matches || document.hidden) return
       blinkTimer = setTimeout(() => {
+        blink?.cancel()
         blink = eyelids!.animate([
           { transform: "scaleY(1)", offset: 0 },
           { transform: "scaleY(0.06)", offset: 0.45 },
@@ -65,11 +66,12 @@ export function useAvatarMotion() {
       clearTimeout(blinkTimer)
       clearTimeout(resetTimer)
       blink?.cancel()
+      character!.style.setProperty("--avatar-animation-state", document.hidden ? "paused" : "running")
       resetGaze()
       scheduleBlink()
     }
 
-    scheduleBlink()
+    syncMotion()
     window.addEventListener("pointermove", follow, { passive: true })
     window.addEventListener("pointerdown", follow, { passive: true })
     window.addEventListener("pointerup", release, { passive: true })

@@ -126,6 +126,7 @@ export function AvatarEditor({ initialAvatar }: { initialAvatar: Partial<AvatarS
           </div>
           <div className="avatar-character-wrap" aria-label="Предпросмотр персонажа">
             <svg ref={characterRef} className="avatar-character" viewBox={accessoryEquipped ? "0 -120 620 1020" : "0 0 620 900"} role="img" aria-label="Персонаж с выбранными цветами">
+              <g className="avatar-breath">
               {accessoryEquipped && <MixMatchAccessoryArt transform="translate(232 -100)" />}
               <g className="avatar-body-shape" fill={avatar.bodyColor}>
                 <g data-part="feet">
@@ -147,6 +148,7 @@ export function AvatarEditor({ initialAvatar }: { initialAvatar: Partial<AvatarS
                 <rect x="212" y="92" width="58" height="136" rx="29" />
                 <rect x="350" y="92" width="58" height="136" rx="29" />
                 </g>
+              </g>
               </g>
             </svg>
           </div>

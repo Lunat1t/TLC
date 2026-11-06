@@ -43,3 +43,7 @@
 @media(prefers-reduced-motion:reduce){.avatar-character-wrap,.avatar-character,.avatar-face rect,.avatar-tabs button,.avatar-swatch{transition-duration:.01ms}}
 
 @media(prefers-reduced-motion:reduce){.avatar-face{transition:none}}
+
+.avatar-breath{transform-box:fill-box;transform-origin:50% 100%;animation:avatar-breathe 4.8s ease-in-out infinite;animation-play-state:var(--avatar-animation-state,running)}
+@keyframes avatar-breathe{0%,100%{transform:scale(1,1)}45%{transform:scale(1.012,1.018)}}
+@media(prefers-reduced-motion:reduce){.avatar-breath{animation:none}}
