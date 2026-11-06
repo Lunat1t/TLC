@@ -1,14 +1,14 @@
 "use client"
 
 import { useEffect, useRef, useState, type CSSProperties } from "react"
-import { Check, Eye, Footprints, Gem, UserRound } from "lucide-react"
+import { Check, Eye, Gem, UserRound } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { DEFAULT_AVATAR_COLORS, type AvatarState } from "@/lib/auth"
 import { MixMatchAccessoryArt } from "./mix-match-accessory-art"
 import { useAvatarMotion } from "./use-avatar-motion"
 import "./avatar-editor.css"
 
-type Part = "body" | "eyes" | "shoes" | "accessory"
+type Part = "body" | "eyes" | "accessory"
 
 const PALETTE = [
   { name: "Голубой", color: "#43c5e4" },
@@ -28,11 +28,8 @@ export function AvatarEditor({ initialAvatar }: { initialAvatar: Partial<AvatarS
   const [avatar, setAvatar] = useState({
     bodyColor: initialAvatar?.bodyColor || DEFAULT_AVATAR_COLORS.bodyColor,
     characterEyeColor: initialAvatar?.characterEyeColor || DEFAULT_AVATAR_COLORS.characterEyeColor,
-    shoeColor: initialAvatar?.shoeColor || DEFAULT_AVATAR_COLORS.shoeColor,
   })
   const [part, setPart] = useState<Part>("body")
-  const colorKey = part === "eyes" ? "characterEyeColor" : part === "shoes" ? "shoeColor" : "bodyColor"
-  const partLabel = part === "eyes" ? "глаз" : part === "shoes" ? "обуви" : "тела"
   const [accessoryUnlocked, setAccessoryUnlocked] = useState(false)
   const [accessoryEquipped, setAccessoryEquipped] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -124,7 +121,7 @@ export function AvatarEditor({ initialAvatar }: { initialAvatar: Partial<AvatarS
     <section className="avatar-editor" aria-labelledby="avatar-editor-title">
       <div className="avatar-editor-layout">
         <div className={`avatar-stage camera-${part}`}>
-          <div className="sr-only">
+          <div className="avatar-editor-heading">
             <h2 id="avatar-editor-title">Настрой аватар</h2>
           </div>
           <div className="avatar-character-wrap" aria-label="Предпросмотр персонажа">
@@ -132,17 +129,13 @@ export function AvatarEditor({ initialAvatar }: { initialAvatar: Partial<AvatarS
               <g className="avatar-breath">
               {accessoryEquipped && <MixMatchAccessoryArt transform="translate(232 -100)" />}
               <g className="avatar-body-shape" fill={avatar.bodyColor}>
+                <g data-part="feet">
+                  <path d="M170 760H280V890H130C101 890 78 867 78 838V812C78 783 101 760 130 760Z" />
+                  <path d="M340 760H490C519 760 542 783 542 812V838C542 867 519 890 490 890H340Z" />
+                </g>
                 <g data-part="legs">
                   <path d="M175 475H280V790H175Z" />
                   <path d="M340 475H445V790H340Z" />
-                </g>
-                <g data-part="socks" fill="#ffffff">
-                  <path d="M175 690H280V780H175Z" />
-                  <path d="M340 690H445V780H340Z" />
-                </g>
-                <g data-part="feet" fill={avatar.shoeColor}>
-                  <path d="M170 760H280V890H130C101 890 78 867 78 838V812C78 783 101 760 130 760Z" />
-                  <path d="M340 760H490C519 760 542 783 542 812V838C542 867 519 890 490 890H340Z" />
                 </g>
                 <g data-part="arms">
                   <path d="M40 465H150V555C150 588 124 615 92 615C59 615 40 589 40 558Z" />
@@ -169,9 +162,6 @@ export function AvatarEditor({ initialAvatar }: { initialAvatar: Partial<AvatarS
             <button type="button" role="tab" aria-label="Глаза" title="Глаза" aria-selected={part === "eyes"} className={part === "eyes" ? "active" : ""} onClick={() => choosePart("eyes")}>
               <Eye size={23} />
             </button>
-            <button type="button" role="tab" aria-label="Обувь" title="Обувь" aria-selected={part === "shoes"} className={part === "shoes" ? "active" : ""} onClick={() => choosePart("shoes")}>
-              <Footprints size={23} />
-            </button>
             {accessoryUnlocked && <button type="button" role="tab" aria-label="Аксессуар" title="Аксессуар" aria-selected={part === "accessory"} className={part === "accessory" ? "active" : ""} onClick={() => choosePart("accessory")}>
               <Gem size={23} />
             </button>}
@@ -181,14 +171,14 @@ export function AvatarEditor({ initialAvatar }: { initialAvatar: Partial<AvatarS
             <div><h3>Смеситель Mix and Match</h3><p>Аксессуар для аватара</p></div>
             <button type="button" className="avatar-accessory-toggle" onClick={() => void toggleAccessory()} disabled={busy}>{busy ? "Сохраняем…" : accessoryEquipped ? "Снять" : "Надеть"}</button>
           </div> : <>
-            <div className="avatar-color-heading"><div><h3>Цвет {partLabel}</h3><p>{part === "shoes" ? "Выбери цвет обуви · носки белые" : "Выбери любимый оттенок"}</p></div><span className="avatar-current-color" style={{ backgroundColor: avatar[colorKey] }} /></div>
-            <div className="avatar-palette" aria-label={`Цвет ${partLabel}`}>
+            <div className="avatar-color-heading"><div><h3>Цвет {part === "eyes" ? "глаз" : "тела"}</h3><p>Выбери любимый оттенок</p></div><span className="avatar-current-color" style={{ backgroundColor: avatar[part === "eyes" ? "characterEyeColor" : "bodyColor"] }} /></div>
+            <div className="avatar-palette" aria-label={`Цвет ${part === "eyes" ? "глаз" : "тела"}`}>
               {PALETTE.map(({ name, color }) => {
-                const selected = avatar[colorKey] === color
-                return <button key={color} type="button" className={`avatar-swatch ${selected ? "selected" : ""} ${color === "#f2f5f7" ? "light" : ""}`} style={{ "--swatch": color } as CSSProperties} aria-label={name} aria-pressed={selected} onClick={() => { const nextColors = { ...avatar, [colorKey]: color }; setAvatar(nextColors); scheduleAvatarSave(nextColors) }}>{selected && <Check size={16} />}</button>
+                const selected = avatar[part === "eyes" ? "characterEyeColor" : "bodyColor"] === color
+                return <button key={color} type="button" className={`avatar-swatch ${selected ? "selected" : ""} ${color === "#f2f5f7" ? "light" : ""}`} style={{ "--swatch": color } as CSSProperties} aria-label={name} aria-pressed={selected} onClick={() => { const nextColors = { ...avatar, [part === "eyes" ? "characterEyeColor" : "bodyColor"]: color }; setAvatar(nextColors); scheduleAvatarSave(nextColors) }}>{selected && <Check size={16} />}</button>
               })}
             </div>
-            <div className="avatar-color-label">{PALETTE.find(({ color }) => color === avatar[colorKey])?.name || "Мой цвет"}</div>
+            <div className="avatar-color-label">{PALETTE.find(({ color }) => color === avatar[part === "eyes" ? "characterEyeColor" : "bodyColor"])?.name || "Мой цвет"}</div>
           </>}
           {message && <div className="avatar-save-row"><p role="status" className={message === "Аватар сохранён" ? "success" : message === "Сохраняем…" ? "saving" : "error"}>{message}</p></div>}
         </div>
