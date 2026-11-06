@@ -21,16 +21,14 @@ const roles = [
   { id: "teacher", name: "Я учитель", kk: "Мен мұғаліммін", description: "Помогаю открывать новое", kkDescription: "Жаңалық ашуға көмектесемін", icon: GraduationCap, color: "blue" },
   { id: "parent", name: "Я родитель", kk: "Мен ата-анамын", description: "Поддерживаю юного изобретателя", kkDescription: "Жас өнертапқышқа қолдау көрсетемін", icon: Heart, color: "coral" },
 ] as const
-const options = ["LEGO WeDo", "LEGO SPIKE", "LEGO EV3", "VEX"]
 type Role = typeof roles[number]["id"]
 
 export default function RegisterPage() {
   const router = useRouter()
   const [language, setLanguage] = React.useState<"ru" | "kk">("ru")
-  const [course, setCourse] = React.useState("")
+  const [selectedCourses, setSelectedCourses] = React.useState<string[]>([])
   const [role, setRole] = React.useState<Role | null>(null)
   const [step, setStep] = React.useState(0)
-  const [disciplines, setDisciplines] = React.useState<string[]>([])
   const [name, setName] = React.useState("")
   const [lastName, setLastName] = React.useState("")
   const [age, setAge] = React.useState("")
@@ -50,26 +48,25 @@ export default function RegisterPage() {
   }, [])
   React.useEffect(() => { heading.current?.focus() }, [step])
 
-  const steps = ["course", "role", ...(role === "teacher" ? ["disciplines"] : []), "name", ...(role === "parent" ? [] : ["age"]), "password"]
+  const steps = ["role", ...(role === "student" || role === "teacher" ? ["course"] : []), "name", ...(role === "parent" ? [] : ["age"]), "password"]
+  const disciplines = role === "parent" ? [] : courses.filter(item => selectedCourses.includes(item.id)).map(item => item.name.replace(/\u00ad/g, ""))
   const loginPreview = name.trim() && lastName.trim() ? `${name.trim()}_${lastName.trim()}` : ""
   const current = steps[step]
   const titles: Record<string, string> = {
-    course: t("Что хочешь изучать?", "Нені үйренгің келеді?"),
+    course: role === "teacher" ? t("Что вы преподаёте?", "Нені үйретесіз?") : t("Что хочешь изучать?", "Нені үйренгің келеді?"),
     role: t("Давай познакомимся!", "Танысайық!"),
-    disciplines: t("Чему вы учите?", "Нені үйретесіз?"),
     name: t("Как тебя зовут?", "Есімің кім?"),
     age: t("Сколько тебе лет?", "Жасың нешеде?"),
     password: t("Придумай пароль", "Құпиясөз ойлап тап"),
   }
   const hints: Record<string, string> = {
-    course: t("Выбери то, что тебе интересно. С этого и начнём!", "Өзіңе қызықтысын таңда. Содан бастаймыз!"),
+    course: t("Можно выбрать несколько направлений.", "Бірнеше бағытты таңдауға болады."),
     role: t("Здесь рады и детям, и взрослым.", "Мұнда балаларға да, ересектерге де қуаныштымыз."),
-    disciplines: t("Можно выбрать несколько направлений.", "Бірнеше бағытты таңдауға болады."),
     name: t("Напиши имя и фамилию английскими буквами. Мы объединим их в логин.", "Есімің мен тегіңді ағылшын әріптерімен жаз. Оларды біріктіріп, логин жасаймыз."),
     age: t("Так мы узнаем тебя чуть лучше.", "Осылайша сені жақынырақ танимыз."),
     password: t("Не меньше 8 символов. Лучше несколько слов, которые легко запомнить.", "Кемінде 8 таңба. Есте сақтауға оңай бірнеше сөз таңда."),
   }
-  const ready = current === "course" ? !!course : current === "role" ? !!role : current === "disciplines" ? !!disciplines.length : current === "name" ? !!name.trim() && !!lastName.trim() : current === "age" ? !!age : password.length >= 8
+  const ready = current === "course" ? selectedCourses.length > 0 : current === "role" ? !!role : current === "name" ? !!name.trim() && !!lastName.trim() : current === "age" ? !!age : password.length >= 8
 
   async function next(event: React.FormEvent) {
     event.preventDefault()
@@ -86,10 +83,10 @@ export default function RegisterPage() {
         const client = createClient()
         const { error: passwordError } = await client.auth.updateUser({ password, data: { login, nickname: `${name.trim()} ${lastName.trim()}`, first_name: name.trim(), last_name: lastName.trim() } })
         if (passwordError) throw passwordError
-        const { error } = await client.rpc("complete_tlc_onboarding", { p_login: login, p_age: role === "parent" ? null : Number(age), p_role: role, p_disciplines: role === "teacher" ? disciplines : [] })
+        const { error } = await client.rpc("complete_tlc_onboarding", { p_login: login, p_age: role === "parent" ? null : Number(age), p_role: role, p_disciplines: disciplines })
         if (error) throw error
-      } else await registerStudentWithSupabase(localStorage, { login, firstName: name, lastName, password, age: role === "parent" ? null : Number(age), role: role!, disciplines: role === "teacher" ? disciplines : [] })
-      localStorage.setItem("tlc.learning-interest", course)
+      } else await registerStudentWithSupabase(localStorage, { login, firstName: name, lastName, password, age: role === "parent" ? null : Number(age), role: role!, disciplines: disciplines })
+      if (role !== "parent") localStorage.setItem("tlc.learning-interests", JSON.stringify(selectedCourses))
       router.replace(role === "parent" ? "/profile" : "/dashboard")
       router.refresh()
     } catch (e) { setError(e instanceof Error ? e.message : t("Не удалось создать аккаунт. Попробуй ещё раз.", "Аккаунт жасау мүмкін болмады. Қайта көр.")) }
@@ -112,13 +109,12 @@ export default function RegisterPage() {
           <h1 id="onboarding-title" ref={heading} tabIndex={-1}>{titles[current]}</h1>
           <p id="onboarding-hint">{hints[current]}</p>
         </div>
-        {current === "course" && <div className="onboarding-courses" role="group" aria-label={titles.course}>{courses.map(item => <button key={item.id} type="button" className={`onboarding-choice course-choice ${course === item.id ? "is-selected" : ""}`} aria-pressed={course === item.id} onClick={() => { setCourse(item.id); setError("") }}>
+        {current === "course" && <div className="onboarding-courses" role="group" aria-label={titles.course}>{courses.map(item => <button key={item.id} type="button" className={`onboarding-choice course-choice ${selectedCourses.includes(item.id) ? "is-selected" : ""}`} aria-pressed={selectedCourses.includes(item.id)} onClick={() => { setSelectedCourses(old => old.includes(item.id) ? old.filter(id => id !== item.id) : [...old, item.id]); setError("") }}>
           <span className={`onboarding-art art-${item.color}`}><item.icon size={48} strokeWidth={2.4} aria-hidden="true" /></span>
           <strong>{kk && "kkName" in item ? item.kkName : item.name}</strong><span className="choice-description">{kk ? item.kk : item.description}</span>
-          {course === item.id && <Check className="choice-check" size={20} aria-hidden="true" />}
+          {selectedCourses.includes(item.id) && <Check className="choice-check" size={20} aria-hidden="true" />}
         </button>)}</div>}
         {current === "role" && <div className="onboarding-roles" role="group" aria-label={titles.role}>{roles.map(item => <button key={item.id} type="button" className={`onboarding-choice role-choice ${role === item.id ? "is-selected" : ""}`} aria-pressed={role === item.id} onClick={() => { setRole(item.id); setError("") }}><span className={`onboarding-art art-${item.color}`}><item.icon size={32} aria-hidden="true" /></span><span><strong>{kk ? item.kk : item.name}</strong><span className="choice-description">{kk ? item.kkDescription : item.description}</span></span>{role === item.id && <Check className="choice-check" size={20} aria-hidden="true" />}</button>)}</div>}
-        {current === "disciplines" && <div className="onboarding-roles" role="group" aria-label={titles.disciplines}>{options.map(item => <button key={item} type="button" className={`onboarding-choice discipline-choice ${disciplines.includes(item) ? "is-selected" : ""}`} aria-pressed={disciplines.includes(item)} onClick={() => setDisciplines(old => old.includes(item) ? old.filter(v => v !== item) : [...old, item])}><Blocks size={26} aria-hidden="true" /><strong>{item}</strong><span className="discipline-check">{disciplines.includes(item) && <Check size={18} />}</span></button>)}</div>}
         {current === "name" && <div className="onboarding-answer">
           <span className="onboarding-art answer-art art-blue"><UserRound size={54} aria-hidden="true" /></span>
           <label htmlFor="first-name">{t("Имя", "Есім")}</label>
