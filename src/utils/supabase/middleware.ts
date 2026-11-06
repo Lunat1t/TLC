@@ -34,7 +34,10 @@ export const createClient = async (request: NextRequest) => {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  // Verify the JWT signature (and refresh expired tokens), rather than fetch the
+  // full auth user on every navigation. RLS still checks every database request.
+  const { data, error } = await supabase.auth.getClaims();
+  const userId = error ? null : data?.claims.sub;
   const path = request.nextUrl.pathname;
   const registerPage = path === "/register" && !request.nextUrl.searchParams.has("student");
   const uploadPage = path === "/admin/instructions/drive";
@@ -42,8 +45,8 @@ export const createClient = async (request: NextRequest) => {
   if (protectedPage || registerPage) {
     let complete = false;
     let role: string | null = null;
-    if (user) {
-      const { data } = await supabase.from("profiles").select("onboarding_complete,role").eq("id", user.id).maybeSingle();
+    if (userId) {
+      const { data } = await supabase.from("profiles").select("onboarding_complete,role").eq("id", userId).maybeSingle();
       complete = data?.onboarding_complete === true;
       role = data?.role ?? null;
       if (registerPage && complete) {

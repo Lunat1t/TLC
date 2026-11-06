@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto"
 import { NextResponse } from "next/server"
+import { revalidateTag } from "next/cache"
 import { requireInstructionPublisher, errorResponse, InstructionError } from "@/lib/instructions/access"
 import { publicDriveDownloadUrl, MAX_PDF_BYTES } from "@/lib/instructions/google-drive"
 import { instructionBucket } from "@/lib/instructions/validation"
-import { MAX_AUTO_PREVIEW_PDF_BYTES, renderFirstPagePreview } from "@/lib/instructions/pdf-preview"
+import { MAX_AUTO_PREVIEW_PDF_BYTES, normalizeCoverImage, renderFirstPagePreview } from "@/lib/instructions/pdf-preview"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
@@ -35,9 +36,8 @@ export async function POST(request: Request) {
       const manualBytes = new Uint8Array(await manualCover.arrayBuffer())
       const manualType = coverTypes[manualCover.type as keyof typeof coverTypes]
       if (!manualType.signature(manualBytes)) throw new InstructionError(400, "invalid_cover", "Файл обложки повреждён или его формат не поддерживается.")
-      coverBytes = manualBytes
-      coverMimeType = manualCover.type
-      coverExtension = manualType.extension
+      try { coverBytes = await normalizeCoverImage(manualBytes) }
+      catch { throw new InstructionError(400, "invalid_cover", "Не удалось прочитать изображение обложки.") }
     }
     let fileId: string | undefined
     try {
@@ -88,6 +88,7 @@ export async function POST(request: Request) {
         p_cover_object_key: uploadedCover.path, p_cover_mime_type: coverMimeType, p_cover_size: coverBytes.byteLength,
       })
       if (error) throw new InstructionError(error.code === "23505" ? 409 : 503, "publish_failed", error.code === "23505" ? "Этот PDF уже добавлен." : "Не удалось опубликовать инструкцию.")
+      revalidateTag("instruction-catalog")
       return NextResponse.json({ instruction: data }, { status: 201 })
     } catch (error) {
       await client.storage.from(instructionBucket).remove([uploadedCover.path])

@@ -3,6 +3,19 @@ import { pathToFileURL } from "node:url"
 
 export const MAX_AUTO_PREVIEW_PDF_BYTES = 30 * 1024 * 1024
 
+export async function normalizeCoverImage(bytes: Uint8Array) {
+  const { createCanvas, loadImage } = await import("@napi-rs/canvas")
+  const image = await loadImage(Buffer.from(bytes))
+  const canvas = createCanvas(720, 480)
+  const context = canvas.getContext("2d")
+  const scale = Math.min(720 / image.width, 480 / image.height)
+  const width = image.width * scale, height = image.height * scale
+  context.fillStyle = "#ffffff"
+  context.fillRect(0, 0, 720, 480)
+  context.drawImage(image, (720 - width) / 2, (480 - height) / 2, width, height)
+  return new Uint8Array(canvas.toBuffer("image/jpeg", 82))
+}
+
 export async function renderFirstPagePreview(pdfBytes: Uint8Array) {
   const [{ GlobalWorkerOptions, getDocument }, { createCanvas }] = await Promise.all([
     import("pdfjs-dist/legacy/build/pdf.mjs"),

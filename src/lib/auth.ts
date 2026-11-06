@@ -302,19 +302,20 @@ export async function syncSessionFromSupabase(
 
   try {
     const supabase = createSupabaseBrowserClient()
-    const { data } = await supabase.auth.getUser()
-    if (!data?.user) {
+    const { data } = await supabase.auth.getSession()
+    const user = data.session?.user
+    if (!user) {
       const empty = loadAuthState(null);
       storage?.setItem(AUTH_STORAGE_KEY, JSON.stringify(empty));
       return empty
     }
-    const meta = data.user.user_metadata || {}
+    const meta = user.user_metadata || {}
     const loginName = String(
       meta.login || meta.nickname || local.user?.login || "Ученик"
     )
     const synced: AuthState = {
       user: {
-        id: data.user.id,
+        id: user.id,
         login: loginName,
         nickname: loginName,
         loggedInAt: local.user?.loggedInAt || new Date().toISOString(),

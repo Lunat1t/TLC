@@ -76,7 +76,7 @@ export function AchievementNotifier() {
     const { data: authListener } = client.auth.onAuthStateChange((_event, session) => {
       window.setTimeout(() => void attach(session?.user?.id || null), 0)
     })
-    void client.auth.getUser().then(({ data }) => attach(data.user?.id || null))
+    void client.auth.getSession().then(({ data }) => attach(data.session?.user.id || null))
 
     return () => {
       active = false

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next"
 import "./globals.css"
 import { StudentNavigation } from "@/components/navigation/student-navigation"
 import { AchievementNotifier } from "@/components/profile/achievement-notifier"
+import { AccessProvider } from "@/components/auth/access-provider"
 
 export const metadata: Metadata = {
   title: "TLC — программирование роботов",
@@ -26,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
-      <body className="min-h-dvh flex flex-col"><StudentNavigation>{children}</StudentNavigation><AchievementNotifier /></body>
+      <body className="min-h-dvh flex flex-col"><AccessProvider><StudentNavigation>{children}</StudentNavigation><AchievementNotifier /></AccessProvider></body>
     </html>
   )
 }

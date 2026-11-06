@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { createClient } from "@/utils/supabase/client"
+import { useAccess } from "@/components/auth/access-provider"
 
 type Profile = {
   nickname: string
@@ -24,14 +25,15 @@ export default function ProfilePage() {
   const [qr, setQr] = useState("")
   const [pending, setPending] = useState("")
   const [message, setMessage] = useState("")
-  const [admin, setAdmin] = useState(false)
+  const { isAdmin: admin } = useAccess()
   const [scanning, setScanning] = useState(false)
   const [busy, setBusy] = useState(false)
   const scanner = useRef<import("html5-qrcode").Html5Qrcode | null>(null)
 
   async function refresh() {
     const client = createClient()
-    const { data: { user } } = await client.auth.getUser()
+    const { data: { session } } = await client.auth.getSession()
+    const user = session?.user
     if (!user) {
       router.replace("/login")
       return
@@ -50,8 +52,6 @@ export default function ProfilePage() {
     const links = await client.rpc("my_family_links")
     if (links.error) throw links.error
     setFamily(links.data || [])
-    const permission = await client.rpc("is_instruction_admin")
-    setAdmin(permission.data === true)
     if (data.role === "student") {
       const QRCode = await import("qrcode")
       setQr(await QRCode.toDataURL(`${window.location.origin}/link-student?token=${data.student_link_token}`, { width: 320, margin: 2 }))

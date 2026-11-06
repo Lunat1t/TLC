@@ -3,7 +3,7 @@ import test from 'node:test'
 import { defaultNavigationLayout, layoutAtPosition, layoutPosition, readNavigationLayout } from '../src/lib/navigation-layout.ts'
 
 test('invalid stored layouts recover a complete navigation', () => {
-  for (const raw of [null, 'broken', '{}', '{"order":["projects","projects"]}', '{"order":["unexpected"]}']) assert.deepEqual(readNavigationLayout(raw).order, ['projects','instructions'])
+  for (const raw of [null, 'broken', '{}', '{"order":["projects","projects"]}', '{"order":["unexpected"]}']) assert.deepEqual(readNavigationLayout(raw).order, ['projects','instructions','avatar'])
   assert.deepEqual(readNavigationLayout('{"x":-100,"y":200,"vertical":true,"order":["instructions","projects"]}'), {x:0,y:1,vertical:true,order:['instructions','projects']})
 })
 test('dragging clamps at every edge', () => {
@@ -39,11 +39,11 @@ test('role navigation hides all parent pages and adds publishing for teachers', 
   const { navigationPages, reconcilePageOrder, moveNavigationPage } = await import('../src/lib/navigation-layout.ts')
   assert.deepEqual(navigationPages('parent',true),[])
   assert.deepEqual(navigationPages(null),[])
-  assert.deepEqual(navigationPages('student'),['projects','instructions'])
-  assert.deepEqual(navigationPages('teacher',true),['projects','instructions','add-instruction'])
+  assert.deepEqual(navigationPages('student'),['projects','instructions','avatar'])
+  assert.deepEqual(navigationPages('teacher',true),['projects','instructions','add-instruction','avatar'])
   const teacher=reconcilePageOrder(['instructions','projects'],navigationPages('teacher',true))
-  assert.deepEqual(teacher,['instructions','projects','add-instruction'])
-  assert.deepEqual(moveNavigationPage(teacher,2,0),['add-instruction','instructions','projects'])
-  assert.deepEqual(reconcilePageOrder(['add-instruction','instructions','projects'],navigationPages('student')),['instructions','projects'])
+  assert.deepEqual(teacher,['instructions','projects','add-instruction','avatar'])
+  assert.deepEqual(moveNavigationPage(teacher,2,0),['add-instruction','instructions','projects','avatar'])
+  assert.deepEqual(reconcilePageOrder(['add-instruction','instructions','projects'],navigationPages('student')),['instructions','projects','avatar'])
   assert.deepEqual(readNavigationLayout(JSON.stringify({...defaultNavigationLayout(),order:teacher})).order,teacher)
 })

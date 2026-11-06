@@ -17,7 +17,8 @@ export default function AvatarPage() {
     let active = true
     async function load() {
       const client = createClient()
-      const { data: { user } } = await client.auth.getUser()
+      const { data: { session } } = await client.auth.getSession()
+      const user = session?.user
       if (!user) {
         router.replace("/login?next=/avatar")
         return

@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react"
+import { useAccess } from "@/components/auth/access-provider"
 import { ArrowDown, ArrowUp, BookOpen, Check, FolderOpen, GripVertical, FilePlus2, Move, RotateCcw, Settings, UserRound, X } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import type { CSSProperties, KeyboardEvent, PointerEvent, ReactNode, TouchEvent } from "react"
@@ -17,32 +18,32 @@ const pages = {
 type Drag = { pointerId: number; x: number; y: number; left: number; top: number; page?: PageId; moved: boolean }
 export function StudentNavigation({ children }: { children: ReactNode }) {
   const pathname = usePathname(), router = useRouter()
+  const [isPending, startTransition] = useTransition()
   const [layout, setLayout] = useState<NavigationLayout>(defaultNavigationLayout)
   const [saved, setSaved] = useState<NavigationLayout>(defaultNavigationLayout)
   const [editing, setEditing] = useState(false), [menu, setMenu] = useState(false)
   const [message, setMessage] = useState("")
   const [geometry, setGeometry] = useState<{ bounds: LayoutBounds; width: number; height: number; reserved?: LayoutBounds } | null>(null)
   const nav = useRef<HTMLElement>(null), bounds = useRef<HTMLDivElement>(null), settings = useRef<HTMLDivElement>(null), gear = useRef<HTMLButtonElement>(null)
+  const warmed = useRef(new Map<string, number>())
   const drag = useRef<Drag | null>(null)
   const touchOrigin = useRef<{ x: number; y: number } | null>(null)
   const onHome = pathname === "/dashboard", inLibrary = pathname === "/instructions" || pathname.startsWith("/instructions/"), onAvatar = pathname === "/avatar"
-  const [access, setAccess] = useState<{ role: string | null; canPublish: boolean }>({ role: null, canPublish: false })
+  const access = useAccess()
   const allowed = navigationPages(access.role, access.canPublish)
   const order = reconcilePageOrder(layout.order, allowed)
   const orderKey = order.join("|")
   const visible = allowed.length > 0 && (onHome || inLibrary || pathname === "/admin/instructions/drive" || onAvatar)
-  useEffect(() => {
-    let active = true
-    void fetch("/api/instructions/admin-status", { cache: "no-store" }).then(async r => r.ok ? await r.json() : null).then(data => { if(active) setAccess({ role: data?.role ?? null, canPublish: data?.canPublish === true }) }).catch(() => { if(active) setAccess({role:null,canPublish:false}) })
-    return () => { active=false }
-  }, [pathname])
   const dock = navigationDock(layout)
 
   useEffect(() => {
     if (!visible) return
     for (const id of order) {
       const path = pages[id].path
-      if (path !== pathname) router.prefetch(path)
+      if (path !== pathname && Date.now() - (warmed.current.get(path) ?? 0) > 30_000) {
+        warmed.current.set(path, Date.now())
+        router.prefetch(path)
+      }
     }
   }, [visible, pathname, orderKey, router])
 
@@ -109,7 +110,7 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
     const rect = nav.current.getBoundingClientRect(), amount = event.shiftKey ? 40 : 10
     setLayout(old => dockNavigationLayout(layoutAtPosition(old, rect.left + delta[0] * amount, rect.top + delta[1] * amount, geometry.bounds, geometry), geometry.bounds))
   }
-  function navigate(page: PageId) { if (!editing && pathname !== pages[page].path) router.push(pages[page].path) }
+  function navigate(page: PageId) { if (!editing && pathname !== pages[page].path) startTransition(() => router.push(pages[page].path)) }
   function handleTouchStart(event: TouchEvent<HTMLDivElement>) {
     if (!visible || editing || event.touches.length !== 1 || (event.target instanceof Element && event.target.closest("a,button,input,select,textarea,[contenteditable=true],[data-swipe-ignore]"))) { touchOrigin.current = null; return }
     touchOrigin.current = { x: event.touches[0].clientX, y: event.touches[0].clientY }
@@ -127,7 +128,8 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
   const railSize = layout.vertical ? (geometry?.width ?? 156) + 24 : Math.max(84, (geometry?.height ?? 60) + 24)
   const contentStyle: CSSProperties = { [dock]: railSize }
   return <div data-dock={visible ? dock : undefined} className="tlc-student-navigation-root" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onTouchCancel={() => { touchOrigin.current = null }}>
-    {visible ? <div key={pathname} className="tlc-page-content tlc-page-transition" style={contentStyle}>{children}</div> : children}
+    <div className={visible ? "tlc-page-content tlc-page-transition" : "tlc-page-container"} style={visible ? contentStyle : undefined} aria-busy={isPending}>{children}</div>
+    {isPending && <div className="tlc-navigation-progress" role="status">Загружаем страницу…</div>}
     {visible && <>
       {!onAvatar && <div className={`tlc-nav-rail dock-${dock}`} style={layout.vertical ? { width: railSize } : { height: railSize }} aria-hidden="true" />}
       {!onAvatar && <div ref={bounds} className={`tlc-layout-bounds${editing ? " is-editing" : ""}`} aria-hidden="true" />}

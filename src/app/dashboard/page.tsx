@@ -3,6 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useAccess } from "@/components/auth/access-provider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -108,7 +109,7 @@ export default function HomePage() {
   const router = useRouter()
   const [projects, setProjects] = React.useState<RobotProject[]>([])
   const [auth, setAuth] = React.useState<AuthState>(() => loadAuthState(null))
-  const [isInstructionAdmin, setIsInstructionAdmin] = React.useState(false)
+  const { isAdmin: isInstructionAdmin } = useAccess()
   const [notice, setNotice] = React.useState<{
     text: string
     isError: boolean
@@ -142,19 +143,6 @@ export default function HomePage() {
       })
     }
   }, [])
-
-  React.useEffect(() => {
-    let active = true
-    if (!auth.user?.id) {
-      setIsInstructionAdmin(false)
-      return
-    }
-    void fetch("/api/instructions/admin-status", { cache: "no-store" })
-      .then(async (response) => response.ok ? (await response.json()).isAdmin === true : false)
-      .then((isAdmin) => { if (active) setIsInstructionAdmin(isAdmin) })
-      .catch(() => { if (active) setIsInstructionAdmin(false) })
-    return () => { active = false }
-  }, [auth.user?.id])
 
   const selectedProject = React.useMemo(
     () => projects.find((p) => p.id === selectedId) || null,

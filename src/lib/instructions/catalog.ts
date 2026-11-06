@@ -1,4 +1,6 @@
-import { serverClient, InstructionError } from "./access"
+import { unstable_cache } from "next/cache"
+import { createPublicClient } from "@/utils/supabase/public"
+import { InstructionError } from "./access"
 import { asKit } from "./validation"
 import type { CatalogCard, Kit } from "./types"
 
@@ -20,12 +22,16 @@ export async function listCatalog(input: { kit?: string | null; q?: string | nul
   const kit: Kit | null = input.kit ? asKit(input.kit) : null
   const q = String(input.q || "").trim().slice(0, 100)
   const after = decodeCursor(input.cursor)
-  const client = await serverClient()
+  return cachedCatalog(kit, q, after.time, after.id)
+}
+
+const cachedCatalog = unstable_cache(async (kit: Kit | null, q: string, afterTime: string | null, afterId: string | null) => {
+  const client = createPublicClient()
   const { data, error } = await client.rpc("search_instruction_cards", {
     p_kit: kit,
     p_query: q || null,
-    p_after_time: after.time,
-    p_after_id: after.id,
+    p_after_time: afterTime,
+    p_after_id: afterId,
     p_limit: 21,
   })
   if (error) throw new InstructionError(503, "catalog_unavailable", "Каталог временно недоступен.")
@@ -40,4 +46,4 @@ export async function listCatalog(input: { kit?: string | null; q?: string | nul
     ? Buffer.from(JSON.stringify({ time: last.published_at, id: last.id }), "utf8").toString("base64url")
     : null
   return { items, nextCursor }
-}
+}, ["published-instruction-catalog-v1"], { revalidate: 60, tags: ["instruction-catalog"] })

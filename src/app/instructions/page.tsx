@@ -22,13 +22,13 @@ export default async function InstructionsPage({ searchParams }: { searchParams:
       {(kit || q) && <Link href="/instructions">Сбросить</Link>}
     </form>
     {error ? <p role="alert" className="instruction-message">Каталог пока недоступен. Попробуйте позже.</p> : result.items.length === 0 ? <p className="instruction-message">Инструкции не найдены. Измените запрос или <Link href="/instructions">сбросьте фильтр</Link>.</p> :
-      <div className="instruction-grid">{result.items.map((item) => {
+      <div className="instruction-grid">{result.items.map((item, index) => {
         const downloadUrl = driveDownloadPath(item.slug, item.hasPdf)
         const coverUrl = item.coverAssetId
           ? `/api/instruction-media/${item.id}/${item.coverAssetId}`
           : item.hasPdf ? `/api/instructions/${encodeURIComponent(item.slug)}/preview` : null
         const content = <>
-          <div className="instruction-cover">{coverUrl ? <img src={coverUrl} alt="" loading="lazy" decoding="async" /> : <span aria-hidden="true">◈</span>}</div>
+          <div className="instruction-cover">{coverUrl ? <img src={coverUrl} alt="" width={720} height={480} loading={index < 2 ? "eager" : "lazy"} fetchPriority={index === 0 ? "high" : "auto"} decoding="async" /> : <span aria-hidden="true">◈</span>}</div>
           <div className="instruction-card-copy"><h2>{item.title}</h2><p>{item.summary}</p><div className="instruction-topics">{item.topics.map((topic) => <span key={topic}>{topic}</span>)}</div></div>
         </>
         return downloadUrl
