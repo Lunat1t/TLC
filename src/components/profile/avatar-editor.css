@@ -3,7 +3,7 @@
 .avatar-stage{position:relative;display:flex;min-height:0;flex-direction:column;overflow:hidden;border:0;border-radius:0;background:#fff2a6;isolation:isolate}
 .avatar-editor-heading{position:absolute;z-index:3;inset:max(16px,env(safe-area-inset-top)) 18px auto;display:flex;align-items:center;gap:14px}
 .avatar-editor-heading h2{margin:0;color:#1c3030;font-size:clamp(18px,2vw,24px);font-weight:800;letter-spacing:-.03em}
-.avatar-character-wrap{position:absolute;inset:58px 0 0;display:grid;place-items:center;transform:translateY(2%);transition:transform .65s cubic-bezier(.2,.8,.2,1)}
+.avatar-character-wrap{position:absolute;inset:58px 0 0;display:flex;align-items:center;justify-content:center;transform:translateY(2%);transition:transform .65s cubic-bezier(.2,.8,.2,1)}
 .avatar-character{width:min(58vw,420px);height:88%;overflow:visible;transition:transform .65s cubic-bezier(.2,.8,.2,1),transform-origin .65s cubic-bezier(.2,.8,.2,1);transform-origin:50% 18%}
 .camera-eyes .avatar-character{transform:scale(2.2)}
 .avatar-face rect{transition:x .35s ease,y .35s ease,width .35s ease,height .35s ease,rx .35s ease,transform .35s ease}
