@@ -36,7 +36,7 @@ export const createClient = async (request: NextRequest) => {
 
   const { data: { user } } = await supabase.auth.getUser();
   const path = request.nextUrl.pathname;
-  const protectedPage = path === "/" || path === "/editor" || path === "/instructions" || path.startsWith("/instructions/");
+  const protectedPage = path === "/dashboard" || path === "/editor" || path === "/instructions" || path.startsWith("/instructions/");
   if (protectedPage) {
     let complete = false;
     if (user) {

@@ -12,11 +12,11 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const touchOrigin = useRef<TouchOrigin>(null)
-  const onHome = pathname === "/"
+  const onHome = pathname === "/dashboard"
   const inLibrary = pathname === "/instructions" || pathname.startsWith("/instructions/")
   const visible = onHome || inLibrary
 
-  function navigate(target: "/" | "/instructions") {
+  function navigate(target: "/dashboard" | "/instructions") {
     if (pathname !== target) router.push(target)
   }
 
@@ -48,7 +48,7 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
     if (Math.abs(deltaX) < 72 || Math.abs(deltaX) < Math.abs(deltaY) * 1.25) return
 
     if (deltaX < 0 && onHome) navigate("/instructions")
-    if (deltaX > 0 && inLibrary) navigate("/")
+    if (deltaX > 0 && inLibrary) navigate("/dashboard")
   }
 
   return (
@@ -66,7 +66,7 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
             className={`tlc-bottom-nav-item${onHome ? " is-active" : ""}`}
             aria-label="Проекты"
             aria-current={onHome ? "page" : undefined}
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/dashboard")}
           >
             <FolderOpen size={22} strokeWidth={2} aria-hidden="true" />
             <span>Проекты</span>

@@ -688,7 +688,7 @@ function EditorWorkspace() {
       {/* Topbar */}
       <header className="h-[68px] shrink-0 flex items-center gap-4 px-4 md:px-6 bg-white border-b border-[#dce8ec] z-10">
         <Link
-          href="/"
+          href="/dashboard"
           aria-label="К списку проектов"
           className="text-sm font-extrabold text-[#087996] hover:text-[#055a70] whitespace-nowrap"
         >
@@ -2016,7 +2016,7 @@ function EditorWorkspace() {
               </div>
             </div>
 
-            {loadError && !project && <div className="absolute inset-0 z-30 overflow-y-auto bg-white p-6"><h2 className="text-lg font-bold">{loadError}</h2><div className="flex flex-col gap-2 mt-4">{projects.map(p=><Link key={p.id} className="rounded-lg border p-3 text-[#086985]" href={`/editor?id=${encodeURIComponent(p.id)}`}>{p.name}</Link>)}{projects.length===0&&<Link href="/" className="text-[#086985] underline">К списку проектов</Link>}</div></div>}
+            {loadError && !project && <div className="absolute inset-0 z-30 overflow-y-auto bg-white p-6"><h2 className="text-lg font-bold">{loadError}</h2><div className="flex flex-col gap-2 mt-4">{projects.map(p=><Link key={p.id} className="rounded-lg border p-3 text-[#086985]" href={`/editor?id=${encodeURIComponent(p.id)}`}>{p.name}</Link>)}{projects.length===0&&<Link href="/dashboard" className="text-[#086985] underline">К списку проектов</Link>}</div></div>}
           </div>
 
         </main>

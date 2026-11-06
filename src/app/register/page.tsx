@@ -28,7 +28,7 @@ export default function RegisterPage(){
  setBusy(true);try{
   if(googleUser){const client=createClient();const {error:passwordError}=await client.auth.updateUser({password:pinPassword(pin),data:{login:name,nickname:name}});if(passwordError)throw passwordError;const {error}=await client.rpc("complete_tlc_onboarding",{p_login:name,p_age:Number(age),p_role:role,p_disciplines:role==="teacher"?disciplines:[]});if(error)throw error}
   else await registerStudentWithSupabase(localStorage,{login:name,password:pin,age:Number(age),role:role!,disciplines:role==="teacher"?disciplines:[]})
-  router.replace(role==="parent"?"/profile":"/");router.refresh()
+  router.replace(role==="parent"?"/profile":"/dashboard");router.refresh()
  }catch(e){setError(e instanceof Error?e.message:"Не удалось создать аккаунт.")}finally{setBusy(false)}}
  return <main className="min-h-dvh grid place-items-center p-5 bg-[#f4f9fb]"><Card className="w-full max-w-xl"><CardHeader><span className="text-sm font-bold text-cyan-700">TLC · Знакомство · {step+1}/{steps.length}</span><h1 className="text-3xl font-black text-[#102c35]">{title}</h1></CardHeader><CardContent><form onSubmit={next} className="grid gap-5">
  {current==="role"&&<div className="grid gap-3">{roles.map(item=><button key={item.id} type="button" aria-pressed={role===item.id} onClick={()=>setRole(item.id)} className={`rounded-2xl border-2 p-5 text-left text-lg font-bold ${role===item.id?"border-cyan-500 bg-cyan-50":"border-slate-200"}`}>{item.icon} {item.name}</button>)}</div>}
