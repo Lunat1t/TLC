@@ -54,7 +54,7 @@ export default function LoginPage() {
         isError: false,
       })
       setTimeout(() => {
-        router.push(sessionStorage.getItem("tlc.pending-student") ? "/profile" : new URLSearchParams(window.location.search).get("next") === "/admin/instructions/drive" ? "/admin/instructions/drive" : "/dashboard")
+        router.replace(sessionStorage.getItem("tlc.pending-student") ? "/profile" : new URLSearchParams(window.location.search).get("next") === "/admin/instructions/drive" ? "/admin/instructions/drive" : "/dashboard")
       }, 500)
     } catch (err) {
       setStatus({
@@ -78,6 +78,7 @@ export default function LoginPage() {
         </Link>
         <Link
           href="/dashboard"
+          prefetch={false}
           className="text-sm font-extrabold text-[#053543] px-4 py-2.5 rounded-full bg-white/85 hover:bg-white shadow-sm transition-transform hover:-translate-y-0.5"
         >
           ← К проектам
