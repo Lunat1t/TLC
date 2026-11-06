@@ -29,6 +29,7 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
   const [access, setAccess] = useState<{ role: string | null; canPublish: boolean }>({ role: null, canPublish: false })
   const allowed = navigationPages(access.role, access.canPublish)
   const order = reconcilePageOrder(layout.order, allowed)
+  const orderKey = order.join("|")
   const visible = allowed.length > 0 && (onHome || inLibrary || pathname === "/admin/instructions/drive" || onAvatar)
   useEffect(() => {
     let active = true
@@ -36,6 +37,14 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
     return () => { active=false }
   }, [pathname])
   const dock = navigationDock(layout)
+
+  useEffect(() => {
+    if (!visible) return
+    for (const id of order) {
+      const path = pages[id].path
+      if (path !== pathname) router.prefetch(path)
+    }
+  }, [visible, pathname, orderKey, router])
 
   useEffect(() => {
     try { const initial = dockNavigationLayout(readNavigationLayout(localStorage.getItem(NAVIGATION_LAYOUT_KEY))); setLayout(initial); setSaved(initial) } catch { /* Defaults remain usable without browser storage. */ }
@@ -110,7 +119,7 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
     if (!origin || !visible || editing || !event.changedTouches[0]) return
     const dx = event.changedTouches[0].clientX - origin.x, dy = event.changedTouches[0].clientY - origin.y
     if (Math.abs(dx) < 72 || Math.abs(dx) < Math.abs(dy) * 1.25) return
-    const current: PageId = onHome ? "projects" : inLibrary ? "instructions" : "add-instruction", index = order.indexOf(current), target = order[index + (dx < 0 ? 1 : -1)]
+    const current: PageId = onHome ? "projects" : inLibrary ? "instructions" : onAvatar ? "avatar" : "add-instruction", index = order.indexOf(current), target = order[index + (dx < 0 ? 1 : -1)]
     if (target) navigate(target)
   }
   const position = geometry ? layoutPosition(layout, geometry.bounds, geometry, geometry.reserved) : null
@@ -118,7 +127,7 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
   const railSize = layout.vertical ? (geometry?.width ?? 156) + 24 : Math.max(84, (geometry?.height ?? 60) + 24)
   const contentStyle: CSSProperties = { [dock]: railSize }
   return <div data-dock={visible ? dock : undefined} className="tlc-student-navigation-root" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onTouchCancel={() => { touchOrigin.current = null }}>
-    {visible ? <div className="tlc-page-content" style={contentStyle}>{children}</div> : children}
+    {visible ? <div key={pathname} className="tlc-page-content tlc-page-transition" style={contentStyle}>{children}</div> : children}
     {visible && <>
       {!onAvatar && <div className={`tlc-nav-rail dock-${dock}`} style={layout.vertical ? { width: railSize } : { height: railSize }} aria-hidden="true" />}
       {!onAvatar && <div ref={bounds} className={`tlc-layout-bounds${editing ? " is-editing" : ""}`} aria-hidden="true" />}

@@ -153,6 +153,9 @@
 
 /* Navigation owns an edge rail; pages scroll only inside the remaining area. */
 .tlc-page-content { position: fixed; inset: 0; min-width: 0; overflow: auto; overscroll-behavior: contain; }
+.tlc-page-transition { animation: tlc-page-enter 180ms ease-out both; }
+@keyframes tlc-page-enter { from { opacity: .72; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .tlc-page-transition { animation: none; } }
 .tlc-page-content > .home-shell { min-height: 100%; }
 .tlc-page-content .home-main, .tlc-page-content .instruction-page { padding-bottom: 32px; }
 .tlc-nav-rail { position: fixed; background: #f7fbfc; z-index: 40; pointer-events: none; border-color: #dbe9ec; }
