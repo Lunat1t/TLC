@@ -26,7 +26,11 @@ export interface AvatarState {
   eyeColor: string
   colors: string[]
   expression: OrbExpressionId
+  bodyColor: string
+  characterEyeColor: string
 }
+
+export const DEFAULT_AVATAR_COLORS = { bodyColor: "#43c5e4", characterEyeColor: "#ffffff" } as const
 
 export interface AuthState {
   user: UserSession | null
@@ -104,7 +108,13 @@ export function normalizeAvatarState(rawAvatar?: Partial<AvatarState> | null): A
     ...orb,
     expression:
       ORB_EXPRESSIONS.find((item) => item.id === rawAvatar?.expression)?.id || "happy",
+    bodyColor: isHexColor(rawAvatar?.bodyColor) ? rawAvatar!.bodyColor! : DEFAULT_AVATAR_COLORS.bodyColor,
+    characterEyeColor: isHexColor(rawAvatar?.characterEyeColor) ? rawAvatar!.characterEyeColor! : DEFAULT_AVATAR_COLORS.characterEyeColor,
   }
+}
+
+function isHexColor(value: unknown): value is string {
+  return typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value)
 }
 
 export function loadAuthState(storage?: Storage | null): AuthState {

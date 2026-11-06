@@ -23,6 +23,8 @@
   backdrop-filter: blur(14px);
 }
 
+.tlc-bottom-nav.is-avatar-page { z-index: 10002; }
+
 .tlc-bottom-nav-item {
   display: flex;
   align-items: center;

@@ -1,14 +1,14 @@
 export const NAVIGATION_LAYOUT_KEY = "tlc.navigation-layout.v1"
-export type PageId = "projects" | "instructions" | "add-instruction"
+export type PageId = "projects" | "instructions" | "add-instruction" | "avatar"
 export type NavigationLayout = { x: number; y: number; vertical: boolean; order: PageId[] }
-export const defaultNavigationLayout = (): NavigationLayout => ({ x: .5, y: 1, vertical: false, order: ["projects", "instructions"] })
+export const defaultNavigationLayout = (): NavigationLayout => ({ x: .5, y: 1, vertical: false, order: ["projects", "instructions", "avatar"] })
 const unit = (value: unknown, fallback: number) => typeof value === "number" && Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : fallback
 export function readNavigationLayout(raw: string | null): NavigationLayout {
   try {
     const data = JSON.parse(raw || "null")
     if (!data || typeof data !== "object") return defaultNavigationLayout()
     return { x: unit(data.x, .5), y: unit(data.y, 1), vertical: data.vertical === true,
-      order: Array.isArray(data.order) && data.order.length >= 2 && data.order.length <= 3 && new Set(data.order).size === data.order.length && data.order.every((id: unknown) => ["projects", "instructions", "add-instruction"].includes(String(id))) && data.order.includes("projects") && data.order.includes("instructions") ? [...data.order] : ["projects", "instructions"] }
+      order: Array.isArray(data.order) && data.order.length >= 2 && data.order.length <= 4 && new Set(data.order).size === data.order.length && data.order.every((id: unknown) => ["projects", "instructions", "add-instruction", "avatar"].includes(String(id))) && data.order.includes("projects") && data.order.includes("instructions") ? [...data.order] : ["projects", "instructions", "avatar"] }
   } catch { return defaultNavigationLayout() }
 }
 export type LayoutBounds = { left: number; top: number; width: number; height: number }
@@ -38,7 +38,7 @@ export function dockNavigationLayout(layout: NavigationLayout, bounds?: LayoutBo
 
 export function navigationPages(role: string | null, canPublish = false): PageId[] {
   if (!role || role === "parent") return []
-  return canPublish ? ["projects", "instructions", "add-instruction"] : ["projects", "instructions"]
+  return canPublish ? ["projects", "instructions", "add-instruction", "avatar"] : ["projects", "instructions", "avatar"]
 }
 export function reconcilePageOrder(order: PageId[], allowed: PageId[]): PageId[] {
   return [...order.filter(id=>allowed.includes(id)), ...allowed.filter(id=>!order.includes(id))]
