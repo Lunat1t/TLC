@@ -9,7 +9,8 @@ type Language = "ru" | "kk"
 const copy = {
   ru: {
     welcome: "Добро пожаловать",
-    start: "Начать",
+    start: "Записать на пробное занятие",
+    createAccount: "Создать аккаунт ученика или учителя",
     account: "У меня уже есть аккаунт",
     services: "Наши услуги",
     items: ["LEGO WeDo", "LEGO SPIKE", "LEGO EV3", "Arduino", "Программирование"],
@@ -17,7 +18,8 @@ const copy = {
   },
   kk: {
     welcome: "Қош келдіңіз",
-    start: "Бастау",
+    start: "Сынақ сабағына жазылу",
+    createAccount: "Оқушы немесе мұғалім аккаунтын жасау",
     account: "Менде аккаунт бар",
     services: "Біздің қызметтер",
     items: ["LEGO WeDo", "LEGO SPIKE", "LEGO EV3", "Arduino", "Бағдарламалау"],
@@ -56,8 +58,9 @@ export default function WelcomePage() {
       <section className="welcome-main" aria-labelledby="welcome-title">
         <h1 id="welcome-title">{text.welcome}</h1>
         <div className="welcome-actions">
-          <Link className="welcome-start" href="/register">{text.start}</Link>
+          <Link className="welcome-start" href="/trial">{text.start}</Link>
           <Link className="welcome-login" href="/login">{text.account}</Link>
+          <Link className="welcome-register" href="/register">{text.createAccount}</Link>
         </div>
       </section>
 

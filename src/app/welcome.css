@@ -76,6 +76,8 @@
 .welcome-start:hover { background: #078fa0; }
 .welcome-login { color: #087f91; border: 2px solid #dce8eb; background: #fff; }
 .welcome-login:hover { background: #f6fbfc; }
+.welcome-register { min-height: auto !important; padding: 2px 8px !important; color: #668087; font-size: 12px !important; font-weight: 700 !important; text-decoration: none; }
+.welcome-register:hover { color: #087f91; text-decoration: underline; }
 .welcome-services {
   margin: 0 calc(clamp(20px, 6vw, 80px) * -1);
   padding: 24px clamp(20px, 6vw, 80px) 28px;
