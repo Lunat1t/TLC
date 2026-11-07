@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react"
 
-export function useAvatarMotion() {
+export function useAvatarMotion({ centerX = 310, centerY = 160 } = {}) {
   const characterRef = useRef<SVGSVGElement>(null)
   const gazeRef = useRef<SVGGElement>(null)
   const eyelidsRef = useRef<SVGGElement>(null)
@@ -31,7 +31,7 @@ export function useAvatarMotion() {
       const matrix = character!.getScreenCTM()
       if (!matrix) return
       const point = new DOMPoint(target.x, target.y).matrixTransform(matrix.inverse())
-      const dx = (point.x - 310) / 180, dy = (point.y - 160) / 180
+      const dx = (point.x - centerX) / 180, dy = (point.y - centerY) / 180
       const distance = Math.max(1, Math.hypot(dx, dy))
       gaze!.style.transform = `translate(${dx / distance * 32}px, ${dy / distance * 24}px)`
     }
@@ -94,7 +94,7 @@ export function useAvatarMotion() {
       document.removeEventListener("visibilitychange", syncMotion)
       reducedMotion.removeEventListener("change", syncMotion)
     }
-  }, [])
+  }, [centerX, centerY])
 
   return { characterRef, gazeRef, eyelidsRef }
 }

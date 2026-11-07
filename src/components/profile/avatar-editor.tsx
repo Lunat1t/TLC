@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react"
 import { Check, Eye, Gem, UserRound } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { DEFAULT_AVATAR_COLORS, type AvatarState } from "@/lib/auth"
+import AvatarDarwinV3 from "./avatar-darwin-v3"
 import { MixMatchAccessoryArt } from "./mix-match-accessory-art"
 import { useAccess } from "@/components/auth/access-provider"
 import { useAvatarMotion } from "./use-avatar-motion"
@@ -25,7 +26,7 @@ const PALETTE = [
 ]
 
 export function AvatarEditor({ initialAvatar }: { initialAvatar: Partial<AvatarState> | null }) {
-  const { characterRef, gazeRef, eyelidsRef } = useAvatarMotion()
+  const { characterRef, gazeRef, eyelidsRef } = useAvatarMotion({ centerX: 344.5, centerY: 250 })
   const { updateProfile } = useAccess()
   const [avatar, setAvatar] = useState({
     bodyColor: initialAvatar?.bodyColor || DEFAULT_AVATAR_COLORS.bodyColor,
@@ -128,32 +129,18 @@ export function AvatarEditor({ initialAvatar }: { initialAvatar: Partial<AvatarS
             <h2 id="avatar-editor-title">Настрой аватар</h2>
           </div>
           <div className="avatar-character-wrap" aria-label="Предпросмотр персонажа">
-            <svg ref={characterRef} className="avatar-character" viewBox={accessoryEquipped ? "0 -120 620 1020" : "0 0 620 900"} role="img" aria-label="Персонаж с выбранными цветами">
-              <g className="avatar-breath">
-              {accessoryEquipped && <MixMatchAccessoryArt transform="translate(232 -100)" />}
-              <g className="avatar-body-shape" fill={avatar.bodyColor}>
-                <g data-part="feet">
-                  <path d="M170 760H280V890H130C101 890 78 867 78 838V812C78 783 101 760 130 760Z" />
-                  <path d="M340 760H490C519 760 542 783 542 812V838C542 867 519 890 490 890H340Z" />
-                </g>
-                <g data-part="legs">
-                  <path d="M175 475H280V790H175Z" />
-                  <path d="M340 475H445V790H340Z" />
-                </g>
-                <g data-part="arms">
-                  <path d="M40 465H150V555C150 588 124 615 92 615C59 615 40 589 40 558Z" />
-                  <path d="M470 465H580V558C580 589 561 615 528 615C496 615 470 588 470 555Z" />
-                </g>
-                <path d="M105 20H515C551 20 580 49 580 85V500H40V85C40 49 69 20 105 20Z" />
-              </g>
-              <g ref={gazeRef} className="avatar-face" fill={avatar.characterEyeColor} aria-hidden="true">
-                <g ref={eyelidsRef} className="avatar-eyelids">
-                <rect x="212" y="92" width="58" height="136" rx="29" />
-                <rect x="350" y="92" width="58" height="136" rx="29" />
-                </g>
-              </g>
-              </g>
-            </svg>
+            <AvatarDarwinV3
+              className="avatar-character"
+              viewBox={accessoryEquipped ? "0 -50 689 1110" : "0 0 689 1060"}
+              bodyColor={avatar.bodyColor}
+              eyeColor={avatar.characterEyeColor}
+              characterRef={characterRef}
+              gazeRef={gazeRef}
+              eyelidsRef={eyelidsRef}
+              animate
+            >
+              {accessoryEquipped && <MixMatchAccessoryArt transform="translate(266.5 -35)" />}
+            </AvatarDarwinV3>
           </div>
         </div>
 
