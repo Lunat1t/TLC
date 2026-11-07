@@ -47,3 +47,49 @@
 .avatar-breath{transform-box:fill-box;transform-origin:50% 100%;animation:avatar-breathe 4.8s ease-in-out infinite;animation-play-state:var(--avatar-animation-state,running)}
 @keyframes avatar-breathe{0%,100%{transform:scale(1,1)}45%{transform:scale(1.012,1.018)}}
 @media(prefers-reduced-motion:reduce){.avatar-breath{animation:none}}
+
+/* Landscape tablets: keep the character and controls visible at the same time. */
+@media (orientation: landscape) and (min-width: 800px) {
+  .avatar-editor-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(350px, 40%);
+    grid-template-rows: minmax(0, 1fr);
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+  .avatar-stage { min-width: 0; }
+  .avatar-editor-heading { inset-inline-start: max(24px, env(safe-area-inset-left)); }
+  .avatar-character-wrap { inset: 60px 16px 16px; transform: none; }
+  .avatar-character { width: 100%; max-width: 460px; height: 92%; }
+  .camera-eyes .avatar-character { transform: scale(1.8); }
+  .avatar-customizer {
+    min-width: 0;
+    gap: 18px;
+    border-left: 1px solid #dbe7ea;
+    padding: 12px max(20px, env(safe-area-inset-right)) 24px;
+    scrollbar-gutter: stable;
+  }
+  .avatar-tabs { padding-top: 0; }
+  .avatar-tabs button { min-height: 60px; touch-action: manipulation; }
+  .avatar-color-heading h3 { font-size: clamp(22px, 2.2vw, 28px); }
+  .avatar-color-heading p { line-height: 1.5; }
+  .avatar-palette {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(48px, 1fr));
+    gap: 10px;
+    overflow: visible;
+    padding: 3px;
+  }
+  .avatar-swatch {
+    width: 100%;
+    height: auto;
+    min-height: 48px;
+    aspect-ratio: 1;
+    flex-basis: auto;
+    border-radius: 16px;
+    touch-action: manipulation;
+  }
+  .avatar-swatch:before { inset: 9px; border-radius: 9px; }
+  .avatar-color-label { margin-top: -8px; }
+  .avatar-save-row { margin-top: 0; }
+  .avatar-accessory-control { grid-template-columns: 78px minmax(0, 1fr); }
+  .avatar-accessory-art { width: 78px; }
+}
