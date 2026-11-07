@@ -8,59 +8,47 @@ import { Card } from "@/components/ui/card"
 import { createClient } from "@/utils/supabase/client"
 import { useAccess } from "@/components/auth/access-provider"
 
-type Profile = {
-  nickname: string
-  age: number | null
-  role: string
-  disciplines: string[]
-  student_link_token: string
-  onboarding_complete: boolean
-}
 type Family = { account_id: string; name: string; role: string }
 
 export default function ProfilePage() {
   const router = useRouter()
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [family, setFamily] = useState<Family[]>([])
-  const [qr, setQr] = useState("")
+  const [familyState, setFamilyState] = useState<{ owner: string | null; items: Family[] }>({ owner: null, items: [] })
+  const [qrState, setQrState] = useState<{ owner: string | null; value: string }>({ owner: null, value: "" })
   const [pending, setPending] = useState("")
   const [message, setMessage] = useState("")
-  const { isAdmin: admin } = useAccess()
+  const { isAdmin: admin, profile, ready, userId, error: profileError } = useAccess()
+  const family = familyState.owner === userId ? familyState.items : []
+  const qr = qrState.owner === userId ? qrState.value : ""
+  function setFamily(items: Family[]) { setFamilyState({ owner: userId, items }) }
+  function setQr(value: string) { setQrState({ owner: userId, value }) }
   const [scanning, setScanning] = useState(false)
   const [busy, setBusy] = useState(false)
   const scanner = useRef<import("html5-qrcode").Html5Qrcode | null>(null)
 
-  async function refresh() {
-    const client = createClient()
-    const { data: { session } } = await client.auth.getSession()
-    const user = session?.user
-    if (!user) {
-      router.replace("/login")
-      return
+  useEffect(() => {
+    if (!ready || profileError) return
+    if (!userId) { router.replace("/login"); return }
+    if (!profile?.onboarding_complete) { router.replace("/register"); return }
+    let active = true
+    const controller = new AbortController()
+    setFamily([])
+    setQr("")
+    void createClient().rpc("my_family_links").abortSignal(controller.signal).then(({ data, error }) => {
+      if (!active) return
+      if (error) setMessage("Не удалось загрузить связанные аккаунты.")
+      else setFamily(data || [])
+    })
+    if (profile.role === "student") {
+      const token = profile.student_link_token
+      void import("qrcode").then(QRCode => QRCode.toDataURL(`${window.location.origin}/link-student?token=${token}`, { width: 320, margin: 2 }))
+        .then(value => { if (active) setQr(value) })
+        .catch(() => { if (active) setMessage("Не удалось создать QR ученика.") })
     }
-    const { data, error } = await client
-      .from("profiles")
-      .select("nickname,age,role,disciplines,student_link_token,onboarding_complete")
-      .eq("id", user.id)
-      .single()
-    if (error) throw error
-    if (!data.onboarding_complete) {
-      router.replace("/register")
-      return
-    }
-    setProfile(data)
-    const links = await client.rpc("my_family_links")
-    if (links.error) throw links.error
-    setFamily(links.data || [])
-    if (data.role === "student") {
-      const QRCode = await import("qrcode")
-      setQr(await QRCode.toDataURL(`${window.location.origin}/link-student?token=${data.student_link_token}`, { width: 320, margin: 2 }))
-    }
-  }
+    return () => { active = false; controller.abort() }
+  }, [ready, userId, profile?.id, profile?.role, profile?.student_link_token, profile?.onboarding_complete, profileError, router])
 
   useEffect(() => {
     setPending(sessionStorage.getItem("tlc.pending-student") || "")
-    void refresh().catch(() => setMessage("Не удалось загрузить профиль. Обновите страницу."))
     return () => {
       if (scanner.current?.isScanning) void scanner.current.stop().catch(() => {})
     }
@@ -108,7 +96,8 @@ export default function ProfilePage() {
       setMessage(`Ученик ${data} связан с вашим аккаунтом.`)
       setPending("")
       sessionStorage.removeItem("tlc.pending-student")
-      await refresh()
+      const links = await createClient().rpc("my_family_links")
+      if (!links.error) setFamily(links.data || [])
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Не удалось связать аккаунты.")
     } finally {
@@ -123,6 +112,7 @@ export default function ProfilePage() {
         {profile?.role === "parent" && <button type="button" className="justify-self-end font-bold text-cyan-800" onClick={async () => { await createClient().auth.signOut(); router.replace("/"); router.refresh() }}>Выйти из аккаунта</button>}
         <Card className="grid gap-4 p-6">
           <h1 className="text-3xl font-black">Профиль</h1>
+          {profileError && <p role="alert">Не удалось обновить профиль. Попробуйте позже.</p>}
           {profile ? <>
             <h2 className="text-2xl font-bold">{profile.nickname}</h2>
             <p>{({ student: "Ученик", teacher: "Учитель", parent: "Родитель" })[profile.role]}{profile.role !== "parent" && profile.age !== null && <> · Возраст: {profile.age}</>}</p>

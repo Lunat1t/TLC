@@ -39,6 +39,7 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!visible) return
     for (const id of order) {
+      if (id === "add-instruction") continue
       const path = pages[id].path
       if (path !== pathname && Date.now() - (warmed.current.get(path) ?? 0) > 30_000) {
         warmed.current.set(path, Date.now())
@@ -135,7 +136,7 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
       {!onAvatar && <div ref={bounds} className={`tlc-layout-bounds${editing ? " is-editing" : ""}`} aria-hidden="true" />}
       <nav ref={nav} style={style} className={`tlc-bottom-nav${layout.vertical ? " is-vertical" : ""}${editing ? " is-editing" : ""}${onAvatar ? " is-avatar-page" : ""}`} aria-label="Навигация TLC" data-swipe-ignore>
         {editing && <button type="button" className="tlc-nav-move" aria-label="Переместить панель" title="Перетащите панель или используйте стрелки клавиатуры" onPointerDown={e => startDrag(e)} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} onKeyDown={moveWithKeys}><GripVertical size={20} aria-hidden="true" /></button>}
-        {order.map(id => { const page = pages[id], active = id === "projects" ? onHome : id === "instructions" ? inLibrary : pathname === page.path; return <button key={id} data-page={id} type="button" className={`tlc-bottom-nav-item${active ? " is-active" : ""}`} aria-label={page.label} aria-current={active ? "page" : undefined} title={editing ? `${page.label}: перетащите для смены порядка` : page.label} onClick={() => navigate(id)} onPointerDown={e => startDrag(e, id)} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}><page.icon size={22} strokeWidth={2} aria-hidden="true" /><span>{page.label}</span></button> })}
+        {order.map(id => { const page = pages[id], active = id === "projects" ? onHome : id === "instructions" ? inLibrary : pathname === page.path; return <button key={id} data-page={id} type="button" className={`tlc-bottom-nav-item${active ? " is-active" : ""}`} aria-label={page.label} aria-current={active ? "page" : undefined} title={editing ? `${page.label}: перетащите для смены порядка` : page.label} onPointerEnter={() => { if (!editing && id === "add-instruction") router.prefetch(page.path) }} onFocus={() => { if (!editing && id === "add-instruction") router.prefetch(page.path) }} onClick={() => navigate(id)} onPointerDown={e => startDrag(e, id)} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}><page.icon size={22} strokeWidth={2} aria-hidden="true" /><span>{page.label}</span></button> })}
       </nav>
       {!onAvatar && <button ref={gear} type="button" className={`tlc-layout-gear${editing ? " is-editing" : ""}`} aria-label="Настроить интерфейс" aria-expanded={menu} aria-controls="tlc-layout-settings" onClick={() => setMenu(!menu)}><Settings size={22} aria-hidden="true" /></button>}
       {!onAvatar && menu && <div ref={settings} id="tlc-layout-settings" className="tlc-layout-settings" role="dialog" aria-label="Настройка интерфейса" data-swipe-ignore>

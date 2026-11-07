@@ -3,6 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useAccess } from "@/components/auth/access-provider"
 import { ArrowLeft, Blocks, Bot, Check, Code2, Cpu, GraduationCap, Heart, KeyRound, Smile, Sparkles, UserRound } from "lucide-react"
 import { registerStudentWithSupabase } from "@/lib/auth"
 import { createClient } from "@/utils/supabase/client"
@@ -25,6 +26,7 @@ type Role = typeof roles[number]["id"]
 
 export default function RegisterPage() {
   const router = useRouter()
+  const { refreshProfile } = useAccess()
   const [language, setLanguage] = React.useState<"ru" | "kk">("ru")
   const [selectedCourses, setSelectedCourses] = React.useState<string[]>([])
   const [role, setRole] = React.useState<Role | null>(null)
@@ -87,6 +89,7 @@ export default function RegisterPage() {
         if (error) throw error
       } else await registerStudentWithSupabase(localStorage, { login, firstName: name, lastName, password, age: role === "parent" ? null : Number(age), role: role!, disciplines: disciplines })
       if (role !== "parent") localStorage.setItem("tlc.learning-interests", JSON.stringify(selectedCourses))
+      await refreshProfile()
       router.replace(role === "parent" ? "/profile" : "/dashboard")
       router.refresh()
     } catch (e) { setError(e instanceof Error ? e.message : t("Не удалось создать аккаунт. Попробуй ещё раз.", "Аккаунт жасау мүмкін болмады. Қайта көр.")) }

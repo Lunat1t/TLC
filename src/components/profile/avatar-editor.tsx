@@ -5,6 +5,7 @@ import { Check, Eye, Gem, UserRound } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { DEFAULT_AVATAR_COLORS, type AvatarState } from "@/lib/auth"
 import { MixMatchAccessoryArt } from "./mix-match-accessory-art"
+import { useAccess } from "@/components/auth/access-provider"
 import { useAvatarMotion } from "./use-avatar-motion"
 import "./avatar-editor.css"
 
@@ -25,6 +26,7 @@ const PALETTE = [
 
 export function AvatarEditor({ initialAvatar }: { initialAvatar: Partial<AvatarState> | null }) {
   const { characterRef, gazeRef, eyelidsRef } = useAvatarMotion()
+  const { updateProfile } = useAccess()
   const [avatar, setAvatar] = useState({
     bodyColor: initialAvatar?.bodyColor || DEFAULT_AVATAR_COLORS.bodyColor,
     characterEyeColor: initialAvatar?.characterEyeColor || DEFAULT_AVATAR_COLORS.characterEyeColor,
@@ -88,6 +90,7 @@ export function AvatarEditor({ initialAvatar }: { initialAvatar: Partial<AvatarS
         .update({ avatar: nextAvatar, updated_at: new Date().toISOString() })
         .eq("id", user.id)
       if (saveError) throw saveError
+      updateProfile({ avatar: nextAvatar })
 
       const { error: metadataError } = await client.auth.updateUser({ data: { avatar: nextAvatar } })
       if (metadataError) throw metadataError
