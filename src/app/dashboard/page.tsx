@@ -299,7 +299,7 @@ export default function HomePage() {
               <p className="home-empty">Здесь появятся ваши проекты. Создайте первый, чтобы начать.</p>
             ) : sortedProjects.map((project) => (
               <div key={project.id} className="home-project-item">
-                <Link href={`/editor?id=${encodeURIComponent(project.id)}`} className="home-project-row" title={`Открыть проект ${project.name}`}>
+                <Link prefetch={false} href={`/editor?id=${encodeURIComponent(project.id)}`} className="home-project-row" title={`Открыть проект ${project.name}`}>
                   <FolderOpen size={19} aria-hidden="true" />
                   <span className="home-project-copy"><strong>{project.name}</strong><small>{HUBS[project.hub]} · {formatDate(project.updatedAt)}</small></span>
                 </Link>

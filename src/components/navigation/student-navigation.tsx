@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react"
 import { useAccess } from "@/components/auth/access-provider"
+import { useRouteWarmup } from "@/components/auth/app-startup"
 import { ArrowDown, ArrowUp, BookOpen, Check, FolderOpen, GripVertical, FilePlus2, Move, RotateCcw, Settings, UserRound, X } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import type { CSSProperties, KeyboardEvent, PointerEvent, ReactNode, TouchEvent } from "react"
@@ -18,6 +19,7 @@ const pages = {
 type Drag = { pointerId: number; x: number; y: number; left: number; top: number; page?: PageId; moved: boolean }
 export function StudentNavigation({ children }: { children: ReactNode }) {
   const pathname = usePathname(), router = useRouter()
+  const warmRoute = useRouteWarmup()
   const [isPending, startTransition] = useTransition()
   const [layout, setLayout] = useState<NavigationLayout>(defaultNavigationLayout)
   const [saved, setSaved] = useState<NavigationLayout>(defaultNavigationLayout)
@@ -25,28 +27,14 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
   const [message, setMessage] = useState("")
   const [geometry, setGeometry] = useState<{ bounds: LayoutBounds; width: number; height: number; reserved?: LayoutBounds } | null>(null)
   const nav = useRef<HTMLElement>(null), bounds = useRef<HTMLDivElement>(null), settings = useRef<HTMLDivElement>(null), gear = useRef<HTMLButtonElement>(null)
-  const warmed = useRef(new Map<string, number>())
   const drag = useRef<Drag | null>(null)
   const touchOrigin = useRef<{ x: number; y: number } | null>(null)
   const onHome = pathname === "/dashboard", inLibrary = pathname === "/instructions" || pathname.startsWith("/instructions/"), onAvatar = pathname === "/avatar"
   const access = useAccess()
   const allowed = navigationPages(access.role, access.canPublish)
   const order = reconcilePageOrder(layout.order, allowed)
-  const orderKey = order.join("|")
   const visible = allowed.length > 0 && (onHome || inLibrary || pathname === "/admin/instructions/drive" || onAvatar)
   const dock = navigationDock(layout)
-
-  useEffect(() => {
-    if (!visible) return
-    for (const id of order) {
-      if (id === "add-instruction") continue
-      const path = pages[id].path
-      if (path !== pathname && Date.now() - (warmed.current.get(path) ?? 0) > 30_000) {
-        warmed.current.set(path, Date.now())
-        router.prefetch(path)
-      }
-    }
-  }, [visible, pathname, orderKey, router])
 
   useEffect(() => {
     try { const initial = dockNavigationLayout(readNavigationLayout(localStorage.getItem(NAVIGATION_LAYOUT_KEY))); setLayout(initial); setSaved(initial) } catch { /* Defaults remain usable without browser storage. */ }
@@ -136,7 +124,7 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
       {!onAvatar && <div ref={bounds} className={`tlc-layout-bounds${editing ? " is-editing" : ""}`} aria-hidden="true" />}
       <nav ref={nav} style={style} className={`tlc-bottom-nav${layout.vertical ? " is-vertical" : ""}${editing ? " is-editing" : ""}${onAvatar ? " is-avatar-page" : ""}`} aria-label="Навигация TLC" data-swipe-ignore>
         {editing && <button type="button" className="tlc-nav-move" aria-label="Переместить панель" title="Перетащите панель или используйте стрелки клавиатуры" onPointerDown={e => startDrag(e)} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} onKeyDown={moveWithKeys}><GripVertical size={20} aria-hidden="true" /></button>}
-        {order.map(id => { const page = pages[id], active = id === "projects" ? onHome : id === "instructions" ? inLibrary : pathname === page.path; return <button key={id} data-page={id} type="button" className={`tlc-bottom-nav-item${active ? " is-active" : ""}`} aria-label={page.label} aria-current={active ? "page" : undefined} title={editing ? `${page.label}: перетащите для смены порядка` : page.label} onPointerEnter={() => { if (!editing && id === "add-instruction") router.prefetch(page.path) }} onFocus={() => { if (!editing && id === "add-instruction") router.prefetch(page.path) }} onClick={() => navigate(id)} onPointerDown={e => startDrag(e, id)} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}><page.icon size={22} strokeWidth={2} aria-hidden="true" /><span>{page.label}</span></button> })}
+        {order.map(id => { const page = pages[id], active = id === "projects" ? onHome : id === "instructions" ? inLibrary : pathname === page.path; return <button key={id} data-page={id} type="button" className={`tlc-bottom-nav-item${active ? " is-active" : ""}`} aria-label={page.label} aria-current={active ? "page" : undefined} title={editing ? `${page.label}: перетащите для смены порядка` : page.label} onPointerEnter={() => { if (!editing) warmRoute(page.path) }} onFocus={() => { if (!editing) warmRoute(page.path) }} onClick={() => navigate(id)} onPointerDown={e => startDrag(e, id)} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}><page.icon size={22} strokeWidth={2} aria-hidden="true" /><span>{page.label}</span></button> })}
       </nav>
       {!onAvatar && <button ref={gear} type="button" className={`tlc-layout-gear${editing ? " is-editing" : ""}`} aria-label="Настроить интерфейс" aria-expanded={menu} aria-controls="tlc-layout-settings" onClick={() => setMenu(!menu)}><Settings size={22} aria-hidden="true" /></button>}
       {!onAvatar && menu && <div ref={settings} id="tlc-layout-settings" className="tlc-layout-settings" role="dialog" aria-label="Настройка интерфейса" data-swipe-ignore>
