@@ -1,8 +1,7 @@
 "use client"
 
-import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useState, type FormEvent } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import { useAccess } from "@/components/auth/access-provider"
 import { driveDownloadPath } from "@/lib/instructions/drive-links"
 import type { CatalogCard } from "@/lib/instructions/types"
@@ -23,11 +22,23 @@ const blankEditor: EditorData = { id: null, title: "", summary: "", kit: "spike"
 export function InstructionCatalogCards({ items }: { items: CatalogCard[] }) {
   const router = useRouter()
   const { isAdmin, ready } = useAccess()
+  const [selected, setSelected] = useState<CatalogCard | null>(null)
   const [editor, setEditor] = useState<EditorData | null>(null)
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
   const [notice, setNotice] = useState("")
+
+  useEffect(() => {
+    if (!selected && !editor) return
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key !== "Escape" || saving) return
+      if (editor) setEditor(null)
+      else setSelected(null)
+    }
+    window.addEventListener("keydown", closeOnEscape)
+    return () => window.removeEventListener("keydown", closeOnEscape)
+  }, [editor, saving, selected])
 
   async function editCard(id: string) {
     setError(""); setNotice(""); setLoadingId(id)
@@ -39,7 +50,12 @@ export function InstructionCatalogCards({ items }: { items: CatalogCard[] }) {
         id: body.instruction.id, title: body.instruction.title, summary: body.instruction.summary || "",
         kit: body.instruction.kit, topics: body.instruction.topics || [], fileId: body.fileId || "", coverUrl: body.coverUrl || null,
       })
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Не удалось загрузить карточку.") }
+      setSelected(null)
+      return true
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Не удалось загрузить карточку.")
+      return false
+    }
     finally { setLoadingId(null) }
   }
 
@@ -69,10 +85,9 @@ export function InstructionCatalogCards({ items }: { items: CatalogCard[] }) {
   return <>
     {ready && isAdmin && <div className="instruction-admin-toolbar"><span>Управление каталогом</span><button type="button" onClick={createCard}>Добавить инструкцию</button></div>}
     {notice && <p className="instruction-admin-notice" role="status">{notice}</p>}
-    {error && !editor && <p className="instruction-admin-error" role="alert">{error}</p>}
+    {error && !editor && !selected && <p className="instruction-admin-error" role="alert">{error}</p>}
     <div className="instruction-grid">
       {items.map((item, index) => {
-        const downloadUrl = driveDownloadPath(item.slug, item.hasPdf)
         const coverUrl = item.coverAssetId
           ? `/api/instruction-media/${item.id}/${item.coverAssetId}`
           : item.hasPdf ? `/api/instructions/${encodeURIComponent(item.slug)}/preview` : null
@@ -81,15 +96,39 @@ export function InstructionCatalogCards({ items }: { items: CatalogCard[] }) {
           <div className="instruction-card-copy"><h2>{item.title}</h2><p>{item.summary}</p><div className="instruction-topics">{item.topics.map((topic) => <span key={topic}>{topic}</span>)}</div></div>
         </>
         return <div className="instruction-admin-shell" key={item.id}>
-          {downloadUrl
-            ? <a href={downloadUrl} className="instruction-card" rel="noreferrer" referrerPolicy="no-referrer">{content}</a>
-            : <Link href={`/instructions/${item.slug}`} className="instruction-card">{content}</Link>}
-          {ready && isAdmin && <button type="button" className="instruction-admin-edit" onClick={() => void editCard(item.id)} disabled={loadingId === item.id} aria-label={`Изменить карточку: ${item.title}`}>
-            {loadingId === item.id ? "Открываю…" : "Изменить"}
-          </button>}
+          <button type="button" className="instruction-card" onClick={() => { setError(""); setSelected(item) }} aria-label={`Открыть инструкцию: ${item.title}`}>
+            {content}
+          </button>
         </div>
       })}
     </div>
+
+    {selected && (() => {
+      const downloadUrl = driveDownloadPath(selected.slug, selected.hasPdf)
+      const coverUrl = selected.coverAssetId
+        ? `/api/instruction-media/${selected.id}/${selected.coverAssetId}`
+        : selected.hasPdf ? `/api/instructions/${encodeURIComponent(selected.slug)}/preview` : null
+      return <div className="instruction-admin-backdrop instruction-card-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) setSelected(null) }}>
+        <section className="instruction-card-dialog" role="dialog" aria-modal="true" aria-labelledby="instruction-card-dialog-title">
+          <button type="button" className="instruction-card-dialog-close" onClick={() => setSelected(null)} aria-label="Закрыть">×</button>
+          <div className="instruction-card-dialog-cover">
+            {coverUrl ? <img src={coverUrl} alt={selected.title} /> : <span aria-hidden="true">◈</span>}
+          </div>
+          <div className="instruction-card-dialog-content">
+            <h2 id="instruction-card-dialog-title">{selected.title}</h2>
+            {error && <p className="instruction-admin-error" role="alert">{error}</p>}
+            <div className="instruction-card-dialog-actions">
+              {downloadUrl
+                ? <a href={downloadUrl} rel="noreferrer" referrerPolicy="no-referrer">Скачать PDF</a>
+                : <button type="button" disabled>PDF недоступен</button>}
+              {ready && isAdmin && <button type="button" className="instruction-card-edit-action" onClick={() => void editCard(selected.id)} disabled={loadingId === selected.id}>
+                {loadingId === selected.id ? "Открываю…" : "Редактировать"}
+              </button>}
+            </div>
+          </div>
+        </section>
+      </div>
+    })()}
 
     {editor && <div className="instruction-admin-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) setEditor(null) }}>
       <section className="instruction-admin-dialog" role="dialog" aria-modal="true" aria-labelledby="instruction-admin-title">
