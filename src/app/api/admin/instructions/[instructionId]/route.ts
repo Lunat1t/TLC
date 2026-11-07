@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto"
 import { NextResponse } from "next/server"
 import { revalidateTag } from "next/cache"
-import { errorResponse, InstructionError, requireAdmin } from "@/lib/instructions/access"
+import { errorResponse, InstructionError, requireInstructionPublisher } from "@/lib/instructions/access"
 import { instructionBucket } from "@/lib/instructions/validation"
 import { MAX_PDF_BYTES, publicDriveDownloadUrl } from "@/lib/instructions/google-drive"
 import { MAX_AUTO_PREVIEW_PDF_BYTES, normalizeCoverImage, renderFirstPagePreview } from "@/lib/instructions/pdf-preview"
@@ -37,7 +37,7 @@ function parsedTopics(value: FormDataEntryValue | null) {
 
 export async function GET(_request: Request, context: { params: Promise<{ instructionId: string }> }) {
   try {
-    const { client } = await requireAdmin()
+    const { client } = await requireInstructionPublisher()
     const { instructionId } = await context.params
     if (!uuidPattern.test(instructionId)) throw new InstructionError(400, "invalid_instruction", "Некорректная карточка инструкции.")
     const { data: instruction, error } = await client.from("instructions")
@@ -45,19 +45,12 @@ export async function GET(_request: Request, context: { params: Promise<{ instru
       .eq("id", instructionId).eq("status", "published").maybeSingle()
     if (error) throw new InstructionError(503, "instruction_unavailable", "Не удалось загрузить карточку инструкции.")
     if (!instruction) throw new InstructionError(404, "instruction_not_found", "Карточка инструкции не найдена.")
-    const [{ data: document, error: documentError }, { data: cover, error: coverError }] = await Promise.all([
-      client.from("instruction_assets").select("source_file_id,byte_size")
-        .eq("instruction_id", instructionId).eq("kind", "document").eq("is_current", true).maybeSingle(),
-      instruction.cover_asset_id
-        ? client.from("instruction_assets").select("id").eq("id", instruction.cover_asset_id).eq("instruction_id", instructionId).maybeSingle()
-        : Promise.resolve({ data: null, error: null }),
-    ])
-    if (documentError || coverError) throw new InstructionError(503, "assets_unavailable", "Не удалось загрузить файлы карточки.")
+    const { data: fileId, error: documentError } = await client.rpc("published_instruction_drive_file", { p_slug: instruction.slug })
+    if (documentError) throw new InstructionError(503, "assets_unavailable", "Не удалось загрузить файл карточки.")
     return NextResponse.json({
       instruction,
-      fileId: document?.source_file_id || "",
-      fileSize: Number(document?.byte_size || 0),
-      coverUrl: cover ? `/api/instruction-media/${instructionId}/${cover.id}` : null,
+      fileId: fileId || "",
+      coverUrl: instruction.cover_asset_id ? `/api/instruction-media/${instructionId}/${instruction.cover_asset_id}` : null,
     }, { headers: { "Cache-Control": "private, no-store" } })
   } catch (error) { return errorResponse(error) }
 }
@@ -66,7 +59,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ instr
   let uploadedCoverPath: string | null = null
   let cleanupUploadedCover: (() => Promise<void>) | null = null
   try {
-    const { client } = await requireAdmin()
+    const { client } = await requireInstructionPublisher()
     const { instructionId } = await context.params
     if (!uuidPattern.test(instructionId)) throw new InstructionError(400, "invalid_instruction", "Некорректная карточка инструкции.")
     const body = await request.formData()
@@ -80,20 +73,18 @@ export async function PATCH(request: Request, context: { params: Promise<{ instr
     if (body.get("rights") !== "on") throw new InstructionError(400, "rights_required", "Подтвердите право на публикацию материала.")
 
     const { data: current, error: currentError } = await client.from("instructions")
-      .select("id").eq("id", instructionId).eq("status", "published").maybeSingle()
+      .select("id,slug").eq("id", instructionId).eq("status", "published").maybeSingle()
     if (currentError) throw new InstructionError(503, "instruction_unavailable", "Не удалось загрузить карточку инструкции.")
     if (!current) throw new InstructionError(404, "instruction_not_found", "Карточка инструкции не найдена.")
-    const { data: currentDocument, error: documentError } = await client.from("instruction_assets")
-      .select("source_file_id,byte_size").eq("instruction_id", instructionId)
-      .eq("kind", "document").eq("is_current", true).maybeSingle()
-    if (documentError || !currentDocument?.source_file_id) {
+    const { data: currentFileId, error: documentError } = await client.rpc("published_instruction_drive_file", { p_slug: current.slug })
+    if (documentError || !currentFileId) {
       throw new InstructionError(503, "document_unavailable", "У этой карточки нет действующей ссылки на PDF.")
     }
 
     const fileId = driveFileId(body.get("url"))
     if (!fileId) throw new InstructionError(400, "invalid_drive_link", "Вставьте ссылку на PDF в Google Drive.")
-    let fileSize = Number(currentDocument.byte_size)
-    const pdfChanged = fileId !== currentDocument.source_file_id
+    let fileSize = 0
+    const pdfChanged = fileId !== currentFileId
     let downloadUrl: string | null = null
     if (pdfChanged) {
       downloadUrl = await publicDriveDownloadUrl(fileId)
@@ -146,7 +137,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ instr
 
     const { data, error } = await client.rpc("update_instruction_card_admin", {
       p_instruction_id: instructionId, p_title: title, p_summary: summary, p_kit: kit, p_topics: topics,
-      p_file_id: fileId, p_file_size: fileSize,
+      p_file_id: fileId, p_file_size: pdfChanged ? fileSize : null,
       p_cover_object_key: uploadedCoverPath, p_cover_mime_type: coverMimeType,
       p_cover_size: coverBytes?.byteLength ?? null,
     })

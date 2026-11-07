@@ -21,7 +21,7 @@ const blankEditor: EditorData = { id: null, title: "", summary: "", kit: "spike"
 
 export function InstructionCatalogCards({ items }: { items: CatalogCard[] }) {
   const router = useRouter()
-  const { isAdmin, ready } = useAccess()
+  const { canPublish, ready } = useAccess()
   const [selected, setSelected] = useState<CatalogCard | null>(null)
   const [editor, setEditor] = useState<EditorData | null>(null)
   const [loadingId, setLoadingId] = useState<string | null>(null)
@@ -83,7 +83,7 @@ export function InstructionCatalogCards({ items }: { items: CatalogCard[] }) {
   }
 
   return <>
-    {ready && isAdmin && <div className="instruction-admin-toolbar"><span>Управление каталогом</span><button type="button" onClick={createCard}>Добавить инструкцию</button></div>}
+    {ready && canPublish && <div className="instruction-admin-toolbar"><span>Управление каталогом</span><button type="button" onClick={createCard}>Добавить инструкцию</button></div>}
     {notice && <p className="instruction-admin-notice" role="status">{notice}</p>}
     {error && !editor && !selected && <p className="instruction-admin-error" role="alert">{error}</p>}
     <div className="instruction-grid">
@@ -121,8 +121,8 @@ export function InstructionCatalogCards({ items }: { items: CatalogCard[] }) {
               {downloadUrl
                 ? <a href={downloadUrl} rel="noreferrer" referrerPolicy="no-referrer">Скачать PDF</a>
                 : <button type="button" disabled>PDF недоступен</button>}
-              {ready && isAdmin && <button type="button" className="instruction-card-edit-action" onClick={() => void editCard(selected.id)} disabled={loadingId === selected.id}>
-                {loadingId === selected.id ? "Открываю…" : "Редактировать"}
+              {ready && canPublish && <button type="button" className="instruction-card-edit-action" onClick={() => void editCard(selected.id)} disabled={loadingId === selected.id}>
+                {loadingId === selected.id ? "Открываю…" : "Изменить"}
               </button>}
             </div>
           </div>
@@ -133,7 +133,7 @@ export function InstructionCatalogCards({ items }: { items: CatalogCard[] }) {
     {editor && <div className="instruction-admin-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) setEditor(null) }}>
       <section className="instruction-admin-dialog" role="dialog" aria-modal="true" aria-labelledby="instruction-admin-title">
         <header className="instruction-admin-dialog-heading">
-          <div><span>ПАНЕЛЬ АДМИНИСТРАТОРА</span><h2 id="instruction-admin-title">{editor.id ? "Изменить инструкцию" : "Добавить инструкцию"}</h2></div>
+          <div><span>УПРАВЛЕНИЕ ИНСТРУКЦИЯМИ</span><h2 id="instruction-admin-title">{editor.id ? "Изменить инструкцию" : "Добавить инструкцию"}</h2></div>
           <button type="button" onClick={() => setEditor(null)} disabled={saving} aria-label="Закрыть">×</button>
         </header>
         <form className="instruction-admin-form" onSubmit={saveCard}>
