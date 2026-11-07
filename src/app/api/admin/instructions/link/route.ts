@@ -21,8 +21,17 @@ export async function POST(request: Request) {
     const body = await request.formData()
     const title = String(body.get("title") || "").trim()
     const kit = String(body.get("kit") || "")
+    const summary = String(body.get("summary") || "").trim()
+    let topics: string[] = []
+    try {
+      const parsed = JSON.parse(String(body.get("topics") || "[]"))
+      if (Array.isArray(parsed)) topics = parsed.map((topic) => String(topic).trim()).filter(Boolean)
+    } catch {}
     if (!title || title.length > 120 || !["spike", "ev3"].includes(kit) || body.get("rights") !== "on") {
       throw new InstructionError(400, "invalid_instruction", "Укажите название, набор и подтвердите право на публикацию.")
+    }
+    if (summary.length > 1000 || topics.length > 12 || topics.some((topic) => topic.length > 40)) {
+      throw new InstructionError(400, "invalid_instruction_details", "Описание должно быть до 1000 символов, тем — не больше 12 (до 40 символов каждая).")
     }
     const coverValue = body.get("cover")
     const manualCover = coverValue instanceof File && coverValue.size > 0 ? coverValue : null
@@ -85,6 +94,7 @@ export async function POST(request: Request) {
     try {
       const { data, error } = await client.rpc("publish_drive_instruction", {
         p_title: title, p_kit: kit, p_slug: `instruction-${randomUUID()}`, p_file_id: fileId, p_size: size,
+        p_summary: summary, p_topics: topics,
         p_cover_object_key: uploadedCover.path, p_cover_mime_type: coverMimeType, p_cover_size: coverBytes.byteLength,
       })
       if (error) throw new InstructionError(error.code === "23505" ? 409 : 503, "publish_failed", error.code === "23505" ? "Этот PDF уже добавлен." : "Не удалось опубликовать инструкцию.")

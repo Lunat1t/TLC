@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { listCatalog } from "@/lib/instructions/catalog"
-import { driveDownloadPath } from "@/lib/instructions/drive-links"
+import { InstructionCatalogCards } from "@/components/instructions/instruction-catalog-cards"
 import "./instructions.css"
 
 export default async function InstructionsPage({ searchParams }: { searchParams: Promise<{ kit?: string; q?: string; cursor?: string }> }) {
@@ -21,20 +21,9 @@ export default async function InstructionsPage({ searchParams }: { searchParams:
       <button type="submit">Найти</button>
       {(kit || q) && <Link href="/instructions">Сбросить</Link>}
     </form>
-    {error ? <p role="alert" className="instruction-message">Каталог пока недоступен. Попробуйте позже.</p> : result.items.length === 0 ? <p className="instruction-message">Инструкции не найдены. Измените запрос или <Link href="/instructions">сбросьте фильтр</Link>.</p> :
-      <div className="instruction-grid">{result.items.map((item, index) => {
-        const downloadUrl = driveDownloadPath(item.slug, item.hasPdf)
-        const coverUrl = item.coverAssetId
-          ? `/api/instruction-media/${item.id}/${item.coverAssetId}`
-          : item.hasPdf ? `/api/instructions/${encodeURIComponent(item.slug)}/preview` : null
-        const content = <>
-          <div className="instruction-cover">{coverUrl ? <img src={coverUrl} alt="" width={720} height={480} loading={index < 2 ? "eager" : "lazy"} fetchPriority={index === 0 ? "high" : "auto"} decoding="async" /> : <span aria-hidden="true">◈</span>}</div>
-          <div className="instruction-card-copy"><h2>{item.title}</h2><p>{item.summary}</p><div className="instruction-topics">{item.topics.map((topic) => <span key={topic}>{topic}</span>)}</div></div>
-        </>
-        return downloadUrl
-          ? <a key={item.id} href={downloadUrl} className="instruction-card" rel="noreferrer" referrerPolicy="no-referrer">{content}</a>
-          : <Link key={item.id} href={`/instructions/${item.slug}`} className="instruction-card">{content}</Link>
-      })}</div>}
+    {error && <p role="alert" className="instruction-message">Каталог пока недоступен. Попробуйте позже.</p>}
+    {!error && result.items.length === 0 && <p className="instruction-message">Инструкции не найдены. Измените запрос или <Link href="/instructions">сбросьте фильтр</Link>.</p>}
+    <InstructionCatalogCards items={result.items} />
     {result.nextCursor && <Link className="instruction-next" href={`/instructions?${next.toString()}`}>Показать ещё</Link>}
   </main>
 }
