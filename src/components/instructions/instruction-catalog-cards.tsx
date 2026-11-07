@@ -8,7 +8,7 @@ import type { CatalogCard } from "@/lib/instructions/types"
 import "./instruction-catalog-admin.css"
 
 type EditorData = {
-  id: string | null
+  id: string
   title: string
   summary: string
   kit: "spike" | "ev3"
@@ -16,8 +16,6 @@ type EditorData = {
   fileId: string
   coverUrl: string | null
 }
-
-const blankEditor: EditorData = { id: null, title: "", summary: "", kit: "spike", topics: [], fileId: "", coverUrl: null }
 
 export function InstructionCatalogCards({ items }: { items: CatalogCard[] }) {
   const router = useRouter()
@@ -59,10 +57,6 @@ export function InstructionCatalogCards({ items }: { items: CatalogCard[] }) {
     finally { setLoadingId(null) }
   }
 
-  function createCard() {
-    setError(""); setNotice(""); setEditor({ ...blankEditor })
-  }
-
   async function saveCard(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!editor) return
@@ -70,20 +64,17 @@ export function InstructionCatalogCards({ items }: { items: CatalogCard[] }) {
     form.set("topics", JSON.stringify(String(form.get("topics") || "").split(",").map((topic) => topic.trim()).filter(Boolean)))
     setSaving(true); setError(""); setNotice("")
     try {
-      const response = await fetch(editor.id ? `/api/admin/instructions/${encodeURIComponent(editor.id)}` : "/api/admin/instructions/link", {
-        method: editor.id ? "PATCH" : "POST", body: form,
-      })
+      const response = await fetch(`/api/admin/instructions/${encodeURIComponent(editor.id)}`, { method: "PATCH", body: form })
       const body = await response.json()
       if (!response.ok) throw new Error(body.error?.message || "Не удалось сохранить карточку.")
       setEditor(null)
-      setNotice(editor.id ? "Изменения карточки сохранены." : "Инструкция добавлена в каталог.")
+      setNotice("Изменения карточки сохранены.")
       router.refresh()
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Не удалось сохранить карточку.") }
     finally { setSaving(false) }
   }
 
   return <>
-    {ready && canPublish && <div className="instruction-admin-toolbar"><span>Управление каталогом</span><button type="button" onClick={createCard}>Добавить инструкцию</button></div>}
     {notice && <p className="instruction-admin-notice" role="status">{notice}</p>}
     {error && !editor && !selected && <p className="instruction-admin-error" role="alert">{error}</p>}
     <div className="instruction-grid">
@@ -146,7 +137,7 @@ export function InstructionCatalogCards({ items }: { items: CatalogCard[] }) {
           <label>Новая обложка — необязательно<input name="cover" type="file" accept="image/jpeg,image/png,image/webp" /><small>Загрузите JPG, PNG или WebP до 3 МБ. Если заменить PDF и не выбрать изображение, обложка создастся из первой страницы PDF.</small></label>
           <label className="instruction-admin-rights"><input type="checkbox" name="rights" required /><span>Подтверждаю право на публикацию инструкции и обложки.</span></label>
           {error && <p className="instruction-admin-error" role="alert">{error}</p>}
-          <footer><button type="button" className="instruction-admin-cancel" onClick={() => setEditor(null)} disabled={saving}>Отмена</button><button type="submit" disabled={saving}>{saving ? "Сохраняю…" : editor.id ? "Сохранить изменения" : "Опубликовать инструкцию"}</button></footer>
+          <footer><button type="button" className="instruction-admin-cancel" onClick={() => setEditor(null)} disabled={saving}>Отмена</button><button type="submit" disabled={saving}>{saving ? "Сохраняю…" : "Сохранить изменения"}</button></footer>
         </form>
       </section>
     </div>}

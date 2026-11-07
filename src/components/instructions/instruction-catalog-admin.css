@@ -1,9 +1,7 @@
-.instruction-admin-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 22px;padding:14px 18px;background:#e5f5f8;border:1px solid #c7e3e9;border-radius:16px;color:#164b5c;font-weight:800}
-.instruction-admin-toolbar button,.instruction-admin-edit{border:0;border-radius:11px;background:#073442;color:white;font-weight:800;cursor:pointer}
-.instruction-admin-toolbar button{min-height:44px;padding:0 18px}
+.instruction-admin-edit{border:0;border-radius:11px;background:#073442;color:white;font-weight:800;cursor:pointer}
 .instruction-admin-shell{position:relative;min-width:0}
 .instruction-admin-edit{position:absolute;top:12px;right:12px;z-index:2;min-height:40px;padding:0 14px;box-shadow:0 3px 12px #082f3b30}
-.instruction-admin-edit:disabled,.instruction-admin-toolbar button:disabled{opacity:.6;cursor:wait}
+.instruction-admin-edit:disabled{opacity:.6;cursor:wait}
 .instruction-card{display:block;width:100%;padding:0;border:1px solid #d4e8ed;text-align:left;color:inherit;font:inherit;text-decoration:none;cursor:pointer}
 .instruction-card-dialog{position:relative;width:min(100%,680px);max-height:min(92dvh,900px);overflow:auto;background:#f7fbfc;border:1px solid #d5e8eb;border-radius:24px;box-shadow:0 25px 90px #001b23a0;color:#12343e}
 .instruction-card-dialog-close{position:absolute;top:14px;right:14px;z-index:2;width:42px;height:42px;border:0;border-radius:12px;background:#f7fbfceb;color:#12343e;font-size:28px;line-height:1;cursor:pointer;box-shadow:0 2px 10px #001b2330}
@@ -39,5 +37,5 @@
 .instruction-admin-form footer button{min-height:46px;padding:0 18px;border:0;border-radius:12px;background:#007f99;color:white;font-weight:850;cursor:pointer}
 .instruction-admin-form footer .instruction-admin-cancel{background:#e2eef1;color:#244d59}
 .instruction-admin-form footer button:disabled{opacity:.6;cursor:wait}
-.instruction-admin-form input:focus-visible,.instruction-admin-form textarea:focus-visible,.instruction-admin-form select:focus-visible,.instruction-admin-form button:focus-visible,.instruction-admin-edit:focus-visible,.instruction-admin-toolbar button:focus-visible{outline:3px solid #f5bd35;outline-offset:2px}
-@media(max-width:600px){.instruction-admin-toolbar{align-items:stretch;flex-direction:column}.instruction-admin-toolbar button{width:100%}.instruction-admin-backdrop{padding:10px}.instruction-admin-dialog,.instruction-card-dialog{max-height:96dvh;border-radius:18px}.instruction-admin-dialog-heading,.instruction-admin-form{padding-left:18px;padding-right:18px}.instruction-admin-dialog-heading h2{font-size:21px}.instruction-admin-form footer{flex-direction:column-reverse}.instruction-admin-form footer button{width:100%}.instruction-card-dialog-cover{height:36dvh;min-height:180px}.instruction-card-dialog-content{padding:20px}.instruction-card-dialog-actions{flex-direction:column}.instruction-card-dialog-actions>a,.instruction-card-dialog-actions>button{width:100%}}
+.instruction-admin-form input:focus-visible,.instruction-admin-form textarea:focus-visible,.instruction-admin-form select:focus-visible,.instruction-admin-form button:focus-visible,.instruction-admin-edit:focus-visible{outline:3px solid #f5bd35;outline-offset:2px}
+@media(max-width:600px){.instruction-admin-backdrop{padding:10px}.instruction-admin-dialog,.instruction-card-dialog{max-height:96dvh;border-radius:18px}.instruction-admin-dialog-heading,.instruction-admin-form{padding-left:18px;padding-right:18px}.instruction-admin-dialog-heading h2{font-size:21px}.instruction-admin-form footer{flex-direction:column-reverse}.instruction-admin-form footer button{width:100%}.instruction-card-dialog-cover{height:36dvh;min-height:180px}.instruction-card-dialog-content{padding:20px}.instruction-card-dialog-actions{flex-direction:column}.instruction-card-dialog-actions>a,.instruction-card-dialog-actions>button{width:100%}}

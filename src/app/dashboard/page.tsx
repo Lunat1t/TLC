@@ -3,18 +3,11 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useAccess } from "@/components/auth/access-provider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ChevronDown, Download, FolderOpen, Plus, Upload, MoreHorizontal, UserRound } from "lucide-react"
+import { Download, FolderOpen, Plus, Upload, MoreHorizontal } from "lucide-react"
 import "../home.css"
-import {
-  loadAuthState,
-  signOutFromSupabase,
-  syncSessionFromSupabase,
-  type AuthState,
-} from "@/lib/auth"
 import {
   HUBS,
   importProject,
@@ -108,8 +101,6 @@ function InstallAppButton() {
 export default function HomePage() {
   const router = useRouter()
   const [projects, setProjects] = React.useState<RobotProject[]>([])
-  const [auth, setAuth] = React.useState<AuthState>(() => loadAuthState(null))
-  const { isAdmin: isInstructionAdmin } = useAccess()
   const [notice, setNotice] = React.useState<{
     text: string
     isError: boolean
@@ -132,10 +123,6 @@ export default function HomePage() {
     try {
       storageRawRef.current = window.localStorage.getItem(STORAGE_KEY)
       setProjects(loadProjects(window.localStorage))
-      setAuth(loadAuthState(window.localStorage))
-      void syncSessionFromSupabase(window.localStorage).then((synced) => {
-        setAuth(synced)
-      })
     } catch {
       setNotice({
         text: "Список проектов не удалось прочитать. Проверьте хранилище браузера.",
@@ -262,23 +249,6 @@ export default function HomePage() {
   return (
     <div className="home-shell">
       <div className="home-content">
-        <header className="home-header">
-          <div className="home-header-actions">
-            {auth.user ? <details className="home-profile-dropdown">
-              <summary className="home-profile"><UserRound size={18} aria-hidden="true" /><span>{auth.user.nickname}</span><ChevronDown size={14} aria-hidden="true" /></summary>
-              <div className="home-profile-menu">
-                <Link href="/profile" className="home-profile-menu-item">Профиль</Link>
-                {isInstructionAdmin && <Link href="/instructions" className="home-profile-menu-item">Управление инструкциями</Link>}
-                <button type="button" className="home-profile-menu-item" onClick={async () => {
-                  const next = await signOutFromSupabase(window.localStorage)
-                  setAuth(next)
-                  setNotice({ text: "Вы вышли из аккаунта.", isError: false })
-                }}>Выйти</button>
-              </div>
-            </details> : <Link href="/login" className="home-profile"><UserRound size={18} aria-hidden="true" /><span>Войти</span></Link>}
-          </div>
-        </header>
-
         <main className="home-main">
           <div className="home-main-toolbar">
             <button type="button" onClick={openNewModal} className="home-new-button">

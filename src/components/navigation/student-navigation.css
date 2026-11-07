@@ -69,6 +69,15 @@
   outline-offset: 3px;
 }
 
+.tlc-nav-account { position: relative; display: flex; align-items: center; }
+.tlc-nav-account-toggle { display: grid; place-items: center; width: 48px; min-width: 48px; min-height: 46px; padding: 0 12px; border-radius: 999px; color: #58717a; }
+.tlc-nav-account-toggle:hover, .tlc-nav-account-toggle[aria-expanded="true"] { background: #e6f2f6; color: #006e87; }
+.tlc-nav-account-menu { position: absolute; z-index: 10004; right: 0; bottom: calc(100% + 8px); display: grid; width: max-content; min-width: 190px; max-width: min(300px, calc(100vw - 32px)); gap: 2px; padding: 7px; border: 1px solid #d4e8ed; border-radius: 16px; background: #fcfefe; color: #29444e; box-shadow: 0 12px 36px rgb(7 52 66 / 18%); }
+.tlc-nav-account-name { padding: 10px 11px; overflow: hidden; color: #58717a; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.tlc-nav-account-link { display: block; width: 100%; min-height: 42px; padding: 9px 11px; border-radius: 10px; color: #29444e; text-align: left; font-size: 14px; font-weight: 700; }
+.tlc-nav-account-link:hover { background: #e6f2f6; color: #006e87; }
+.tlc-nav-account-toggle:focus-visible, .tlc-nav-account-link:focus-visible { outline: 3px solid #005d83; outline-offset: 2px; }
+
 .home-main { padding-bottom: calc(112px + env(safe-area-inset-bottom)); }
 .instruction-page { padding-bottom: calc(112px + env(safe-area-inset-bottom)); }
 
@@ -89,6 +98,9 @@
 .tlc-bottom-nav.is-vertical { flex-direction: column; border-radius: 30px; }
 .tlc-bottom-nav.is-vertical .tlc-bottom-nav-item { width: 154px; gap: 9px; }
 .tlc-bottom-nav.is-vertical .tlc-bottom-nav-item span { max-width: 90px; opacity: 1; }
+.tlc-bottom-nav.is-vertical .tlc-nav-account { width: 100%; justify-content: center; }
+.tlc-bottom-nav.is-vertical .tlc-nav-account-toggle { width: 154px; }
+.tlc-bottom-nav.is-vertical .tlc-nav-account-menu { right: auto; left: calc(100% + 8px); bottom: 0; }
 .tlc-bottom-nav.is-editing { outline: 2px solid #029cba; outline-offset: 3px; touch-action: none; }
 .tlc-bottom-nav.is-editing .tlc-bottom-nav-item { cursor: grab; touch-action: none; transition: none; }
 .tlc-bottom-nav.is-editing .tlc-bottom-nav-item:active, .tlc-nav-move:active { cursor: grabbing; }
@@ -167,11 +179,15 @@
 .tlc-student-navigation-root[data-dock="top"] .tlc-layout-gear { top: max(18px, env(safe-area-inset-top)); bottom: auto; }
 .tlc-student-navigation-root[data-dock="top"] .tlc-layout-settings { top: calc(max(18px, env(safe-area-inset-top)) + 58px); bottom: auto; }
 .tlc-student-navigation-root[data-dock="left"] .tlc-layout-settings { left: max(16px, env(safe-area-inset-left)); right: auto; }
+.tlc-student-navigation-root[data-dock="top"] .tlc-nav-account-menu { top: calc(100% + 8px); bottom: auto; }
+.tlc-student-navigation-root[data-dock="left"] .tlc-nav-account-menu { right: auto; left: calc(100% + 8px); bottom: 0; }
+.tlc-student-navigation-root[data-dock="right"] .tlc-nav-account-menu { right: calc(100% + 8px); bottom: 0; }
 .tlc-student-navigation-root:is([data-dock="top"],[data-dock="bottom"]) .tlc-layout-bounds { right: max(80px, calc(env(safe-area-inset-right) + 68px)); }
 .tlc-student-navigation-root:is([data-dock="left"],[data-dock="right"]) .tlc-layout-bounds { bottom: max(80px, calc(env(safe-area-inset-bottom) + 68px)); }
 .tlc-layout-edges { flex-wrap: wrap; }
 .tlc-layout-edges button { flex-basis: 40%; }
 @media (max-width: 600px) {
+  .tlc-bottom-nav:has(.tlc-nav-account) .tlc-nav-account-toggle { width: 46px; min-width: 46px; padding: 0 11px; }
   .tlc-student-navigation-root:is([data-dock="left"],[data-dock="right"]) .tlc-bottom-nav-item { width: 46px; min-width: 46px; padding: 0 11px; gap: 0; }
   .tlc-student-navigation-root:is([data-dock="left"],[data-dock="right"]) .tlc-bottom-nav-item span { display: none; }
   .tlc-page-content .home-main-toolbar { flex-wrap: wrap; }

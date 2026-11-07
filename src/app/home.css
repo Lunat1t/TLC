@@ -25,16 +25,6 @@ html, body { overflow-x: clip; }
 .home-shell { min-height: 100dvh; background: var(--home-canvas); color: var(--home-ink); font-family: var(--home-font); }
 .home-shell :is(button, a, select, input):focus-visible { outline: 3px solid var(--home-focus); outline-offset: 2px; }
 .home-content { min-width: 0; }
-.home-header { display: flex; align-items: center; justify-content: flex-end; min-height: 76px; padding: 12px clamp(24px, 5vw, 72px); border-bottom: 1px solid var(--home-line); background: var(--home-paper); }
-.home-header-actions { display: flex; align-items: center; gap: 12px; }
-.home-profile { display: flex; align-items: center; gap: 8px; min-height: 42px; border-radius: 22px; padding: 4px 12px 4px 4px; background: var(--home-dark); color: var(--home-paper); font-size: 13px; font-weight: 750; }
-.home-profile:hover { background: var(--home-blue); }
-.home-profile-dropdown { position: relative; }
-.home-profile-dropdown > summary { cursor: pointer; list-style: none; }
-.home-profile-dropdown > summary::-webkit-details-marker { display: none; }
-.home-profile-menu { position: absolute; z-index: 30; top: calc(100% + 8px); right: 0; min-width: 190px; padding: 6px; border: 1px solid var(--home-line); border-radius: 12px; background: white; box-shadow: 0 14px 32px #0734421c; }
-.home-profile-menu-item { display: block; width: 100%; padding: 10px 12px; border-radius: 8px; color: var(--home-ink); text-align: left; font-size: 13px; font-weight: 650; }
-.home-profile-menu-item:hover { background: var(--home-blue-soft); }
 .home-main { width: min(100%, 1110px); margin: 0 auto; padding: clamp(32px, 5vw, 64px) clamp(20px, 5vw, 56px) 80px; }
 .home-main-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 44px; }
 .home-new-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; width: min(100%, 250px); border-radius: 13px; background: var(--home-dark); color: var(--home-paper); font-weight: 750; font-size: 14px; transition: transform 150ms, background-color 150ms; }
@@ -61,7 +51,6 @@ html, body { overflow-x: clip; }
 .home-notice-error { background: var(--home-error-bg); color: var(--home-error); }
 .home-notice-success { background: var(--home-success-bg); color: var(--home-success); }
 @media (max-width: 650px) {
-  .home-header { justify-content: flex-end; min-height: 62px; padding: 8px 16px; }
   .home-main { padding: 28px 18px 64px; }
   .home-main-toolbar { align-items: stretch; flex-direction: column; gap: 8px; margin-bottom: 36px; }
   .home-new-button { width: 100%; }

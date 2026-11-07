@@ -1,12 +1,14 @@
 "use client"
 
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react"
+import Link from "next/link"
 import { useAccess } from "@/components/auth/access-provider"
 import { useRouteWarmup } from "@/components/auth/app-startup"
-import { ArrowDown, ArrowUp, BookOpen, Check, FolderOpen, GripVertical, FilePlus2, Move, RotateCcw, Settings, UserRound, X } from "lucide-react"
+import { ArrowDown, ArrowUp, BookOpen, Check, CircleUserRound, FolderOpen, GripVertical, FilePlus2, Move, RotateCcw, Settings, UserRound, X } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import type { CSSProperties, KeyboardEvent, PointerEvent, ReactNode, TouchEvent } from "react"
 import { defaultNavigationLayout, navigationPages, reconcilePageOrder, moveNavigationPage, dockNavigationLayout, navigationDock, layoutAtPosition, layoutPosition, NAVIGATION_LAYOUT_KEY, readNavigationLayout, type LayoutBounds, type NavigationLayout, type PageId } from "@/lib/navigation-layout"
+import { signOutFromSupabase } from "@/lib/auth"
 import "./student-navigation.css"
 
 const pages = {
@@ -24,16 +26,18 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
   const [layout, setLayout] = useState<NavigationLayout>(defaultNavigationLayout)
   const [saved, setSaved] = useState<NavigationLayout>(defaultNavigationLayout)
   const [editing, setEditing] = useState(false), [menu, setMenu] = useState(false)
+  const [accountOpen, setAccountOpen] = useState(false)
   const [message, setMessage] = useState("")
   const [geometry, setGeometry] = useState<{ bounds: LayoutBounds; width: number; height: number; reserved?: LayoutBounds } | null>(null)
-  const nav = useRef<HTMLElement>(null), bounds = useRef<HTMLDivElement>(null), settings = useRef<HTMLDivElement>(null), gear = useRef<HTMLButtonElement>(null)
+  const nav = useRef<HTMLElement>(null), bounds = useRef<HTMLDivElement>(null), settings = useRef<HTMLDivElement>(null), gear = useRef<HTMLButtonElement>(null), accountMenu = useRef<HTMLDivElement>(null), accountButton = useRef<HTMLButtonElement>(null)
   const drag = useRef<Drag | null>(null)
   const touchOrigin = useRef<{ x: number; y: number } | null>(null)
   const onHome = pathname === "/dashboard", inLibrary = pathname === "/instructions" || pathname.startsWith("/instructions/"), onAvatar = pathname === "/avatar"
   const access = useAccess()
   const allowed = navigationPages(access.role, access.canPublish)
   const order = reconcilePageOrder(layout.order, allowed)
-  const visible = allowed.length > 0 && (onHome || inLibrary || pathname === "/admin/instructions/drive" || onAvatar)
+  const visible = pathname === "/dashboard" || (allowed.length > 0 && (inLibrary || pathname === "/admin/instructions/drive" || onAvatar))
+  const showPageLinks = allowed.length > 0
   const dock = navigationDock(layout)
 
   useEffect(() => {
@@ -61,13 +65,17 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
     catch { setMessage("Не удалось сохранить. Разрешите хранение данных в браузере.") }
   }
   useEffect(() => {
-    function dismiss(event: globalThis.PointerEvent) { if (event.target instanceof Node && !settings.current?.contains(event.target) && !gear.current?.contains(event.target)) setMenu(false) }
-    function escape(event: globalThis.KeyboardEvent) { if (event.key === "Escape") { setLayout(saved); setEditing(false); setMenu(false); drag.current = null; gear.current?.focus() } }
-    if (menu) document.addEventListener("pointerdown", dismiss)
-    if (menu || editing) document.addEventListener("keydown", escape)
+    function dismiss(event: globalThis.PointerEvent) {
+      if (!(event.target instanceof Node)) return
+      if (!settings.current?.contains(event.target) && !gear.current?.contains(event.target)) setMenu(false)
+      if (!accountMenu.current?.contains(event.target)) setAccountOpen(false)
+    }
+    function escape(event: globalThis.KeyboardEvent) { if (event.key === "Escape") { setLayout(saved); setEditing(false); setMenu(false); setAccountOpen(false); drag.current = null; (accountOpen ? accountButton.current : gear.current)?.focus() } }
+    if (menu || accountOpen) document.addEventListener("pointerdown", dismiss)
+    if (menu || editing || accountOpen) document.addEventListener("keydown", escape)
     return () => { document.removeEventListener("pointerdown", dismiss); document.removeEventListener("keydown", escape) }
-  }, [menu, editing, saved])
-  useEffect(() => { setMenu(false); setEditing(false); setLayout(saved); drag.current = null }, [pathname, saved])
+  }, [menu, editing, accountOpen, saved])
+  useEffect(() => { setMenu(false); setAccountOpen(false); setEditing(false); setLayout(saved); drag.current = null }, [pathname, saved])
 
   function startDrag(event: PointerEvent<HTMLButtonElement>, page?: PageId) {
     if (!editing || event.button !== 0 || !nav.current) return
@@ -120,13 +128,24 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
     <div className={visible ? "tlc-page-content tlc-page-transition" : "tlc-page-container"} style={visible ? contentStyle : undefined} aria-busy={isPending}>{children}</div>
     {isPending && <div className="tlc-navigation-progress" role="status">Загружаем страницу…</div>}
     {visible && <>
-      {!onAvatar && <div className={`tlc-nav-rail dock-${dock}`} style={layout.vertical ? { width: railSize } : { height: railSize }} aria-hidden="true" />}
-      {!onAvatar && <div ref={bounds} className={`tlc-layout-bounds${editing ? " is-editing" : ""}`} aria-hidden="true" />}
+      {!onAvatar && showPageLinks && <div className={`tlc-nav-rail dock-${dock}`} style={layout.vertical ? { width: railSize } : { height: railSize }} aria-hidden="true" />}
+      {!onAvatar && showPageLinks && <div ref={bounds} className={`tlc-layout-bounds${editing ? " is-editing" : ""}`} aria-hidden="true" />}
       <nav ref={nav} style={style} className={`tlc-bottom-nav${layout.vertical ? " is-vertical" : ""}${editing ? " is-editing" : ""}${onAvatar ? " is-avatar-page" : ""}`} aria-label="Навигация TLC" data-swipe-ignore>
         {editing && <button type="button" className="tlc-nav-move" aria-label="Переместить панель" title="Перетащите панель или используйте стрелки клавиатуры" onPointerDown={e => startDrag(e)} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} onKeyDown={moveWithKeys}><GripVertical size={20} aria-hidden="true" /></button>}
         {order.map(id => { const page = pages[id], active = id === "projects" ? onHome : id === "instructions" ? inLibrary : pathname === page.path; return <button key={id} data-page={id} type="button" className={`tlc-bottom-nav-item${active ? " is-active" : ""}`} aria-label={page.label} aria-current={active ? "page" : undefined} title={editing ? `${page.label}: перетащите для смены порядка` : page.label} onPointerEnter={() => { if (!editing) warmRoute(page.path) }} onFocus={() => { if (!editing) warmRoute(page.path) }} onClick={() => navigate(id)} onPointerDown={e => startDrag(e, id)} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}><page.icon size={22} strokeWidth={2} aria-hidden="true" /><span>{page.label}</span></button> })}
+        <div className="tlc-nav-account" ref={accountMenu}>
+          <button ref={accountButton} type="button" className="tlc-nav-account-toggle" aria-label={`${access.userId ? "Аккаунт" : "Войти"}${access.profile?.nickname ? `: ${access.profile.nickname}` : ""}`} title={access.userId ? "Аккаунт" : "Войти"} aria-expanded={accountOpen} aria-controls="tlc-account-menu" onClick={() => { setMenu(false); setAccountOpen(open => !open) }}><CircleUserRound size={22} strokeWidth={2} aria-hidden="true" /></button>
+          {accountOpen && <div id="tlc-account-menu" className="tlc-nav-account-menu" aria-label="Аккаунт">
+            {access.userId ? <>
+              {access.profile?.nickname && <strong className="tlc-nav-account-name">{access.profile.nickname}</strong>}
+              <Link href="/profile" className="tlc-nav-account-link" onClick={() => setAccountOpen(false)}>Профиль</Link>
+              {access.isAdmin && <Link href="/instructions" className="tlc-nav-account-link" onClick={() => setAccountOpen(false)}>Управление инструкциями</Link>}
+              <button type="button" className="tlc-nav-account-link" onClick={async () => { await signOutFromSupabase(window.localStorage); setAccountOpen(false); router.replace("/login"); router.refresh() }}>Выйти</button>
+            </> : <Link href="/login" className="tlc-nav-account-link" onClick={() => setAccountOpen(false)}>Войти</Link>}
+          </div>}
+        </div>
       </nav>
-      {!onAvatar && <button ref={gear} type="button" className={`tlc-layout-gear${editing ? " is-editing" : ""}`} aria-label="Настроить интерфейс" aria-expanded={menu} aria-controls="tlc-layout-settings" onClick={() => setMenu(!menu)}><Settings size={22} aria-hidden="true" /></button>}
+      {!onAvatar && showPageLinks && <button ref={gear} type="button" className={`tlc-layout-gear${editing ? " is-editing" : ""}`} aria-label="Настроить интерфейс" aria-expanded={menu} aria-controls="tlc-layout-settings" onClick={() => setMenu(!menu)}><Settings size={22} aria-hidden="true" /></button>}
       {!onAvatar && menu && <div ref={settings} id="tlc-layout-settings" className="tlc-layout-settings" role="dialog" aria-label="Настройка интерфейса" data-swipe-ignore>
         <div className="tlc-layout-settings-heading"><strong>{editing ? "Положение панели" : "Настройка интерфейса"}</strong><button type="button" aria-label="Закрыть настройки" onClick={() => { setMenu(false); gear.current?.focus() }}><X size={18} /></button></div>
         {!editing ? <><p>Расположи переключатель страниц так, как тебе удобно.</p><button type="button" className="tlc-layout-primary" onClick={() => { setEditing(true); setMenu(true); setMessage("") }}><Move size={18} />Изменить положение</button></> : <>
