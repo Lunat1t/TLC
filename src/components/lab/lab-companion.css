@@ -5,7 +5,11 @@
 .buddy-torso { transform-origin:344px 550px; }.buddy-arm-l{transform-origin:112px 370px}.buddy-arm-r{transform-origin:576px 370px}.buddy-leg-l{transform-origin:265px 580px}.buddy-leg-r{transform-origin:423px 580px}
 .buddy-face { transform:translateX(var(--buddy-look,0)); transition:transform .4s; }.buddy-blink{transform-origin:344px 250px;animation:buddy-blink 6.4s infinite}
 .buddy-ground-shadow{position:absolute;width:64px;height:9px;left:10px;bottom:0;background:#2b4a6d25;border-radius:50%;filter:blur(2px);z-index:-1;}
-.lab-buddy[data-mode=walk] .buddy-leg-l{animation:buddy-step .55s ease-in-out infinite alternate}.lab-buddy[data-mode=walk] .buddy-leg-r{animation:buddy-step .55s ease-in-out infinite alternate-reverse}.lab-buddy[data-mode=walk] .buddy-arm-l{animation:buddy-arm .55s ease-in-out infinite alternate-reverse}.lab-buddy[data-mode=walk] .buddy-arm-r{animation:buddy-arm .55s ease-in-out infinite alternate}.lab-buddy[data-mode=walk] .buddy-torso{animation:buddy-bob .275s ease-in-out infinite alternate}
+.buddy-walk-rig{display:none}
+.lab-buddy[data-mode=walk] .buddy-walk-rig{display:block}
+.lab-buddy[data-mode=walk] :is(.buddy-leg-l,.buddy-leg-r){display:none}
+.lab-buddy[data-mode=walk] :is(.buddy-torso,.buddy-arm-l,.buddy-arm-r){animation:none;transform-origin:0 0}
+
 .lab-buddy[data-mode=climb] .buddy-arm-l{animation:buddy-reach .6s infinite alternate}.lab-buddy[data-mode=climb] .buddy-arm-r{animation:buddy-reach .6s infinite alternate-reverse}.lab-buddy[data-mode=climb] .buddy-leg-l{animation:buddy-step .5s infinite alternate}.lab-buddy[data-mode=climb] .buddy-leg-r{animation:buddy-step .5s infinite alternate-reverse}
 .lab-buddy:is([data-mode=sit],[data-mode=inspect],[data-mode=sleep]) .buddy-leg-l{transform:translate(-22px,-75px) rotate(-22deg) scaleY(.75)}.lab-buddy:is([data-mode=sit],[data-mode=inspect],[data-mode=sleep]) .buddy-leg-r{transform:translate(22px,-75px) rotate(22deg) scaleY(.75)}
 .lab-buddy[data-mode=inspect] .buddy-torso{animation:buddy-curious 2.8s ease-in-out infinite alternate}.lab-buddy[data-mode=idle] .buddy-torso{animation:buddy-breathe 3.5s ease-in-out infinite alternate}
@@ -22,3 +26,5 @@
 @media(prefers-reduced-motion:reduce){.lab-companion-layer *{animation:none!important;transition:none!important}}
 .lab-buddy:is([data-mode=sit],[data-mode=inspect],[data-mode=sleep]) .buddy-art{transform:translateY(24px)}
 .lab-buddy[data-perched=true]:is([data-mode=sit],[data-mode=inspect],[data-mode=sleep]) .buddy-art{transform:translateY(52px)}
+
+@media(prefers-reduced-motion:reduce){.lab-buddy[data-mode=walk] .buddy-walk-rig{display:none}.lab-buddy[data-mode=walk] :is(.buddy-leg-l,.buddy-leg-r){display:block}}
