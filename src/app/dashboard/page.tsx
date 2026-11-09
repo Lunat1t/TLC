@@ -6,8 +6,9 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Download, FolderOpen, Plus, Upload, MoreHorizontal } from "lucide-react"
+import { Download, FolderOpen, Plus, Upload, MoreHorizontal, X } from "lucide-react"
 import "../home.css"
+import { LabBoard } from "@/components/lab/lab-board"
 import {
   HUBS,
   importProject,
@@ -100,6 +101,12 @@ function InstallAppButton() {
 
 export default function HomePage() {
   const router = useRouter()
+  const [projectsOpen, setProjectsOpen] = React.useState(false)
+  const projectsCloseRef = React.useRef<HTMLButtonElement>(null)
+  const projectsLauncherRef = React.useRef<HTMLElement | null>(null)
+  function openProjects() { projectsLauncherRef.current = document.activeElement as HTMLElement | null; setProjectsOpen(true) }
+  function closeProjects() { setProjectsOpen(false); projectsLauncherRef.current?.focus() }
+  React.useEffect(()=> { if (projectsOpen) projectsCloseRef.current?.focus() }, [projectsOpen])
   const [projects, setProjects] = React.useState<RobotProject[]>([])
   const [notice, setNotice] = React.useState<{
     text: string
@@ -250,6 +257,8 @@ export default function HomePage() {
     <div className="home-shell">
       <div className="home-content">
         <main className="home-main">
+          <LabBoard projects={projects} onProjects={openProjects} onNewProject={openNewModal} onProjectMenu={setSelectedId} />
+          {projectsOpen && <section className="desktop-project-window" aria-label="Мои проекты"><header><strong>Мои проекты</strong><button ref={projectsCloseRef} onClick={closeProjects} aria-label="Закрыть окно проектов"><X size={20}/></button></header>
           <div className="home-main-toolbar">
             <button type="button" onClick={openNewModal} className="home-new-button">
               <Plus size={19} aria-hidden="true" /> Новый проект
@@ -261,7 +270,7 @@ export default function HomePage() {
             </div>
           </div>
           <div className="home-projects-heading">
-            <h1>Мои проекты</h1>
+            <h2>Мои проекты</h2>
             <span>{countLabel(projects.length)}</span>
           </div>
           <nav className="home-project-list" aria-label="Список проектов">
@@ -278,6 +287,7 @@ export default function HomePage() {
             ))}
           </nav>
           {notice && <p role="status" className={`home-notice ${notice.isError ? "home-notice-error" : "home-notice-success"}`}>{notice.text}</p>}
+          </section>}
         </main>
       </div>
 

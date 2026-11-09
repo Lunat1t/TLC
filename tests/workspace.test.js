@@ -19,7 +19,7 @@ test('invalid imported blocks and removed empty blocks are ignored', () => {
 
 test('motor button panel persists size and allows at most three added color modules', () => {
   const panel = addBlock([], 'panel', 20, 30, 'motor-buttons');
-  assert.deepEqual(panel[0], {id:'panel',type:'motor-buttons',x:20,y:30,width:180,height:132,controlModules:[]});
+  assert.deepEqual(panel[0], {id:'panel',type:'motor-buttons',x:20,y:30,width:180,height:132,controlModules:[],hiddenControlButtons:[]});
   const saved = readBlocks({blocks:[{...panel[0],width:222,height:176,controlModules:['red','green','yellow','blue','red']} ]});
   assert.equal(saved[0].width,222);
   assert.equal(saved[0].height,176);
@@ -245,67 +245,18 @@ test('if/else block supports empty condition, body and else branches, and Pybric
   assert.match(code,/\nmotor_b\.run_time\(360, 1000, then=Stop\.BRAKE\)/);
 });
 
-test('controller button and stop blocks: persistence, snap rules, and Pybricks exclusion', async () => {
-  const {addBlock, updateDrive, attachChain, snapTargetInfo, readBlocks, generatePybricks} = await import('../src/lib/workspace.ts');
-
-  // 1. Creation and defaults
-  let b = addBlock([], 'btn-1', 0, 0, 'button');
-  assert.equal(b[0].type, 'button');
-  assert.equal(b[0].button, 'up');
-  assert.equal(b[0].event, 'pressed');
-
-  b = addBlock(b, 'stop-1', 100, 100, 'stop');
-  assert.equal(b[1].type, 'stop');
-  assert.equal(b[1].motor, 'A');
-
-  // 2. updateDrive supports button and stop
-  b = updateDrive(b, 'btn-1', {button: 'a', event: 'released'}, 'spike');
-  assert.equal(b[0].button, 'a');
-  assert.equal(b[0].event, 'released');
-
-  b = updateDrive(b, 'stop-1', {motor: 'B', motor2: 'C'}, 'spike');
-  assert.equal(b[1].motor, 'B');
-  assert.equal(b[1].motor2, 'C');
-
-  // 3. Button header cannot have parent
-  b = attachChain(b, 'btn-1', 'stop-1');
-  assert.equal(b.find(x => x.id === 'btn-1').parentId, undefined);
-  assert.equal(snapTargetInfo(b, 'btn-1', 100, 150), null);
-
-  // 4. Attach drive and stop under button
-  b = addBlock(b, 'drive-1', 0, 100, 'drive');
-  b = updateDrive(b, 'drive-1', {motor: 'A', modules: ['travel'], value: 1, unit: 'rotations'}, 'spike');
-  b = attachChain(b, 'drive-1', 'btn-1');
-  assert.equal(b.find(x => x.id === 'drive-1').parentId, 'btn-1');
-
-  b = attachChain(b, 'stop-1', 'drive-1');
-  assert.equal(b.find(x => x.id === 'stop-1').parentId, 'drive-1');
-
-  // 5. if cannot be attached under button chain
-  b = addBlock(b, 'if-bad', 0, 300, 'if');
-  b = attachChain(b, 'if-bad', 'stop-1');
-  assert.equal(b.find(x => x.id === 'if-bad').parentId, undefined);
-
-  // 6. Pybricks generation skips button chains completely
-  // Autonomous chain:
-  b = addBlock(b, 'start-1', 300, 0, 'start');
-  b = addBlock(b, 'auto-drive', 300, 60, 'drive');
-  b = updateDrive(b, 'auto-drive', {motor: 'D', modules: ['travel'], value: 3, unit: 'rotations'}, 'spike');
-  b = attachChain(b, 'auto-drive', 'start-1');
-
-  // Also test autonomous stop
-  b = addBlock(b, 'auto-stop', 300, 120, 'stop');
-  b = updateDrive(b, 'auto-stop', {motor: 'D'}, 'spike');
-  b = attachChain(b, 'auto-stop', 'auto-drive');
-
-  const code = generatePybricks(b, 'spike');
-  // Must contain motor D
-  assert.match(code, /motor_d = Motor\(Port\.D\)/);
-  assert.match(code, /motor_d\.run_angle\(360, 1080, then=Stop\.BRAKE\)/);
-  assert.match(code, /motor_d\.brake\(\)/);
-  // Must NOT contain motor A, B, C from the button chain!
-  assert.doesNotMatch(code, /motor_a/);
-  assert.doesNotMatch(code, /motor_b/);
-  assert.doesNotMatch(code, /motor_c/);
+test('removed button handlers are discarded while standalone stop settings persist', async () => {
+  const {updateDrive, generatePybricks} = await import('../src/lib/workspace.ts');
+  const blocks = readBlocks({blocks:[
+    {id:'legacy-button',type:'button',x:0,y:0,button:'a',event:'released'},
+    {id:'stop',type:'stop',x:0,y:60,motor:'A'},
+  ]});
+  assert.deepEqual(blocks.map(block=>block.id),['stop']);
+  const updated = updateDrive(blocks,'stop',{motor:'B',motor2:'C'},'spike');
+  assert.equal(updated[0].motor,'B');
+  assert.equal(updated[0].motor2,'C');
+  const code=generatePybricks(updated,'spike');
+  assert.match(code,/motor_b\.brake\(\)/);
+  assert.match(code,/motor_c\.brake\(\)/);
+  assert.doesNotMatch(code,/motor_a/);
 });
-

@@ -4,28 +4,52 @@ import {readFileSync} from 'node:fs';
 import {migrateControlWorkspace,validateControlLayout} from '../src/lib/control-workspace.ts';
 import {readBlocks} from '../src/lib/workspace.ts';
 const fixture = name => JSON.parse(readFileSync(new URL(`./fixtures/controller/${name}`,import.meta.url),'utf8'));
-test('legacy event migration is deterministic, preserves source, and is idempotent',()=>{
+const panelProject = () => {
+  const project=fixture('autonomous.json');
+  project.workspace.controlLayout={version:1,areas:[
+    {id:'area',sheetId:'sheet-main',title:'Управление',x:0,y:0,width:640,height:360},
+  ],controls:[
+    {id:'panel',areaId:'area',kind:'motor-panel',label:'Кнопки моторов',x:0,y:0,width:180,height:132},
+  ]};
+  project.workspace.sheets[0].blocks.push({id:'panel-block',type:'motor-buttons',x:0,y:0,controlAreaId:'area'});
+  return project;
+};
+test('migration removes unavailable handlers, detaches actions, preserves source and is idempotent',()=>{
   const source=fixture('controller.json'), before=JSON.stringify(source);
   const a=migrateControlWorkspace(source), b=migrateControlWorkspace(source);
   assert.equal(JSON.stringify(source),before);
   assert.deepEqual(a,b);assert.equal(a.changed,true);
   assert.equal(migrateControlWorkspace(a.project).changed,false);
-  const workspace=a.project.workspace, layout=validateControlLayout(workspace.controlLayout,['sheet-main']);
-  const events=readBlocks(workspace.sheets[0],'spike').filter(x=>x.type==='button');
-  assert.equal(events.length,2);assert.deepEqual(events.map(x=>x.target.input),['up','up']);
-  assert.ok(events.every(x=>x.target.controlId===layout.controls[0].id));
+  const blocks=readBlocks(a.project.workspace.sheets[0],'spike');
+  assert.deepEqual(blocks.map(block=>block.id),['drive','stop']);
+  assert.ok(blocks.every(block=>block.parentId===undefined));
+  assert.equal(a.project.workspace.controlLayout,undefined);
+});
+test('migration keeps motor panels and merges duplicate areas on a sheet',()=>{
+  const source=panelProject(), layout=source.workspace.controlLayout;
+  layout.areas.push({...layout.areas[0],id:'duplicate'});
+  layout.controls.push({...layout.controls[0],id:'removed-panel',areaId:'duplicate'});
+  source.workspace.sheets[0].blocks.at(-1).controlAreaId='duplicate';
+  const before=JSON.stringify(source);
+  const result=migrateControlWorkspace(source);
+  assert.equal(JSON.stringify(source),before);
+  assert.equal(result.changed,true);
+  assert.equal(result.project.workspace.controlLayout.areas.length,1);
+  assert.deepEqual(result.project.workspace.controlLayout.controls.map(control=>control.id),['panel']);
+  assert.equal(result.project.workspace.sheets[0].blocks.at(-1).controlAreaId,'area');
+  assert.equal(migrateControlWorkspace(result.project).changed,false);
 });
 test('autonomous projects stay unchanged and unknown layout versions are rejected',()=>{
   const source=fixture('autonomous.json');assert.equal(migrateControlWorkspace(source).changed,false);
   source.workspace.controlLayout={version:2,areas:[],controls:[]};
   assert.throws(()=>migrateControlWorkspace(source),/версия/);
 });
-test('layout rejects overlap, out of bounds and unknown controls',()=>{
-  const layout=migrateControlWorkspace(fixture('controller.json')).project.workspace.controlLayout;
+test('layout rejects overlap and out of bounds while discarding unavailable controls',()=>{
+  const layout=panelProject().workspace.controlLayout;
   const control=layout.controls[0];
   assert.throws(()=>validateControlLayout({...layout,controls:[control,{...control,id:'second'}]},['sheet-main']),/перекрываются/);
-  assert.throws(()=>validateControlLayout({...layout,controls:[{...control,x:500}]},['sheet-main']),/вне области/);
-  assert.throws(()=>validateControlLayout({...layout,controls:[{...control,kind:'other'}]},['sheet-main']),/Неверный элемент/);
+  assert.throws(()=>validateControlLayout({...layout,controls:[{...control,x:600}]},['sheet-main']),/вне области/);
+  assert.deepEqual(validateControlLayout({...layout,controls:[{...control,kind:'drivetrain'}]},['sheet-main']).controls,[]);
 });
 
 test('project migration backs up source before writing and rejects stale writes', async()=>{
@@ -54,7 +78,9 @@ test('when cross-tab locks are unavailable projects remain readable without stor
   const source=JSON.stringify([fixture('controller.json')]);let writes=0;
   const storage={getItem:key=>key===STORAGE_KEY?source:null,setItem:()=>writes++};
   const result=await prepareEditorProjects(storage,'fixture-controller',undefined);
-  assert.equal(result.readOnly,true);assert.equal(result.projects[0].workspace.controlLayout.version,1);
+  assert.equal(result.readOnly,true);
+  assert.deepEqual(readBlocks(result.projects[0].workspace.sheets[0]).map(block=>block.id),['drive','stop']);
+  assert.equal(result.raw,source);
   await assert.rejects(saveEditorProjects(storage,result.projects,result.raw,undefined));
   assert.equal(writes,0);
 });
@@ -75,20 +101,26 @@ test('legacy visual import leaves stored configuration unchanged and creates no 
   validateControlLayout(layout,['sheet-main']);
 });
 
-test('cloning a sheet remaps internal control and block IDs but retains external targets',async()=>{
- const {cloneControlSheet}=await import('../src/lib/control-workspace.ts');const p=migrateControlWorkspace(fixture('controller.json')).project;
- p.workspace.sheets[0].blocks.push({id:'external',type:'button',x:300,y:0,target:{controlId:'outside',input:'up'}});
- let i=0;const result=cloneControlSheet({sheets:p.workspace.sheets,activeSheetId:'sheet-main'},p.workspace.controlLayout,'sheet-main','copy','Копия',()=>`new-${++i}`);
- const copied=result.state.sheets[1];const area=result.layout.areas.find(a=>a.sheetId==='copy');const control=result.layout.controls.find(c=>c.areaId===area.id);
- assert.ok(copied.blocks.filter(b=>b.id!=='external').every(b=>b.id.startsWith('new-')));
- assert.ok(copied.blocks.filter(b=>b.target?.input==='up'&&b.target.controlId!=='outside').every(b=>b.target.controlId===control.id));
- assert.ok(copied.blocks.some(b=>b.target?.controlId==='outside'));
+test('cloning a sheet remaps panel areas and block parents without altering the source',async()=>{
+  const {cloneControlSheet}=await import('../src/lib/control-workspace.ts');
+  const project=panelProject(), before=JSON.stringify(project);
+  const state={sheets:project.workspace.sheets,activeSheetId:'sheet-main'};
+  let i=0;
+  const result=cloneControlSheet(state,project.workspace.controlLayout,'sheet-main','copy','Копия',()=>`new-${++i}`);
+  const copied=result.state.sheets[1], area=result.layout.areas.find(area=>area.sheetId==='copy');
+  const control=result.layout.controls.find(control=>control.areaId===area.id);
+  assert.equal(JSON.stringify(project),before);
+  assert.ok(copied.blocks.every(block=>block.id.startsWith('new-')));
+  const copiedIds=new Set(copied.blocks.map(block=>block.id));
+  assert.ok(copied.blocks.filter(block=>block.parentId).every(block=>copiedIds.has(block.parentId)));
+  assert.equal(copied.blocks.find(block=>block.type==='motor-buttons').controlAreaId,area.id);
+  assert.notEqual(control.id,'panel');
+  validateControlLayout(result.layout,result.state.sheets.map(sheet=>sheet.id));
 });
-
-test('copying an area creates new controls without changing existing handler targets',async()=>{
- const {cloneControlArea}=await import('../src/lib/control-workspace.ts');const project=migrateControlWorkspace(fixture('controller.json')).project;
- const old=project.workspace.controlLayout, oldTarget=project.workspace.sheets[0].blocks[0].target.controlId;let i=0;
- const copied=cloneControlArea(old,old.areas[0].id,()=>`copy-${++i}`);
- assert.equal(copied.areas.length,2);assert.equal(copied.controls.length,2);
- assert.notEqual(copied.controls[1].id,oldTarget);assert.equal(project.workspace.sheets[0].blocks[0].target.controlId,oldTarget);
+test('copying an area on the same sheet is rejected without changing the layout',async()=>{
+  const {cloneControlArea}=await import('../src/lib/control-workspace.ts');
+  const layout=panelProject().workspace.controlLayout, before=JSON.stringify(layout);
+  let i=0;
+  assert.throws(()=>cloneControlArea(layout,'area',()=>`copy-${++i}`),/только одну область/);
+  assert.equal(JSON.stringify(layout),before);
 });

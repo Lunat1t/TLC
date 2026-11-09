@@ -11,3 +11,8 @@ import './controller-ui.test.js';
 import './control-workspace.test.js';
 
 import './controller-runtime.test.js';
+
+import './account-credentials.test.ts';
+import './navigation-layout.test.ts';
+import './session-resource.test.ts';
+import './startup.test.ts';
