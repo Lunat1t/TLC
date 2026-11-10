@@ -110,7 +110,7 @@ export function InstructionCatalogCards({ items }: { items: CatalogCard[] }) {
             {error && <p className="instruction-admin-error" role="alert">{error}</p>}
             <div className="instruction-card-dialog-actions">
               {downloadUrl
-                ? <a href={downloadUrl} rel="noreferrer" referrerPolicy="no-referrer">Скачать PDF</a>
+                ? <><a href={`/instructions/${selected.slug}/read`}>Читать инструкцию</a><a href={downloadUrl} rel="noreferrer" referrerPolicy="no-referrer">Скачать PDF</a></>
                 : <button type="button" disabled>PDF недоступен</button>}
               {ready && canPublish && <button type="button" className="instruction-card-edit-action" onClick={() => void editCard(selected.id)} disabled={loadingId === selected.id}>
                 {loadingId === selected.id ? "Открываю…" : "Изменить"}

@@ -1,38 +1,27 @@
 # TLC Android (Capacitor)
 
-The Android app is a Capacitor WebView wrapper for the hosted TLC site. TLC uses Next.js server routes and Supabase session middleware, so Android must load an HTTPS deployment; a static export is not supported. The WebView and server use the same API routes for teacher uploads and authentication.
+Android-приложение открывает https://techlabcode.vercel.app внутри WebView. Публикация сайта обновляет интерфейс приложения при следующей загрузке страницы. Для работы нужен интернет; при сбое подключения открывается локальный экран с повторной попыткой. Изменения нативных плагинов и разрешений требуют нового APK.
 
-## Requirements
+## Сборка
 
-- Node.js 22+, npm
-- JDK 21
-- Android Studio and Android SDK (plus an emulator or Android tablet)
-- An HTTPS deployment of TLC
-
-## Configure and build
-
-Set `TLC_ANDROID_SERVER_URL` to the HTTPS base URL of the TLC deployment before syncing Capacitor. In GitHub, add it as a repository Actions variable so the `main` workflow can package a debug APK. Keep the URL free of credentials and tokens.
+Нужны Node.js 22+, JDK 21, Android SDK 36 / Build Tools 36 и Android SDK licenses. Android-проект уже включён в репозиторий.
 
 ```sh
-npm install
-TLC_ANDROID_SERVER_URL=https://your-tlc-host.example npm run android:init
-npm run android:open
+npm ci
+# Укажите путь SDK в android/local.properties либо ANDROID_HOME.
+npm run android:apk
 ```
 
-To produce a debug APK:
+Результат: `android/app/build/outputs/apk/debug/app-debug.apk` (подписанная отладочная сборка для установки вручную). Для дальнейших обновлений установленного APK нужно сохранять один ключ подписи; CI debug-ключ на разных runner может отличаться. Для постоянного распространения нужен отдельный защищённый release-ключ, не включённый в Git.
 
-```sh
-TLC_ANDROID_SERVER_URL=https://your-tlc-host.example npm run android:apk
-```
+`npm run android:open` открывает проект в Android Studio. `npm run android:sync` обновляет ресурсы и плагины без лишней сборки Next.js: серверная часть остаётся на Vercel.
 
-Output: `android/app/build/outputs/apk/debug/app-debug.apk`. For later web edits use `TLC_ANDROID_SERVER_URL=... npm run android:sync`. A signed release APK needs a signing key; do not commit secrets or keystores.
+Адрес по умолчанию — основной TLC. Для отдельного HTTPS-стенда задайте `TLC_ANDROID_SERVER_URL` перед синхронизацией. Локальная кнопка повтора подключения возвращает на основной TLC. GitHub Actions `Android debug APK` собирает APK после push в main либо вручную; переменная репозитория `TLC_ANDROID_SERVER_URL` необязательна.
 
-Without `TLC_ANDROID_SERVER_URL`, the package falls back to the local setup page in `android-shell/index.html`; it does not contain the TLC application. The Actions workflow requires the repository variable before producing an APK.
+## Установка и границы
 
-## Known limits
+Передайте APK на Android-планшет, разрешите установку из выбранного источника и установите TLC. Минимум Android 7.0 (API 24); рекомендуется актуальный Android System WebView.
 
-- Projects stored in browser localStorage do not automatically transfer to Android because the native WebView has separate storage. Export/import a `.robotproj.json` file to transfer projects.
-- Native BLE communication with SPIKE and EV3 has not been implemented. The editor Bluetooth control remains a placeholder.
-- Android file download/share behavior should be checked on a tablet, especially Pybricks `.py` export.
-- Legacy `/controller.html` uses browser Web Bluetooth and may not work in Android WebView.
-- A device-tested APK and checked-in Android Studio project have not been produced yet. Run `android:init` on an Android development workstation.
+Вход хранится в отдельном хранилище приложения. Браузерный вход автоматически в приложение не переносится. Локальные проекты и настройки браузера также не переносятся; используйте экспорт/импорт для локальных проектов. Удаление приложения очищает локальные данные.
+
+Нативный BLE для SPIKE/EV3 пока не реализован. Загрузка/экспорт файлов и работа с реальным роботом требуют отдельной проверки на планшете. Это первая Android-сборка; успешная компиляция не подтверждает поведение на физическом устройстве.

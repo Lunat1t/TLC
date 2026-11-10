@@ -118,3 +118,5 @@ body { -webkit-user-select: none; user-select: none; }
 input, textarea, [contenteditable]:not([contenteditable="false"]),
 [contenteditable]:not([contenteditable="false"]) *, pre, pre *, code, code *,
 .select-text, .select-text * { -webkit-user-select: text; user-select: text; }
+
+@media(max-width:767px){.editor-topbar{height:auto!important;min-height:104px;display:flex;flex-wrap:wrap;gap:8px!important;padding:8px 12px!important}.editor-topbar>div:first-of-type{flex:1;min-width:100px}.editor-topbar>button,.editor-topbar summary{min-height:44px}.editor-topbar>button{padding-inline:10px;font-size:12px}.editor-topbar>details{margin-left:auto}.tlc-editor [aria-label="Меню блоков"]{max-width:calc(100vw - 48px)}}

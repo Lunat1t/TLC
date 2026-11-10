@@ -49,3 +49,10 @@
 .desktop-project-menu,.desktop-unpin { display:none; }
 
 [data-theme=dark] .desktop-launch strong { background:#20344c; color:#e2ecfa; }
+@media(max-width:600px){
+ .is-desktop .desktop-canvas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-content:start;align-items:start;gap:24px 8px;padding:24px 12px 110px;height:auto;min-height:100dvh}
+ .desktop-canvas>.desktop-item{position:relative!important;left:auto!important;top:auto!important;transform:none!important;width:100%;max-width:100%;min-width:0}
+ .desktop-canvas>.desktop-clock{grid-column:1/-1;grid-row:1;text-align:center;margin:8px 0 18px}.desktop-clock .lab-clock time{font-size:72px}.desktop-clock .lab-clock p{font-size:13px}
+ .desktop-canvas>.desktop-note{grid-column:span 2}.desktop-drag-handle{visibility:hidden;height:12px;pointer-events:none}.shortcut-menu-trigger{top:0;width:32px;height:32px}.desktop-launch strong{font-size:12px;max-width:100%}
+}
+@media(min-width:601px) and (max-width:1024px) and (pointer:coarse){.is-desktop .desktop-canvas{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-content:start;gap:26px 12px;padding:28px 24px 120px;height:auto;min-height:100dvh}.desktop-canvas>.desktop-item{position:relative!important;left:auto!important;top:auto!important;width:100%;max-width:100%}.desktop-canvas>.desktop-clock{grid-column:1/-1;grid-row:1;text-align:center}.desktop-canvas>.desktop-note{grid-column:span 2}.desktop-drag-handle{visibility:hidden;pointer-events:none;height:12px}}

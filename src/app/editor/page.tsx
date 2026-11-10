@@ -678,7 +678,7 @@ function EditorWorkspace() {
 
   return (
     <div
-      className="flex flex-col h-dvh min-h-[360px] bg-[#f5f8fa] text-[#18313b] select-none overflow-hidden"
+      className="tlc-editor flex flex-col h-dvh min-h-[360px] bg-[#f5f8fa] text-[#18313b] select-none overflow-hidden"
       onPointerDown={(e) => {
         if (!(e.target as HTMLElement).closest("[data-module-picker]")) {
           setOpenMenuBlockId(null)
@@ -686,7 +686,7 @@ function EditorWorkspace() {
       }}
     >
       {/* Topbar */}
-      <header className="h-[68px] shrink-0 flex items-center gap-4 px-4 md:px-6 bg-white border-b border-[#dce8ec] z-10">
+      <header className="editor-topbar h-[68px] shrink-0 flex items-center gap-4 px-4 md:px-6 bg-white border-b border-[#dce8ec] z-10">
         <Link
           href="/dashboard"
           aria-label="К списку проектов"

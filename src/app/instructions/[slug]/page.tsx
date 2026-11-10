@@ -16,7 +16,7 @@ export default async function InstructionCardPage({ params }: { params: Promise<
     <Link href="/instructions" className="instruction-back">← К инструкциям</Link>
     <div className="instruction-detail-layout">
       <div className="instruction-cover instruction-detail-cover">{coverUrl ? <img src={coverUrl} alt="" width={720} height={480} decoding="async" fetchPriority="high" /> : <span aria-hidden="true">◈</span>}</div>
-      <div><p className="instruction-kit">{card.kit === "spike" ? "SPIKE Prime" : "LEGO EV3"}</p><h1>{card.title}</h1><p>{card.summary}</p><div className="instruction-topics">{card.topics.map((topic) => <span key={topic}>{topic}</span>)}</div>{downloadUrl ? <a href={downloadUrl} className="instruction-next" rel="noreferrer" referrerPolicy="no-referrer">Скачать PDF с Google Drive</a> : <p className="instruction-message">Для этой инструкции пока не подключён PDF.</p>}</div>
+      <div><p className="instruction-kit">{card.kit === "spike" ? "SPIKE Prime" : "LEGO EV3"}</p><h1>{card.title}</h1><p>{card.summary}</p><div className="instruction-topics">{card.topics.map((topic) => <span key={topic}>{topic}</span>)}</div>{downloadUrl ? <><Link className="instruction-next" href={`/instructions/${card.slug}/read`}>Читать инструкцию</Link> <a href={downloadUrl} className="instruction-next" rel="noreferrer" referrerPolicy="no-referrer">Скачать PDF</a></> : <p className="instruction-message">Для этой инструкции пока не подключён PDF.</p>}</div>
     </div>
   </main>
 }
