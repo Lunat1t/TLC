@@ -15,25 +15,6 @@ export function DesktopCanvas({ userId, children }: { userId: string; children: 
   const [error, setError] = useState("")
   const store=useAccountWorkspace()
   useEffect(()=>{
-    const canvas=document.querySelector<HTMLElement>(".desktop-canvas")
-    if(!canvas)return
-    let frame=0
-    const update=()=>{
-      cancelAnimationFrame(frame)
-      frame=requestAnimationFrame(()=>{
-        const base=Math.max(530,window.innerHeight-230)
-        const bottom=Math.max(base,...Array.from(canvas.querySelectorAll<HTMLElement>(".desktop-item"),item=>item.offsetTop+item.offsetHeight))
-        const height=Math.ceil(bottom)
-        if(Math.abs(canvas.clientHeight-height)>1)canvas.style.height=`${height}px`
-      })
-    }
-    const observer=new ResizeObserver(update)
-    observer.observe(canvas)
-    canvas.querySelectorAll(".desktop-item").forEach(item=>observer.observe(item))
-    update()
-    return()=>{cancelAnimationFrame(frame);observer.disconnect();canvas.style.height=""}
-  },[children])
-  useEffect(()=>{
     setActive(false)
     if(!store.ready)return
     try {
