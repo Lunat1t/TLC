@@ -72,7 +72,6 @@ export function DesktopItem({ id, label, initial, children, className = "", mobi
     {menuOpen&&createPortal(<div style={{position:"fixed",left:Math.max(8,Math.min(window.innerWidth-208,node.current?.getBoundingClientRect().left||8)),top:Math.max(8,Math.min(window.innerHeight-350,node.current?.getBoundingClientRect().top||8)),zIndex:11950}} className="shortcut-actions" role="group" aria-label={`Действия: ${label}`} onPointerDown={e=>{e.stopPropagation();suppressed.current=false}} onKeyDown={e=>{if(e.key==="Escape")setMenuOpen(false)}}>
       <button onClick={()=>{setMenuOpen(false);if(onEdit){onEdit();return}const title=window.prompt("Название ярлыка",p.title||label);if(title?.trim())place(id,{...p,title:title.trim().slice(0,64)})}}>Редактировать</button>
       <button onClick={()=>{place(id,{...p,locked:!p.locked});setMenuOpen(false)}}>{p.locked?"Открепить":"Закрепить"}</button>
-      {shortcut&&<button disabled={!dock.ready} onClick={()=>{if(!dock.pin({...shortcut,label:p.title||label}))window.alert("В панели до 10 дополнительных ярлыков.");setMenuOpen(false)}}>Добавить в bar</button>}
       {onDelete&&<button onClick={()=>{setMenuOpen(false);onDelete()}}>Удалить</button>}
       <button onClick={()=>setMenuOpen(false)}>Закрыть меню</button>
     </div>,document.body)}
