@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Download, FolderOpen, Plus, Upload, MoreHorizontal, X } from "lucide-react"
 import "../home.css"
+import { useAccountWorkspace } from "@/components/lab/account-workspace"
+import { useWorkspaceSettings } from "@/components/lab/workspace-settings"
 import { LabBoard } from "@/components/lab/lab-board"
 import {
   HUBS,
@@ -101,6 +103,7 @@ function InstallAppButton() {
 
 export default function HomePage() {
   const router = useRouter()
+  const accountWorkspace=useAccountWorkspace(),{settings:workspaceSettings}=useWorkspaceSettings()
   const [projectsOpen, setProjectsOpen] = React.useState(false)
   const projectsCloseRef = React.useRef<HTMLButtonElement>(null)
   const projectsLauncherRef = React.useRef<HTMLElement | null>(null)
@@ -160,6 +163,7 @@ export default function HomePage() {
     try {
       const created = makeProject("Новая программа", hub, createId())
       await commit([...projects, created])
+      if(workspaceSettings.activeDesktop)accountWorkspace.update("layout",{...(accountWorkspace.values.layout as object||{}),[`project:${created.id}`]:{x:.5,y:.5,z:1,desktop:workspaceSettings.activeDesktop}})
       setNewOpen(false)
       setNotice({ text: `Проект «${created.name}» создан.`, isError: false })
       router.push(`/editor?id=${encodeURIComponent(created.id)}`)
