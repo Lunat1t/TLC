@@ -96,7 +96,7 @@ export function PersonalBoard({ userId, projects = [], onProjects, onNewProject,
       if (kind === "image" && !file) throw Error("Выберите картинку.")
       if (!editing && items.length >= LIMIT) throw Error("На доске помещается до 18 материалов.")
       if (kind === "shortcut" && !safeUrl(url.trim())) throw Error("Укажите адрес сайта с https:// или путь страницы TLC, например /instructions.")
-      const item: PinItem = { id: editing || crypto.randomUUID(), desktop:editing?items.find(p=>p.id===editing)?. kind, text: text.trim(), color, ...(kind === "shortcut" ? {url:safeUrl(url.trim())!} : {}), ...(kind === "event" ? { date } : {}), ...(kind === "image" && file ? { image: await imageData(file) } : {}) }
+      const item: PinItem = { id: editing || crypto.randomUUID(), kind, text: text.trim(), color, ...(kind === "shortcut" ? {url:safeUrl(url.trim())!} : {}), ...(kind === "event" ? { date } : {}), ...(kind === "image" && file ? { image: await imageData(file) } : {}) }
       if (save(editing?items.map(p=>p.id===editing?item:p):[...items, item])) setDialog(false)
     } catch (e) { setError(e instanceof Error ? e.message : "Не удалось добавить материал.") } finally { setBusy(false) }
   }
