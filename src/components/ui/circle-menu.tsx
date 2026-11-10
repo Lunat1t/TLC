@@ -6,8 +6,8 @@ import { Menu, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 // Geometry and motion values from the supplied CircleMenu.
-const CONSTANTS = { itemSize: 48, containerSize: 250, openStagger: .02, closeStagger: .07 }
-type CircleMenuItem = { label: string; icon: ReactNode; onSelect: () => void; disabled?: boolean }
+const CONSTANTS = { itemSize: 66, containerSize: 230, openStagger: .02, closeStagger: .07 }
+type CircleMenuItem = { label: string; icon: ReactNode; onSelect: () => void; disabled?: boolean; color?: string }
 
 function MenuItem({ item, index, totalItems, isOpen, reduced }: {
   item: CircleMenuItem; index: number; totalItems: number; isOpen: boolean; reduced: boolean
@@ -27,12 +27,12 @@ function MenuItem({ item, index, totalItems, isOpen, reduced }: {
       delay: isOpen ? index * CONSTANTS.openStagger : index * CONSTANTS.closeStagger,
       type: "spring", stiffness: 300, damping: 30,
     }}
-    style={{ width: CONSTANTS.itemSize - 2, height: CONSTANTS.itemSize - 2 }}
+    style={{ width: CONSTANTS.itemSize - 2, height: CONSTANTS.itemSize - 2, backgroundColor:item.color, color:item.color?"#fff":undefined }}
     className="circle-menu-item group absolute flex items-center justify-center rounded-full bg-muted text-foreground hover:bg-muted/50 disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground"
     onClick={item.onSelect}
   >
     {item.icon}
-    <span className="circle-menu-label pointer-events-none absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap text-xs text-foreground opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100">{item.label}</span>
+    <span className="circle-menu-label pointer-events-none absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap text-xs text-foreground opacity-100 bg-white text-slate-800 px-2 py-1 rounded-lg shadow-sm">{item.label}</span>
   </motion.button>
 }
 

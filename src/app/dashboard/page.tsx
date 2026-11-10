@@ -114,8 +114,9 @@ export default function HomePage() {
   } | null>(null)
 
   const [newOpen, setNewOpen] = React.useState(false)
-  const [newName, setNewName] = React.useState("")
-  const [newHub, setNewHub] = React.useState<HubType>("spike")
+  const newDialogRef=React.useRef<HTMLDialogElement>(null)
+  React.useEffect(()=>{if(newOpen)newDialogRef.current?.showModal();else newDialogRef.current?.close()},[newOpen])
+  const [creating,setCreating]=React.useState(false)
   const [formError, setFormError] = React.useState<string | null>(null)
 
   const [selectedId, setSelectedId] = React.useState<string | null>(null)
@@ -149,15 +150,15 @@ export default function HomePage() {
   }
 
   function openNewModal() {
-    setNewName("")
     setFormError(null)
     setNewOpen(true)
   }
 
-  async function handleCreateProject(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleCreateProject(hub:HubType) {
+    if(creating)return
+    setCreating(true)
     try {
-      const created = makeProject(newName, newHub, createId())
+      const created = makeProject("Новая программа", hub, createId())
       await commit([...projects, created])
       setNewOpen(false)
       setNotice({ text: `Проект «${created.name}» создан.`, isError: false })
@@ -166,7 +167,7 @@ export default function HomePage() {
       setFormError(
         err instanceof Error ? err.message : "Не удалось сохранить проект."
       )
-    }
+    } finally {setCreating(false)}
   }
 
   async function handleRenameProject(e: React.FormEvent) {
@@ -291,89 +292,7 @@ export default function HomePage() {
         </main>
       </div>
 
-      {newOpen && (
-        <div className="fixed inset-0 z-50 bg-[var(--home-overlay)] backdrop-blur-xs grid place-items-center p-4">
-          <div className="w-full max-w-[480px] rounded-[23px] bg-white p-7 shadow-2xl">
-            <form onSubmit={handleCreateProject}>
-              <p className="text-xs font-bold text-[var(--home-blue)] mb-2">
-                Новый проект
-              </p>
-              <h2 className="text-[28px] font-black text-[var(--home-ink)] mb-5">
-                Что будем создавать?
-              </h2>
-              <div className="grid gap-2">
-                <Label htmlFor="projectName">Название проекта</Label>
-                <Input
-                  id="projectName"
-                  maxLength={64}
-                  required
-                  autoFocus
-                  placeholder="Например, мой робот"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                />
-              </div>
-
-              <fieldset className="mt-6 grid gap-2.5">
-                <legend className="text-sm font-bold text-[var(--home-ink)] mb-2.5">
-                  Выберите робота
-                </legend>
-                {(["spike", "ev3"] as const).map((h) => (
-                  <label
-                    key={h}
-                    className={`flex items-center gap-3 p-3 rounded-[13px] border cursor-pointer min-h-[75px] ${
-                      newHub === h
-                        ? "border-[var(--home-blue)] bg-[var(--home-cyan-soft)] "
-                        : "border-[var(--home-line)]"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="hub"
-                      value={h}
-                      checked={newHub === h}
-                      onChange={() => setNewHub(h)}
-                      className="w-4 h-4 accent-[var(--home-blue)]"
-                    />
-                    <span
-                      className={`grid place-items-center w-12 h-12 rounded-[13px] text-[28px] font-black ${
-                        h === "spike"
-                          ? "bg-[var(--home-cyan-soft)] text-[var(--home-blue)]"
-                          : "bg-[var(--home-ev3-soft)] text-[var(--home-ev3)]"
-                      }`}
-                    >
-                      {h === "spike" ? "▦" : "▣"}
-                    </span>
-                    <span className="flex flex-col">
-                      <strong className="text-[15px] text-[var(--home-ink)]">
-                        {HUBS[h]}
-                      </strong>
-                      <small className="text-xs text-[var(--home-muted)]">
-                        {h === "spike" ? "Хаб с портами A–F" : "Хаб с портами A–D"}
-                      </small>
-                    </span>
-                  </label>
-                ))}
-              </fieldset>
-
-              {formError && (
-                <p className="text-[13px] text-[var(--home-error)] mt-3">{formError}</p>
-              )}
-
-              <div className="flex justify-end gap-2.5 mt-7">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setNewOpen(false)}
-                >
-                  Отмена
-                </Button>
-                <Button type="submit">Создать проект</Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <dialog ref={newDialogRef} onCancel={e=>{if(creating)e.preventDefault();else setNewOpen(false)}} onClose={()=>setNewOpen(false)} aria-label="Новая программа" className="program-picker w-full max-w-md rounded-3xl bg-white p-6 text-slate-800 shadow-2xl"><h2 className="text-2xl font-bold mb-5">Выберите робота</h2><div className="grid grid-cols-2 gap-4">{(['ev3','spike'] as const).map(hub=><button autoFocus={hub==='ev3'} disabled={creating} key={hub} className={`rounded-2xl p-7 text-xl font-bold min-h-32 ${hub==='ev3'?'bg-emerald-100 text-emerald-900':'bg-amber-100 text-amber-900'}`} onClick={()=>void handleCreateProject(hub)}>{HUBS[hub]}</button>)}</div>{formError&&<p role="alert" className="text-red-700 mt-4">{formError}</p>}<button disabled={creating} onClick={()=>setNewOpen(false)} className="mt-5 min-h-11">Отмена</button></dialog>
 
       {selectedProject && !renameOpen && (
         <div className="fixed inset-0 z-50 bg-[var(--home-overlay)] backdrop-blur-xs grid place-items-center p-4">

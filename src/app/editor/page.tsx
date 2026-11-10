@@ -92,6 +92,7 @@ function EditorWorkspace() {
   const paletteRef = React.useRef<HTMLElement | null>(null)
   const storageRawRef = React.useRef<string | null>(null)
   const saveBusyRef = React.useRef(false)
+  const [renaming,setRenaming]=React.useState(false),[nameDraft,setNameDraft]=React.useState("")
   const [projects, setProjects] = React.useState<RobotProject[]>([])
   const [project, setProject] = React.useState<RobotProject | null>(null)
   const [loadError, setLoadError] = React.useState<string | null>(null)
@@ -260,6 +261,14 @@ function EditorWorkspace() {
       return new Map<string, string>()
     }
   }, [project, snapshotSheets])
+
+  async function renameProgram(){
+    if(!project||saveBusyRef.current)return
+    const name=nameDraft.trim().slice(0,64)
+    if(!name){setSaveMessage({text:"Введите название программы.",isError:true});return}
+    saveBusyRef.current=true
+    try{const updated={...project,name,updatedAt:new Date().toISOString()};const next=projects.map(p=>p.id===project.id?updated:p);storageRawRef.current=await saveEditorProjects(localStorage,next,storageRawRef.current,navigator.locks);setProjects(next);setProject(updated);setRenaming(false);document.title=`${name} — TLC`;setSaveMessage({text:"Название сохранено",isError:false})}catch(e){setSaveMessage({text:e instanceof Error?e.message:"Не удалось сохранить название",isError:true})}finally{saveBusyRef.current=false}
+  }
 
   const persistSheets = React.useCallback(
     async (nextState: SheetState, nextLayout?: ControlLayout): Promise<boolean> => {
@@ -706,9 +715,7 @@ function EditorWorkspace() {
           setTimeout(() => URL.revokeObjectURL(url), 1000)
         }}>Скачать исходные проекты</button>}
         <div className="flex items-baseline gap-3 min-w-0">
-          <strong className="text-[17px] font-black truncate">
-            {project ? project.name : loadError ? "Проект недоступен" : "Проект"}
-          </strong>
+          {renaming?<form onSubmit={e=>{e.preventDefault();void renameProgram()}} className="flex gap-2 min-w-0"><input autoFocus aria-label="Название программы" className="min-w-0 w-40 border rounded-lg p-2" maxLength={64} value={nameDraft} onChange={e=>setNameDraft(e.target.value)} onKeyDown={e=>{if(e.key==='Escape')setRenaming(false)}}/><button type="submit" aria-label="Сохранить название">✓</button></form>:<button disabled={!project||checking} title="Изменить название" aria-label={`Название программы: ${project?.name||'Проект'}. Изменить`} className="text-[17px] font-black truncate text-left" onClick={()=>{setNameDraft(project?.name||'');setRenaming(true)}}>{project?project.name:loadError?'Проект недоступен':'Проект'} <span aria-hidden="true">✎</span></button>}
           {project && (
             <Badge variant="secondary" className="hidden sm:inline-flex">
               {HUBS[project.hub]}

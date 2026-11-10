@@ -3,11 +3,11 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { createPortal } from "react-dom"
 import { CircleMenu } from "@/components/ui/circle-menu"
-import { FileCode2, Globe, StickyNote } from "lucide-react"
+import { FileCode2, Globe, StickyNote, ImagePlus, FolderOpen } from "lucide-react"
 
-type Actions = { onShortcut: () => void; onNote: () => void; onProject?: () => void; canPin: boolean }
+type Actions = { onShortcut: () => void; onNote: () => void; onProject?: () => void; onImage:()=>void; canPin: boolean }
 
-export function DesktopContextMenu({ children, onShortcut, onNote, onProject, canPin }: Actions & { children: ReactNode }) {
+export function DesktopContextMenu({ children, onShortcut, onNote, onProject, onImage, canPin }: Actions & { children: ReactNode }) {
   const [point, setPoint] = useState<{ x: number; y: number } | null>(null)
   const surface = useRef<HTMLDivElement>(null)
   const menu = useRef<HTMLDivElement>(null)
@@ -22,7 +22,7 @@ export function DesktopContextMenu({ children, onShortcut, onNote, onProject, ca
     cancelHold()
     previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     // Keep the entire radial menu inside the visible viewport.
-    setPoint({ x: Math.max(158, Math.min(window.innerWidth - 158, x)), y: Math.max(158, Math.min(window.innerHeight - 158, y)) })
+    setPoint({ x: Math.max(165, Math.min(window.innerWidth - 165, x)), y: Math.max(165, Math.min(window.innerHeight - 165, y)) })
   }
   function close(restoreFocus = false) {
     setPoint(null)
@@ -86,9 +86,11 @@ export function DesktopContextMenu({ children, onShortcut, onNote, onProject, ca
       }
     }} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setPoint(null) }}>
       <CircleMenu defaultOpen onClose={()=>close(true)} items={[
-        { label: "Создать ярлык", icon: <Globe size={16} aria-hidden="true"/>, disabled: !canPin, onSelect: ()=>{close();onShortcut()} },
-        { label: "Заметка", icon: <StickyNote size={16} aria-hidden="true"/>, disabled: !canPin, onSelect: ()=>{close();onNote()} },
-        ...(onProject ? [{ label: "Новый проект", icon: <FileCode2 size={16} aria-hidden="true"/>, onSelect: ()=>{close();onProject()} }] : []),
+        { label: "Ярлык", color:"#8b5bd9", icon: <Globe size={28} aria-hidden="true"/>, disabled: !canPin, onSelect: ()=>{close();onShortcut()} },
+        { label: "Заметка", color:"#ca8a04", icon: <StickyNote size={28} aria-hidden="true"/>, disabled: !canPin, onSelect: ()=>{close();onNote()} },
+        ...(onProject ? [{ label: "Программа", color:"#2875e8", icon: <FileCode2 size={28} aria-hidden="true"/>, onSelect: ()=>{close();onProject()} }] : []),
+        {label:"Картинка",color:"#df5970",icon:<ImagePlus size={28}/>,disabled:!canPin,onSelect:()=>{close();onImage()}},
+        {label:"Файлы",color:"#218573",icon:<FolderOpen size={28}/>,onSelect:()=>{close();window.location.assign("/files")}},
       ]}/>
 
     </div>, document.body)}
