@@ -1,0 +1,9 @@
+import { NextResponse } from "next/server"
+import { verifiedUser, errorResponse, InstructionError } from "@/lib/instructions/access"
+export async function GET(){try{const {client,user}=await verifiedUser();const {data,error}=await client.from("account_workspace").select("section,value,revision").eq("user_id",user.id);if(error)throw new InstructionError(503,"workspace_unavailable","Облачное рабочее место недоступно.");return NextResponse.json({userId:user.id,sections:data},{headers:{"Cache-Control":"private, no-store"}})}catch(e){return errorResponse(e)}}
+export async function PUT(request:Request){try{
+ const origin=request.headers.get("origin");if(origin&&origin!==new URL(request.url).origin)throw new InstructionError(403,"origin","Недопустимый источник.")
+ const {client,user}=await verifiedUser();const text=await request.text();if(text.length>3_500_000)throw new InstructionError(413,"size","Рабочее место слишком большое.")
+ const body=JSON.parse(text);if(body.userId!==user.id)throw new InstructionError(409,"account_changed","Аккаунт изменился. Обновите страницу.");if(!['settings','layout','board'].includes(body.section)||!Number.isInteger(body.revision)||body.revision<0||body.value===null||typeof body.value!=="object"||(body.section==='board'?!Array.isArray(body.value):Array.isArray(body.value)))throw new InstructionError(400,"invalid","Неверные настройки.")
+ const {data,error}=await client.rpc("save_workspace_section",{p_section:body.section,p_value:body.value,p_revision:body.revision});if(error)throw new InstructionError(503,"workspace_unavailable","Не удалось сохранить в аккаунте.");if(data===-1)throw new InstructionError(409,"conflict","Рабочее место изменено на другом устройстве. Обновите страницу.");return NextResponse.json({userId:user.id,revision:data},{headers:{"Cache-Control":"private, no-store"}})
+}catch(e){return errorResponse(e)}}

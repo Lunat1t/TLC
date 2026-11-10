@@ -7,6 +7,7 @@ import { useAccess } from "@/components/auth/access-provider"
 import "./lab-board.css"
 import "./desktop.css"
 import { DesktopCanvas, DesktopItem } from "./desktop-canvas"
+import { useAccountWorkspace } from "./account-workspace"
 import { useWorkspaceSettings } from "./workspace-settings"
 import { DesktopContextMenu } from "./desktop-context-menu"
 import type { RobotProject } from "@/lib/projects"
@@ -48,7 +49,7 @@ export function LabBoard(props: BoardProps) {
 export function PersonalBoard({ userId, projects = [], onProjects, onNewProject, onProjectMenu, onDeleteProject }: { userId: string } & BoardProps) {
   const {settings}=useWorkspaceSettings()
   const [editing,setEditing]=useState<string|null>(null)
-  const key = `tlc-lab-board-v1:${userId}`
+  const store=useAccountWorkspace()
   const [items, setItems] = useState<PinItem[]>([])
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState("")
@@ -61,16 +62,15 @@ export function PersonalBoard({ userId, projects = [], onProjects, onNewProject,
   const [file, setFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
   const dialogRef = useRef<HTMLDialogElement>(null)
-  const storedRaw = useRef<string | null>(null)
-  useEffect(() => {
-    try { const raw = localStorage.getItem(key); storedRaw.current = raw; if (raw) { const data: unknown = JSON.parse(raw); if (!Array.isArray(data) || data.length > LIMIT || !data.every(validItem)) throw Error(); setItems(data) } setLoaded(true) }
-    catch { setError("Не удалось прочитать доску. Проверьте доступ к хранилищу браузера; исходная запись сохранена.") }
-  }, [key])
+  useEffect(()=>{
+    setLoaded(false)
+    if(!store.ready)return
+    const data=store.values.board||[]
+    if(!Array.isArray(data)||data.length>LIMIT||!data.every(validItem)){setError('Не удалось прочитать доску аккаунта.');return}
+    setItems(data);setLoaded(true)
+  },[store.ready,store.values.board])
   useEffect(() => { if (dialog) dialogRef.current?.showModal(); else dialogRef.current?.close() }, [dialog])
-  function save(next: PinItem[]) {
-    try { if (localStorage.getItem(key) !== storedRaw.current) { setError("Доска изменена в другой вкладке. Обновите страницу, чтобы увидеть изменения."); return false } const json = JSON.stringify(next); if (json.length > 3_000_000) throw Error(); localStorage.setItem(key, json); storedRaw.current = json; setItems(next); setError(""); return true }
-    catch { setError("Не удалось сохранить. Возможно, память браузера заполнена. Попробуйте картинку поменьше или удалите лишнее."); return false }
-  }
+  function save(next:PinItem[]){if(!loaded)return false;if(JSON.stringify(next).length>3_000_000){setError('Доска слишком большая. Выберите картинку поменьше.');return false}if(!store.update('board',next))return false;setItems(next);setError('');return true}
   function open(type: PinItem["kind"] = "note") { setEditing(null); setText(""); setUrl(""); setDate(""); setFile(null); setKind(type); setDialog(true) }
   async function add(event: React.FormEvent) {
     event.preventDefault(); setBusy(true); setError("")
@@ -94,5 +94,5 @@ export function PersonalBoard({ userId, projects = [], onProjects, onNewProject,
     {items.map((item,index)=><DesktopItem id={`pin:${item.id}`} key={item.id} label={item.kind==="shortcut"?item.text:"Карточка"} initial={[.08+(index%4)*.22, .23+Math.floor(index/4)*.15]} mobileInitial={[(index%2)*.98,.58+index/(items.length+1)*.4]} onEdit={item.kind==="shortcut"?()=>{setEditing(item.id);setKind(item.kind);setText(item.text);setUrl(item.url||"");setColor(item.color);setDialog(true)}:undefined} onDelete={()=>{if(window.confirm(`Удалить «${item.text||"карточку"}»?`))save(items.filter(p=>p.id!==item.id))}} className={item.kind==="shortcut"?"desktop-shortcut":"desktop-note"}>
       {item.kind==="shortcut" ? <><a className="desktop-launch" href={item.url} target={item.url?.startsWith("/")?undefined:"_blank"} rel="noopener noreferrer"><span className="desktop-app-icon is-purple"><Globe/></span><strong>{item.text}</strong></a><button className="desktop-unpin" onClick={()=>save(items.filter(p=>p.id!==item.id))} aria-label={`Убрать ярлык ${item.text}`}><X size={14}/></button></> : <article className={`lab-pin lab-pin-${item.kind} lab-pin-${item.color}`}><span className="lab-pin-head" aria-hidden="true"/>{item.image?<img src={item.image} alt={item.text||"Закреплённая картинка"}/>:null}{item.kind==="event"&&item.date?<time dateTime={item.date}>{new Date(`${item.date}T12:00:00`).toLocaleDateString("ru-RU",{day:"numeric",month:"long",year:"numeric"})}</time>:null}<p>{item.text}</p><button className="desktop-remove" onClick={()=>save(items.filter(p=>p.id!==item.id))} aria-label={`Открепить ${item.text||"картинку"}`}><X size={16}/></button></article>}
     </DesktopItem>)}
-  </DesktopCanvas></DesktopContextMenu><div className="desktop-hint">Правый клик или долгое нажатие на пустом месте — меню · Перетаскивай элементы за полоску сверху · Сохраняется в этом браузере</div>{error&&!dialog?<p role="alert" className="lab-error">{error}</p>:null}<dialog ref={dialogRef} className="lab-dialog" aria-labelledby="lab-dialog-title" onCancel={event => { if (busy) event.preventDefault(); else setDialog(false) }} onClose={() => setDialog(false)}><form onSubmit={add}><header><h2 id="lab-dialog-title">{editing?"Редактировать ярлык":"Что закрепим?"}</h2><button type="button" disabled={busy} onClick={() => setDialog(false)} aria-label="Закрыть"><X /></button></header><div className="lab-kinds">{([['note', 'Заметка'], ['image', 'Картинка / мем'], ['event', 'Событие'], ['shortcut', 'Ярлык']] as const).map(([value, label]) => <button type="button" key={value} aria-pressed={kind === value} onClick={() => setKind(value)}>{label}</button>)}</div><label htmlFor="pin-text">{kind === "image" ? "Подпись к картинке" : kind === "shortcut" ? "Название ярлыка" : "Что хочется сохранить?"}</label><textarea id="pin-text" autoFocus maxLength={300} required={kind !== "image"} value={text} onChange={e => setText(e.target.value)} placeholder="Новая идея, смешная мысль или маленькая победа…" />{kind === "shortcut" ? <label>Адрес сайта или страницы TLC<input type="text" required value={url} maxLength={2000} onChange={e=>setUrl(e.target.value)} placeholder="https://example.com или /instructions" /></label> : null}{kind === "image" ? <label className="lab-file"><ImagePlus size={20} /> {file?.name || "Выбрать картинку"}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={e => setFile(e.target.files?.[0] || null)} /></label> : null}{kind === "event" ? <label>Дата события<input type="date" min="0001-01-01" max="9999-12-31" required value={date} onChange={e => setDate(e.target.value)} /></label> : null}<fieldset><legend>Цвет карточки</legend>{colors.map(value => <button type="button" key={value} className={`lab-swatch lab-pin-${value}`} aria-label={{yellow:'Жёлтый',blue:'Голубой',pink:'Розовый'}[value]} aria-pressed={color === value} onClick={() => setColor(value)} />)}</fieldset>{error ? <p role="alert" className="lab-error">{error}</p> : null}<button className="lab-submit" disabled={busy} type="submit">{busy ? "Сохраняем…" : "Закрепить на доске"}<Pin size={18} /></button></form></dialog></>
+  </DesktopCanvas></DesktopContextMenu><div className="desktop-hint">Правый клик или долгое нажатие на пустом месте — меню · Перетаскивай элементы за полоску сверху · Сохраняется в аккаунте</div>{error&&!dialog?<p role="alert" className="lab-error">{error}</p>:null}<dialog ref={dialogRef} className="lab-dialog" aria-labelledby="lab-dialog-title" onCancel={event => { if (busy) event.preventDefault(); else setDialog(false) }} onClose={() => setDialog(false)}><form onSubmit={add}><header><h2 id="lab-dialog-title">{editing?"Редактировать ярлык":"Что закрепим?"}</h2><button type="button" disabled={busy} onClick={() => setDialog(false)} aria-label="Закрыть"><X /></button></header><div className="lab-kinds">{([['note', 'Заметка'], ['image', 'Картинка / мем'], ['event', 'Событие'], ['shortcut', 'Ярлык']] as const).map(([value, label]) => <button type="button" key={value} aria-pressed={kind === value} onClick={() => setKind(value)}>{label}</button>)}</div><label htmlFor="pin-text">{kind === "image" ? "Подпись к картинке" : kind === "shortcut" ? "Название ярлыка" : "Что хочется сохранить?"}</label><textarea id="pin-text" autoFocus maxLength={300} required={kind !== "image"} value={text} onChange={e => setText(e.target.value)} placeholder="Новая идея, смешная мысль или маленькая победа…" />{kind === "shortcut" ? <label>Адрес сайта или страницы TLC<input type="text" required value={url} maxLength={2000} onChange={e=>setUrl(e.target.value)} placeholder="https://example.com или /instructions" /></label> : null}{kind === "image" ? <label className="lab-file"><ImagePlus size={20} /> {file?.name || "Выбрать картинку"}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={e => setFile(e.target.files?.[0] || null)} /></label> : null}{kind === "event" ? <label>Дата события<input type="date" min="0001-01-01" max="9999-12-31" required value={date} onChange={e => setDate(e.target.value)} /></label> : null}<fieldset><legend>Цвет карточки</legend>{colors.map(value => <button type="button" key={value} className={`lab-swatch lab-pin-${value}`} aria-label={{yellow:'Жёлтый',blue:'Голубой',pink:'Розовый'}[value]} aria-pressed={color === value} onClick={() => setColor(value)} />)}</fieldset>{error ? <p role="alert" className="lab-error">{error}</p> : null}<button className="lab-submit" disabled={busy} type="submit">{busy ? "Сохраняем…" : "Закрепить на доске"}<Pin size={18} /></button></form></dialog></>
 }

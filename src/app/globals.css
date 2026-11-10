@@ -120,3 +120,5 @@ input, textarea, [contenteditable]:not([contenteditable="false"]),
 .select-text, .select-text * { -webkit-user-select: text; user-select: text; }
 
 @media(max-width:767px){.editor-topbar{height:auto!important;min-height:104px;display:flex;flex-wrap:wrap;gap:8px!important;padding:8px 12px!important}.editor-topbar>div:first-of-type{flex:1;min-width:100px}.editor-topbar>button,.editor-topbar summary{min-height:44px}.editor-topbar>button{padding-inline:10px;font-size:12px}.editor-topbar>details{margin-left:auto}.tlc-editor [aria-label="Меню блоков"]{max-width:calc(100vw - 48px)}}
+
+.workspace-sync-status:empty{display:none}.workspace-sync-status{position:fixed;left:12px;top:12px;z-index:14000;max-width:calc(100vw - 24px);padding:10px 14px;border:1px solid #b5c9df;border-radius:12px;background:#fff;color:#193b68;box-shadow:0 4px 18px #1233;font-size:13px}.workspace-sync-status button{margin-left:12px;text-decoration:underline;min-height:36px}

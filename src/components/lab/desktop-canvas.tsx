@@ -2,6 +2,7 @@
 
 import { Children, cloneElement, isValidElement, createContext, useContext, useEffect, useRef, useState, type ReactElement, type ReactNode } from "react"
 import { createPortal } from "react-dom"
+import { useAccountWorkspace } from "./account-workspace"
 import { GripHorizontal } from "lucide-react"
 
 type Point = { x: number; y: number; z: number; locked?: boolean; title?: string }
@@ -11,31 +12,22 @@ export function DesktopCanvas({ userId, children }: { userId: string; children: 
   const [positions, setPositions] = useState<Positions>({})
   const [active, setActive] = useState(false)
   const [error, setError] = useState("")
-  const key = `tlc-desktop-layout-v1:${userId}`
-  const rawRef = useRef<string | null>(null)
-  useEffect(() => {
+  const store=useAccountWorkspace()
+  useEffect(()=>{
+    setActive(false)
+    if(!store.ready)return
     try {
-      const raw = localStorage.getItem(key); rawRef.current = raw
-      if (raw) {
-        const data: unknown = JSON.parse(raw)
-        if (!data || typeof data !== "object" || Array.isArray(data)) throw Error()
-        const clean: Positions = {}
-        for (const [id, p] of Object.entries(data)) {
-          if (p && typeof p === "object" && [p.x,p.y,p.z].every(Number.isFinite)) clean[id] = {x:Math.min(1,Math.max(0,p.x)),y:Math.min(1,Math.max(0,p.y)),z:Math.min(999,Math.max(1,p.z)),locked:p.locked===true,title:typeof p.title==="string"?p.title.slice(0,64):undefined}
-        }
-        setPositions(clean)
+      const data=store.values.layout||{}
+      if(typeof data!=='object'||Array.isArray(data))throw Error()
+      const clean:Positions={}
+      for(const [id,value] of Object.entries(data)){
+        const p=value as Point
+        if(p&&typeof p==='object'&&[p.x,p.y,p.z].every(Number.isFinite))clean[id]={x:Math.min(1,Math.max(0,p.x)),y:Math.min(1,Math.max(0,p.y)),z:Math.min(999,Math.max(1,p.z)),locked:p.locked===true,title:typeof p.title==='string'?p.title.slice(0,64):undefined}
       }
-      setActive(true)
-    } catch { setError("Не удалось загрузить расстановку. Исходные данные сохранены.") }
-  }, [key])
-  function place(id: string, point: Point) {
-    if (!active) return
-    const next = { ...positions, [id]: point }
-    try {
-      if (localStorage.getItem(key) !== rawRef.current) throw Error("Расстановка изменена в другой вкладке. Обновите страницу.")
-      const raw = JSON.stringify(next); localStorage.setItem(key,raw); rawRef.current=raw; setPositions(next); setError("")
-    } catch (e) { setError(e instanceof Error && e.message ? e.message : "Не удалось сохранить расстановку.") }
-  }
+      setPositions(clean);setActive(true);setError('')
+    }catch{setError('Не удалось загрузить расстановку аккаунта.')}
+  },[store.ready,store.values.layout])
+  function place(id:string,point:Point){if(!active)return;const next={...positions,[id]:point};if(store.update('layout',next)){setPositions(next);setError('')}}
   return <CanvasContext.Provider value={{positions,place,active}}><div className="desktop-canvas" data-swipe-ignore>{children}</div>{error && <p className="desktop-save-error" role="alert">{error}</p>}</CanvasContext.Provider>
 }
 export function DesktopItem({ id, label, initial, children, className = "", mobileInitial, movable = true, onEdit, onDelete }: { onEdit?:()=>void; onDelete?:()=>void; mobileInitial?: [number,number]; movable?: boolean; id: string; label: string; initial: [number,number]; children: ReactNode; className?: string }) {
