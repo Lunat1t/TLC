@@ -3,11 +3,15 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { createPortal } from "react-dom"
 import { CircleMenu } from "@/components/ui/circle-menu"
-import { FileCode2, Globe, StickyNote, ImagePlus } from "lucide-react"
+import { FileCode2, Globe, StickyNote, ImagePlus, Plus, X } from "lucide-react"
 
 type Actions = { onShortcut: () => void; onNote: () => void; onProject?: () => void; onImage:()=>void; canPin: boolean }
 
 export function DesktopContextMenu({ children, onShortcut, onNote, onProject, onImage, canPin }: Actions & { children: ReactNode }) {
+  const [phone,setPhone]=useState(false)
+  const phoneDialog=useRef<HTMLDialogElement>(null)
+  const addButton=useRef<HTMLButtonElement>(null)
+  useEffect(()=>{const media=window.matchMedia("(max-width: 600px)");const sync=()=>{setPhone(media.matches);setPoint(null);phoneDialog.current?.close()};sync();media.addEventListener("change",sync);return()=>media.removeEventListener("change",sync)},[])
   const [point, setPoint] = useState<{ x: number; y: number } | null>(null)
   const surface = useRef<HTMLDivElement>(null)
   const menu = useRef<HTMLDivElement>(null)
@@ -20,6 +24,7 @@ export function DesktopContextMenu({ children, onShortcut, onNote, onProject, on
   }
   function open(x: number, y: number) {
     cancelHold()
+    if(phone){phoneDialog.current?.showModal();return}
     previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     // Keep the entire radial menu inside the visible viewport.
     setPoint({ x: Math.max(165, Math.min(window.innerWidth - 165, x)), y: Math.max(165, Math.min(window.innerHeight - 165, y)) })
@@ -66,7 +71,7 @@ export function DesktopContextMenu({ children, onShortcut, onNote, onProject, on
     open(event.clientX, event.clientY)
   }} onPointerDown={event => {
     cancelHold()
-    if (event.button !== 0 || !event.isPrimary || !(event.target instanceof Element) || !event.target.matches(".desktop-canvas, .desktop-context-surface")) return
+    if (phone || event.button !== 0 || !event.isPrimary || !(event.target instanceof Element) || !event.target.matches(".desktop-canvas, .desktop-context-surface")) return
     const { clientX: x, clientY: y, pointerId: pointer } = event
     pending.current = { x, y, pointer, timer: setTimeout(() => open(x, y), 600) }
   }} onKeyDown={event => {
@@ -76,7 +81,14 @@ export function DesktopContextMenu({ children, onShortcut, onNote, onProject, on
     open(bounds.left + bounds.width / 2, Math.max(150, bounds.top + 150))
   }}>
     {children}
-    {point && createPortal(<div ref={menu} className="desktop-action-menu" role="dialog" aria-label="Действия рабочего стола" style={{ left: point.x, top: point.y }} onContextMenu={event => event.preventDefault()} onKeyDown={event => {
+    <button ref={addButton} className="phone-desktop-add" type="button" aria-haspopup="dialog" onClick={()=>phoneDialog.current?.showModal()}><Plus size={24} aria-hidden="true"/> Добавить</button>
+    <dialog ref={phoneDialog} className="phone-add-dialog" aria-label="Добавить на рабочий стол"><header><h2>Добавить</h2><button type="button" autoFocus aria-label="Закрыть" onClick={()=>phoneDialog.current?.close()}><X size={22}/></button></header><div>
+    <button disabled={!canPin} onClick={()=>{phoneDialog.current?.close();onNote()}}><StickyNote color="#bc8508"/>Заметку</button>
+    <button disabled={!canPin} onClick={()=>{phoneDialog.current?.close();onImage()}}><ImagePlus color="#d74c6b"/>Картинку</button>
+    {onProject&&<button onClick={()=>{phoneDialog.current?.close();onProject()}}><FileCode2 color="#2875e8"/>Программу</button>}
+    <button disabled={!canPin} onClick={()=>{phoneDialog.current?.close();onShortcut()}}><Globe color="#8958d6"/>Ярлык</button>
+    </div></dialog>
+    {!phone && point && createPortal(<div ref={menu} className="desktop-action-menu" role="dialog" aria-label="Действия рабочего стола" style={{ left: point.x, top: point.y }} onContextMenu={event => event.preventDefault()} onKeyDown={event => {
       if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); close(true) }
       if (["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(event.key)) {
         event.preventDefault()
