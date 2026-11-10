@@ -34,3 +34,35 @@
 .tlc-os.is-public .os-content { padding:24px; }.tlc-os.is-public .os-content>main { min-height:calc(100dvh - 48px); border-radius:24px; overflow:hidden; box-shadow:0 12px 55px #305b9222; background-color:#f4f8ff; }
 @media(max-width:700px) { .os-content{padding:12px 10px 108px}.os-menubar{padding:0 12px;gap:15px}.os-owner{font-size:10px}.os-brand span{max-width:130px;font-size:10px}.os-page-title{display:none}.workshop-section-header{gap:8px;font-size:12px;margin-bottom:12px}.workshop-section-icon{display:none}.os-dock{gap:7px;padding:8px;border-radius:20px}.os-dock-item{width:45px;height:45px;border-radius:12px}.workshop-section-body .instruction-page{padding:14px}.workshop-avatar .avatar-editor{min-height:650px}.tlc-os.is-public .os-content{padding:10px} }
 @media(prefers-reduced-motion:reduce) { .os-dock-item{transition:none}.os-dock-item:hover{transform:none} }
+/* Workspace preferences */
+.tlc-os { background-color:var(--workspace-background,#e6f0fa); }
+.tlc-os[data-background=plain] { background-image:none; }
+.tlc-os[data-background=dots] { background-image:radial-gradient(#7b99b980 1px,transparent 1px); }
+.tlc-os[data-theme=dark] { color:#e2ecfa; --foreground:210 40% 94%; --background:216 30% 14%; --muted:216 25% 24%; background-color:var(--workspace-background,#17283c); }
+[data-theme=dark] :is(.os-menubar,.workshop-section-body>main,.os-dock,.workspace-settings section) { background:#20344c; color:#e2ecfa; border-color:#425a75; }
+[data-theme=dark] :is(.desktop-launch,.desktop-tools,.desktop-hint,.os-brand span,.workshop-back) { color:#d5e5fa; }
+[data-theme=dark] .lab-clock :is(time,p,span) { color:#d5e5fa; }
+.is-desktop .desktop-lab,.is-desktop .desktop-canvas { min-height:100dvh; }
+.is-desktop .os-content { min-height:100dvh; }
+.tlc-os[data-bar=top] .os-dock { top:12px; bottom:auto; }
+.tlc-os[data-bar=top] .os-content { padding-top:100px; }
+.tlc-os[data-bar=left] .os-dock { left:12px; top:50%; bottom:auto; transform:translateY(-50%); flex-direction:column; }
+.tlc-os[data-bar=right] .os-dock { left:auto; right:12px; top:50%; bottom:auto; transform:translateY(-50%); flex-direction:column; }
+.tlc-os[data-bar=left] .os-content { padding-left:100px; }
+.tlc-os[data-bar=right] .os-content { padding-right:100px; }
+.tlc-os:is([data-bar=left],[data-bar=right]) .os-dock-separator { width:36px; height:1px; }
+[data-bar=left] .os-dock-item span { left:calc(100% + 12px); bottom:auto; transform:none; }
+[data-bar=right] .os-dock-item span { left:auto; right:calc(100% + 12px); bottom:auto; transform:none; }
+[data-bar=top] .os-dock-item span { top:calc(100% + 12px); bottom:auto; }
+.workspace-settings { padding:clamp(20px,4vw,48px); max-width:960px; margin:auto; }
+.workspace-settings h1 { font-size:30px; font-weight:800; }
+.workspace-settings>p { margin:12px 0 28px; }
+.workspace-settings section { background:#fff; border:1px solid #bfd2e5; border-radius:16px; padding:24px; margin:16px 0; }
+.workspace-settings h2 { font-size:20px; font-weight:750; margin-bottom:16px; }
+.workspace-settings label { display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; padding:12px 0; }
+.workspace-settings select { color:#193b68; background:#e9f1ff; border-radius:8px; padding:10px; max-width:100%; }
+.settings-links { display:flex; flex-wrap:wrap; gap:16px; margin-top:16px; }
+.settings-links :is(a,button),.settings-reset { padding:12px; border:1px solid #8ba8c8; border-radius:8px; }
+
+.tlc-os[data-bar=top].is-app:not(.is-desktop) { padding-top:100px; }
+.tlc-os[data-bar=top].is-app:not(.is-desktop) .os-content { padding-top:26px; }

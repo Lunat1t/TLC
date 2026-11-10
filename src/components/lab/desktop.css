@@ -40,3 +40,12 @@
 .desktop-action-menu { position:fixed; z-index:11900; width:250px; height:250px; margin:-125px; }
 .desktop-action-menu button { touch-action:manipulation; }
 .desktop-context-surface:focus-visible { outline:3px solid #174aad; }
+.desktop-clock.clock-minimal .lab-clock time { font-size:48px; font-weight:500; }
+.clock-minimal .lab-clock>span { display:none; }
+.shortcut-menu-trigger { position:absolute; right:0; top:26px; width:32px; height:32px; background:#fff; color:#234c7c; border-radius:8px; }
+.shortcut-actions { position:absolute; top:50px; left:0; z-index:100; display:grid; min-width:190px; padding:6px; background:#fff; color:#193b68; border:1px solid #bfd2e5; border-radius:12px; box-shadow:0 10px 35px #193b7433; }
+.shortcut-actions button { text-align:left; padding:12px; border-radius:8px; }
+.shortcut-actions button:hover,.shortcut-actions button:focus-visible { background:#e6f0fa; }
+.desktop-project-menu,.desktop-unpin { display:none; }
+
+[data-theme=dark] .desktop-launch strong { background:#20344c; color:#e2ecfa; }

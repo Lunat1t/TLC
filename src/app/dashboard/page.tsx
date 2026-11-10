@@ -257,7 +257,7 @@ export default function HomePage() {
     <div className="home-shell">
       <div className="home-content">
         <main className="home-main">
-          <LabBoard projects={projects} onProjects={openProjects} onNewProject={openNewModal} onProjectMenu={setSelectedId} />
+          <LabBoard projects={projects} onProjects={openProjects} onNewProject={openNewModal} onProjectMenu={id=>{const p=projects.find(p=>p.id===id);if(p){setSelectedId(id);setRenameValue(p.name);setRenameError(null);setRenameOpen(true)}}}  onDeleteProject={async id=>{const project=projects.find(p=>p.id===id);if(!project||!window.confirm(`Удалить программу «${project.name}»?`))return;try{await commit(projects.filter(p=>p.id!==id))}catch(e){setNotice({text:e instanceof Error?e.message:"Не удалось удалить программу.",isError:true})}}} />
           {projectsOpen && <section className="desktop-project-window" aria-label="Мои проекты"><header><strong>Мои проекты</strong><button ref={projectsCloseRef} onClick={closeProjects} aria-label="Закрыть окно проектов"><X size={20}/></button></header>
           <div className="home-main-toolbar">
             <button type="button" onClick={openNewModal} className="home-new-button">
