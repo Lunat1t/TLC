@@ -15,6 +15,24 @@ export function DesktopCanvas({ userId, children }: { userId: string; children: 
   const [error, setError] = useState("")
   const store=useAccountWorkspace()
   useEffect(()=>{
+    const canvas=document.querySelector<HTMLElement>(".desktop-canvas")
+    if(!canvas)return
+    let frame=0
+    const update=()=>{
+      cancelAnimationFrame(frame)
+      frame=requestAnimationFrame(()=>{
+        const base=Math.max(530,window.innerHeight-230)
+        const bottom=Math.max(base,...Array.from(canvas.querySelectorAll<HTMLElement>(".desktop-item"),item=>item.offsetTop+item.offsetHeight+64))
+        canvas.style.height=`${Math.ceil(bottom)}px`
+      })
+    }
+    const observer=new ResizeObserver(update)
+    observer.observe(canvas)
+    canvas.querySelectorAll(".desktop-item").forEach(item=>observer.observe(item))
+    update()
+    return()=>{cancelAnimationFrame(frame);observer.disconnect();canvas.style.height=""}
+  },[children])
+  useEffect(()=>{
     setActive(false)
     if(!store.ready)return
     try {
@@ -53,7 +71,7 @@ export function DesktopItem({ id, label, initial, children, className = "", mobi
   useEffect(() => {
     const element=node.current, parent=element?.parentElement
     if (!element || !parent) return
-    const measure=()=>setSize({w:Math.max(0,parent.clientWidth-element.offsetWidth),h:Math.max(0,parent.clientHeight-element.offsetHeight),mobile:parent.clientWidth<700})
+    const measure=()=>setSize({w:Math.max(0,parent.clientWidth-element.offsetWidth),h:Math.max(0,parent.clientHeight-element.offsetHeight),mobile:parent.clientWidth<=600})
     const observer=new ResizeObserver(measure);observer.observe(element);observer.observe(parent);measure()
     return ()=>observer.disconnect()
   }, [])
