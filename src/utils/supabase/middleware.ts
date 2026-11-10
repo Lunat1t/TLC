@@ -40,16 +40,17 @@ export const createClient = async (request: NextRequest) => {
   const userId = error ? null : data?.claims.sub;
   const path = request.nextUrl.pathname;
   const registerPage = path === "/register" && !request.nextUrl.searchParams.has("student");
+  const loginPage = path === "/login";
   const uploadPage = path === "/admin/instructions/drive";
   const protectedPage = uploadPage || path === "/dashboard" || path === "/editor" || path === "/instructions" || path.startsWith("/instructions/");
-  if (protectedPage || registerPage) {
+  if (protectedPage || registerPage || loginPage) {
     let complete = false;
     let role: string | null = null;
     if (userId) {
       const { data } = await supabase.from("profiles").select("onboarding_complete,role").eq("id", userId).maybeSingle();
       complete = data?.onboarding_complete === true;
       role = data?.role ?? null;
-      if (registerPage && complete) {
+      if ((registerPage || loginPage) && complete) {
         const response = NextResponse.redirect(new URL(role === "parent" ? "/profile" : "/dashboard", request.url));
         supabaseResponse.cookies.getAll().forEach(cookie => response.cookies.set(cookie));
         return response;
