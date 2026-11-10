@@ -78,8 +78,8 @@ export default function AvatarDarwinV3({
         <rect x="115" y="420" width="458" height="445" rx="64" fill="#37474F" />
       )}
 
-      {/* Базовое скругленное тело №3 */}
-      <path d={DARWIN_V3_BODY_PATH} fill={s.body} />
+      {/* Базовое тело с единым мультяшным контуром */}
+      <path d={DARWIN_V3_BODY_PATH} fill={s.body} stroke="#1a293e" strokeWidth="14" strokeLinejoin="round" />
 
       {/* Скин и обувь внутри маски */}
       <g clipPath={`url(#${clipId})`}>

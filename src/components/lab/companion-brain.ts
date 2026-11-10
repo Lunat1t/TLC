@@ -5,19 +5,21 @@ export const BUDDY_W = 84, BUDDY_H = 132
 export class CompanionBrain {
   x = 40; y = 0; direction = 1; mode: BuddyMode = 'idle'
   energy = .85; curiosity = .8; message = ''; messageUntil = 0
-  private elapsed = 0; private until = 3; private lastInput = 0
+  private elapsed = 0; private entered = 0; private until = 3; private lastInput = 0
   private goal = 0; private target: Platform | null = null; private support: string | null = null
   private velocity = 0; private jumpTime = 0; private jumpStart = { x:0,y:0 }; private jumpEnd = {x:0,y:0}
   private pending: BuddyMode | null = null
   private previous = ''; private lastPlatform = ''; private world = {width:800,height:600,platforms:[] as Platform[]}
   constructor(width:number,height:number) { this.world.width=width;this.world.height=height;this.x=Math.min(90,width-BUDDY_W);this.y=Math.max(0,height-BUDDY_H) }
+  get age() { return this.elapsed-this.entered }
+  get jumpProgress() { return Math.min(1,this.jumpTime/.85) }
   get perched() { return this.support !== null }
   get gaze() { return this.direction * 12 }
-  private change(mode:BuddyMode,seconds:number) { this.mode=mode;this.until=this.elapsed+seconds }
+  private change(mode:BuddyMode,seconds:number) { if(this.mode!==mode)this.entered=this.elapsed;this.mode=mode;this.until=this.elapsed+seconds }
   private clampX(value:number) { return Math.max(0,Math.min(this.world.width-BUDDY_W,value)) }
   private say(text:string) { this.message=text;this.messageUntil=this.elapsed+4 }
   private floor() { return Math.max(0,this.world.height-BUDDY_H) }
-  private hop(x:number,y:number) { this.jumpStart={x:this.x,y:this.y};this.jumpEnd={x:this.clampX(x),y:Math.max(0,y)};this.jumpTime=0;this.change('jump',.65) }
+  private hop(x:number,y:number) { this.jumpStart={x:this.x,y:this.y};this.jumpEnd={x:this.clampX(x),y:Math.max(0,y)};this.jumpTime=0;this.change('jump',.85) }
   setWorld(width:number,height:number,platforms:Platform[]) {
     this.world={width,height,platforms};this.x=this.clampX(this.x);this.y=Math.max(0,Math.min(this.floor(),this.y))
     if(this.target) {
@@ -33,8 +35,9 @@ export class CompanionBrain {
   }
   private settle() { if (!this.support && this.y<this.floor()-3 && this.mode!=='held') {this.pending=this.mode;this.velocity=0;this.change('fall',4)} }
   private land(defaultMode:BuddyMode) { const next=this.pending||defaultMode;this.pending=null;this.change(next,next==='sleep'?30:4) }
-  interact(action:'pet'|'call'|'rest'|'explore') {
+  interact(action:'pet'|'call'|'rest'|'explore'|'hop') {
     this.lastInput=this.elapsed;this.target=null
+    if(action==='hop'){this.support=null;this.hop(this.x+this.direction*70,this.y);return}
     if(action==='rest') {this.change('sleep',60);this.say('Посижу тихонько рядом.');this.settle();return}
     if(action==='call') {this.goal=this.clampX(this.world.width*.35);this.change('walk',12);this.say('Я здесь!');this.settle();return}
     if(action==='explore') {this.choose(true);this.settle();return}
@@ -77,7 +80,7 @@ export class CompanionBrain {
       return
     }
     if(this.mode==='jump') {
-      this.jumpTime+=dt;const t=Math.min(1,this.jumpTime/.65)
+      this.jumpTime+=dt;const t=Math.min(1,Math.max(0,(this.jumpTime-.15)/.7))
       this.x=this.jumpStart.x+(this.jumpEnd.x-this.jumpStart.x)*t
       this.y=this.jumpStart.y+(this.jumpEnd.y-this.jumpStart.y)*t-Math.sin(t*Math.PI)*45
       if(t===1){if(this.target){this.support=this.target.id;this.lastPlatform=this.target.id;this.say(`Что тут у нас? ${this.target.label.slice(0,45)}`);this.curiosity=.25;this.target=null;this.change('inspect',5)}else this.change('fall',3)}
