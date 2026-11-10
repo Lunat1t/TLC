@@ -22,8 +22,9 @@ export function DesktopCanvas({ userId, children }: { userId: string; children: 
       cancelAnimationFrame(frame)
       frame=requestAnimationFrame(()=>{
         const base=Math.max(530,window.innerHeight-230)
-        const bottom=Math.max(base,...Array.from(canvas.querySelectorAll<HTMLElement>(".desktop-item"),item=>item.offsetTop+item.offsetHeight+64))
-        canvas.style.height=`${Math.ceil(bottom)}px`
+        const bottom=Math.max(base,...Array.from(canvas.querySelectorAll<HTMLElement>(".desktop-item"),item=>item.offsetTop+item.offsetHeight))
+        const height=Math.ceil(bottom)
+        if(Math.abs(canvas.clientHeight-height)>1)canvas.style.height=`${height}px`
       })
     }
     const observer=new ResizeObserver(update)
