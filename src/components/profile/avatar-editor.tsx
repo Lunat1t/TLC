@@ -170,7 +170,7 @@ export function AvatarEditor({ initialAvatar }: { initialAvatar: Partial<AvatarS
             </div>
             <div className="avatar-color-label">{PALETTE.find(({ color }) => color === avatar[part === "eyes" ? "characterEyeColor" : "bodyColor"])?.name || "Мой цвет"}</div>
           </>}
-          {message && <div className="avatar-save-row"><p role="status" className={message === "Аватар сохранён" ? "success" : message === "Сохраняем…" ? "saving" : "error"}>{message}</p></div>}
+          {message && message !== "Аватар сохранён" && message !== "Сохраняем…" && <div className="avatar-save-row"><p role="alert" className="error">{message}</p></div>}
         </div>
       </div>
     </section>
