@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { createPortal } from "react-dom"
 import { CircleMenu } from "@/components/ui/circle-menu"
-import { FileCode2, Globe, StickyNote, ImagePlus, FolderOpen } from "lucide-react"
+import { FileCode2, Globe, StickyNote, ImagePlus } from "lucide-react"
 
 type Actions = { onShortcut: () => void; onNote: () => void; onProject?: () => void; onImage:()=>void; canPin: boolean }
 
@@ -90,7 +90,6 @@ export function DesktopContextMenu({ children, onShortcut, onNote, onProject, on
         { label: "Заметка", color:"#ca8a04", icon: <StickyNote size={28} aria-hidden="true"/>, disabled: !canPin, onSelect: ()=>{close();onNote()} },
         ...(onProject ? [{ label: "Программа", color:"#2875e8", icon: <FileCode2 size={28} aria-hidden="true"/>, onSelect: ()=>{close();onProject()} }] : []),
         {label:"Картинка",color:"#df5970",icon:<ImagePlus size={28}/>,disabled:!canPin,onSelect:()=>{close();onImage()}},
-        {label:"Файлы",color:"#218573",icon:<FolderOpen size={28}/>,onSelect:()=>{close();window.location.assign("/files")}},
       ]}/>
 
     </div>, document.body)}
