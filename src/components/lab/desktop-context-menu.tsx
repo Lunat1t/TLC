@@ -9,6 +9,7 @@ type Actions = { onShortcut: () => void; onNote: () => void; onProject?: () => v
 
 export function DesktopContextMenu({ children, onShortcut, onNote, onProject, onImage, canPin }: Actions & { children: ReactNode }) {
   const [phone,setPhone]=useState(false)
+  const [phoneAddVisible,setPhoneAddVisible]=useState(false)
   const phoneDialog=useRef<HTMLDialogElement>(null)
   const addButton=useRef<HTMLButtonElement>(null)
   useEffect(()=>{const media=window.matchMedia("(max-width: 600px)");const sync=()=>{setPhone(media.matches);setPoint(null);phoneDialog.current?.close()};sync();media.addEventListener("change",sync);return()=>media.removeEventListener("change",sync)},[])
@@ -24,7 +25,7 @@ export function DesktopContextMenu({ children, onShortcut, onNote, onProject, on
   }
   function open(x: number, y: number) {
     cancelHold()
-    if(phone){phoneDialog.current?.showModal();return}
+    if(phone){setPhoneAddVisible(true);return}
     previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     // Keep the entire radial menu inside the visible viewport.
     setPoint({ x: Math.max(165, Math.min(window.innerWidth - 165, x)), y: Math.max(165, Math.min(window.innerHeight - 165, y)) })
@@ -71,7 +72,7 @@ export function DesktopContextMenu({ children, onShortcut, onNote, onProject, on
     open(event.clientX, event.clientY)
   }} onPointerDown={event => {
     cancelHold()
-    if (phone || event.button !== 0 || !event.isPrimary || !(event.target instanceof Element) || !event.target.matches(".desktop-canvas, .desktop-context-surface")) return
+    if (event.button !== 0 || !event.isPrimary || !(event.target instanceof Element) || !event.target.matches(".desktop-canvas, .desktop-context-surface")) return
     const { clientX: x, clientY: y, pointerId: pointer } = event
     pending.current = { x, y, pointer, timer: setTimeout(() => open(x, y), 600) }
   }} onKeyDown={event => {
@@ -81,7 +82,7 @@ export function DesktopContextMenu({ children, onShortcut, onNote, onProject, on
     open(bounds.left + bounds.width / 2, Math.max(150, bounds.top + 150))
   }}>
     {children}
-    <button ref={addButton} className="phone-desktop-add" type="button" aria-haspopup="dialog" onClick={()=>phoneDialog.current?.showModal()}><Plus size={24} aria-hidden="true"/> Добавить</button>
+    {phone&&phoneAddVisible&&<button ref={addButton} className="phone-desktop-add" type="button" aria-haspopup="dialog" onClick={()=>{setPhoneAddVisible(false);phoneDialog.current?.showModal()}}><Plus size={24} aria-hidden="true"/> Добавить</button>}
     <dialog ref={phoneDialog} className="phone-add-dialog" aria-label="Добавить на рабочий стол"><header><h2>Добавить</h2><button type="button" autoFocus aria-label="Закрыть" onClick={()=>phoneDialog.current?.close()}><X size={22}/></button></header><div>
     <button disabled={!canPin} onClick={()=>{phoneDialog.current?.close();onNote()}}><StickyNote color="#bc8508"/>Заметку</button>
     <button disabled={!canPin} onClick={()=>{phoneDialog.current?.close();onImage()}}><ImagePlus color="#d74c6b"/>Картинку</button>
