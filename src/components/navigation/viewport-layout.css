@@ -1,4 +1,10 @@
 /* One viewport per application. Each content panel owns its overflow. */
+html:has(.tlc-os.is-desktop),
+body:has(.tlc-os.is-desktop) { height:100%; overflow:hidden; overscroll-behavior:none; }
+.tlc-os.is-desktop { position:fixed; inset:0; overscroll-behavior:none; }
+.tlc-os.is-desktop :is(.os-content,.home-shell,.home-content,.home-main,.desktop-lab,.desktop-context-surface,.desktop-canvas) { overflow:clip; overscroll-behavior:none; }
+.tlc-os.is-desktop .desktop-canvas { touch-action:none; }
+.tlc-os.is-desktop :is(textarea,input,dialog,.desktop-project-window) { touch-action:auto; }
 .tlc-os { height:100dvh; min-height:0; overflow:hidden; }
 .tlc-os[data-bar=top].is-app:not(.is-desktop) { padding-top:0; }
 .tlc-os .os-content { height:100%; min-height:0; box-sizing:border-box; padding:16px 20px 100px; overflow:hidden; }
