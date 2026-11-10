@@ -79,7 +79,7 @@ export default function AvatarDarwinV3({
       )}
 
       {/* Базовое тело с единым мультяшным контуром */}
-      <path d={DARWIN_V3_BODY_PATH} fill={s.body} stroke="#1a293e" strokeWidth="14" strokeLinejoin="round" />
+      <path d={DARWIN_V3_BODY_PATH} fill={s.body} />
 
       {/* Скин и обувь внутри маски */}
       <g clipPath={`url(#${clipId})`}>
