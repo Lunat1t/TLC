@@ -3,7 +3,6 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { GoogleSignIn } from "@/components/google-signin"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -65,7 +64,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col bg-[radial-gradient(circle_at_14%_18%,rgba(2,199,234,0.15)_0%,transparent_42%),radial-gradient(circle_at_86%_82%,rgba(124,106,247,0.12)_0%,transparent_45%),#f4f8fa]">
+    <div className="login-page min-h-dvh flex flex-col bg-[radial-gradient(circle_at_14%_18%,rgba(2,199,234,0.15)_0%,transparent_42%),radial-gradient(circle_at_86%_82%,rgba(124,106,247,0.12)_0%,transparent_45%),#f4f8fa]">
       <header className="min-h-[74px] px-5 md:px-16 py-3.5 flex items-center justify-between gap-4 bg-[#02c7ea]">
         <Link
           href="/"
@@ -152,13 +151,6 @@ export default function LoginPage() {
 
               </div>
             </form>
-
-            <div className="mt-4"><GoogleSignIn /></div>
-            <div className="flex items-center gap-3 my-5 text-xs font-bold uppercase tracking-wider text-[#8299a3]">
-              <span className="h-px flex-1 bg-[#e1ecef]" />
-              <span>или</span>
-              <span className="h-px flex-1 bg-[#e1ecef]" />
-            </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3.5 p-4 rounded-[18px] bg-gradient-to-br from-[#edfcff] to-[#f4f1ff] border border-[#ccebf2]">
               <div className="text-center sm:text-left">
