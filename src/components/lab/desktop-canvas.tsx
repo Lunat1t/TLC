@@ -60,7 +60,7 @@ export function DesktopItem({ id, label, initial, children, className = "", mobi
       cancelHold();suppressed.current=false
       if(!movable||e.button!==0||(e.target as Element).closest("textarea,input,button:not(.desktop-launch)"))return
       start.current={x:e.clientX,y:e.clientY}
-      if(active&&!p.locked&&(e.target as Element).closest(".desktop-app-icon,.lab-pin-head"))drag.current={pointer:e.pointerId,x:e.clientX,y:e.clientY,startX:p.x*size.w,startY:p.y*size.h,point:p,moved:false}
+      if(active&&!p.locked&&(e.target as Element).closest(".desktop-app-icon,.lab-pin-head,.desktop-avatar-artwork"))drag.current={pointer:e.pointerId,x:e.clientX,y:e.clientY,startX:p.x*size.w,startY:p.y*size.h,point:p,moved:false}
       hold.current=setTimeout(()=>{drag.current=null;suppressed.current=true;setMenuOpen(true)},600)
     }}
     onPointerMove={e=>{
