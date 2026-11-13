@@ -1,22 +1,13 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { createRouteWarmer, isApplicationPath, startupRoutes } from '../src/lib/startup.ts'
+import { createRouteWarmer, isApplicationPath } from '../src/lib/startup.ts'
 
 test('startup applies to app routes without blocking public entry and onboarding', () => {
   for (const path of ['/dashboard','/avatar','/profile','/instructions','/instructions/a','/editor','/admin/instructions/drive','/teacher/achievements']) assert.equal(isApplicationPath(path),true,path)
   for (const path of ['/','/trial','/login','/register','/auth/callback','/instructions-public']) assert.equal(isApplicationPath(path),false,path)
 })
 
-test('startup preloads only common pages for the current role', () => {
-  for (const role of ['student','teacher']) {
-    assert.deepEqual(startupRoutes(role),['/dashboard','/instructions','/avatar','/profile'])
-    assert(startupRoutes(role).every(path=>!path.startsWith('/editor')&&!path.startsWith('/admin')))
-  }
-  assert.deepEqual(startupRoutes('parent'),['/profile'])
-  assert.deepEqual(startupRoutes(null),[])
-})
-
-test('startup and hover preloads share a cache and expire instead of repeating', () => {
+test('hover preloads share a cache and expire instead of repeating', () => {
   let clock=0
   const calls:string[]=[]
   const warmer=createRouteWarmer(path=>calls.push(path),()=>clock)

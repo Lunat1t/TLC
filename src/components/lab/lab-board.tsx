@@ -17,7 +17,21 @@ const colors = ["yellow", "blue", "pink"] as const
 const LIMIT = 18
 function Clock() {
   const [now, setNow] = useState<Date | null>(null)
-  useEffect(() => { setNow(new Date()); const timer = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(timer) }, [])
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 601px)")
+    let timer: ReturnType<typeof setInterval> | undefined
+    function sync() {
+      if (timer) clearInterval(timer)
+      timer = undefined
+      if (desktop.matches) {
+        setNow(new Date())
+        timer = setInterval(() => setNow(new Date()), 1000)
+      }
+    }
+    sync()
+    desktop.addEventListener("change", sync)
+    return () => { if (timer) clearInterval(timer); desktop.removeEventListener("change", sync) }
+  }, [])
   return <div className="lab-clock"><span>Сейчас самое время создавать</span><time dateTime={now?.toISOString()}>{now ? now.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }) : "--:--"}</time><p>{now ? now.toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" }) : "Моя лаборатория"}</p></div>
 }
 function safeUrl(value: string): string | null {

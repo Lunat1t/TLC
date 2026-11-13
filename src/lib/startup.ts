@@ -3,12 +3,6 @@ export function isApplicationPath(path: string) {
     .some(base => path === base || path.startsWith(`${base}/`))
 }
 
-export function startupRoutes(role: string | null) {
-  if (role === "parent") return ["/profile"]
-  if (role === "student" || role === "teacher") return ["/dashboard", "/instructions", "/avatar", "/profile"]
-  return []
-}
-
 export function createRouteWarmer(prefetch: (path: string) => void, now = Date.now) {
   const warmed = new Map<string, number>()
   return {
