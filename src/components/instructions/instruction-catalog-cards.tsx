@@ -17,9 +17,52 @@ type EditorData = {
   coverUrl: string | null
 }
 
-export function InstructionCatalogCards({ items }: { items: CatalogCard[] }) {
+type CatalogProps = {
+  items: CatalogCard[]
+  nextCursor: string | null
+  kit: string
+  query: string
+  totalCount: number | null
+}
+
+export function InstructionCatalogCards({ items, nextCursor, kit, query, totalCount }: CatalogProps) {
   const router = useRouter()
   const { canPublish, ready } = useAccess()
+  const [cards, setCards] = useState(items)
+  const [cursor, setCursor] = useState(nextCursor)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [moreError, setMoreError] = useState("")
+
+  useEffect(() => {
+    setCards(items)
+    setCursor(nextCursor)
+    setMoreError("")
+  }, [items, nextCursor])
+
+  async function loadMore() {
+    if (!cursor || loadingMore) return
+    setLoadingMore(true)
+    setMoreError("")
+    try {
+      const params = new URLSearchParams({ cursor })
+      if (kit) params.set("kit", kit)
+      if (query) params.set("q", query)
+      const response = await fetch("/api/instructions?" + params.toString(), { cache: "no-store" })
+      const body = await response.json()
+      if (!response.ok || !Array.isArray(body.items)) {
+        throw new Error(body.error?.message || "Не удалось загрузить следующие инструкции.")
+      }
+      setCards((previous) => {
+        const seen = new Set(previous.map((item) => item.id))
+        return [...previous, ...((body.items as CatalogCard[]).filter((item) => !seen.has(item.id)))]
+      })
+      setCursor(typeof body.nextCursor === "string" ? body.nextCursor : null)
+    } catch (cause) {
+      setMoreError(cause instanceof Error ? cause.message : "Не удалось загрузить инструкции.")
+    } finally {
+      setLoadingMore(false)
+    }
+  }
   const [selected, setSelected] = useState<CatalogCard | null>(null)
   const [editor, setEditor] = useState<EditorData | null>(null)
   const [loadingId, setLoadingId] = useState<string | null>(null)
@@ -77,19 +120,23 @@ export function InstructionCatalogCards({ items }: { items: CatalogCard[] }) {
   return <>
     {notice && <p className="instruction-admin-notice" role="status">{notice}</p>}
     {error && !editor && !selected && <p className="instruction-admin-error" role="alert">{error}</p>}
-    <div className="instruction-grid">
-      {items.map((item, index) => {
+    <div className={"instruction-grid" + (kit === "spike" ? " instruction-grid--spike" : "")}>
+      {cards.map((item, index) => {
         const coverUrl = item.coverAssetId
           ? `/api/instruction-media/${item.id}/${item.coverAssetId}`
           : item.hasPdf ? `/api/instructions/${encodeURIComponent(item.slug)}/preview` : null
         const code = item.title.match(/\((\d{4})\)/)?.[1]
         const content = <>
           <div className="instruction-cover">
-            <span className="instruction-cover-fallback" aria-hidden="true">◈</span>
+            <div className="instruction-cover-placeholder" aria-hidden="true">
+              <span className="instruction-cover-placeholder-icon">◈</span>
+              <span>SPIKE Prime</span>
+            </div>
             {coverUrl && <img src={coverUrl} alt="" width={720} height={480} loading={index < 2 ? "eager" : "lazy"} fetchPriority={index === 0 ? "high" : "auto"} decoding="async" onError={(event) => { event.currentTarget.style.display = "none" }} />}
-            {item.kit === "spike" && code && <span className="instruction-card-code" aria-hidden="true">{code}</span>}
           </div>
-          {item.kit !== "spike" && <div className="instruction-card-copy"><h2>{item.title}</h2><p>{item.summary}</p><div className="instruction-topics">{item.topics.map((topic) => <span key={topic}>{topic}</span>)}</div></div>}
+          {item.kit === "spike"
+            ? <div className="instruction-card-meta"><strong>{code ? "№ " + code : "SPIKE Prime"}</strong><span>{item.hasPdf ? "PDF" : "Сборка"}</span></div>
+            : <div className="instruction-card-copy"><h2>{item.title}</h2><p>{item.summary}</p><div className="instruction-topics">{item.topics.map((topic) => <span key={topic}>{topic}</span>)}</div></div>}
         </>
         return <div className="instruction-admin-shell" key={item.id}>
           <button type="button" className="instruction-card" onClick={() => { setError(""); setSelected(item) }} aria-label={`Открыть инструкцию: ${item.title}`}>
@@ -98,6 +145,13 @@ export function InstructionCatalogCards({ items }: { items: CatalogCard[] }) {
         </div>
       })}
     </div>
+    <footer className="instruction-catalog-pagination">
+      <p aria-live="polite">{"Показано " + cards.length + (totalCount !== null ? " из " + totalCount : "") + " инструкций"}</p>
+      {moreError && <p role="alert" className="instruction-admin-error">{moreError}</p>}
+      {cursor && <button type="button" className="instruction-load-more" onClick={() => void loadMore()} disabled={loadingMore}>
+        {loadingMore ? "Загружаем…" : "Показать ещё 20"}
+      </button>}
+    </footer>
 
     {selected && (() => {
       const downloadUrl = driveDownloadPath(selected.slug, selected.hasPdf)
@@ -108,7 +162,8 @@ export function InstructionCatalogCards({ items }: { items: CatalogCard[] }) {
         <section className="instruction-card-dialog" role="dialog" aria-modal="true" aria-labelledby="instruction-card-dialog-title">
           <button type="button" className="instruction-card-dialog-close" onClick={() => setSelected(null)} aria-label="Закрыть">×</button>
           <div className="instruction-card-dialog-cover">
-            {coverUrl ? <img src={coverUrl} alt={selected.title} /> : <span aria-hidden="true">◈</span>}
+            <span className="instruction-modal-placeholder" aria-hidden="true">◈</span>
+            {coverUrl && <img src={coverUrl} alt={selected.title} onError={(event) => { event.currentTarget.style.display = "none" }} />}
           </div>
           <div className="instruction-card-dialog-content">
             <h2 id="instruction-card-dialog-title">{selected.title}</h2>
