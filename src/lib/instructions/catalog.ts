@@ -45,5 +45,17 @@ const cachedCatalog = unstable_cache(async (kit: Kit | null, q: string, afterTim
   const nextCursor = rows.length > 20 && last
     ? Buffer.from(JSON.stringify({ time: last.published_at, id: last.id }), "utf8").toString("base64url")
     : null
-  return { items, nextCursor }
+
+  // Show an accurate count on the first unfiltered catalogue page. Counting
+  // published records is permitted by the same RLS policy as the cards.
+  let totalCount: number | null = null
+  if (!q && !afterTime) {
+    let countQuery = client.from("instructions")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "published")
+    if (kit) countQuery = countQuery.eq("kit", kit)
+    const { count, error: countError } = await countQuery
+    if (!countError && typeof count === "number") totalCount = count
+  }
+  return { items, nextCursor, totalCount }
 }, ["published-instruction-catalog-v1"], { revalidate: 60, tags: ["instruction-catalog"] })
