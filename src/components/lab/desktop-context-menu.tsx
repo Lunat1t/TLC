@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { createPortal } from "react-dom"
 import { CircleMenu } from "@/components/ui/circle-menu"
-import { FileCode2, Globe, StickyNote, ImagePlus, Plus, X } from "lucide-react"
+import { FileCode2, Globe, StickyNote, ImagePlus, Plus, RotateCw, X } from "lucide-react"
 
 type Actions = { onShortcut: () => void; onNote: () => void; onProject?: () => void; onImage:()=>void; canPin: boolean }
 
@@ -82,12 +82,14 @@ export function DesktopContextMenu({ children, onShortcut, onNote, onProject, on
     open(bounds.left + bounds.width / 2, Math.max(150, bounds.top + 150))
   }}>
     {children}
+    {phone&&<button className="phone-desktop-refresh" type="button" onClick={()=>window.location.reload()}><RotateCw size={19} aria-hidden="true"/> Обновить</button>}
     {phone&&phoneAddVisible&&<button ref={addButton} className="phone-desktop-add" type="button" aria-haspopup="dialog" onClick={()=>{setPhoneAddVisible(false);phoneDialog.current?.showModal()}}><Plus size={24} aria-hidden="true"/> Добавить</button>}
     <dialog ref={phoneDialog} className="phone-add-dialog" aria-label="Добавить на рабочий стол"><header><h2>Добавить</h2><button type="button" autoFocus aria-label="Закрыть" onClick={()=>phoneDialog.current?.close()}><X size={22}/></button></header><div>
     <button disabled={!canPin} onClick={()=>{phoneDialog.current?.close();onNote()}}><StickyNote color="#bc8508"/>Заметку</button>
     <button disabled={!canPin} onClick={()=>{phoneDialog.current?.close();onImage()}}><ImagePlus color="#d74c6b"/>Картинку</button>
     {onProject&&<button onClick={()=>{phoneDialog.current?.close();onProject()}}><FileCode2 color="#2875e8"/>Программу</button>}
     <button disabled={!canPin} onClick={()=>{phoneDialog.current?.close();onShortcut()}}><Globe color="#8958d6"/>Ярлык</button>
+    <button onClick={()=>window.location.reload()}><RotateCw color="#2875e8"/>Обновить страницу</button>
     </div></dialog>
     {!phone && point && createPortal(<div ref={menu} className="desktop-action-menu" role="dialog" aria-label="Действия рабочего стола" style={{ left: point.x, top: point.y }} onContextMenu={event => event.preventDefault()} onKeyDown={event => {
       if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); close(true) }
@@ -103,6 +105,7 @@ export function DesktopContextMenu({ children, onShortcut, onNote, onProject, on
         { label: "Заметка", color:"#ca8a04", icon: <StickyNote size={28} aria-hidden="true"/>, disabled: !canPin, onSelect: ()=>{close();onNote()} },
         ...(onProject ? [{ label: "Программа", color:"#2875e8", icon: <FileCode2 size={28} aria-hidden="true"/>, onSelect: ()=>{close();onProject()} }] : []),
         {label:"Картинка",color:"#df5970",icon:<ImagePlus size={28}/>,disabled:!canPin,onSelect:()=>{close();onImage()}},
+        {label:"Обновить",color:"#2875e8",icon:<RotateCw size={28} aria-hidden="true"/>,onSelect:()=>window.location.reload()},
       ]}/>
 
     </div>, document.body)}
