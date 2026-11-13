@@ -42,7 +42,7 @@ export function DesktopItem({ id, label, initial, children, className = "", mobi
   const drag = useRef<{ pointer: number; x: number; y: number; startX: number; startY: number; point: Point; moved: boolean } | null>(null)
   const [size, setSize] = useState({w:0,h:0,mobile:false})
   const [moving, setMoving] = useState<Point | null>(null)
-  const systemMobile: Record<string,[number,number]> = {avatar:[.02,.02],clock:[.98,.02],projects:[0,.42],instructions:[.5,.42],profile:[1,.42]}
+  const systemMobile: Record<string,[number,number]> = {clock:[.98,.02],projects:[0,.42],instructions:[.5,.42],profile:[1,.42]}
   const origin = size.mobile ? mobileInitial || systemMobile[id] || initial : initial
   const p: Point = movable ? moving || positions[id] || {x:origin[0],y:origin[1],z:1} : {x:origin[0],y:origin[1],z:1}
   useEffect(() => {
@@ -60,7 +60,7 @@ export function DesktopItem({ id, label, initial, children, className = "", mobi
       cancelHold();suppressed.current=false
       if(!movable||e.button!==0||(e.target as Element).closest("textarea,input,button:not(.desktop-launch)"))return
       start.current={x:e.clientX,y:e.clientY}
-      if(active&&!p.locked&&(e.target as Element).closest(".desktop-app-icon,.lab-pin-head,.desktop-avatar-artwork"))drag.current={pointer:e.pointerId,x:e.clientX,y:e.clientY,startX:p.x*size.w,startY:p.y*size.h,point:p,moved:false}
+      if(active&&!p.locked&&(e.target as Element).closest(".desktop-app-icon,.lab-pin-head"))drag.current={pointer:e.pointerId,x:e.clientX,y:e.clientY,startX:p.x*size.w,startY:p.y*size.h,point:p,moved:false}
       hold.current=setTimeout(()=>{drag.current=null;suppressed.current=true;setMenuOpen(true)},600)
     }}
     onPointerMove={e=>{
