@@ -39,3 +39,9 @@
 .instruction-admin-form footer button:disabled{opacity:.6;cursor:wait}
 .instruction-admin-form input:focus-visible,.instruction-admin-form textarea:focus-visible,.instruction-admin-form select:focus-visible,.instruction-admin-form button:focus-visible,.instruction-admin-edit:focus-visible{outline:3px solid #f5bd35;outline-offset:2px}
 @media(max-width:600px){.instruction-admin-backdrop{padding:10px}.instruction-admin-dialog,.instruction-card-dialog{max-height:96dvh;border-radius:18px}.instruction-admin-dialog-heading,.instruction-admin-form{padding-left:18px;padding-right:18px}.instruction-admin-dialog-heading h2{font-size:21px}.instruction-admin-form footer{flex-direction:column-reverse}.instruction-admin-form footer button{width:100%}.instruction-card-dialog-cover{height:36dvh;min-height:180px}.instruction-card-dialog-content{padding:20px}.instruction-card-dialog-actions{flex-direction:column}.instruction-card-dialog-actions>a,.instruction-card-dialog-actions>button{width:100%}}
+
+/* SPIKE cards use PDF covers and a short catalogue number, without a visible title. */
+.instruction-cover > img,.instruction-cover-fallback,.instruction-card-code{grid-area:1 / 1}
+.instruction-cover > img{position:relative;z-index:1}
+.instruction-cover-fallback{z-index:0}
+.instruction-card-code{z-index:2;align-self:end;justify-self:end;margin:0 12px 12px;padding:5px 9px;border-radius:8px;background:#073442d9;color:#fff;font-size:12px;font-weight:800;letter-spacing:.04em}
