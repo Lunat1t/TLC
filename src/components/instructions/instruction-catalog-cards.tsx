@@ -130,7 +130,7 @@ export function InstructionCatalogCards({ items, nextCursor, kit, query, totalCo
           <div className="instruction-cover">
             <div className="instruction-cover-placeholder" aria-hidden="true">
               <span className="instruction-cover-placeholder-icon">◈</span>
-              <span>SPIKE Prime</span>
+              <span>{item.kit === "spike" ? "SPIKE Prime" : "LEGO EV3"}</span>
             </div>
             {coverUrl && <img src={coverUrl} alt="" width={720} height={480} loading={index < 2 ? "eager" : "lazy"} fetchPriority={index === 0 ? "high" : "auto"} decoding="async" onError={(event) => { event.currentTarget.style.display = "none" }} />}
           </div>
