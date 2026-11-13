@@ -127,9 +127,11 @@ body:has(.tlc-os[data-bar=right]) .app-launcher.is-open { padding-right:72px; }
  .tlc-os .os-dock-item span { display:none; }
 }
 
-/* Pages fill the workspace; navigation floats outside their content. */
-.tlc-os[data-bar=top].is-app:not(.is-desktop){padding:0}
-.tlc-os .os-content,.tlc-os[data-bar] .os-content,.tlc-os.is-public .os-content{padding:0}
+/* Keep page surfaces flush even when older dock layouts request reserved padding. */
+.tlc-os{padding:0!important}
+.tlc-os .os-content{padding:0!important}
+.tlc-os .os-content>main{padding:0!important}
+.tlc-os.is-app .workshop-section-body>main{padding:0!important}
 .tlc-os .workshop-section{width:100%;max-width:none;margin:0}
 .tlc-os .workshop-section-body>main,.tlc-os .workshop-avatar .avatar-editor,.tlc-os.is-public .os-content>main{border-radius:0}
 .tlc-os .workspace-settings{border:0;border-radius:0;box-shadow:none}
