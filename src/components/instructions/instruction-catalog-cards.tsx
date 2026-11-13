@@ -82,9 +82,14 @@ export function InstructionCatalogCards({ items }: { items: CatalogCard[] }) {
         const coverUrl = item.coverAssetId
           ? `/api/instruction-media/${item.id}/${item.coverAssetId}`
           : item.hasPdf ? `/api/instructions/${encodeURIComponent(item.slug)}/preview` : null
+        const code = item.title.match(/\((\d{4})\)/)?.[1]
         const content = <>
-          <div className="instruction-cover">{coverUrl ? <img src={coverUrl} alt="" width={720} height={480} loading={index < 2 ? "eager" : "lazy"} fetchPriority={index === 0 ? "high" : "auto"} decoding="async" /> : <span aria-hidden="true">◈</span>}</div>
-          <div className="instruction-card-copy"><h2>{item.title}</h2><p>{item.summary}</p><div className="instruction-topics">{item.topics.map((topic) => <span key={topic}>{topic}</span>)}</div></div>
+          <div className="instruction-cover">
+            <span className="instruction-cover-fallback" aria-hidden="true">◈</span>
+            {coverUrl && <img src={coverUrl} alt="" width={720} height={480} loading={index < 2 ? "eager" : "lazy"} fetchPriority={index === 0 ? "high" : "auto"} decoding="async" onError={(event) => { event.currentTarget.style.display = "none" }} />}
+            {item.kit === "spike" && code && <span className="instruction-card-code" aria-hidden="true">{code}</span>}
+          </div>
+          {item.kit !== "spike" && <div className="instruction-card-copy"><h2>{item.title}</h2><p>{item.summary}</p><div className="instruction-topics">{item.topics.map((topic) => <span key={topic}>{topic}</span>)}</div></div>}
         </>
         return <div className="instruction-admin-shell" key={item.id}>
           <button type="button" className="instruction-card" onClick={() => { setError(""); setSelected(item) }} aria-label={`Открыть инструкцию: ${item.title}`}>
