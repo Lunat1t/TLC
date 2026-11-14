@@ -64,21 +64,21 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="login-page min-h-dvh flex flex-col bg-[radial-gradient(circle_at_14%_18%,rgba(0,142,248,0.15)_0%,transparent_42%),radial-gradient(circle_at_86%_82%,rgba(112,60,238,0.12)_0%,transparent_45%),#fafafa]">
-      <header className="min-h-[74px] px-5 md:px-16 py-3.5 flex items-center justify-between gap-4 bg-[#008ef8]">
+    <div className="login-page min-h-dvh flex flex-col bg-[radial-gradient(circle_at_14%_18%,rgba(2,199,234,0.15)_0%,transparent_42%),radial-gradient(circle_at_86%_82%,rgba(124,106,247,0.12)_0%,transparent_45%),#f4f8fa]">
+      <header className="min-h-[74px] px-5 md:px-16 py-3.5 flex items-center justify-between gap-4 bg-[#02c7ea]">
         <Link
           href="/"
-          className="text-[19px] font-black tracking-wide text-[#212121] inline-flex items-center gap-2.5"
+          className="text-[19px] font-black tracking-wide text-[#002c39] inline-flex items-center gap-2.5"
         >
           TLC
-          <span className="text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-[#212121]/10 text-[#212121]">
+          <span className="text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-[#002c39]/10 text-[#002c39]">
             TechLabCode
           </span>
         </Link>
         <Link
           href="/dashboard"
           prefetch={false}
-          className="text-sm font-extrabold text-[#212121] px-4 py-2.5 rounded-full bg-white/85 hover:bg-white shadow-sm transition-transform hover:-translate-y-0.5"
+          className="text-sm font-extrabold text-[#053543] px-4 py-2.5 rounded-full bg-white/85 hover:bg-white shadow-sm transition-transform hover:-translate-y-0.5"
         >
           ← К проектам
         </Link>
@@ -87,7 +87,7 @@ export default function LoginPage() {
       <main className="flex-1 grid place-items-center px-4 py-10">
         <Card className="w-full max-w-[460px]">
           <CardHeader className="items-center text-center pb-2">
-            <p className="text-[11px] font-black tracking-[0.16em] uppercase text-[#00589a]">
+            <p className="text-[11px] font-black tracking-[0.16em] uppercase text-[#008da9]">
               АВТОРИЗАЦИЯ УЧЕНИКА
             </p>
             <CardTitle className="text-[28px] md:text-[32px]">
@@ -136,8 +136,8 @@ export default function LoginPage() {
                   role="status"
                   className={`rounded-xl px-3.5 py-2.5 text-[13px] font-bold ${
                     status.isError
-                      ? "bg-[#fdeaea] text-[#ed2929]"
-                      : "bg-[#ceefd0] text-[#212121]"
+                      ? "bg-[#fff1ee] text-[#a9352e]"
+                      : "bg-[#e3f9eb] text-[#165e36]"
                   }`}
                 >
                   {status.message}
@@ -152,19 +152,19 @@ export default function LoginPage() {
               </div>
             </form>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3.5 p-4 rounded-[18px] bg-gradient-to-br from-[#e6f4fe] to-[#f1ecfd] border border-[#c7e6fd]">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3.5 p-4 rounded-[18px] bg-gradient-to-br from-[#edfcff] to-[#f4f1ff] border border-[#ccebf2]">
               <div className="text-center sm:text-left">
-                <strong className="block text-sm font-extrabold text-[#212121]">
+                <strong className="block text-sm font-extrabold text-[#10303b]">
                   Ещё нет аккаунта?
                 </strong>
-                <small className="text-xs text-[#626262]">
+                <small className="text-xs text-[#587580]">
                   Создайте аккаунт ученика
                 </small>
               </div>
               <Link
                 id="registerRedirect"
                 href="/register"
-                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-full bg-[#008ef8] text-[#212121] text-sm font-extrabold shadow-[0_8px_20px_rgba(0,142,248,0.25)] hover:bg-[#008ef8] transition-transform hover:-translate-y-0.5 whitespace-nowrap"
+                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-full bg-[#02c7ea] text-[#042b36] text-sm font-extrabold shadow-[0_8px_20px_rgba(2,199,234,0.25)] hover:bg-[#00b4d6] transition-transform hover:-translate-y-0.5 whitespace-nowrap"
               >
                 Регистрация <span aria-hidden="true">↗</span>
               </Link>

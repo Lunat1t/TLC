@@ -687,7 +687,7 @@ function EditorWorkspace() {
 
   return (
     <div
-      className="tlc-editor flex flex-col h-dvh min-h-[360px] bg-[#fafafa] text-[#212121] select-none overflow-hidden"
+      className="tlc-editor flex flex-col h-dvh min-h-[360px] bg-[#f5f8fa] text-[#18313b] select-none overflow-hidden"
       onPointerDown={(e) => {
         if (!(e.target as HTMLElement).closest("[data-module-picker]")) {
           setOpenMenuBlockId(null)
@@ -695,16 +695,16 @@ function EditorWorkspace() {
       }}
     >
       {/* Topbar */}
-      <header className="editor-topbar h-[68px] shrink-0 flex items-center gap-4 px-4 md:px-6 bg-white border-b border-[#dedede] z-10">
+      <header className="editor-topbar h-[68px] shrink-0 flex items-center gap-4 px-4 md:px-6 bg-white border-b border-[#dce8ec] z-10">
         <Link
           href="/dashboard"
           aria-label="К списку проектов"
-          className="text-sm font-extrabold text-[#00589a] hover:text-[#212121] whitespace-nowrap"
+          className="text-sm font-extrabold text-[#087996] hover:text-[#055a70] whitespace-nowrap"
         >
           ← <span className="hidden xs:inline">Проекты</span>
         </Link>
 
-        {loadError && <button type="button" className="text-xs font-bold text-[#931919]" onClick={() => {
+        {loadError && <button type="button" className="text-xs font-bold text-[#a13620]" onClick={() => {
           const raw = window.localStorage.getItem(STORAGE_KEY)
           if (raw === null) return
           const url = URL.createObjectURL(new Blob([raw], {type:"application/json"}))
@@ -726,7 +726,7 @@ function EditorWorkspace() {
         <span
           role="status"
           className={`ml-auto text-xs font-semibold whitespace-nowrap hidden sm:inline ${
-            saveMessage.isError ? "text-[#ed2929]" : "text-[#626262]"
+            saveMessage.isError ? "text-[#b1372c]" : "text-[#6f8992]"
           }`}
         >
           {saveMessage.text}
@@ -738,13 +738,13 @@ function EditorWorkspace() {
           size="sm"
           disabled={!project || checking}
           onClick={handleExportCode}
-          className="rounded-[11px] min-h-[41px] px-3.5 font-extrabold border-[#dedede] text-[#00589a]"
+          className="rounded-[11px] min-h-[41px] px-3.5 font-extrabold border-[#c6dce2] text-[#086985]"
         >
           Программа Pybricks
         </Button>
 
         <details className="relative" onClick={e=>e.stopPropagation()}>
-          <summary className="cursor-pointer rounded-lg border border-[#dedede] px-3 py-2 text-sm font-bold">Робот</summary>
+          <summary className="cursor-pointer rounded-lg border border-[#c6dce2] px-3 py-2 text-sm font-bold">Робот</summary>
           <div className="absolute right-0 top-full z-50 w-64 rounded-xl border bg-white p-3 shadow-lg flex flex-col gap-2">
             <p role="status" className="text-xs text-slate-700">{robotState.message}</p>
             <button type="button" onClick={()=>void sessionRef.current?.connect()} disabled={checking||project?.hub!=="spike"||(robotState.transport!=="disconnected"&&robotState.transport!=="fault")} className="rounded-lg border px-3 py-2 disabled:opacity-40">Подключить Bluetooth</button>
@@ -763,13 +763,13 @@ function EditorWorkspace() {
         <aside
           ref={paletteRef}
           aria-label="Меню блоков"
-          className={`w-[270px] shrink-0 p-5 bg-white border-r border-[#dedede] z-20 overflow-y-auto transition-[transform,background-color,box-shadow] max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:shadow-2xl ${libraryDropTarget ? "bg-red-50 ring-4 ring-inset ring-red-300" : ""} ${
+          className={`w-[270px] shrink-0 p-5 bg-white border-r border-[#dce8ec] z-20 overflow-y-auto transition-[transform,background-color,box-shadow] max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:shadow-2xl ${libraryDropTarget ? "bg-red-50 ring-4 ring-inset ring-red-300" : ""} ${
             checking ? "pointer-events-none opacity-50 max-md:-translate-x-full" : paletteOpen ? "max-md:translate-x-0" : "max-md:-translate-x-full"
           }`}
         >
           <div className="flex items-center justify-between px-2 pb-5">
             <div>
-              <small className="text-[10px] font-black tracking-[0.14em] text-[#00589a] block">
+              <small className="text-[10px] font-black tracking-[0.14em] text-[#0b8cab] block">
                 БИБЛИОТЕКА
               </small>
               <h2 className="text-2xl font-black tracking-tight mt-1">Блоки</h2>
@@ -778,7 +778,7 @@ function EditorWorkspace() {
               type="button"
               onClick={() => setPaletteOpen(false)}
               aria-label="Закрыть меню"
-              className="md:hidden grid place-items-center w-8 h-8 rounded-lg border border-[#dedede] text-[#212121] font-extrabold"
+              className="md:hidden grid place-items-center w-8 h-8 rounded-lg border border-[#dce7ec] text-[#31525f] font-extrabold"
             >
               ×
             </button>
@@ -794,7 +794,7 @@ function EditorWorkspace() {
             type="button"
             aria-expanded={categoryOpen}
             onClick={() => setCategoryOpen((v) => !v)}
-            className="flex items-center justify-between w-full rounded-[11px] bg-[#e6f4fe] px-4 py-3 text-[#212121] font-extrabold text-sm"
+            className="flex items-center justify-between w-full rounded-[11px] bg-[#eff8fb] px-4 py-3 text-[#284653] font-extrabold text-sm"
           >
             <span>Основные</span>
             <span
@@ -825,15 +825,15 @@ function EditorWorkspace() {
                     clientY: e.clientY,
                   })
                 }}
-                className="w-full rounded-[13px] border border-[#dedede] bg-white p-3.5 text-left flex flex-col gap-2 hover:border-[#f76b14] hover:bg-[#fff8e6] transition-colors disabled:opacity-50 cursor-grab active:cursor-grabbing"
+                className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left flex flex-col gap-2 hover:border-[#d97706] hover:bg-[#fffbeb] transition-colors disabled:opacity-50 cursor-grab active:cursor-grabbing"
               >
                 <span
                   aria-hidden="true"
-                  className="grid place-items-center w-[106px] h-[33px] rounded-t-[14px] rounded-b-[8px] bg-[#f76b14] text-white text-base font-black shadow-[inset_0_-4px_#f76b14]"
+                  className="grid place-items-center w-[106px] h-[33px] rounded-t-[14px] rounded-b-[8px] bg-[#f59e0b] text-white text-base font-black shadow-[inset_0_-4px_#d97706]"
                 >
                   ▶
                 </span>
-                <span className="text-[13px] font-extrabold text-[#212121]">
+                <span className="text-[13px] font-extrabold text-[#18313b]">
                   Когда программа запускается
                 </span>
               </button>
@@ -854,15 +854,15 @@ function EditorWorkspace() {
                     clientY: e.clientY,
                   })
                 }}
-                className="w-full rounded-[13px] border border-[#dedede] bg-white p-3.5 text-left flex flex-col gap-2 hover:border-[#00589a] hover:bg-[#e6f4fe] transition-colors disabled:opacity-50 cursor-grab active:cursor-grabbing"
+                className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left flex flex-col gap-2 hover:border-[#0589b1] hover:bg-[#f2fbfe] transition-colors disabled:opacity-50 cursor-grab active:cursor-grabbing"
               >
                 <span
                   aria-hidden="true"
-                  className="grid place-items-center w-[106px] h-[33px] rounded-[8px] bg-[#00589a] text-white text-xl font-extrabold shadow-[inset_0_-4px_#00589a]"
+                  className="grid place-items-center w-[106px] h-[33px] rounded-[8px] bg-[#0589b1] text-white text-xl font-extrabold shadow-[inset_0_-4px_#00759b]"
                 >
                   ↗
                 </span>
-                <span className="text-[13px] font-extrabold text-[#212121]">
+                <span className="text-[13px] font-extrabold text-[#18313b]">
                   Движение мотора
                 </span>
               </button>
@@ -877,10 +877,10 @@ function EditorWorkspace() {
                   e.preventDefault()
                   setGesture({kind:"palette",type:"stop",clientX:e.clientX,clientY:e.clientY})
                 }}
-                className="w-full rounded-[13px] border border-[#dedede] bg-white p-3.5 text-left flex flex-col gap-2 hover:border-[#ed2929] hover:bg-[#fdeaea] transition-colors disabled:opacity-50 cursor-grab active:cursor-grabbing"
+                className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left flex flex-col gap-2 hover:border-[#b1372c] hover:bg-[#fef2f2] transition-colors disabled:opacity-50 cursor-grab active:cursor-grabbing"
               >
-                <span aria-hidden="true" className="grid place-items-center w-[106px] h-[33px] rounded-[8px] bg-[#ed2929] text-white text-base font-black shadow-[inset_0_-4px_#931919]">■</span>
-                <span className="text-[13px] font-extrabold text-[#212121]">Стоп мотора</span>
+                <span aria-hidden="true" className="grid place-items-center w-[106px] h-[33px] rounded-[8px] bg-[#b1372c] text-white text-base font-black shadow-[inset_0_-4px_#8f2a21]">■</span>
+                <span className="text-[13px] font-extrabold text-[#18313b]">Стоп мотора</span>
               </button>
 
               {/* Блок 3: Связанные моторы */}
@@ -899,15 +899,15 @@ function EditorWorkspace() {
                     clientY: e.clientY,
                   })
                 }}
-                className="w-full rounded-[13px] border border-[#dedede] bg-white p-3.5 text-left flex flex-col gap-2 hover:border-[#00589a] hover:bg-[#e6f4fe] transition-colors disabled:opacity-50 cursor-grab active:cursor-grabbing"
+                className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left flex flex-col gap-2 hover:border-[#107e79] hover:bg-[#f2fbfa] transition-colors disabled:opacity-50 cursor-grab active:cursor-grabbing"
               >
                 <span
                   aria-hidden="true"
-                  className="grid place-items-center w-[106px] h-[33px] rounded-[8px] bg-[#00589a] text-white text-xl font-extrabold shadow-[inset_0_-4px_#212121]"
+                  className="grid place-items-center w-[106px] h-[33px] rounded-[8px] bg-[#107e79] text-white text-xl font-extrabold shadow-[inset_0_-4px_#086560]"
                 >
                   ⇉
                 </span>
-                <span className="text-[13px] font-extrabold text-[#212121]">
+                <span className="text-[13px] font-extrabold text-[#18313b]">
                   Связанные моторы
                 </span>
               </button>
@@ -928,15 +928,15 @@ function EditorWorkspace() {
                     clientY: e.clientY,
                   })
                 }}
-                className="w-full rounded-[13px] border border-[#dedede] bg-white p-3.5 text-left flex flex-col gap-2 hover:border-[#703cee] hover:bg-[#f1ecfd] transition-colors disabled:opacity-50 cursor-grab active:cursor-grabbing"
+                className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left flex flex-col gap-2 hover:border-[#7c3aed] hover:bg-[#f5f3ff] transition-colors disabled:opacity-50 cursor-grab active:cursor-grabbing"
               >
                 <span
                   aria-hidden="true"
-                  className="grid place-items-center w-[116px] h-[33px] rounded-[8px] bg-[#703cee] text-white text-sm font-black shadow-[inset_0_-4px_#703cee]"
+                  className="grid place-items-center w-[116px] h-[33px] rounded-[8px] bg-[#7c3aed] text-white text-sm font-black shadow-[inset_0_-4px_#5b21b6]"
                 >
                   if / else
                 </span>
-                <span className="text-[13px] font-extrabold text-[#212121]">
+                <span className="text-[13px] font-extrabold text-[#18313b]">
                   Если … то / Иначе
                 </span>
               </button>
@@ -947,7 +947,7 @@ function EditorWorkspace() {
             type="button"
             aria-expanded={controllerCategoryOpen}
             onClick={() => setControllerCategoryOpen((v) => !v)}
-            className="flex items-center justify-between w-full rounded-[11px] bg-[#e6f4fe] px-4 py-3 text-[#212121] font-extrabold text-sm mt-3"
+            className="flex items-center justify-between w-full rounded-[11px] bg-[#eff8fb] px-4 py-3 text-[#284653] font-extrabold text-sm mt-3"
           >
             <span>Пульт</span>
             <span
@@ -962,13 +962,13 @@ function EditorWorkspace() {
 
           {controllerCategoryOpen && (
             <div className="py-3 px-1 space-y-2.5">
-              <button type="button" disabled={!project||controlLayout.areas.some(area=>area.sheetId===currentSheet.id)} title={controlLayout.areas.some(area=>area.sheetId===currentSheet.id)?"На этом листе уже есть область «Управление»":""} onPointerDown={e=>dragControlFromPalette(e,"area")} className="w-full rounded-[13px] border border-[#dedede] bg-white p-3.5 text-left text-[#212121] font-extrabold touch-none hover:border-[#f76b14] hover:bg-[#fff8e6] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">▦ Область «Управление»</button>
-              <button type="button" disabled={!project} aria-label="Добавить кнопки моторов только внутрь области управления" onPointerDown={e=>{if(!project||e.button!==0)return;e.preventDefault();setGesture({kind:"palette",type:"motor-buttons",clientX:e.clientX,clientY:e.clientY})}} className="w-full rounded-[13px] border border-[#dedede] bg-white p-3.5 text-left text-[#212121] font-extrabold touch-none hover:border-[#f76b14] hover:bg-[#fff8e6] transition-colors disabled:opacity-50">
+              <button type="button" disabled={!project||controlLayout.areas.some(area=>area.sheetId===currentSheet.id)} title={controlLayout.areas.some(area=>area.sheetId===currentSheet.id)?"На этом листе уже есть область «Управление»":""} onPointerDown={e=>dragControlFromPalette(e,"area")} className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left text-[#18313b] font-extrabold touch-none hover:border-[#d97706] hover:bg-[#fffbeb] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">▦ Область «Управление»</button>
+              <button type="button" disabled={!project} aria-label="Добавить кнопки моторов только внутрь области управления" onPointerDown={e=>{if(!project||e.button!==0)return;e.preventDefault();setGesture({kind:"palette",type:"motor-buttons",clientX:e.clientX,clientY:e.clientY})}} className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left text-[#18313b] font-extrabold touch-none hover:border-[#d97706] hover:bg-[#fffbeb] transition-colors disabled:opacity-50">
                 <span aria-hidden="true" className="mr-2 inline-grid grid-cols-2 gap-0.5 align-middle">
-                  <span className="h-2.5 w-2.5 rounded-[3px] bg-sky-600 shadow-[inset_0_-2px_#00589a]" />
-                  <span className="h-2.5 w-2.5 rounded-[3px] bg-red-600 shadow-[inset_0_-2px_#931919]" />
-                  <span className="h-2.5 w-2.5 rounded-[3px] bg-emerald-600 shadow-[inset_0_-2px_#212121]" />
-                  <span className="h-2.5 w-2.5 rounded-[3px] bg-amber-400 shadow-[inset_0_-2px_#99420c]" />
+                  <span className="h-2.5 w-2.5 rounded-[3px] bg-sky-600 shadow-[inset_0_-2px_#075985]" />
+                  <span className="h-2.5 w-2.5 rounded-[3px] bg-red-600 shadow-[inset_0_-2px_#991b1b]" />
+                  <span className="h-2.5 w-2.5 rounded-[3px] bg-emerald-600 shadow-[inset_0_-2px_#065f46]" />
+                  <span className="h-2.5 w-2.5 rounded-[3px] bg-amber-400 shadow-[inset_0_-2px_#b45309]" />
                 </span>
                 Кнопки моторов
               </button>
@@ -982,23 +982,23 @@ function EditorWorkspace() {
             type="button"
             aria-label="Закрыть меню блоков"
             onClick={() => setPaletteOpen(false)}
-            className="md:hidden fixed inset-0 bg-[#212121]/40 z-10"
+            className="md:hidden fixed inset-0 bg-[#17313b]/40 z-10"
           />
         )}
 
         {/* Board Panel */}
         <main className="flex flex-col flex-1 min-w-0 min-h-0">
           {/* Board Toolbar */}
-          <div inert={checking || undefined} className="h-[54px] shrink-0 flex items-center gap-2 px-4 bg-white border-b border-[#dedede]">
+          <div inert={checking || undefined} className="h-[54px] shrink-0 flex items-center gap-2 px-4 bg-white border-b border-[#e1eaee]">
             <button
               type="button"
               onClick={() => setPaletteOpen(true)}
               aria-label="Открыть меню блоков"
-              className="md:hidden grid place-items-center h-[34px] w-[34px] rounded-[9px] border border-[#dedede] bg-white text-[#212121] font-extrabold"
+              className="md:hidden grid place-items-center h-[34px] w-[34px] rounded-[9px] border border-[#dce7ec] bg-white text-[#31525f] font-extrabold"
             >
               ☰
             </button>
-            <span className="text-[13px] font-extrabold text-[#626262] hidden sm:inline">
+            <span className="text-[13px] font-extrabold text-[#57717d] hidden sm:inline">
               Рабочая область
             </span>
             <span className="flex-1" />
@@ -1006,38 +1006,38 @@ function EditorWorkspace() {
               type="button"
               onClick={() => handleZoom(zoom - 0.25)}
               aria-label="Уменьшить масштаб"
-              className="grid place-items-center h-[34px] min-w-[34px] px-2 rounded-[9px] border border-[#dedede] bg-white hover:bg-[#e6f4fe] text-[#212121] font-extrabold"
+              className="grid place-items-center h-[34px] min-w-[34px] px-2 rounded-[9px] border border-[#dce7ec] bg-white hover:bg-[#f1f9fb] text-[#31525f] font-extrabold"
             >
               −
             </button>
-            <span className="min-w-[46px] text-center text-xs font-extrabold text-[#626262]">
+            <span className="min-w-[46px] text-center text-xs font-extrabold text-[#587681]">
               {Math.round(zoom * 100)}%
             </span>
             <button
               type="button"
               onClick={() => handleZoom(zoom + 0.25)}
               aria-label="Увеличить масштаб"
-              className="grid place-items-center h-[34px] min-w-[34px] px-2 rounded-[9px] border border-[#dedede] bg-white hover:bg-[#e6f4fe] text-[#212121] font-extrabold"
+              className="grid place-items-center h-[34px] min-w-[34px] px-2 rounded-[9px] border border-[#dce7ec] bg-white hover:bg-[#f1f9fb] text-[#31525f] font-extrabold"
             >
               +
             </button>
             <button
               type="button"
               onClick={handleResetView}
-              className="h-[34px] px-3 rounded-[9px] border border-[#dedede] bg-white hover:bg-[#e6f4fe] text-xs font-extrabold text-[#212121]"
+              className="h-[34px] px-3 rounded-[9px] border border-[#dce7ec] bg-white hover:bg-[#f1f9fb] text-xs font-extrabold text-[#31525f]"
             >
               По центру
             </button>
           </div>
 
-          {(checking || robotState.transport==='fault' || startError) && <div role="status" className="px-4 py-1 text-xs font-semibold text-[#212121]">{startError || robotState.message}</div>}
+          {(checking || robotState.transport==='fault' || startError) && <div role="status" className="px-4 py-1 text-xs font-semibold text-[#31525f]">{startError || robotState.message}</div>}
           {/* Infinite Canvas Board */}
           <div
             ref={boardRef}
             aria-label="Доска для блоков"
             style={{
               backgroundImage:
-                "radial-gradient(#dedede 1.15px, transparent 1.15px)",
+                "radial-gradient(#bbcbd2 1.15px, transparent 1.15px)",
               backgroundSize: `${24 * zoom}px ${24 * zoom}px`,
               backgroundPosition: `${panX}px ${panY}px`,
             }}
@@ -1128,7 +1128,7 @@ function EditorWorkspace() {
                 setGesture(null)
               }
             }}
-            className={`relative flex-1 min-h-0 overflow-hidden touch-none bg-[#fafafa] ${
+            className={`relative flex-1 min-h-0 overflow-hidden touch-none bg-[#f7f9fb] ${
               gesture?.kind === "pan" ? "cursor-grabbing" : "cursor-grab"
             }`}
           >
@@ -1184,9 +1184,9 @@ function EditorWorkspace() {
                         left: `${socketX}px`,
                         top: `${socketY}px`,
                       }}
-                      className="absolute z-20 w-[320px] h-[58px] rounded-[12px] border-2 border-dashed border-[#ffbb00] bg-[#fff0c7]/55 shadow-[0_0_24px_rgba(251,191,36,0.45)] pointer-events-none animate-lego-magnet"
+                      className="absolute z-20 w-[320px] h-[58px] rounded-[12px] border-2 border-dashed border-[#fbbf24] bg-[#fef3c7]/55 shadow-[0_0_24px_rgba(251,191,36,0.45)] pointer-events-none animate-lego-magnet"
                     >
-                      <span className="absolute -top-[8px] left-[32px] w-[44px] h-[11px] rounded-t-[6px] bg-[#ffbb00]" />
+                      <span className="absolute -top-[8px] left-[32px] w-[44px] h-[11px] rounded-t-[6px] bg-[#fbbf24]" />
                     </div>
                   )
                 })()}
@@ -1375,27 +1375,27 @@ function EditorWorkspace() {
                       isIfBlock
                         ? "pointer-events-none text-white"
                         : isMotorButtons
-                          ? `${buttonDrag?.blockId === block.id ? "overflow-visible" : "overflow-hidden"} rounded-[14px] border border-[#dedede] bg-[#fafafa] text-[#212121] shadow-[inset_0_-4px_#dedede,0_8px_18px_rgba(20,105,123,0.12)]`
+                          ? `${buttonDrag?.blockId === block.id ? "overflow-visible" : "overflow-hidden"} rounded-[14px] border border-[#b9d0da] bg-[#f4f8fa] text-[#18313b] shadow-[inset_0_-4px_#d6e4e9,0_8px_18px_rgba(20,105,123,0.12)]`
                         : isButtonBlock
-                          ? "w-max min-h-[58px] bg-[#f76b14] text-white shadow-[inset_0_-4px_#f76b14,0_8px_18px_rgba(232,93,42,0.16)]"
+                          ? "w-max min-h-[58px] bg-[#e85d2a] text-white shadow-[inset_0_-4px_#c2410c,0_8px_18px_rgba(232,93,42,0.16)]"
                           : isStopBlock
-                            ? "w-max min-h-[64px] bg-[#ed2929] text-white shadow-[inset_0_-4px_#931919,0_8px_18px_rgba(177,55,44,0.16)]"
+                            ? "w-max min-h-[64px] bg-[#b1372c] text-white shadow-[inset_0_-4px_#8f2a21,0_8px_18px_rgba(177,55,44,0.16)]"
                             : motorBlock
                               ? paired
-                                ? "w-max h-[64px] bg-[#00589a] text-white shadow-[inset_0_-4px_#212121,0_8px_18px_rgba(20,105,123,0.16)]"
-                                : "w-max h-[64px] bg-[#00589a] text-white shadow-[inset_0_-4px_#00589a,0_8px_18px_rgba(20,105,123,0.16)]"
-                              : "w-[320px] h-[58px] bg-[#f76b14] text-white px-5 flex items-center shadow-[inset_0_-4px_#f76b14,0_8px_18px_rgba(120,53,15,0.16)]"
+                                ? "w-max h-[64px] bg-[#107e79] text-white shadow-[inset_0_-4px_#086560,0_8px_18px_rgba(20,105,123,0.16)]"
+                                : "w-max h-[64px] bg-[#0589b1] text-white shadow-[inset_0_-4px_#00759b,0_8px_18px_rgba(20,105,123,0.16)]"
+                              : "w-[320px] h-[58px] bg-[#f59e0b] text-white px-5 flex items-center shadow-[inset_0_-4px_#d97706,0_8px_18px_rgba(120,53,15,0.16)]"
                     } ${
                       isJustAdded ? "animate-lego-spawn" : ""
                     } ${
                       isJustSnapped ? "animate-lego-snap" : ""
                     } ${
                       !isIfBlock && isSelected
-                        ? "outline-3 outline-[#00589a] outline-offset-2"
+                        ? "outline-3 outline-[#087996] outline-offset-2"
                         : ""
                     } ${
                       !isIfBlock && isSnapTarget
-                        ? "ring-4 ring-[#ffbb00] shadow-[0_0_26px_rgba(251,191,36,0.55)]"
+                        ? "ring-4 ring-[#fbbf24] shadow-[0_0_26px_rgba(251,191,36,0.55)]"
                         : ""
                     }`}
                   >
@@ -1405,12 +1405,12 @@ function EditorWorkspace() {
                         aria-hidden="true"
                         className={`absolute -top-[8px] left-[32px] w-[44px] h-[11px] rounded-t-[6px] pointer-events-auto ${
                           isIfBlock
-                            ? "bg-[#703cee]"
+                            ? "bg-[#7c3aed]"
                             : isStopBlock
-                              ? "bg-[#ed2929]"
+                              ? "bg-[#b1372c]"
                               : paired
-                                ? "bg-[#00589a]"
-                                : "bg-[#00589a]"
+                                ? "bg-[#107e79]"
+                                : "bg-[#0589b1]"
                         }`}
                       />
                     )}
@@ -1419,7 +1419,7 @@ function EditorWorkspace() {
                     {isJustSnappedHead && (
                       <span
                         aria-hidden="true"
-                        className="absolute -top-[6px] left-[16px] w-[180px] h-[10px] rounded-full bg-gradient-to-r from-[#ffe499] via-white to-transparent pointer-events-none z-40 animate-lego-flash"
+                        className="absolute -top-[6px] left-[16px] w-[180px] h-[10px] rounded-full bg-gradient-to-r from-[#fef08a] via-white to-transparent pointer-events-none z-40 animate-lego-flash"
                       />
                     )}
 
@@ -1433,7 +1433,7 @@ function EditorWorkspace() {
                           setSelectedId(null)
                           saveBlocks(removeBlock(blocks, block.id))
                         }}
-                        className="pointer-events-auto absolute -top-[13px] -right-[12px] z-30 w-[26px] h-[26px] rounded-full bg-white text-[#212121] shadow-md text-lg leading-none font-bold grid place-items-center"
+                        className="pointer-events-auto absolute -top-[13px] -right-[12px] z-30 w-[26px] h-[26px] rounded-full bg-white text-[#18313b] shadow-md text-lg leading-none font-bold grid place-items-center"
                       >
                         ×
                       </button>
@@ -1442,16 +1442,16 @@ function EditorWorkspace() {
                     {/* Block Content */}
                     {isMotorButtons ? (
                       <div data-button-panel="true" className="relative flex h-full w-full flex-col">
-                        <div data-panel-drag className="flex h-8 shrink-0 items-center rounded-t-[13px] bg-[#c7e6fd] px-2 text-xs font-extrabold text-[#212121]">Кнопки моторов</div>
+                        <div data-panel-drag className="flex h-8 shrink-0 items-center rounded-t-[13px] bg-[#e7f3f8] px-2 text-xs font-extrabold text-[#31525f]">Кнопки моторов</div>
                         {(() => {
                           const hiddenButtons = block.hiddenControlButtons || []
                           const colors = (["blue", ...(block.controlModules || [])] as MotorPanelButton[])
                             .filter(color => !hiddenButtons.includes(color))
                           const paint: Record<MotorPanelButton, { face: string; shade: string }> = {
-                            blue: { face: "#008ef8", shade: "#00589a" },
-                            red: { face: "#ed2929", shade: "#ed2929" },
-                            green: { face: "#22b82b", shade: "#15721b" },
-                            yellow: { face: "#ffbb00", shade: "#ffbb00" },
+                            blue: { face: "#1687b3", shade: "#0e688a" },
+                            red: { face: "#d9473d", shade: "#a92b26" },
+                            green: { face: "#32a66a", shade: "#21804e" },
+                            yellow: { face: "#edc13d", shade: "#c59b24" },
                           }
                           const fourButtonPositions: Record<string, string> = {
                             red: "col-start-2 row-start-1",
@@ -1530,7 +1530,7 @@ function EditorWorkspace() {
                                     width: buttonSize,
                                     height: buttonSize,
                                     background: paint[color].face,
-                                    boxShadow: `inset 0 -${Math.max(3,Math.round(buttonSize*0.12))}px ${paint[color].shade},0 2px 3px #626262`,
+                                    boxShadow: `inset 0 -${Math.max(3,Math.round(buttonSize*0.12))}px ${paint[color].shade},0 2px 3px #78909a`,
                                     transform: buttonDrag?.blockId === block.id && buttonDrag.color === color
                                       ? `translate(${buttonDrag.dx/zoom}px,${buttonDrag.dy/zoom}px) scale(1.08)`
                                       : pressedPanelButtons.includes(`${block.id}:${color}`) ? "translateY(3px) scale(0.96)"
@@ -1580,34 +1580,34 @@ function EditorWorkspace() {
                                     }))
                                   }}
                                   style={{width:buttonSize,height:buttonSize}}
-                                  className="grid shrink-0 place-items-center rounded-full border border-[#dedede] bg-white text-lg font-bold text-[#212121]"
+                                  className="grid shrink-0 place-items-center rounded-full border border-[#b9d0da] bg-white text-lg font-bold text-[#31525f]"
                                 >+</button>
                               )}
                             </div>
                           )
                         })()}
-                        <button type="button" aria-label="Изменить размер панели кнопок" onPointerDown={e=>resizeMotorPanel(e,block)} className="absolute bottom-0 right-0 z-20 grid h-6 w-6 cursor-nwse-resize place-items-center rounded-tl bg-white/80 text-sm text-[#212121]">◢</button>
+                        <button type="button" aria-label="Изменить размер панели кнопок" onPointerDown={e=>resizeMotorPanel(e,block)} className="absolute bottom-0 right-0 z-20 grid h-6 w-6 cursor-nwse-resize place-items-center rounded-tl bg-white/80 text-sm text-[#31525f]">◢</button>
                       </div>
                     ) : isIfBlock ? (
                       <div className="flex flex-col items-start">
                         {/* 1. Top Header Bar of E-shaped If/Else block */}
                         <div
-                          className={`pointer-events-auto relative flex flex-nowrap items-center h-[58px] w-[260px] px-5 gap-3 bg-[#703cee] shadow-[inset_0_-4px_#703cee,0_8px_18px_rgba(91,33,182,0.2)] ${
+                          className={`pointer-events-auto relative flex flex-nowrap items-center h-[58px] w-[260px] px-5 gap-3 bg-[#7c3aed] shadow-[inset_0_-4px_#5b21b6,0_8px_18px_rgba(91,33,182,0.2)] ${
                             isConnected
                               ? "rounded-tl-[5px] rounded-tr-[14px]"
                               : "rounded-t-[14px]"
                           } rounded-br-[14px] ${
                             isSelected
-                              ? "ring-3 ring-[#00589a]"
+                              ? "ring-3 ring-[#087996]"
                               : isSnapTarget
-                                ? "ring-4 ring-[#ffbb00]"
+                                ? "ring-4 ring-[#fbbf24]"
                                 : ""
                           }`}
                         >
                           {/* Inner top LEGO stud pointing down into the first C-mouth ("Если") */}
                           <span
                             aria-hidden="true"
-                            className="absolute -bottom-[7px] left-[60px] w-[44px] h-[10px] rounded-b-[6px] bg-[#703cee] z-20"
+                            className="absolute -bottom-[7px] left-[60px] w-[44px] h-[10px] rounded-b-[6px] bg-[#7c3aed] z-20"
                           />
 
                           <span className="text-[16px] font-extrabold whitespace-nowrap tracking-tight">
@@ -1616,7 +1616,7 @@ function EditorWorkspace() {
                           {/* Empty condition slot */}
                           <span
                             aria-hidden="true"
-                            className="w-[88px] h-[32px] rounded-full bg-[#452594]/55 border border-white/25 shadow-inner"
+                            className="w-[88px] h-[32px] rounded-full bg-[#4c1d95]/55 border border-white/25 shadow-inner"
                           />
                           <span className="text-[16px] font-extrabold whitespace-nowrap tracking-tight">
                             то
@@ -1628,20 +1628,20 @@ function EditorWorkspace() {
                           style={{ height: `${bodySpineHeight}px` }}
                           className="relative flex items-center"
                         >
-                          <div className="pointer-events-auto w-[28px] h-full bg-[#703cee] shadow-[inset_-4px_0_#703cee]" />
+                          <div className="pointer-events-auto w-[28px] h-full bg-[#7c3aed] shadow-[inset_-4px_0_#5b21b6]" />
                         </div>
 
                         {/* 3. Middle Bar ("Иначе") */}
-                        <div className="pointer-events-auto relative flex items-center w-[220px] h-[48px] px-5 bg-[#703cee] shadow-[inset_0_-4px_#703cee,0_8px_18px_rgba(91,33,182,0.16)] rounded-r-[14px]">
+                        <div className="pointer-events-auto relative flex items-center w-[220px] h-[48px] px-5 bg-[#7c3aed] shadow-[inset_0_-4px_#5b21b6,0_8px_18px_rgba(91,33,182,0.16)] rounded-r-[14px]">
                           {/* Top LEGO stud to lock with last block in "Если" branch */}
                           <span
                             aria-hidden="true"
-                            className="absolute -top-[8px] left-[60px] w-[44px] h-[10px] rounded-t-[6px] bg-[#703cee]"
+                            className="absolute -top-[8px] left-[60px] w-[44px] h-[10px] rounded-t-[6px] bg-[#7c3aed]"
                           />
                           {/* Bottom LEGO stud pointing down into the second C-mouth ("Иначе") */}
                           <span
                             aria-hidden="true"
-                            className="absolute -bottom-[7px] left-[60px] w-[44px] h-[10px] rounded-b-[6px] bg-[#703cee] z-20"
+                            className="absolute -bottom-[7px] left-[60px] w-[44px] h-[10px] rounded-b-[6px] bg-[#7c3aed] z-20"
                           />
                           <span className="text-[16px] font-extrabold whitespace-nowrap tracking-tight">
                             Иначе
@@ -1653,19 +1653,19 @@ function EditorWorkspace() {
                           style={{ height: `${elseSpineHeight}px` }}
                           className="relative flex items-center"
                         >
-                          <div className="pointer-events-auto w-[28px] h-full bg-[#703cee] shadow-[inset_-4px_0_#703cee]" />
+                          <div className="pointer-events-auto w-[28px] h-full bg-[#7c3aed] shadow-[inset_-4px_0_#5b21b6]" />
                         </div>
 
                         {/* 5. Bottom C-Foot */}
                         <div
-                          className={`pointer-events-auto relative w-[220px] h-[28px] bg-[#703cee] shadow-[inset_0_-4px_#703cee,0_8px_18px_rgba(91,33,182,0.16)] rounded-r-[12px] ${
+                          className={`pointer-events-auto relative w-[220px] h-[28px] bg-[#7c3aed] shadow-[inset_0_-4px_#5b21b6,0_8px_18px_rgba(91,33,182,0.16)] rounded-r-[12px] ${
                             hasChild ? "rounded-bl-[5px]" : "rounded-bl-[14px]"
                           }`}
                         >
                           {/* Top LEGO stud on C-foot to lock with last block in "Иначе" branch */}
                           <span
                             aria-hidden="true"
-                            className="absolute -top-[8px] left-[60px] w-[44px] h-[10px] rounded-t-[6px] bg-[#703cee]"
+                            className="absolute -top-[8px] left-[60px] w-[44px] h-[10px] rounded-t-[6px] bg-[#7c3aed]"
                           />
                         </div>
                       </div>
@@ -1729,7 +1729,7 @@ function EditorWorkspace() {
                                 )
                               )
                             }
-                            className="h-[38px] rounded-full px-3.5 bg-white text-[#212121] font-extrabold text-[15px] shadow-xs cursor-pointer"
+                            className="h-[38px] rounded-full px-3.5 bg-white text-[#0d3b4c] font-extrabold text-[15px] shadow-xs cursor-pointer"
                           >
                             {motorPorts.map((port) => (
                               <option key={port} value={port}>
@@ -1757,7 +1757,7 @@ function EditorWorkspace() {
                                 )
                               )
                             }
-                            className="h-[38px] rounded-full px-3.5 bg-white text-[#212121] font-extrabold text-[15px] shadow-xs cursor-pointer"
+                            className="h-[38px] rounded-full px-3.5 bg-white text-[#0d3b4c] font-extrabold text-[15px] shadow-xs cursor-pointer"
                           >
                             <option value="forward">вперёд</option>
                             <option value="backward">назад</option>
@@ -1782,7 +1782,7 @@ function EditorWorkspace() {
                                     )
                                   )
                                 }
-                                className="h-[38px] rounded-full px-3.5 bg-white text-[#212121] font-extrabold text-[15px] shadow-xs cursor-pointer"
+                                className="h-[38px] rounded-full px-3.5 bg-white text-[#0d3b4c] font-extrabold text-[15px] shadow-xs cursor-pointer"
                               >
                                 {motorPorts.map((port) => (
                                   <option key={port} value={port}>
@@ -1807,7 +1807,7 @@ function EditorWorkspace() {
                                     )
                                   )
                                 }
-                                className="h-[38px] rounded-full px-3.5 bg-white text-[#212121] font-extrabold text-[15px] shadow-xs cursor-pointer"
+                                className="h-[38px] rounded-full px-3.5 bg-white text-[#0d3b4c] font-extrabold text-[15px] shadow-xs cursor-pointer"
                               >
                                 <option value="forward">вперёд</option>
                                 <option value="backward">назад</option>
@@ -1858,7 +1858,7 @@ function EditorWorkspace() {
                                         )
                                       )
                                     }}
-                                    className="w-[78px] h-[38px] rounded-full px-3 text-center bg-white text-[#212121] font-extrabold text-[15px] shadow-xs"
+                                    className="w-[78px] h-[38px] rounded-full px-3 text-center bg-white text-[#0d3b4c] font-extrabold text-[15px] shadow-xs"
                                   />
                                   <select
                                     aria-label="Единица измерения"
@@ -1876,7 +1876,7 @@ function EditorWorkspace() {
                                         )
                                       )
                                     }
-                                    className="h-[38px] rounded-full px-3.5 bg-white text-[#212121] font-extrabold text-[15px] shadow-xs cursor-pointer"
+                                    className="h-[38px] rounded-full px-3.5 bg-white text-[#0d3b4c] font-extrabold text-[15px] shadow-xs cursor-pointer"
                                   >
                                     <option value="rotations">оборотов</option>
                                     <option value="degrees">градусов</option>
@@ -1912,7 +1912,7 @@ function EditorWorkspace() {
                                         )
                                       )
                                     }}
-                                    className="w-[80px] h-[38px] rounded-full px-3 text-center bg-white text-[#212121] font-extrabold text-[15px] shadow-xs"
+                                    className="w-[80px] h-[38px] rounded-full px-3 text-center bg-white text-[#0d3b4c] font-extrabold text-[15px] shadow-xs"
                                   />
                                   <span className="text-[14px] font-extrabold text-white/95">
                                     {mod === "speed" ? "°/с" : "%"}
@@ -1964,7 +1964,7 @@ function EditorWorkspace() {
                           </button>
 
                           {openMenuBlockId === block.id && (
-                            <div className="absolute top-[calc(100%+8px)] right-0 z-50 w-[240px] p-2.5 rounded-[12px] border border-[#dedede] bg-white text-[#212121] shadow-xl flex flex-col gap-1.5">
+                            <div className="absolute top-[calc(100%+8px)] right-0 z-50 w-[240px] p-2.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-1.5">
                               {(
                                 [
                                   ["speed", "со скоростью"],
@@ -2001,7 +2001,7 @@ function EditorWorkspace() {
                                     )
                                     setOpenMenuBlockId(null)
                                   }}
-                                  className="text-left px-3.5 py-2.5 rounded-lg bg-[#e6f4fe] hover:bg-[#c7e6fd] text-sm font-extrabold text-[#212121] disabled:opacity-45"
+                                  className="text-left px-3.5 py-2.5 rounded-lg bg-[#eff8fb] hover:bg-[#dff2f8] text-sm font-extrabold text-[#18313b] disabled:opacity-45"
                                 >
                                   {label}
                                 </button>
@@ -2017,7 +2017,7 @@ function EditorWorkspace() {
               </div>
             </div>
 
-            {loadError && !project && <div className="absolute inset-0 z-30 overflow-y-auto bg-white p-6"><h2 className="text-lg font-bold">{loadError}</h2><div className="flex flex-col gap-2 mt-4">{projects.map(p=><Link key={p.id} className="rounded-lg border p-3 text-[#00589a]" href={`/editor?id=${encodeURIComponent(p.id)}`}>{p.name}</Link>)}{projects.length===0&&<Link href="/dashboard" className="text-[#00589a] underline">К списку проектов</Link>}</div></div>}
+            {loadError && !project && <div className="absolute inset-0 z-30 overflow-y-auto bg-white p-6"><h2 className="text-lg font-bold">{loadError}</h2><div className="flex flex-col gap-2 mt-4">{projects.map(p=><Link key={p.id} className="rounded-lg border p-3 text-[#086985]" href={`/editor?id=${encodeURIComponent(p.id)}`}>{p.name}</Link>)}{projects.length===0&&<Link href="/dashboard" className="text-[#086985] underline">К списку проектов</Link>}</div></div>}
           </div>
 
         </main>
@@ -2032,16 +2032,16 @@ function EditorWorkspace() {
           }}
           className={`fixed z-50 pointer-events-none opacity-85 -translate-x-1/2 -translate-y-1/2 scale-90 px-4 flex items-center text-white font-extrabold text-xs ${
             gesture.type === "start"
-              ? "w-[240px] h-[52px] rounded-t-[20px] rounded-b-[12px] bg-[#f76b14] shadow-[inset_0_-6px_#f76b14]"
+              ? "w-[240px] h-[52px] rounded-t-[20px] rounded-b-[12px] bg-[#f59e0b] shadow-[inset_0_-6px_#d97706]"
               : gesture.type === "if"
-                ? "w-[220px] h-[56px] rounded-[12px] bg-[#703cee] shadow-[inset_0_-6px_#703cee]"
+                ? "w-[220px] h-[56px] rounded-[12px] bg-[#7c3aed] shadow-[inset_0_-6px_#5b21b6]"
                 : gesture.type === "pair"
-                  ? "w-[220px] h-[56px] rounded-[12px] bg-[#00589a] shadow-[inset_0_-6px_#212121]"
+                  ? "w-[220px] h-[56px] rounded-[12px] bg-[#107e79] shadow-[inset_0_-6px_#086560]"
                   : gesture.type === "button"
-                    ? "w-[240px] h-[52px] rounded-t-[20px] rounded-b-[12px] bg-[#f76b14] shadow-[inset_0_-6px_#f76b14]"
+                    ? "w-[240px] h-[52px] rounded-t-[20px] rounded-b-[12px] bg-[#e85d2a] shadow-[inset_0_-6px_#c2410c]"
                     : gesture.type === "stop"
-                      ? "w-[220px] h-[56px] rounded-[12px] bg-[#ed2929] shadow-[inset_0_-6px_#931919]"
-                      : "w-[220px] h-[56px] rounded-[12px] bg-[#00589a] shadow-[inset_0_-6px_#00589a]"
+                      ? "w-[220px] h-[56px] rounded-[12px] bg-[#b1372c] shadow-[inset_0_-6px_#8f2a21]"
+                      : "w-[220px] h-[56px] rounded-[12px] bg-[#0589b1] shadow-[inset_0_-6px_#00759b]"
           }`}
         >
           {gesture.type === "start"
@@ -2058,7 +2058,7 @@ function EditorWorkspace() {
         </div>
       )}
 
-      {codeModal.open && <div role="dialog" aria-modal="true" aria-label={codeModal.title} className="fixed inset-0 z-50 bg-[#212121]/50 grid place-items-center p-4"><div className="w-full max-w-[600px] rounded-[18px] bg-white p-6 shadow-2xl"><h2 className="text-xl font-black mb-3">{codeModal.title}</h2><p className="text-sm mb-3">Загрузите файл в Pybricks Code и запустите на хабе.</p><textarea readOnly aria-label="Код программы Pybricks" value={codeModal.code} className="w-full h-[210px] p-3 border rounded-lg font-mono text-sm"/><div className="flex justify-end gap-3 mt-4"><Button type="button" variant="outline" onClick={handleDownloadPy}>Скачать .py</Button><Button type="button" onClick={()=>setCodeModal(prev=>({...prev,open:false}))}>Закрыть</Button></div></div></div>}
+      {codeModal.open && <div role="dialog" aria-modal="true" aria-label={codeModal.title} className="fixed inset-0 z-50 bg-[#112a36]/50 grid place-items-center p-4"><div className="w-full max-w-[600px] rounded-[18px] bg-white p-6 shadow-2xl"><h2 className="text-xl font-black mb-3">{codeModal.title}</h2><p className="text-sm mb-3">Загрузите файл в Pybricks Code и запустите на хабе.</p><textarea readOnly aria-label="Код программы Pybricks" value={codeModal.code} className="w-full h-[210px] p-3 border rounded-lg font-mono text-sm"/><div className="flex justify-end gap-3 mt-4"><Button type="button" variant="outline" onClick={handleDownloadPy}>Скачать .py</Button><Button type="button" onClick={()=>setCodeModal(prev=>({...prev,open:false}))}>Закрыть</Button></div></div></div>}
 
     </div>
   )
@@ -2068,7 +2068,7 @@ export default function EditorPage() {
   return (
     <React.Suspense
       fallback={
-        <div className="h-dvh grid place-items-center bg-[#fafafa] text-sm font-bold text-[#626262]">
+        <div className="h-dvh grid place-items-center bg-[#f5f8fa] text-sm font-bold text-[#57717d]">
           Загрузка редактора…
         </div>
       }

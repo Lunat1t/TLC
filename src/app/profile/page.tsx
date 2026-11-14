@@ -106,7 +106,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <main className="min-h-dvh bg-[#fafafa] p-5 md:p-12">
+    <main className="min-h-dvh bg-[#f4f9fb] p-5 md:p-12">
       <div className="mx-auto grid max-w-2xl gap-5">
         {profile && profile.role !== "parent" && <Link href="/dashboard" className="font-bold text-cyan-800">← К проектам</Link>}
         {profile?.role === "parent" && <button type="button" className="justify-self-end font-bold text-cyan-800" onClick={async () => { await createClient().auth.signOut(); router.replace("/"); router.refresh() }}>Выйти из аккаунта</button>}

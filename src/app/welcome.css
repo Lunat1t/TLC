@@ -3,8 +3,8 @@
   display: grid;
   grid-template-rows: auto 1fr auto;
   padding: 0 clamp(20px, 6vw, 80px);
-  color: var(--brand-ink);
-  background: var(--brand-white);
+  color: #18343d;
+  background: #fff;
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
 }
 .welcome-header {
@@ -12,10 +12,10 @@
   align-items: center;
   justify-content: space-between;
   min-height: 76px;
-  border-bottom: 1px solid var(--brand-subtle);
+  border-bottom: 1px solid #e8eef0;
 }
 .welcome-logo {
-  color: var(--brand-ink);
+  color: #087f91;
   font-size: 25px;
   font-weight: 900;
   letter-spacing: -1.5px;
@@ -25,7 +25,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  color: var(--brand-muted);
+  color: #71848a;
   font-size: 13px;
   font-weight: 750;
 }
@@ -36,8 +36,8 @@
   background: transparent;
   cursor: pointer;
 }
-.welcome-language button[aria-pressed="true"] { color: var(--brand-blue-dark); }
-.welcome-language span { width: 1px; height: 17px; background: var(--brand-line); }
+.welcome-language button[aria-pressed="true"] { color: #087f91; }
+.welcome-language span { width: 1px; height: 17px; background: #d8e2e5; }
 .welcome-main {
   display: flex;
   flex-direction: column;
@@ -72,21 +72,21 @@
   transition: transform 140ms ease, background-color 140ms ease;
 }
 .welcome-actions a:hover { transform: translateY(-1px); }
-.welcome-start { color: var(--brand-white); background: var(--brand-purple); box-shadow: 0 3px 0 var(--brand-purple-dark); }
-.welcome-start:hover { background: var(--brand-purple-hover); }
-.welcome-login { color: var(--brand-blue-dark); border: 2px solid var(--brand-line); background: var(--brand-white); }
-.welcome-login:hover { background: var(--brand-blue-soft); }
-.welcome-register { min-height: auto !important; padding: 2px 8px !important; color: var(--brand-muted); font-size: 12px !important; font-weight: 700 !important; text-decoration: none; }
-.welcome-register:hover { color: var(--brand-blue-dark); text-decoration: underline; }
+.welcome-start { color: #fff; background: #08a6b8; box-shadow: 0 3px 0 #087f91; }
+.welcome-start:hover { background: #078fa0; }
+.welcome-login { color: #087f91; border: 2px solid #dce8eb; background: #fff; }
+.welcome-login:hover { background: #f6fbfc; }
+.welcome-register { min-height: auto !important; padding: 2px 8px !important; color: #668087; font-size: 12px !important; font-weight: 700 !important; text-decoration: none; }
+.welcome-register:hover { color: #087f91; text-decoration: underline; }
 .welcome-services {
   margin: 0 calc(clamp(20px, 6vw, 80px) * -1);
   padding: 24px clamp(20px, 6vw, 80px) 28px;
-  border-top: 1px solid var(--brand-line);
-  background: var(--brand-white);
+  border-top: 1px solid #e3eaec;
+  background: #fbfdfd;
 }
 .welcome-services h2 {
   margin: 0 0 17px;
-  color: var(--brand-muted);
+  color: #71848a;
   font-size: 12px;
   font-weight: 800;
   letter-spacing: .08em;
@@ -101,23 +101,15 @@
   list-style: none;
 }
 .welcome-services li {
-  border: 1px solid var(--brand-line);
+  border: 1px solid #dce8eb;
   border-radius: 9px;
   padding: 10px 14px;
-  color: var(--brand-ink);
-  background: var(--brand-yellow);
+  color: #28444c;
+  background: white;
   font-size: 13px;
   font-weight: 700;
 }
-/* Solid reference colors make each service easy to distinguish. */
-.welcome-services li { color: var(--brand-ink); border-color: transparent; }
-.welcome-services li:nth-child(1) { background: var(--brand-orange); }
-.welcome-services li:nth-child(2) { background: var(--brand-yellow); }
-.welcome-services li:nth-child(3) { background: var(--brand-green); }
-.welcome-services li:nth-child(4) { background: var(--brand-blue); }
-.welcome-services li:nth-child(5) { background: var(--brand-purple); color: var(--brand-white); }
-.welcome-header { border-image: linear-gradient(to right, var(--brand-red) 0% 16.67%, var(--brand-orange) 16.67% 33.33%, var(--brand-yellow) 33.33% 50%, var(--brand-green) 50% 66.67%, var(--brand-blue) 66.67% 83.33%, var(--brand-purple) 83.33% 100%) 1; }
-.welcome-page :is(a, button):focus-visible { outline: 3px solid var(--brand-blue-dark); outline-offset: 3px; }
+.welcome-page :is(a, button):focus-visible { outline: 3px solid #005d83; outline-offset: 3px; }
 @media (max-width: 560px) {
   .welcome-header { min-height: 66px; }
   .welcome-logo { font-size: 22px; }

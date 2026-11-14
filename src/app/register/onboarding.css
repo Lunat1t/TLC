@@ -1,12 +1,12 @@
 .onboarding {
-  --on-ink: var(--brand-ink);
-  --on-muted: var(--brand-muted);
-  --on-line: var(--brand-line);
-  --on-white: var(--brand-white);
-  --on-green: var(--brand-green);
-  --on-green-shadow: var(--brand-green-dark);
-  --on-selected: var(--brand-green-soft);
-  --on-teal: var(--brand-blue-dark);
+  --on-ink: #34434b;
+  --on-muted: #7c878e;
+  --on-line: #e5e9eb;
+  --on-white: #fff;
+  --on-green: #a6e82e;
+  --on-green-shadow: #7cb51b;
+  --on-selected: #f3fbe6;
+  --on-teal: #087f91;
   min-height: 100dvh;
   color: var(--on-ink);
   background: var(--on-white);
@@ -20,7 +20,7 @@
 .onboarding-back:hover { background: var(--on-line); }
 .onboarding-progress { flex: 1; height: 16px; border-radius: 20px; background: var(--on-line); overflow: hidden; }
 .onboarding-progress > span { display: block; width: 100%; height: 100%; background: var(--on-green); border-radius: inherit; transform-origin: left; transition: transform 250ms ease; position: relative; }
-.onboarding-progress > span::after { content: ""; position: absolute; inset: 3px 8px auto; height: 4px; border-radius: inherit; background: var(--brand-green); }
+.onboarding-progress > span::after { content: ""; position: absolute; inset: 3px 8px auto; height: 4px; border-radius: inherit; background: #c6f37a; }
 .onboarding-count { min-width: 46px; font-size: 14px; font-weight: 800; }
 .onboarding-count span { color: var(--on-muted); font-weight: 500; }
 .onboarding-form { display: flex; flex-direction: column; min-height: calc(100dvh - 168px); }
@@ -31,17 +31,17 @@
 .onboarding-title-group p { margin: 0; color: var(--on-muted); font-size: 16px; line-height: 1.6; }
 .onboarding-courses { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
 .onboarding-choice { position: relative; border: 2px solid var(--on-line); border-radius: 20px; background: var(--on-white); box-shadow: 0 4px 0 var(--on-line); transition: transform 140ms ease, border-color 140ms ease, background-color 140ms ease; }
-.onboarding-choice:hover { transform: translateY(-3px); border-color: var(--brand-disabled); }
+.onboarding-choice:hover { transform: translateY(-3px); border-color: #bcc9cc; }
 .onboarding-choice:active { transform: translateY(3px); box-shadow: none; }
 .onboarding-choice.is-selected { border-color: var(--on-green-shadow); background: var(--on-selected); box-shadow: 0 4px 0 var(--on-green-shadow); }
 .course-choice { padding: 30px 12px 26px; min-height: 242px; display: flex; flex-direction: column; align-items: center; text-align: center; }
 .onboarding-art { width: 86px; height: 86px; display: inline-flex; justify-content: center; align-items: center; border-radius: 26px; margin-bottom: 24px; flex-shrink: 0; transform: rotate(-6deg); }
 .onboarding-art svg { transform: rotate(6deg); }
-.art-coral { background: var(--brand-red-soft); color: var(--brand-red); }
-.art-yellow { background: var(--brand-yellow-tint); color: var(--brand-orange-dark); }
-.art-blue { background: var(--brand-blue-tint); color: var(--brand-blue); }
-.art-mint { background: var(--brand-green-tint); color: var(--brand-green-dark); }
-.art-lilac { background: var(--brand-purple-soft); color: var(--brand-purple); }
+.art-coral { background: #ffebe5; color: #e87552; }
+.art-yellow { background: #fff2bc; color: #b17b12; }
+.art-blue { background: #e0f3ff; color: #279ad3; }
+.art-mint { background: #dff7ef; color: #20a488; }
+.art-lilac { background: #efebff; color: #8a6acf; }
 .onboarding-choice strong { display: block; font-size: 16px; font-weight: 800; overflow-wrap: normal; hyphens: manual; }
 .choice-description { display: block; margin-top: 8px; font-size: 13px; line-height: 1.4; color: var(--on-muted); }
 .choice-check { position: absolute; right: 10px; top: 10px; border-radius: 50%; padding: 2px; background: var(--on-green); color: var(--on-ink); }
@@ -55,17 +55,17 @@
 .onboarding-answer { width: min(100%, 380px); margin: auto; display: flex; flex-direction: column; }
 .answer-art { margin: 0 auto 28px; width: 112px; height: 112px; border-radius: 36px; }
 .onboarding-answer label { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
-.onboarding-answer input { min-width: 0; width: 100%; border: 2px solid var(--on-line); border-radius: 16px; padding: 18px 20px; font-size: 22px; font-weight: 650; background: var(--brand-canvas); color: var(--on-ink); }
-.onboarding-answer input[aria-invalid="true"] { border-color: var(--brand-red); }
-.onboarding-error { color: var(--brand-red-dark); text-align: center; margin: 24px 0 0; font-size: 15px; }
+.onboarding-answer input { min-width: 0; width: 100%; border: 2px solid var(--on-line); border-radius: 16px; padding: 18px 20px; font-size: 22px; font-weight: 650; background: #f8fafb; color: var(--on-ink); }
+.onboarding-answer input[aria-invalid="true"] { border-color: #cf4b48; }
+.onboarding-error { color: #b13d37; text-align: center; margin: 24px 0 0; font-size: 15px; }
 .onboarding-footer { border-top: 2px solid var(--on-line); padding: 24px 32px 28px; margin-top: auto; }
 .onboarding-footer > div { max-width: 920px; margin: auto; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
 .onboarding-footer p { margin: 0; font-size: 15px; font-weight: 750; }
 .onboarding-footer p span { display: block; margin-top: 5px; color: var(--on-muted); font-size: 13px; font-weight: 400; }
-.onboarding-next { min-width: 186px; min-height: 52px; padding: 14px 28px; border-radius: 16px; background: var(--on-green); color: var(--brand-ink); box-shadow: 0 4px 0 var(--on-green-shadow); font-size: 16px; font-weight: 850; transition: transform 120ms ease, background-color 120ms ease; }
-.onboarding-next:hover:not(:disabled) { background: var(--brand-green-hover); }
+.onboarding-next { min-width: 186px; min-height: 52px; padding: 14px 28px; border-radius: 16px; background: var(--on-green); color: #304518; box-shadow: 0 4px 0 var(--on-green-shadow); font-size: 16px; font-weight: 850; transition: transform 120ms ease, background-color 120ms ease; }
+.onboarding-next:hover:not(:disabled) { background: #b2ef45; }
 .onboarding-next:active:not(:disabled) { transform: translateY(4px); box-shadow: none; }
-.onboarding-next:disabled { color: var(--brand-disabled); background: var(--on-line); box-shadow: 0 4px 0 var(--brand-line); cursor: default; }
+.onboarding-next:disabled { color: #9aa2a7; background: var(--on-line); box-shadow: 0 4px 0 #d4d9dc; cursor: default; }
 .onboarding :is(a, button, input):focus-visible { outline: 3px solid var(--on-teal); outline-offset: 5px; }
 @media (max-width: 900px) {
   .onboarding-courses { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 670px; margin: auto; }

@@ -1,25 +1,25 @@
 /* TLC local project workspace home screen. */
 :root {
   --home-font: Inter, ui-sans-serif, system-ui, sans-serif;
-  --home-ink: var(--brand-ink);
-  --home-muted: var(--brand-muted);
-  --home-line: var(--brand-line);
-  --home-paper: var(--brand-white);
-  --home-overlay: #2121218c;
-  --home-ev3-soft: var(--brand-orange-tint);
-  --home-ev3: var(--brand-orange);
-  --home-canvas: var(--brand-canvas);
-  --home-rail: var(--brand-blue-soft);
-  --home-cyan: var(--brand-blue);
-  --home-cyan-soft: var(--brand-blue-tint);
-  --home-blue: var(--brand-blue-dark);
-  --home-blue-soft: var(--brand-subtle);
-  --home-dark: var(--brand-purple);
-  --home-focus: var(--brand-blue-dark);
-  --home-success-bg: var(--brand-green-tint);
-  --home-success: var(--brand-green-dark);
-  --home-error-bg: var(--brand-red-soft);
-  --home-error: var(--brand-red-dark);
+  --home-ink: #102c35;
+  --home-muted: #58717a;
+  --home-line: #dbe9ec;
+  --home-paper: #fcfefe;
+  --home-overlay: #0b2c3a8c;
+  --home-ev3-soft: #fff1df;
+  --home-ev3: #ac681d;
+  --home-canvas: #f5f9f9;
+  --home-rail: #eaf7f9;
+  --home-cyan: #02c7ea;
+  --home-cyan-soft: #d9f8ff;
+  --home-blue: #006e87;
+  --home-blue-soft: #e6f2f6;
+  --home-dark: #092c37;
+  --home-focus: #005d83;
+  --home-success-bg: #e0f8e8;
+  --home-success: #19613b;
+  --home-error-bg: #fff1ee;
+  --home-error: #a9352e;
 }
 html, body { overflow-x: clip; }
 .home-shell { min-height: 100dvh; background: var(--home-canvas); color: var(--home-ink); font-family: var(--home-font); }
@@ -28,7 +28,7 @@ html, body { overflow-x: clip; }
 .home-main { width: min(100%, 1110px); margin: 0 auto; padding: clamp(32px, 5vw, 64px) clamp(20px, 5vw, 56px) 80px; }
 .home-main-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 44px; }
 .home-new-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; width: min(100%, 250px); border-radius: 13px; background: var(--home-dark); color: var(--home-paper); font-weight: 750; font-size: 14px; transition: transform 150ms, background-color 150ms; }
-.home-new-button:hover { background: var(--brand-purple-hover); transform: translateY(-1px); }
+.home-new-button:hover { background: var(--home-blue); transform: translateY(-1px); }
 .home-new-button:active { transform: translateY(0); }
 .home-secondary-actions { display: flex; align-items: center; gap: 10px; }
 .home-import, .home-install { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; padding: 8px 12px; border-radius: 9px; font-size: 13px; font-weight: 700; color: var(--home-blue); }
@@ -39,7 +39,7 @@ html, body { overflow-x: clip; }
 .home-project-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 14px; }
 .home-empty { grid-column: 1 / -1; color: var(--home-muted); font-size: 14px; line-height: 1.5; padding: 24px; border: 1px dashed var(--home-line); border-radius: 14px; background: var(--home-paper); }
 .home-project-item { display: flex; align-items: center; min-width: 0; border: 1px solid var(--home-line); border-radius: 13px; background: var(--home-paper); transition: border-color 150ms, box-shadow 150ms; }
-.home-project-item:hover, .home-project-item:focus-within { border-color: var(--brand-line); box-shadow: 0 8px 22px #2121210c; }
+.home-project-item:hover, .home-project-item:focus-within { border-color: #b8d8df; box-shadow: 0 8px 22px #0734420c; }
 .home-project-row { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; min-height: 76px; padding: 14px 16px; text-align: left; border-radius: 11px; color: var(--home-ink); }
 .home-project-row svg { flex: none; color: var(--home-blue); }
 .home-project-copy { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
