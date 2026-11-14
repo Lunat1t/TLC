@@ -44,12 +44,12 @@ test('autonomous projects stay unchanged and unknown layout versions are rejecte
   source.workspace.controlLayout={version:2,areas:[],controls:[]};
   assert.throws(()=>migrateControlWorkspace(source),/версия/);
 });
-test('layout rejects overlap and out of bounds while discarding unavailable controls',()=>{
+test('layout rejects overlap, out of bounds and unknown controls',()=>{
   const layout=panelProject().workspace.controlLayout;
   const control=layout.controls[0];
   assert.throws(()=>validateControlLayout({...layout,controls:[control,{...control,id:'second'}]},['sheet-main']),/перекрываются/);
   assert.throws(()=>validateControlLayout({...layout,controls:[{...control,x:600}]},['sheet-main']),/вне области/);
-  assert.deepEqual(validateControlLayout({...layout,controls:[{...control,kind:'drivetrain'}]},['sheet-main']).controls,[]);
+  assert.throws(()=>validateControlLayout({...layout,controls:[{...control,kind:'other'}]},['sheet-main']),/Неверный элемент/);
 });
 
 test('project migration backs up source before writing and rejects stale writes', async()=>{
@@ -98,7 +98,7 @@ test('legacy visual import leaves stored configuration unchanged and creates no 
   const layout=importLegacyControls(old,{version:1,areas:[],controls:[]},'sheet-main',()=>`import-${++i}`);
   assert.equal(JSON.stringify(old),original);assert.equal(layout.controls.length,2);
   assert.ok(layout.controls.every(c=>!('ports' in c)&&!('speed' in c)&&!('reverse' in c)));
-  validateControlLayout(layout,['sheet-main']);
+  assert.deepEqual(validateControlLayout(layout,['sheet-main']),layout);
 });
 
 test('cloning a sheet remaps panel areas and block parents without altering the source',async()=>{
@@ -117,10 +117,17 @@ test('cloning a sheet remaps panel areas and block parents without altering the 
   assert.notEqual(control.id,'panel');
   validateControlLayout(result.layout,result.state.sheets.map(sheet=>sheet.id));
 });
-test('copying an area on the same sheet is rejected without changing the layout',async()=>{
-  const {cloneControlArea}=await import('../src/lib/control-workspace.ts');
+test('a sheet cannot contain two control areas',()=>{
   const layout=panelProject().workspace.controlLayout, before=JSON.stringify(layout);
-  let i=0;
-  assert.throws(()=>cloneControlArea(layout,'area',()=>`copy-${++i}`),/только одну область/);
+  assert.throws(()=>validateControlLayout({...layout,areas:[...layout.areas,{...layout.areas[0],id:'copy'}]},['sheet-main']),/только одну область/);
   assert.equal(JSON.stringify(layout),before);
+});
+
+test('migration rejects unknown controls without changing source',()=>{
+  const project=panelProject(),before=JSON.stringify(project);
+  project.workspace.controlLayout.controls[0].kind='unknown';
+  const raw=JSON.stringify(project);
+  assert.throws(()=>migrateControlWorkspace(project),/Неверный элемент/);
+  assert.equal(JSON.stringify(project),raw);
+  assert.notEqual(raw,before);
 });

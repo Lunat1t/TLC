@@ -467,7 +467,7 @@ export function addBlock(
     throw new Error("На доске слишком много блоков.")
   if (!Number.isFinite(x) || !Number.isFinite(y))
     throw new Error("Не удалось определить место блока.")
-  if (!["start", "drive", "pair", "if", "button", "stop", "motor-buttons"].includes(type))
+  if (!LIBRARY_BLOCK_TYPES.has(type))
     throw new Error("Неизвестный блок.")
   const block: WorkspaceBlock = {
     id,

@@ -13,16 +13,16 @@ import "./avatar-editor.css"
 type Part = "body" | "eyes" | "accessory"
 
 const PALETTE = [
-  { name: "Голубой", color: "#43c5e4" },
-  { name: "Красный", color: "#ef5b64" },
-  { name: "Оранжевый", color: "#ff9b45" },
-  { name: "Жёлтый", color: "#ffd34e" },
-  { name: "Зелёный", color: "#57c785" },
-  { name: "Бирюзовый", color: "#35c8b0" },
-  { name: "Фиолетовый", color: "#9875ed" },
-  { name: "Розовый", color: "#ee82b4" },
-  { name: "Белый", color: "#f2f5f7" },
-  { name: "Графитовый", color: "#414b5b" },
+  { name: "Голубой", color: "#008ef8" },
+  { name: "Красный", color: "#ed2929" },
+  { name: "Оранжевый", color: "#f76b14" },
+  { name: "Жёлтый", color: "#ffbb00" },
+  { name: "Зелёный", color: "#22b82b" },
+  { name: "Бирюзовый", color: "#008ef8" },
+  { name: "Фиолетовый", color: "#703cee" },
+  { name: "Розовый", color: "#c6b1f8" },
+  { name: "Белый", color: "#f3f3f3" },
+  { name: "Графитовый", color: "#212121" },
 ]
 
 export function AvatarEditor({ initialAvatar }: { initialAvatar: Partial<AvatarState> | null }) {
@@ -165,7 +165,7 @@ export function AvatarEditor({ initialAvatar }: { initialAvatar: Partial<AvatarS
             <div className="avatar-palette" aria-label={`Цвет ${part === "eyes" ? "глаз" : "тела"}`}>
               {PALETTE.map(({ name, color }) => {
                 const selected = avatar[part === "eyes" ? "characterEyeColor" : "bodyColor"] === color
-                return <button key={color} type="button" className={`avatar-swatch ${selected ? "selected" : ""} ${color === "#f2f5f7" ? "light" : ""}`} style={{ "--swatch": color } as CSSProperties} aria-label={name} aria-pressed={selected} onClick={() => { const nextColors = { ...avatar, [part === "eyes" ? "characterEyeColor" : "bodyColor"]: color }; setAvatar(nextColors); scheduleAvatarSave(nextColors) }}>{selected && <Check size={16} />}</button>
+                return <button key={color} type="button" className={`avatar-swatch ${selected ? "selected" : ""} ${color === "#f3f3f3" ? "light" : ""}`} style={{ "--swatch": color } as CSSProperties} aria-label={name} aria-pressed={selected} onClick={() => { const nextColors = { ...avatar, [part === "eyes" ? "characterEyeColor" : "bodyColor"]: color }; setAvatar(nextColors); scheduleAvatarSave(nextColors) }}>{selected && <Check size={16} />}</button>
               })}
             </div>
             <div className="avatar-color-label">{PALETTE.find(({ color }) => color === avatar[part === "eyes" ? "characterEyeColor" : "bodyColor"])?.name || "Мой цвет"}</div>

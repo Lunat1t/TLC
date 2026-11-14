@@ -260,3 +260,7 @@ test('removed button handlers are discarded while standalone stop settings persi
   assert.match(code,/motor_c\.brake\(\)/);
   assert.doesNotMatch(code,/motor_a/);
 });
+
+test('retired button handlers cannot be added to the editor',()=>{
+  assert.throws(()=>addBlock([], 'legacy', 0, 0, 'button'),/Неизвестный блок/);
+});

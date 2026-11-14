@@ -8,17 +8,17 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-[#092c37] text-white border-2 border-[#092c37] shadow-sm hover:bg-[#144352] hover:-translate-y-0.5",
+          "bg-primary text-primary-foreground border-2 border-primary shadow-sm hover:bg-primary/90 hover:-translate-y-0.5",
         cyan:
-          "bg-[#02c7ea] text-[#042b36] shadow-[0_8px_20px_rgba(2,199,234,0.25)] hover:bg-[#00b4d6] hover:-translate-y-0.5",
+          "bg-[#008ef8] text-[#212121] shadow-[0_8px_20px_rgba(0,142,248,0.25)] hover:bg-[#38a7fa] hover:-translate-y-0.5",
         destructive:
-          "bg-white text-[#b43d33] border border-[#f0c1bb] hover:bg-[#fff2ef]",
+          "bg-white text-[#931919] border border-[#f8a9a9] hover:bg-[#fdeaea]",
         outline:
-          "border border-[#c7d8df] bg-white text-[#25434d] hover:bg-[#f1f8fa]",
+          "border border-[#dedede] bg-white text-[#212121] hover:bg-[#f3f3f3]",
         secondary:
-          "bg-[#f1f6f8] text-[#6b838e] border-[1.5px] border-dashed border-[#bfd2da]",
+          "bg-[#f3f3f3] text-[#626262] border-[1.5px] border-dashed border-[#dedede]",
         ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-[#007e9d] underline-offset-4 hover:underline",
+        link: "text-[#00589a] underline-offset-4 hover:underline",
       },
       size: {
         default: "min-h-[50px] px-6 py-3",

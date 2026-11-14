@@ -19,7 +19,7 @@ const id = (v: unknown) => typeof v === 'string' && v.length > 0 && v.length <= 
 export function validateControlLayout(raw: unknown, sheetIds: readonly string[]): ControlLayout {
   if (!obj(raw) || raw.version !== 1 || !Array.isArray(raw.areas) || !Array.isArray(raw.controls)) throw new Error('Неподдерживаемая версия области управления.')
   if (raw.areas.length > 12) throw new Error('Можно добавить не более 12 областей управления.')
-  const rawControls = raw.controls.filter((c: unknown) => obj(c) && c.kind === 'motor-panel')
+  const rawControls = raw.controls
   const ids = new Set<string>()
   const areaSheets = new Set<string>()
   const areas: ControlArea[] = raw.areas.map((a: unknown) => {
@@ -68,6 +68,12 @@ export function migrateControlWorkspace(project: RobotProject): {project: RobotP
     })
     if (duplicateAreaMap.size) layoutInput = {...ws.controlLayout,areas:uniqueAreas,controls:Array.isArray(ws.controlLayout.controls) ? ws.controlLayout.controls.filter((c: unknown) => !obj(c) || !duplicateAreaMap.has(String(c.areaId))) : ws.controlLayout.controls}
   }
+  // Remove only known retired controls during migration, never in validation.
+  // Malformed or unknown controls must fail before the original project is saved.
+  if (obj(layoutInput) && Array.isArray(layoutInput.controls)) {
+    const retired = new Set(['drivetrain', 'motor', 'motor-group', 'legacy-buttons', 'joystick', 'dpad'])
+    layoutInput = {...layoutInput, controls: layoutInput.controls.filter((c: unknown) => !obj(c) || !retired.has(String(c.kind)))}
+  }
   const cleanedLayout = layoutInput !== undefined ? validateControlLayout(layoutInput,sheetIds) : undefined
   const originalControlCount = obj(ws.controlLayout) && Array.isArray(ws.controlLayout.controls) ? ws.controlLayout.controls.length : 0
   const originalAreaCount = obj(ws.controlLayout) && Array.isArray(ws.controlLayout.areas) ? ws.controlLayout.areas.length : 0
@@ -110,9 +116,9 @@ export function importLegacyControls(raw: unknown, layout: ControlLayout, sheetI
   const controls:ControlInstance[]=[]
   for (const value of sourceDevices) {
     if (!obj(value) || !id(value.id) || !['drivetrain','motor','motor-group'].includes(String(value.type))) throw new Error('Старая раскладка содержит неподдерживаемый элемент.')
-    const kind=value.type as ControlKind, pos=sourcePositions.find((p:unknown)=>obj(p)&&p.deviceId===value.id)
+    const pos=sourcePositions.find((p:unknown)=>obj(p)&&p.deviceId===value.id)
     if (!obj(pos) || !number(pos.x) || !number(pos.y) || Number(pos.x)<0 || Number(pos.x)>1 || Number(pos.y)<0 || Number(pos.y)>1) throw new Error('Не удалось прочитать положение элемента.')
-    const [minW,minH]=CONTROL_MIN[kind], w=Math.max(minW,Math.min(480,number(pos.width)?Number(pos.width):206)), h=Math.max(minH,Math.min(420,number(pos.height)?Number(pos.height):176))
+    const [minW,minH]=CONTROL_MIN['motor-panel'], w=Math.max(minW,Math.min(480,number(pos.width)?Number(pos.width):206)), h=Math.max(minH,Math.min(420,number(pos.height)?Number(pos.height):176))
     const fits=(x:number,y:number)=>!controls.some(c=>x<c.x+c.width&&x+w>c.x&&y<c.y+c.height&&y+h>c.y)
     let x=Math.round(Number(pos.x)*(width-w)),y=Math.round(Number(pos.y)*(height-44-h))
     if(!fits(x,y)) {
@@ -120,7 +126,7 @@ export function importLegacyControls(raw: unknown, layout: ControlLayout, sheetI
       for(let yy=0;yy+h<=height-44&&!found;yy+=16)for(let xx=0;xx+w<=width;xx+=16)if(fits(xx,yy)){x=xx;y=yy;found=true;break}
       if(!found)throw new Error('Не хватает места для старой раскладки.')
     }
-    controls.push({id:createId(),areaId,kind,label:label(value.name)?(value.name as string).trim():'Управление',x,y,width:w,height:h})
+    controls.push({id:createId(),areaId,kind:'motor-panel',label:label(value.name)?(value.name as string).trim():'Управление',x,y,width:w,height:h})
   }
   const next:ControlLayout={...layout,areas:[...layout.areas,area],controls:[...layout.controls,...controls]}
   validateControlLayout(next,[...new Set([...layout.areas.map(a=>a.sheetId),sheetId])])
@@ -143,17 +149,4 @@ export function cloneControlSheet(state: import('./workspace').SheetState, layou
   const nextLayout:ControlLayout={...layout,areas:[...layout.areas,...sourceAreas.map(a=>({...a,id:areaIds.get(a.id)!,sheetId:newSheetId}))],controls:[...layout.controls,...sourceControls.map(c=>({...c,id:controlIds.get(c.id)!,areaId:areaIds.get(c.areaId)!}))]}
   validateControlLayout(nextLayout,nextState.sheets.map(s=>s.id))
   return {state:nextState,layout:nextLayout}
-}
-
-/** A copied area has new control IDs; existing handlers keep their original targets. */
-export function cloneControlArea(layout:ControlLayout,areaId:string,createId:()=>string):ControlLayout {
-  const area=layout.areas.find(a=>a.id===areaId)
-  if(!area)throw new Error('Область не найдена.')
-  if(layout.areas.some(candidate=>candidate.id!==areaId&&candidate.sheetId===area.sheetId))throw new Error('На одном листе можно создать только одну область «Управление».')
-  if(layout.areas.length>=12)throw new Error('Можно добавить не более 12 областей управления.')
-  const nextId=createId(), newArea={...area,id:nextId,x:area.x+32,y:area.y+32}
-  const copied=layout.controls.filter(c=>c.areaId===areaId).map(c=>({...c,id:createId(),areaId:nextId}))
-  const result:ControlLayout={...layout,areas:[...layout.areas,newArea],controls:[...layout.controls,...copied]}
-  validateControlLayout(result,[...new Set(result.areas.map(a=>a.sheetId))])
-  return result
 }
