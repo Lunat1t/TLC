@@ -1,0 +1,36 @@
+.activity-status{display:flex;align-items:center;justify-content:space-between;gap:16px;height:68px;padding:8px max(18px,env(safe-area-inset-right)) 8px max(18px,env(safe-area-inset-left));background:#f8fbfff0;border-bottom:1px solid #d3e2f2;color:#193b68}
+.activity-status button{display:flex;align-items:center;gap:10px;min-height:48px;border-radius:14px;padding:5px 12px;cursor:pointer}
+.activity-balance{background:#eef8d9;border:1px solid #c8e59a;color:#395f16;text-align:left}
+.activity-ticket{display:grid;place-items:center;width:36px;height:30px;border-radius:7px;background:#91c83e;color:#fff;box-shadow:inset 0 0 0 2px #ffffff60}
+.activity-balance strong{font-size:19px;line-height:1.1;font-variant-numeric:tabular-nums}
+.activity-balance small{display:block;font-size:10px;font-weight:650}
+.activity-streak{background:#fff3e5;border:1px solid #ffdbb0;color:#a5440d}
+.activity-streak>span{display:flex;align-items:center;gap:12px}
+.activity-streak strong{font-size:19px;line-height:1.1;font-variant-numeric:tabular-nums}
+.activity-streak small{display:block;font-size:10px;font-weight:650}
+.activity-flame{color:#f58220;fill:#ffb644;filter:drop-shadow(0 2px 5px #ff940044)}
+.activity-multiplier{padding:5px 8px;background:#ffdfb4;border-radius:8px;font-size:14px;font-weight:800;font-variant-numeric:tabular-nums}
+.is-active .activity-flame{animation:activity-glow 2.6s ease-in-out infinite}
+@keyframes activity-glow{50%{filter:drop-shadow(0 0 7px #ff940088)}}
+.tlc-os.has-activity{display:flex;flex-direction:column}
+.has-activity>.activity-status{flex:none}
+.tlc-os.has-activity>.os-content{height:auto;min-height:0;flex:1;overflow:auto}
+.tlc-os.has-activity.is-desktop .home-shell:has(.desktop-lab){height:100%;min-height:0}
+.tlc-os.has-activity[data-bar=top] .os-dock{top:76px}
+.activity-dialog{margin:auto;width:min(420px,calc(100vw - 32px));max-height:calc(100dvh - 32px);padding:0;border:1px solid #d3e2f2;border-radius:24px;background:#fff;color:#193b68;box-shadow:0 20px 80px #10284440}
+.activity-dialog::backdrop{background:#10284470;backdrop-filter:blur(5px)}
+.activity-dialog-body{position:relative;padding:28px}
+.activity-close{position:absolute;right:10px;top:10px;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:#eef3f8}
+.activity-dialog h2{font-size:24px;font-weight:800;margin:14px 0 8px}
+.activity-dialog p{font-size:14px;line-height:1.6;margin:12px 0}
+.activity-dialog small{display:block;font-size:12px;color:#52667e;line-height:1.5}
+.activity-steps{display:flex;gap:8px;margin:20px 0}
+.activity-steps span{flex:1;padding:12px 8px;border-radius:12px;background:#fff3e5;text-align:center;font-size:12px;color:#a5440d}
+.activity-steps b{display:block;font-size:20px}
+.activity-earned{padding:12px;border-radius:12px;background:#eef8d9;color:#395f16;font-weight:700}
+.activity-retry{min-height:44px;padding:8px 16px;background:#e9f1ff;border-radius:10px}
+[data-theme=dark] .activity-status,[data-theme=dark] .activity-dialog{background:#20344c;color:#e2ecfa;border-color:#425a75}
+[data-theme=dark] .activity-dialog small{color:#bbcede}
+[data-theme=dark] :is(.activity-close,.activity-retry){background:#345579;color:#e2ecfa}
+@media(max-width:600px){.activity-status{padding:6px 10px;height:64px}.activity-status button{gap:7px;padding:4px 9px}.tlc-os.has-activity.is-desktop>.os-content{flex:1;min-height:0}.activity-dialog-body{padding:24px}}
+@media(prefers-reduced-motion:reduce){.is-active .activity-flame{animation:none}}
