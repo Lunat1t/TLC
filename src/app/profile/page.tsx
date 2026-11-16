@@ -64,7 +64,7 @@ export default function ProfilePage() {
       sessionStorage.setItem("tlc.pending-student", token)
       void stop()
     } catch {
-      setMessage("Это не QR ученика TLC.")
+      setMessage("Это не QR ученика Brick Studio.")
     }
   }
 
@@ -117,8 +117,8 @@ export default function ProfilePage() {
             <h2 className="text-2xl font-bold">{profile.nickname}</h2>
             <p>{({ student: "Ученик", teacher: "Учитель", parent: "Родитель" })[profile.role]}{profile.role !== "parent" && profile.age !== null && <> · Возраст: {profile.age}</>}</p>
             {profile.role === "teacher" && <p>{profile.disciplines.join(" · ")}</p>}
-            {(profile.role === "student" || profile.role === "teacher") && <Link href="/avatar" className="justify-self-start rounded-xl bg-cyan-700 px-5 py-3 font-bold text-white">Редактировать аватар</Link>}
-            {profile.role === "teacher" && <Link href="/teacher/achievements" className="font-bold text-cyan-800">Выдать достижение ученику</Link>}
+            {(profile.role === "student" || profile.role === "teacher") && <Link href="/avatar" className="justify-self-start rounded-xl bg-cyan-700 px-5 py-3 font-bold text-white">Мои персонажи</Link>}
+            {(profile.role === "teacher" || admin) && <Link href="/teacher/achievements" className="font-bold text-cyan-800">{admin ? "Прогресс и достижения учеников" : "Выдать достижение ученику"}</Link>}
             {profile.role !== "parent" && admin && <Link href="/instructions" className="font-bold text-cyan-800">Управление инструкциями</Link>}
             {profile.role === "teacher" && !admin && <Link href="/admin/instructions/drive" className="font-bold text-cyan-800">Добавить инструкцию</Link>}
             {profile.role === "student" && <section className="grid gap-3"><h2 className="text-xl font-bold">QR для родителя</h2><p>Родитель сканирует этот QR в своём аккаунте, чтобы связать его с вашим.</p>{qr && <img src={qr} width={320} height={320} alt="QR для связи с аккаунтом родителя" className="max-w-full" />}</section>}

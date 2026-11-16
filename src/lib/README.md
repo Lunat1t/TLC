@@ -1,0 +1,36 @@
+# Application library
+
+## Overview
+
+Shared logic for TLC accounts, project storage, visual programming, robot control and navigation. The browser controller session handles live communication with a hub. The workspace module generates standalone Pybricks source for export.
+
+## Interface
+
+- `fullNameLogin` and `validateAccountPassword` validate credentials. `auth.ts` exposes `AuthState`, `AvatarState`, login and registration validation, avatar normalization and storage helpers. `registerStudentWithSupabase`, `signInStudentWithSupabase`, `syncSessionFromSupabase` and `signOutFromSupabase` connect these helpers to Supabase Auth. [account-credentials.ts](./account-credentials.ts) · [auth.ts](./auth.ts)
+- `RobotProject` and `HubType` define the saved project shape. `makeProject` and `importProject` create records with caller-supplied IDs. `validateProject`, `loadProjects` and `saveProjects` normalize saved records. `prepareEditorProjects` and `saveEditorProjects` handle migration and guarded editor writes. [projects.ts](./projects.ts)
+- `WorkspaceBlock` and `SheetState` describe the editor model. `readBlocks` and `readSheets` normalize saved data. The same module exposes sheet editing, block and chain editing, link cleanup, layout, snap targeting and `generatePybricks`. [workspace.ts](./workspace.ts)
+- `validateControlLayout`, `migrateControlWorkspace`, `importLegacyControls`, `cloneControlSheet` and `cloneControlArea` handle the editor's control-area model and older saved layouts. `validateControllerConfig` validates the separate version-1 controller configuration with hub ports, modules and gamepad mapping. [control-workspace.ts](./control-workspace.ts) · [controller-layout.ts](./controller-layout.ts)
+- `compileControllerProgram`, `controllerHandler`, `controllerRuntimeErrors`, `describeAction` and `commandsFor` are typed wrappers around the public JavaScript compiler and command helpers. `createControllerSession` runs a compiled program in check mode. `createBluetoothTransport` provides the browser transport. [controller-program.ts](./controller-program.ts) · [controller-program.js](../../public/controller-program.js) · [controller-runtime.ts](./controller-runtime.ts)
+- `readNavigationLayout`, `layoutPosition`, `layoutAtPosition`, `navigationDock`, `dockNavigationLayout`, `navigationPages`, `reconcilePageOrder` and `moveNavigationPage` cover navigation placement and order. `isApplicationPath`, `startupRoutes` and `createRouteWarmer` support route preloading. [navigation-layout.ts](./navigation-layout.ts) · [startup.ts](./startup.ts)
+- `createSessionResource` exposes an in-memory account display snapshot with subscription, identity selection, refresh, update and cancellation. `cn` merges conditional class names with Tailwind conflict handling. [session-resource.ts](./session-resource.ts) · [utils.ts](./utils.ts)
+- [Instruction services](./instructions/README.md) provides the catalog, publishing access checks, Drive PDF integration and previews.
+
+## Invariants
+
+- `fullNameLogin` trims both names and joins them with an underscore. Each name starts with a Latin letter and may contain Latin letters or hyphens. The result is at most 32 characters. `validateAccountPassword` preserves the input and requires at least eight JavaScript string units and at most 72 UTF-8 bytes. `validateLoginInput` also accepts four digits for PIN login. [account-credentials.ts](./account-credentials.ts) · [auth.ts](./auth.ts)
+- `validateProject` checks the current version, hub, ID and creation timestamp field. `readSheets` recovers legacy top-level blocks as `sheet-main`. It caps sheets at 32 and falls back to the first valid sheet if the saved active ID is missing. `readBlocks` caps each sheet at 200 unique blocks with finite positions and filters by the current block palette. `cleanLinks` removes invalid, overlapping-slot and cyclic links. [projects.ts](./projects.ts) · [workspace.ts](./workspace.ts)
+- `generatePybricks` uses the target hub's motor import and sorts root chains by position. Motion blocks require a travel module, power uses seconds and paired motors need distinct ports. The conditional block currently emits `if True:`. [workspace.ts](./workspace.ts)
+- `validateControlLayout` requires version 1, at most one area per sheet and non-overlapping motor panels within their areas. It filters unsupported control kinds. `migrateControlWorkspace` keeps the surrounding workspace fields while removing unavailable block types and detaching their direct children. `validateControllerConfig` enforces hub port availability, exclusive port assignment across modules and one layout record per module. [control-workspace.ts](./control-workspace.ts) · [controller-layout.ts](./controller-layout.ts)
+- `createControllerSession` requires an explicit program start in check mode. Hub readiness alone leaves program startup to the caller. Trial actions are logged locally. Live actions use the negotiated protocol and discovered ports. Stop invalidates pending actions and requires a hub acknowledgement when the transport is ready. [controller-runtime.ts](./controller-runtime.ts)
+- `createSessionResource` tracks one account at a time. Changing account identity clears the old snapshot and cancels its request. Its data is for display. `createRouteWarmer` accepts local paths and deduplicates a path for 30 seconds. [session-resource.ts](./session-resource.ts) · [startup.ts](./startup.ts)
+
+## Side Effects
+
+- Auth helpers use Supabase Auth and `profiles`. Sign-in resolves the login with `resolve_tlc_pin_login` before password sign-in. When a storage object is supplied, session and avatar helpers update `tlc.auth.v2`. [auth.ts](./auth.ts)
+- Project persistence uses `robot-studio-projects-v1` in the supplied browser storage. `prepareEditorProjects` backs up the original array before a migration write and returns a read-only result when Web Locks are unavailable. `saveEditorProjects` requires the `tlc-project-storage` lock, checks the expected stored value and preserves a pre-edit backup. [projects.ts](./projects.ts)
+- `createControllerSession` serializes writes, monitors hub acknowledgements and closes the transport on communication faults. `createBluetoothTransport` requests a device and subscribes to GATT notifications in a secure Web Bluetooth context. [controller-runtime.ts](./controller-runtime.ts)
+- `createSessionResource` calls the supplied loader and notifies listeners. `createRouteWarmer` calls the supplied prefetch function. [session-resource.ts](./session-resource.ts) · [startup.ts](./startup.ts)
+
+## Verification
+
+Run `npm test` from the repository root. The suite includes controller-session tests and a hub simulation. Physical Bluetooth and live Supabase behavior require their respective environments.

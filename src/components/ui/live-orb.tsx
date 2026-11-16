@@ -89,7 +89,7 @@ export const AVATAR_PRESETS: AvatarPreset[] = [
   },
   {
     id: "tlc-cyber",
-    name: "TLC Импульс",
+    name: "Brick Studio Импульс",
     badge: "SPIKE Cyan",
     variant: "webgl",
     colors: ["#02C7EA", "#38BDF8", "#7DD3C7"],

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 180" role="img" aria-labelledby="title desc">
+  <title id="title">Персонаж №1 — Loop Parade</title>
+  <desc id="desc">Жёлтый круглоголовый персонаж с красным хохолком в шаговой позе.</desc>
+  <!-- Ручная векторная основа по персонажу №1 из Pinterest-референса. -->
+  <g stroke="#26231F" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Ноги и ступни -->
+    <path d="M70 91 Q66 108 55 129 L43 145 Q41 149 46 150 L59 149 Q63 148 65 144 L80 119 Q88 109 91 97Z" fill="#F7C642"/>
+    <path d="M81 91 Q89 108 101 121 L115 128 Q120 130 122 125 L120 120 L105 111 Q98 96 94 86Z" fill="#F7C642"/>
+    <path d="M44 145 Q36 148 35 153 Q35 157 41 157 L59 155 Q64 154 63 149 L59 148Z" fill="#F7C642"/>
+    <path d="M115 126 Q122 124 127 128 Q130 132 125 135 L112 137 Q106 137 106 132Z" fill="#F7C642"/>
+
+    <!-- Корпус и руки -->
+    <path d="M67 65 Q63 78 68 94 L84 98 Q91 84 83 67Z" fill="#F7C642"/>
+    <path d="M68 72 Q57 78 49 89 L43 96 Q41 100 45 102 Q49 103 52 99 L67 88Z" fill="#F7C642"/>
+    <path d="M82 72 Q94 77 100 88 L103 96 Q104 100 100 101 Q96 101 94 97 L79 87Z" fill="#F7C642"/>
+
+    <!-- Голова -->
+    <circle cx="76" cy="48" r="27" fill="#F7C642"/>
+    <path d="M68 22 Q68 15 75 15 Q80 15 82 21 Q78 19 76 24Z" fill="#E8544D"/>
+    <ellipse cx="68" cy="49" rx="1.8" ry="2.8" fill="#26231F" stroke="none"/>
+    <ellipse cx="82" cy="49" rx="1.8" ry="2.8" fill="#26231F" stroke="none"/>
+  </g>
+</svg>

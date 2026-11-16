@@ -7,9 +7,9 @@ import { AccessProvider } from "@/components/auth/access-provider"
 import { AppStartup } from "@/components/auth/app-startup"
 
 export const metadata: Metadata = {
-  title: "TLC — программирование роботов",
+  title: "Brick Studio — программирование роботов",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, title: "TechLabCode", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "Brick Studio", statusBarStyle: "default" },
   icons: { apple: "/icons/icon-180.png", icon: "/icons/icon-192.png" },
   description:
     "Среда блочного программирования роботов LEGO SPIKE Prime и LEGO EV3",

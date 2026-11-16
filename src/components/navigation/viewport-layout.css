@@ -155,3 +155,7 @@ body:has(.tlc-os[data-bar=right]) .app-launcher.is-open { padding-right:72px; }
  [data-theme=dark] .mobile-menu-panel a{color:#e2ecfa}
  [data-theme=dark] .mobile-menu-panel a:hover,[data-theme=dark] .mobile-menu-panel a[aria-current=page]{background:#345579}
 }
+
+.tlc-os.is-app:not(.is-desktop) .workshop-section { max-width:none; height:100%; margin:0; }
+.tlc-os.is-app:not(.is-desktop) .workshop-section-body { height:100%; }
+.tlc-os.is-app:not(.is-desktop) .workshop-section-body>main { height:100%; min-height:0; border-radius:0; }

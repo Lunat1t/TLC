@@ -11,7 +11,7 @@ export async function GET() {
       listConfiguredPdfs(),
       client.from("instructions").select("id,title,slug,kit").eq("status", "draft").order("updated_at", { ascending: false }),
     ])
-    if (draftsResult.error) throw new InstructionError(503, "drafts_unavailable", "Не удалось загрузить черновики TLC.")
+    if (draftsResult.error) throw new InstructionError(503, "drafts_unavailable", "Не удалось загрузить черновики Brick Studio.")
     const sourceIds = listing.files.map((file) => file.id)
     const imported = sourceIds.length
       ? await client.from("instruction_assets").select("source_file_id,instruction_id").eq("source_provider", "google_drive").in("source_file_id", sourceIds)
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     const file = await configuredPdf(fileId)
     await verifyPdfSignature(file)
     const { data: duplicate } = await client.from("instruction_assets").select("instruction_id").eq("source_provider", "google_drive").eq("source_file_id", file.id).maybeSingle()
-    if (duplicate) throw new InstructionError(409, "already_imported", "Этот PDF уже импортирован в TLC.")
+    if (duplicate) throw new InstructionError(409, "already_imported", "Этот PDF уже импортирован в Brick Studio.")
 
     await ensurePublicDriveRead(file.id)
 
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
       source_file_id: file.id,
     }).select("id,instruction_id,byte_size").single()
     if (insertError) {
-      throw new InstructionError(503, "asset_record_failed", "Не удалось сохранить ссылку на PDF в каталоге TLC.")
+      throw new InstructionError(503, "asset_record_failed", "Не удалось сохранить ссылку на PDF в каталоге Brick Studio.")
     }
     return NextResponse.json({ asset, sourceName: file.name }, { status: 201, headers: { "Cache-Control": "private, no-store" } })
   } catch (error) { return errorResponse(error) }

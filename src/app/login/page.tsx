@@ -53,7 +53,11 @@ export default function LoginPage() {
         isError: false,
       })
       setTimeout(() => {
-        router.replace(sessionStorage.getItem("tlc.pending-student") ? "/profile" : new URLSearchParams(window.location.search).get("next") === "/admin/instructions/drive" ? "/admin/instructions/drive" : "/dashboard")
+        const destination = new URLSearchParams(window.location.search).get("next")
+        const nextPath = destination === "/admin/instructions/drive" || destination === "/teacher/achievements"
+          ? destination
+          : "/dashboard"
+        router.replace(sessionStorage.getItem("tlc.pending-student") ? "/profile" : nextPath)
       }, 500)
     } catch (err) {
       setStatus({
@@ -70,9 +74,9 @@ export default function LoginPage() {
           href="/"
           className="text-[19px] font-black tracking-wide text-[#002c39] inline-flex items-center gap-2.5"
         >
-          TLC
+          Brick Studio
           <span className="text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-[#002c39]/10 text-[#002c39]">
-            TechLabCode
+            LEGO robotics studio
           </span>
         </Link>
         <Link
@@ -91,7 +95,7 @@ export default function LoginPage() {
               АВТОРИЗАЦИЯ УЧЕНИКА
             </p>
             <CardTitle className="text-[28px] md:text-[32px]">
-              Вход в TLC
+              Вход в Brick Studio
             </CardTitle>
             <CardDescription className="max-w-sm">
               Войдите в свой профиль, чтобы синхронизировать проекты роботов

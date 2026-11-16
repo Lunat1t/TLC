@@ -95,7 +95,7 @@ export function AchievementNotifier() {
         <span>Новое достижение</span>
         <strong>Взболтать, но не смешивать</strong>
         <p>Соревнование Mix and Match 2025–2026.</p>
-        <Link href="/profile#wardrobe" onClick={() => setAchievement(null)}>Открыть гардероб</Link>
+        <Link href="/avatar#wardrobe" onClick={() => setAchievement(null)}>Открыть гардероб</Link>
       </div>
       <button type="button" className="achievement-toast-close" aria-label="Закрыть уведомление" onClick={() => setAchievement(null)}><X size={17} /></button>
     </aside>

@@ -8,6 +8,7 @@ import {
   type LiveOrbVariant,
 } from "@/components/ui/live-orb"
 import { createClient as createSupabaseBrowserClient } from "@/utils/supabase/client"
+import type { CharacterId, CharacterLook } from "./characters"
 
 export const AUTH_STORAGE_KEY = "tlc.auth.v2"
 
@@ -28,6 +29,7 @@ export interface AvatarState {
   expression: OrbExpressionId
   bodyColor: string
   characterEyeColor: string
+  characters?: Partial<Record<CharacterId, CharacterLook>>
 }
 
 export const DEFAULT_AVATAR_COLORS = { bodyColor: "#43c5e4", characterEyeColor: "#ffffff" } as const

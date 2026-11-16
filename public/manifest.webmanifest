@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "TechLabCode — программирование роботов",
-  "short_name": "TechLabCode",
+  "name": "Brick Studio — программирование роботов",
+  "short_name": "Brick Studio",
   "description": "Программирование и управление роботами LEGO",
   "start_url": "/",
   "scope": "/",

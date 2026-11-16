@@ -22,11 +22,11 @@ export async function verifiedUser() {
   const { data, error } = await client.auth.getUser()
   if (error) {
     if (typeof error.status === "number" && error.status >= 400 && error.status < 500) {
-      throw new InstructionError(401, "unauthenticated", "Войдите в TLC.")
+      throw new InstructionError(401, "unauthenticated", "Войдите в Brick Studio.")
     }
     throw new InstructionError(503, "dependency_unavailable", "Проверка входа временно недоступна.")
   }
-  if (!data.user) throw new InstructionError(401, "unauthenticated", "Войдите в TLC.")
+  if (!data.user) throw new InstructionError(401, "unauthenticated", "Войдите в Brick Studio.")
   return { client, user: data.user }
 }
 

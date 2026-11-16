@@ -8,7 +8,7 @@ if (parsedUrl.protocol !== "https:" || parsedUrl.username || parsedUrl.password)
 
 const config: CapacitorConfig = {
   appId: "com.tlc.robotstudio",
-  appName: "TLC",
+  appName: "Brick Studio",
   webDir: "android-shell",
   ...(serverUrl
     ? {

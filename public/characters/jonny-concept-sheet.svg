@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 640" role="img" aria-labelledby="title desc">
+  <title id="title">Jonny — лист персонажей</title>
+  <desc id="desc">Шесть цветных поз Jonny: круглое тело, без рук, с двумя толстыми ногами и спокойными глазами.</desc>
+  <rect width="900" height="640" rx="28" fill="#FCFBF8"/>
+  <text x="48" y="52" fill="#252321" font-family="Arial, sans-serif" font-size="27" font-weight="800" letter-spacing="1.4">JONNY</text>
+  <text x="49" y="75" fill="#77716C" font-family="Arial, sans-serif" font-size="12" font-weight="600" letter-spacing=".8">ОДИН ПЕРСОНАЖ · РАЗНЫЕ ПОЗЫ</text>
+
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <!-- Спокойно стоит -->
+    <g transform="translate(150 100)">
+      <g fill="none" stroke="#292622" stroke-width="20"><path d="M-19 89 Q-24 121 -25 161"/><path d="M19 89 Q24 121 25 161"/></g>
+      <g fill="none" stroke="#F8C847" stroke-width="13"><path d="M-19 89 Q-24 121 -25 161"/><path d="M19 89 Q24 121 25 161"/></g>
+      <path d="M-33 158 Q-43 168 -34 174 L-12 174 Q-7 171 -13 163Z M33 158 Q43 168 34 174 L12 174 Q7 171 13 163Z" fill="#F8C847" stroke="#292622" stroke-width="4"/>
+      <circle cy="57" r="41" fill="#F8C847" stroke="#292622" stroke-width="4"/>
+      <ellipse cx="-12" cy="55" rx="3.2" ry="5.2" fill="#292622"/><ellipse cx="12" cy="55" rx="3.2" ry="5.2" fill="#292622"/>
+    </g>
+    <!-- Ноги широко -->
+    <g transform="translate(450 100)">
+      <g fill="none" stroke="#292622" stroke-width="22"><path d="M-18 89 Q-27 120 -52 158"/><path d="M18 89 Q27 120 52 158"/></g>
+      <g fill="none" stroke="#55B8EE" stroke-width="14"><path d="M-18 89 Q-27 120 -52 158"/><path d="M18 89 Q27 120 52 158"/></g>
+      <path d="M-61 154 Q-72 164 -63 170 L-42 170 Q-37 166 -44 159Z M61 154 Q72 164 63 170 L42 170 Q37 166 44 159Z" fill="#55B8EE" stroke="#292622" stroke-width="4"/>
+      <circle cy="57" r="41" fill="#55B8EE" stroke="#292622" stroke-width="4"/>
+      <ellipse cx="-12" cy="55" rx="3.2" ry="5.2" fill="#292622"/><ellipse cx="12" cy="55" rx="3.2" ry="5.2" fill="#292622"/>
+    </g>
+    <!-- Согнутые ноги -->
+    <g transform="translate(750 100)">
+      <g fill="none" stroke="#292622" stroke-width="20"><path d="M-19 89 Q-39 119 -22 159"/><path d="M19 89 Q39 119 22 159"/></g>
+      <g fill="none" stroke="#F277A2" stroke-width="13"><path d="M-19 89 Q-39 119 -22 159"/><path d="M19 89 Q39 119 22 159"/></g>
+      <path d="M-31 156 Q-41 166 -32 172 L-11 172 Q-7 168 -13 161Z M31 156 Q41 166 32 172 L11 172 Q7 168 13 161Z" fill="#F277A2" stroke="#292622" stroke-width="4"/>
+      <circle cy="57" r="41" fill="#F277A2" stroke="#292622" stroke-width="4"/>
+      <ellipse cx="-12" cy="55" rx="3.2" ry="5.2" fill="#292622"/><ellipse cx="12" cy="55" rx="3.2" ry="5.2" fill="#292622"/>
+    </g>
+    <!-- Шагает в сторону -->
+    <g transform="translate(150 385)">
+      <g fill="none" stroke="#292622" stroke-width="20"><path d="M-19 89 Q-30 119 -39 157"/><path d="M19 89 Q30 115 53 145"/></g>
+      <g fill="none" stroke="#A779DE" stroke-width="13"><path d="M-19 89 Q-30 119 -39 157"/><path d="M19 89 Q30 115 53 145"/></g>
+      <path d="M-47 154 Q-57 164 -48 170 L-27 170 Q-23 166 -29 159Z M52 141 Q62 146 60 155 L42 163 Q36 162 40 154Z" fill="#A779DE" stroke="#292622" stroke-width="4"/>
+      <circle cy="57" r="41" fill="#A779DE" stroke="#292622" stroke-width="4"/>
+      <ellipse cx="-12" cy="55" rx="3.2" ry="5.2" fill="#292622"/><ellipse cx="12" cy="55" rx="3.2" ry="5.2" fill="#292622"/>
+    </g>
+    <!-- Идёт -->
+    <g transform="translate(450 385)">
+      <g fill="none" stroke="#292622" stroke-width="20"><path d="M-19 89 Q-31 119 -49 147"/><path d="M19 89 Q29 116 49 143"/></g>
+      <g fill="none" stroke="#83CB65" stroke-width="13"><path d="M-19 89 Q-31 119 -49 147"/><path d="M19 89 Q29 116 49 143"/></g>
+      <path d="M-57 144 Q-67 154 -58 160 L-37 160 Q-33 156 -39 149Z M48 139 Q60 144 58 153 L40 161 Q34 160 38 152Z" fill="#83CB65" stroke="#292622" stroke-width="4"/>
+      <circle cy="57" r="41" fill="#83CB65" stroke="#292622" stroke-width="4"/>
+      <ellipse cx="-12" cy="55" rx="3.2" ry="5.2" fill="#292622"/><ellipse cx="12" cy="55" rx="3.2" ry="5.2" fill="#292622"/>
+    </g>
+    <!-- Прыгает -->
+    <g transform="translate(750 385)">
+      <g fill="none" stroke="#292622" stroke-width="20"><path d="M-19 89 Q-32 114 -62 116"/><path d="M19 89 Q32 114 62 116"/></g>
+      <g fill="none" stroke="#FF973D" stroke-width="13"><path d="M-19 89 Q-32 114 -62 116"/><path d="M19 89 Q32 114 62 116"/></g>
+      <path d="M-68 111 Q-80 117 -72 125 L-52 127 Q-47 124 -54 117Z M68 111 Q80 117 72 125 L52 127 Q47 124 54 117Z" fill="#FF973D" stroke="#292622" stroke-width="4"/>
+      <circle cy="57" r="41" fill="#FF973D" stroke="#292622" stroke-width="4"/>
+      <ellipse cx="-12" cy="55" rx="3.2" ry="5.2" fill="#292622"/><ellipse cx="12" cy="55" rx="3.2" ry="5.2" fill="#292622"/>
+      <path d="M-6 153 L-12 164 M6 153 L12 164" fill="none" stroke="#292622" stroke-width="3"/>
+    </g>
+  </g>
+
+  <g fill="#746F68" font-family="Arial, sans-serif" font-size="12" font-weight="700" text-anchor="middle">
+    <text x="150" y="292">СПОКОЙНО</text><text x="450" y="292">ШИРОКАЯ СТОЙКА</text><text x="750" y="292">СГИБ</text>
+    <text x="150" y="600">ШАГАЕТ</text><text x="450" y="600">ИДЁТ</text><text x="750" y="600">ПРЫГАЕТ</text>
+  </g>
+</svg>

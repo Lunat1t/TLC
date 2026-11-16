@@ -35,6 +35,8 @@
 .avatar-accessory-control p{margin:4px 0 0;color:#748991;font-size:12px}
 .avatar-accessory-toggle{grid-column:1/-1;min-height:46px;border:0;border-radius:12px;background:#22afd2;padding:0 16px;color:#06262e;font:inherit;font-size:13px;font-weight:850;cursor:pointer}
 .avatar-accessory-toggle:disabled{opacity:.6;cursor:wait}
+.avatar-wardrobe{display:grid;gap:12px;padding-bottom:8px}
+.avatar-wardrobe button:focus-visible,.avatar-tabs button:focus-visible{outline:3px solid #08657a;outline-offset:3px}
 .avatar-save-row{display:grid;gap:8px;margin-top:auto;padding-top:2px}
 .avatar-save-row{margin-bottom:6px}
 .avatar-save-row p{margin:0;font-size:12px}.avatar-save-row .success{color:#188751}.avatar-save-row .saving{color:#1485a3}.avatar-save-row .error{color:#bd3e3e}
@@ -47,6 +49,40 @@
 .avatar-breath{transform-box:fill-box;transform-origin:50% 100%;animation:avatar-breathe 4.8s ease-in-out infinite;animation-play-state:var(--avatar-animation-state,running)}
 @keyframes avatar-breathe{0%,100%{transform:scale(1,1)}45%{transform:scale(1.012,1.018)}}
 @media(prefers-reduced-motion:reduce){.avatar-breath{animation:none}}
+
+.character-editor{overflow:auto;background:#f1f8fb}
+.character-editor-layout{display:grid;min-height:100%;grid-template-rows:auto minmax(0,1fr);gap:18px;padding:clamp(18px,3vw,40px)}
+.character-editor-heading h1{margin:0;color:#1c3030;font-size:clamp(24px,3vw,36px);font-weight:900;letter-spacing:-.04em}
+.character-editor-heading p{margin:5px 0 0;color:#617981}
+.character-editor-content{display:grid;min-height:0;grid-template-columns:minmax(190px,230px) minmax(0,1fr) minmax(280px,360px);gap:18px}
+.character-roster{display:grid;align-content:start;gap:10px;overflow:auto;padding:2px}
+.character-roster-item{display:flex;min-height:76px;align-items:center;gap:12px;border:1px solid #d8e6ea;border-radius:18px;background:#fff;padding:8px 14px;color:#203747;font:inherit;font-weight:800;text-align:left;cursor:pointer;transition:border-color .18s,transform .18s,box-shadow .18s}
+.character-roster-item:hover{transform:translateY(-1px);border-color:#8dc8d6}
+.character-roster-item.active{border-color:#20a7c7;box-shadow:0 0 0 2px #20a7c722}
+.character-roster-art{width:54px;height:54px;flex:none}
+.character-preview{display:grid;min-height:340px;grid-template-rows:minmax(0,1fr) auto;place-items:center;overflow:hidden;border:1px solid #d8e6ea;border-radius:28px;background:radial-gradient(ellipse at 50% 82%,#d9f2f7 0,transparent 60%),#fff;padding:18px}
+.character-preview-stage{position:relative;display:grid;width:100%;min-height:0;height:100%;place-items:center}
+.character-preview-art{width:min(100%,430px);height:100%;min-height:260px;max-height:480px;overflow:visible}
+.character-preview-accessory{position:absolute;right:10%;bottom:8%;width:clamp(74px,18%,118px);height:auto;filter:drop-shadow(0 6px 5px #243a4424)}
+.character-preview-copy{width:min(100%,430px);padding:0 12px 8px}
+.character-preview-copy h2{margin:0;color:#1d3440;font-size:clamp(22px,2.3vw,30px);font-weight:900}
+.character-preview-copy p{margin:5px 0 0;color:#617981;line-height:1.5}
+.character-controls{display:flex;min-width:0;flex-direction:column;gap:17px;overflow:auto;border:1px solid #d8e6ea;border-radius:24px;background:#fff;padding:16px}
+.character-controls .avatar-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-bottom:1px solid #e1ebee}
+.character-controls .avatar-tabs button{min-height:54px}
+.character-color-icon{width:22px;height:22px;border:2px solid #d8e6ea;border-radius:50%}
+.character-save-status{margin:0;color:#188751;font-size:13px;font-weight:750}
+.character-save-status.error{color:#bd3e3e}
+.character-unlock-note{margin:auto 0 0;border-radius:12px;background:#f2f7f8;padding:10px;color:#72848b;font-size:12px;line-height:1.45}
+.character-controls .avatar-palette{display:grid;grid-template-columns:repeat(5,minmax(38px,1fr));gap:8px;overflow:visible}
+.character-controls .avatar-swatch{width:100%;height:auto;min-height:48px;aspect-ratio:1;flex-basis:auto;border-radius:14px}
+.character-controls .avatar-swatch:before{inset:8px;border-radius:8px}
+.character-controls .avatar-accessory-control{grid-template-columns:72px minmax(0,1fr)}
+.character-controls .avatar-accessory-art{width:72px}
+.character-controls .avatar-accessory-toggle{grid-column:1/-1}
+@media(max-width:1000px){.character-editor-content{grid-template-columns:1fr 1fr}.character-roster{grid-column:1/-1;grid-template-columns:repeat(5,minmax(0,1fr));overflow:visible}.character-roster-item{min-height:94px;flex-direction:column;justify-content:center;gap:2px;padding:6px;font-size:12px;text-align:center}.character-roster-art{width:48px;height:48px}.character-preview{min-height:330px}}
+@media(max-width:640px){.character-editor-layout{gap:12px;padding:14px}.character-editor-content{grid-template-columns:1fr;gap:12px}.character-roster{gap:6px}.character-roster-item{min-height:80px;font-size:10px}.character-roster-art{width:40px;height:40px}.character-preview{min-height:280px}.character-preview-art{min-height:200px}.character-controls{overflow:visible;padding:13px}.character-controls .avatar-palette{grid-template-columns:repeat(5,minmax(42px,1fr))}}
+@media(prefers-reduced-motion:reduce){.character-roster-item{transition:none}}
 
 /* Landscape tablets: keep the character and controls visible at the same time. */
 @media (orientation: landscape) and (min-width: 800px) {
@@ -92,4 +128,11 @@
   .avatar-save-row { margin-top: 0; }
   .avatar-accessory-control { grid-template-columns: 78px minmax(0, 1fr); }
   .avatar-accessory-art { width: 78px; }
+}
+
+/* The character editor uses its own three-column layout on wide screens. */
+@media (orientation: landscape) and (min-width: 800px) {
+  .character-editor .avatar-editor-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); padding: clamp(18px, 3vw, 40px); }
+  .character-editor .character-editor-content { grid-template-columns: minmax(190px, 230px) minmax(0, 1fr) minmax(280px, 360px); }
+  .character-editor .character-controls { border-left: 1px solid #d8e6ea; padding: 16px; }
 }

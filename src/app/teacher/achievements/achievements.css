@@ -5,6 +5,7 @@
 .teacher-achievements-badge{display:grid;width:52px;height:52px;place-items:center;border-radius:17px;background:#e8f8fc;color:#1597b6}
 .teacher-achievements-kicker{margin:0;color:#188ba8;font-size:11px;font-weight:850;letter-spacing:.12em;text-transform:uppercase}
 .teacher-achievements-card h1{margin:-12px 0 0;color:#172d41;font-size:clamp(26px,5vw,38px);font-weight:900;letter-spacing:-.04em;line-height:1.08}
+.teacher-achievements-title{margin:0;color:#172d41;font-size:clamp(24px,5vw,36px);font-weight:900;letter-spacing:-.04em;line-height:1.1}
 .teacher-achievements-description{max-width:590px;margin:-7px 0 4px;color:#6d8091;font-size:14px;line-height:1.55}
 .teacher-achievements-search{display:grid;gap:8px}.teacher-achievements-search label{color:#3a4f63;font-size:12px;font-weight:800}
 .teacher-achievements-search-row{display:flex;gap:8px}.teacher-achievements-search-row input{min-width:0;flex:1;border:1px solid #dbe6ed;border-radius:13px;background:#fff;padding:12px 14px;color:#1b3044;font:inherit;font-size:14px;outline:none}.teacher-achievements-search-row input:focus{border-color:#26abc8;box-shadow:0 0 0 3px #25abc81e}
@@ -13,3 +14,132 @@
 .teacher-achievements-error,.teacher-achievements-message{margin:0;border-radius:12px;padding:10px 12px;font-size:13px}.teacher-achievements-error{background:#fff1f0;color:#ad3830}.teacher-achievements-message{background:#edf9f1;color:#208352}
 .teacher-achievements-results{display:grid;gap:8px}.teacher-achievements-student{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid #e7eef3;border-radius:15px;padding:12px 14px}.teacher-achievements-student>div{display:grid;gap:3px}.teacher-achievements-student strong{color:#253a4e;font-size:14px}.teacher-achievements-student span{color:#8292a1;font-size:11px}.teacher-achievements-student button{min-height:38px;padding:0 13px;font-size:11px}.teacher-achievements-student .teacher-achievements-issued{border-radius:999px;background:#eaf8ef;padding:7px 10px;color:#278456;font-size:10px;font-weight:800;white-space:nowrap}.teacher-achievements-loading{margin:0;color:#8a99a7;font-size:13px}
 @media(max-width:500px){.teacher-achievements-search-row{flex-direction:column}.teacher-achievements-search-row button{min-height:44px}.teacher-achievements-student{align-items:flex-start;flex-direction:column}.teacher-achievements-student button{min-height:40px}}
+
+.teacher-achievements-card.achievement-admin {
+  --ledger-ink: #12343e;
+  --ledger-muted: #4b6572;
+  --ledger-line: #d5e7ed;
+  --ledger-accent: #08647c;
+  gap: 0;
+  color: var(--ledger-ink);
+}
+.teacher-achievements-card.achievement-admin h1 {
+  margin: 0;
+  padding: 0 0 19px;
+  border-bottom: 4px solid #64d4eb;
+}
+.achievement-admin-section {
+  display: grid;
+  gap: 13px;
+  min-width: 0;
+  padding-block: 22px;
+}
+.achievement-admin-section + .achievement-admin-section { border-top: 1px solid var(--ledger-line); }
+.achievement-admin-section:last-child { padding-bottom: 0; }
+.achievement-admin-section h2 { margin: 0; font-size: 20px; font-weight: 850; line-height: 1.2; }
+.achievement-admin-section h3 { margin: 6px 0 0; font-size: 15px; font-weight: 850; }
+.achievement-admin-section p { margin: 0; font-size: 14px; line-height: 1.5; }
+.achievement-admin-section p a { color: var(--ledger-accent); text-decoration: underline; }
+.achievement-admin .achievement-admin-hint { color: var(--ledger-muted); font-size: 13px; }
+.achievement-admin-list, .achievement-admin-roster { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.achievement-admin-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  min-width: 0;
+  padding: 10px 0;
+  border-top: 1px solid var(--ledger-line);
+  font-size: 14px;
+}
+.achievement-admin-list li > div:first-child { display: grid; gap: 3px; min-width: 0; }
+.achievement-admin-list strong, .achievement-admin-roster strong, .achievement-admin-student-heading { overflow-wrap: anywhere; }
+.achievement-admin-list span, .achievement-admin-roster span, .achievement-admin-student-heading span {
+  color: var(--ledger-muted);
+  font-size: 12px;
+}
+.achievement-admin-actions, .achievement-admin-student-heading, .achievement-admin-retry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.achievement-admin-actions { flex-shrink: 0; }
+.achievement-admin-roster {
+  border: 1px solid var(--ledger-line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.achievement-admin-roster li + li { border-top: 1px solid var(--ledger-line); }
+.achievement-admin-roster button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  background: #f8fbfc;
+  color: var(--ledger-ink);
+  text-align: start;
+}
+.achievement-admin-roster button[aria-pressed=true] {
+  box-shadow: inset 4px 0 var(--ledger-accent);
+  background: #e0f7fc;
+}
+.achievement-admin :is(button, summary), .teacher-achievements-legacy > summary, .teacher-achievements-retry {
+  min-height: 44px;
+  cursor: pointer;
+}
+.achievement-admin :is(button, summary, input):focus-visible, .teacher-achievements-legacy > summary:focus-visible, .teacher-achievements-retry:focus-visible {
+  outline: 3px solid #b46b00;
+  outline-offset: 2px;
+}
+.achievement-admin-roster button:focus-visible { outline-offset: -4px; }
+.achievement-admin :is(.achievement-admin-list, .achievement-admin-retry, .achievement-admin-form) button,
+.teacher-achievements-retry {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 1px solid #b3dbe5;
+  border-radius: 9px;
+  background: #ebf7fa;
+  color: #094d62;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+}
+.achievement-admin button:disabled {
+  border-color: var(--ledger-line);
+  opacity: .62;
+  cursor: default;
+}
+.achievement-admin-list button:disabled:has(svg) { opacity: 1; color: #236240; background: #eef8f2; }
+.achievement-admin-details > summary, .teacher-achievements-legacy > summary {
+  width: fit-content;
+  padding-block: 11px;
+  color: #0c6480;
+  font-weight: 800;
+}
+.teacher-achievements-legacy > summary { margin: 0 0 6px 10px; }
+.achievement-admin-form { display: grid; gap: 12px; padding-top: 10px; }
+.achievement-admin-form label { display: grid; gap: 6px; min-width: 0; font-size: 13px; font-weight: 750; }
+.achievement-admin-form :is(input, select) {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid #b3dbe5;
+  border-radius: 9px;
+  background: #fff;
+  color: var(--ledger-ink);
+  font: inherit;
+  font-size: 16px;
+}
+.achievement-admin .achievement-admin-form button { justify-self: start; background: var(--ledger-accent); color: #fff; }
+@media(max-width: 600px) {
+  .achievement-admin-list li { align-items: flex-start; flex-direction: column; }
+}

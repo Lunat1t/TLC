@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="620" height="900" viewBox="0 0 620 900">
+  <g id="character" fill="#45C6E2">
+    <g id="feet">
+      <path id="foot_left" d="M175 776Q175 760 159 760H130C101 760 78 783 78 812V838C78 867 101 890 130 890H280V760H175V776Z" />
+      <path id="foot_right" d="M445 776Q445 760 461 760H490C519 760 542 783 542 812V838C542 867 519 890 490 890H340V760H445V776Z" />
+    </g>
+
+    <g id="legs">
+      <g id="leg_left">
+        <path id="leg_left_root" d="M175 420H280V500H175Z" />
+        <path id="leg_left_shape" d="M175 790V516Q175 500 191 500H264Q280 500 280 516V790Z" />
+      </g>
+      <g id="leg_right">
+        <path id="leg_right_root" d="M340 420H445V500H340Z" />
+        <path id="leg_right_shape" d="M340 790V516Q340 500 356 500H429Q445 500 445 516V790Z" />
+      </g>
+    </g>
+
+    <g id="arms">
+      <g id="arm_left">
+        <path id="arm_left_root" d="M40 420H150V500H40Z" />
+        <path id="arm_left_shape" d="M40 500H150Q150 516 134 516V555C134 588 124 615 92 615C59 615 40 589 40 558Z" />
+      </g>
+      <g id="arm_right">
+        <path id="arm_right_root" d="M470 420H580V500H470Z" />
+        <path id="arm_right_shape" d="M486 516Q470 516 470 500H580V558C580 589 561 615 528 615C496 615 486 588 486 555Z" />
+      </g>
+    </g>
+
+    <path id="body" d="M105 20H515C551 20 580 49 580 85V500H40V85C40 49 69 20 105 20Z" />
+
+    <g id="eyes" fill="#FFFFFF">
+      <rect id="eye_left" x="212" y="92" width="58" height="136" rx="29" />
+      <rect id="eye_right" x="350" y="92" width="58" height="136" rx="29" />
+    </g>
+  </g>
+</svg>

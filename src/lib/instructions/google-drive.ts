@@ -146,7 +146,7 @@ export async function configuredPdf(fileId: string) {
 export async function ownedUploadPdf(fileId: string, uploadId: string) {
   const file = await configuredPdf(fileId)
   if (!/^[0-9a-f-]{36}$/i.test(uploadId) || file.appProperties?.tlcUploadId !== uploadId) {
-    throw new InstructionError(403, "drive_upload_not_owned", "Файл не подтверждён как загруженный этой формой TLC.")
+    throw new InstructionError(403, "drive_upload_not_owned", "Файл не подтверждён как загруженный этой формой Brick Studio.")
   }
   return file
 }

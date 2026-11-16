@@ -14,7 +14,7 @@ async function currentUser() {
 export async function GET() {
   try {
     const { user } = await currentUser()
-    if (!user) return NextResponse.json({ error: { message: "Войдите в TLC." } }, { status: 401, headers: noStore })
+    if (!user) return NextResponse.json({ error: { message: "Войдите в Brick Studio." } }, { status: 401, headers: noStore })
     let config = null
     try {
       if (user.user_metadata?.controller_layout) {
@@ -31,7 +31,7 @@ export async function GET() {
 export async function PUT(request: Request) {
   try {
     const { client, user } = await currentUser()
-    if (!user) return NextResponse.json({ error: { message: "Войдите в TLC." } }, { status: 401, headers: noStore })
+    if (!user) return NextResponse.json({ error: { message: "Войдите в Brick Studio." } }, { status: 401, headers: noStore })
     let raw
     try { raw = await request.json() }
     catch { return NextResponse.json({ error: { message: "Неверный JSON." } }, { status: 400, headers: noStore }) }

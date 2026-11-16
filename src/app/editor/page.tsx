@@ -198,7 +198,7 @@ function EditorWorkspace() {
       setProject(found)
       setSheetState(initialSheets)
       setLoadError(null)
-      document.title = `${found.name} — TLC`
+      document.title = `${found.name} — Brick Studio`
 
       requestAnimationFrame(() => {
         const board = boardRef.current
@@ -267,7 +267,7 @@ function EditorWorkspace() {
     const name=nameDraft.trim().slice(0,64)
     if(!name){setSaveMessage({text:"Введите название программы.",isError:true});return}
     saveBusyRef.current=true
-    try{const updated={...project,name,updatedAt:new Date().toISOString()};const next=projects.map(p=>p.id===project.id?updated:p);storageRawRef.current=await saveEditorProjects(localStorage,next,storageRawRef.current,navigator.locks);setProjects(next);setProject(updated);setRenaming(false);document.title=`${name} — TLC`;setSaveMessage({text:"Название сохранено",isError:false})}catch(e){setSaveMessage({text:e instanceof Error?e.message:"Не удалось сохранить название",isError:true})}finally{saveBusyRef.current=false}
+    try{const updated={...project,name,updatedAt:new Date().toISOString()};const next=projects.map(p=>p.id===project.id?updated:p);storageRawRef.current=await saveEditorProjects(localStorage,next,storageRawRef.current,navigator.locks);setProjects(next);setProject(updated);setRenaming(false);document.title=`${name} — Brick Studio`;setSaveMessage({text:"Название сохранено",isError:false})}catch(e){setSaveMessage({text:e instanceof Error?e.message:"Не удалось сохранить название",isError:true})}finally{saveBusyRef.current=false}
   }
 
   const persistSheets = React.useCallback(

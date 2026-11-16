@@ -38,8 +38,8 @@ export function AppStartup({ children }: { children: ReactNode }) {
     <div className="tlc-startup-app" inert={blocked ? true : undefined} aria-hidden={blocked ? true : undefined}>{children}</div>
     {blocked && <div className="tlc-startup-overlay">
       <div className="tlc-startup-card" role={failed || slow ? "alert" : "status"} aria-live="polite">
-        <div className="tlc-startup-logo" aria-hidden="true">TLC</div>
-        <h1>{failed ? "Не удалось загрузить настройки" : slow ? "Подключение занимает больше времени" : "Подготавливаем TLC"}</h1>
+        <div className="tlc-startup-logo" aria-hidden="true">BS</div>
+        <h1>{failed ? "Не удалось загрузить настройки" : slow ? "Подключение занимает больше времени" : "Подготавливаем Brick Studio"}</h1>
         <p>{failed || slow ? "Проверь подключение к интернету и попробуй ещё раз." : userId ? "Загружаем твой профиль и настройки…" : "Проверяем вход…"}</p>
         {failed || slow ? <button type="button" onClick={retry}>Попробовать ещё раз</button> : <>
           <span className="tlc-startup-spinner" aria-hidden="true" />

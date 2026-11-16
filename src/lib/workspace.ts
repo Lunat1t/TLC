@@ -738,7 +738,7 @@ export function generatePybricks(
   ].sort()
 
   const lines = [
-    "# TLC: команды выполняются сверху вниз",
+    "# Brick Studio: команды выполняются сверху вниз",
     `from pybricks.${
       hub === "spike" ? "pupdevices" : "ev3devices"
     } import Motor`,

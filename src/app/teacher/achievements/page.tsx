@@ -4,44 +4,50 @@ import { useEffect, useState, type FormEvent } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Award, Search } from "lucide-react"
+import { useAccess } from "@/components/auth/access-provider"
 import { createClient } from "@/utils/supabase/client"
+import { StudentAwardsAdmin } from "./student-awards-admin"
 import "./achievements.css"
 
 type StudentResult = { student_id: string; nickname: string; login: string; achievement_awarded: boolean }
 
 export default function TeacherAchievementsPage() {
   const router = useRouter()
-  const [allowed, setAllowed] = useState(false)
+  const { ready, userId, role, isAdmin, error, refreshProfile } = useAccess()
+  const allowed = Boolean(userId && (role === "teacher" || isAdmin))
+
+  useEffect(() => {
+    if (!ready || allowed || error) return
+    router.replace(userId ? "/profile" : "/login?next=/teacher/achievements")
+  }, [allowed, error, ready, router, userId])
+
+  return <main className="teacher-achievements-page">
+    <div className="teacher-achievements-wrap">
+      <Link href="/profile" className="teacher-achievements-back">← В профиль</Link>
+      {error ? <section className="teacher-achievements-card">
+        <p className="teacher-achievements-error" role="alert">Не удалось проверить доступ.</p>
+        <button type="button" className="teacher-achievements-retry" onClick={() => void refreshProfile().catch(() => {})}>Повторить</button>
+      </section>
+      : !ready || !allowed ? <p className="teacher-achievements-loading" role="status">Проверяем доступ…</p>
+      : isAdmin ? <div key={userId} className="teacher-achievements-wrap">
+        <StudentAwardsAdmin />
+        <details className="teacher-achievements-legacy">
+          <summary>Mix and Match 2025–2026</summary>
+          <MixMatchAwards secondary />
+        </details>
+      </div>
+      : <MixMatchAwards key={userId} />}
+    </div>
+  </main>
+}
+
+function MixMatchAwards({ secondary = false }: { secondary?: boolean }) {
   const [query, setQuery] = useState("")
   const [students, setStudents] = useState<StudentResult[]>([])
   const [confirmedParticipant, setConfirmedParticipant] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
-
-  useEffect(() => {
-    let active = true
-    async function checkRole() {
-      const client = createClient()
-      const { data: { user } } = await client.auth.getUser()
-      if (!user) {
-        router.replace("/login?next=/teacher/achievements")
-        return
-      }
-      const [{ data: profile }, { data: isAdmin }] = await Promise.all([
-        client.from("profiles").select("role,onboarding_complete").eq("id", user.id).maybeSingle(),
-        client.rpc("is_instruction_admin"),
-      ])
-      if (!active) return
-      if (profile?.role !== "teacher" && isAdmin !== true) {
-        router.replace("/profile")
-        return
-      }
-      setAllowed(true)
-    }
-    void checkRole().catch(() => router.replace("/profile"))
-    return () => { active = false }
-  }, [router])
 
   async function search(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -86,14 +92,11 @@ export default function TeacherAchievementsPage() {
     }
   }
 
+  const Title = secondary ? "h2" : "h1"
   return (
-    <main className="teacher-achievements-page">
-      <div className="teacher-achievements-wrap">
-        <Link href="/profile" className="teacher-achievements-back">← В профиль</Link>
         <section className="teacher-achievements-card">
-          <div className="teacher-achievements-badge"><Award size={23} /></div>
-          <p className="teacher-achievements-kicker">Для участников Mix and Match</p>
-          <h1>Взболтать, но не смешивать</h1>
+          <div className="teacher-achievements-badge"><Award size={23} aria-hidden="true" /></div>
+          <Title className="teacher-achievements-title">Взболтать, но не смешивать</Title>
           <p className="teacher-achievements-description">Выдайте достижение ученику, который участвовал в соревновании Mix and Match 2025–2026. Вместе с наградой откроется первый аксессуар для аватара.</p>
 
           <form className="teacher-achievements-search" onSubmit={search}>
@@ -114,9 +117,6 @@ export default function TeacherAchievementsPage() {
                 : <button type="button" disabled={busy || !confirmedParticipant} onClick={() => void award(student)}>Выдать достижение</button>}
             </article>)}
           </div>
-          {!allowed && <p className="teacher-achievements-loading">Проверяем доступ…</p>}
         </section>
-      </div>
-    </main>
   )
 }
