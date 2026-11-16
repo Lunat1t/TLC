@@ -20,3 +20,6 @@ Thumbs.db
 .venv/
 venv/
 *.egg-info/
+
+# Local Kotlin compiler cache
+/android/.kotlin/
