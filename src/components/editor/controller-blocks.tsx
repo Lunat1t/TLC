@@ -1,6 +1,6 @@
 import React from "react"
 import type { WorkspaceBlock, ControllerButton, ControllerEvent } from "@/lib/workspace"
-import { CONTROLLER_BUTTONS, BUTTON_LABELS, KEYBOARD_ARROWS } from "@/lib/controller-program"
+import { CONTROLLER_BUTTONS, BUTTON_LABELS } from "@/lib/controller-program"
 import {CONTROL_INPUTS, type ControlInstance} from "@/lib/control-workspace"
 
 interface ControllerBlockProps {
@@ -37,7 +37,6 @@ export function ControllerButtonBlock({
   controls,
   onChange,
 }: ControllerBlockProps) {
-  const isKeyboard = block.type === "keyboard"
   const currentButton = (block.button || "up") as ControllerButton
   const currentEvent = (block.event || "pressed") as ControllerEvent
 
@@ -45,10 +44,10 @@ export function ControllerButtonBlock({
     <div className="flex flex-col">
       <div className="flex flex-nowrap items-center h-[58px] px-5 gap-3 text-white">
         <span aria-hidden="true" className="text-xl font-black">
-          {isKeyboard ? "⌨" : "🎮"}
+          🎮
         </span>
         <span className="text-[16px] font-extrabold whitespace-nowrap tracking-tight">
-          {isKeyboard ? "Когда стрелка" : "Когда кнопка"}
+          Когда кнопка
         </span>
 
         {/* Цель обработчика — конкретный элемент и его кнопка. */}
@@ -64,11 +63,11 @@ export function ControllerButtonBlock({
           </select>
         </> : <select
           value={currentButton}
-          aria-label={isKeyboard ? "Выбрать стрелку клавиатуры" : "Выбрать кнопку пульта"}
+          aria-label="Выбрать кнопку пульта"
           onChange={(e) => onChange({ button: e.target.value as ControllerButton })}
           className="h-[36px] px-2.5 rounded-[9px] bg-white text-[#18313b] font-black text-sm border-2 border-[#c2410c] shadow-xs cursor-pointer"
         >
-          {(isKeyboard ? Object.values(KEYBOARD_ARROWS) : CONTROLLER_BUTTONS).map((btn) => <option key={btn} value={btn}>{BUTTON_DESCRIPTIONS[btn] || BUTTON_LABELS[btn]}</option>)}
+          {CONTROLLER_BUTTONS.map((btn) => <option key={btn} value={btn}>{BUTTON_DESCRIPTIONS[btn] || BUTTON_LABELS[btn]}</option>)}
         </select>}
 
         {/* Выбор события: нажата / отпущена */}

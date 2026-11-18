@@ -1,4 +1,4 @@
-import {BUTTON_LABELS, KEYBOARD_CONTROL_ID, commandsFor, controllerHandler, controllerRuntimeErrors, describeAction, type ControllerAction, type ControllerEvent, type ControllerProgram} from './controller-program.ts'
+import {commandsFor, controllerHandler, controllerRuntimeErrors, describeAction, type ControllerAction, type ControllerEvent, type ControllerProgram} from './controller-program.ts'
 import {SERVICE, COMMAND_EVENT, commandBytes, parseEvent} from '../../public/pybricks-protocol.js'
 import {subscribeNotifications} from '../../public/notifications.js'
 
@@ -33,7 +33,7 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
   let readyWait:{resolve:()=>void;reject:(e:Error)=>void}|null=null
   let stopWait:{resolve:()=>void;reject:(e:Error)=>void}|null=null
   let snapshot:ControllerProgram|null=null
-  const runners=new Map<string,AbortController>();const owners=new Map<string,{key:string;runner:AbortController}>();const held=new Set<string>()
+  const runners=new Map<string,AbortController>();const owners=new Map<string,AbortController>();const held=new Set<string>()
   const publish=(patch:Partial<SessionState>)=>{if(disposed)return;state={...state,...patch};for(const f of listeners)f(state)}
   const log=(line:string)=>publish({log:[...state.log,line].slice(-30)})
   const clear=()=>{epoch++;for(const run of runners.values())run.abort();runners.clear();owners.clear();held.clear();snapshot=null;if(heartbeat)clock.clearInterval(heartbeat);heartbeat=null}
@@ -80,14 +80,14 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
   async function runActions(key:string,actions:ControllerAction[],generation:number) {
     runners.get(key)?.abort()
     const runner=new AbortController();runners.set(key,runner)
-    for(const action of actions)if('port' in action)owners.set(action.port,{key,runner})
+    for(const action of actions)if('port' in action)owners.set(action.port,runner)
     try {
       for(const action of actions){
         if(runner.signal.aborted||epoch!==generation)break
         if(action.kind==='wait'){await sleep(action.ms,runner.signal,clock);continue}
         const port='port' in action?action.port:null
         for(const command of commandsFor(action,state.protocol||3)){
-          await write(command,()=>!runner.signal.aborted&&epoch===generation&&(!port||owners.get(port)?.runner===runner))
+          await write(command,()=>!runner.signal.aborted&&epoch===generation&&(!port||owners.get(port)===runner))
         }
       }
     } catch(error){if(!runner.signal.aborted&&epoch===generation)await fault(`Ошибка связи: ${error instanceof Error?error.message:String(error)}`)}
@@ -144,28 +144,8 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
       const errors=[...snapshot.errors,...(state.program==='live-running'?controllerRuntimeErrors(snapshot,state.protocol,new Set(state.ports)):[])]
       const error=errors.find(e=>e.severity!=='warning'&&e.target?.controlId===target.controlId&&e.target?.input===target.input)
       if(error){log(`⚠ ${error.message}`);return}
-      const handler = controllerHandler(snapshot,target,event)
-      const keyboard = target.controlId === KEYBOARD_CONTROL_ID
-      let actions = handler?.actions || []
-      if (keyboard && event === 'released') {
-        const press = controllerHandler(snapshot,target,'pressed')
-        const pressPorts = new Set(press?.actions.flatMap(action =>
-          'port' in action && action.kind !== 'stop' ? [action.port] : []
-        ))
-        // Releasing an older key must not stop a motor already taken over by another key.
-        const owned = (port:string) => state.program === 'trial-running' || owners.get(port)?.key === key
-        actions = actions.filter(action => !('port' in action) || !pressPorts.has(action.port) || owned(action.port))
-        const releasePorts = new Set(actions.flatMap(action => 'port' in action ? [action.port] : []))
-        const stops:ControllerAction[] = [...pressPorts]
-          .filter(port => owned(port) && !releasePorts.has(port))
-          .map(port => ({kind:'stop',port}))
-        actions = [...stops,...actions]
-        runners.get(key)?.abort()
-      }
-      const label = keyboard && (target.input in BUTTON_LABELS)
-        ? `Стрелка ${BUTTON_LABELS[target.input as keyof typeof BUTTON_LABELS]}`
-        : target.input
-      log(`${label} ${event==='pressed'?'нажата':'отпущена'} → ${actions.map(describeAction).filter(Boolean).join(' · ')||'нет действий'}`)
+      const handler=controllerHandler(snapshot,target,event);const actions=handler?.actions||[]
+      log(`${target.input} ${event==='pressed'?'нажата':'отпущена'} → ${actions.map(describeAction).filter(Boolean).join(' · ')||'нет действий'}`)
       if(state.program==='live-running'&&actions.length)void runActions(key,actions,epoch)
     },
     stop,

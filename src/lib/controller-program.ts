@@ -63,11 +63,6 @@ export const CONTROLLER_BUTTONS: readonly ControllerButton[] =
 export const BUTTON_LABELS: Record<ControllerButton, string> =
   RawControllerProgram.BUTTON_LABELS as unknown as Record<ControllerButton, string>
 
-export const KEYBOARD_CONTROL_ID = RawControllerProgram.KEYBOARD_CONTROL_ID
-
-export const KEYBOARD_ARROWS: Readonly<Record<string, ControllerButton>> =
-  RawControllerProgram.KEYBOARD_ARROWS
-
 export const BUTTON_KEYS: Record<string, ControllerButton> =
   RawControllerProgram.BUTTON_KEYS as unknown as Record<string, ControllerButton>
 

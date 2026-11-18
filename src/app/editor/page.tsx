@@ -42,10 +42,10 @@ import {
   ControllerButtonBlock,
   ControllerStopBlock,
 } from "@/components/editor/controller-blocks"
-import { BUTTON_LABELS, KEYBOARD_ARROWS, KEYBOARD_CONTROL_ID, compileControllerProgram } from "@/lib/controller-program"
+import { compileControllerProgram } from "@/lib/controller-program"
 import { ControlAreaView } from "@/components/editor/control-area"
 import { useRobotSession } from "@/components/editor/robot-session"
-import { CONTROL_INPUTS, EMPTY_LAYOUT } from "@/lib/control-workspace"
+import { CONTROL_INPUTS } from "@/lib/control-workspace"
 import { controllerRuntimeErrors } from "@/lib/controller-program"
 import { CONTROL_MIN, validateControlLayout, type ControlInstance, type ControlLayout, type ControlKind } from "@/lib/control-workspace"
 
@@ -142,7 +142,6 @@ function EditorWorkspace() {
   const [checking, setChecking] = React.useState(false)
   const editViewRef = React.useRef<{panX:number;panY:number;zoom:number}|null>(null)
   const [starting, setStarting] = React.useState(false)
-  const startAttempt = React.useRef(0)
   const [startError, setStartError] = React.useState("")
   const {state: robotState, ref: sessionRef} = useRobotSession()
   const inputStarted = React.useRef<number | null>(null)
@@ -243,6 +242,26 @@ function EditorWorkspace() {
     [sheetState, panX, panY, zoom]
   )
 
+  const controllerErrorsByBlockId = React.useMemo(() => {
+    if (!project) return new Map<string, string>()
+    try {
+      const currentProject: RobotProject = {
+        ...project,
+        workspace: { ...project.workspace, ...snapshotSheets() } as unknown as Record<string, unknown>,
+      }
+      const compiled = compileControllerProgram(currentProject)
+      const errMap = new Map<string, string>()
+      for (const err of compiled.errors) {
+        if (err.blockId) {
+          errMap.set(err.blockId, err.message)
+        }
+      }
+      return errMap
+    } catch {
+      return new Map<string, string>()
+    }
+  }, [project, snapshotSheets])
+
   async function renameProgram(){
     if(!project||saveBusyRef.current)return
     const name=nameDraft.trim().slice(0,64)
@@ -284,7 +303,7 @@ function EditorWorkspace() {
     [project, projects]
   )
 
-  const controlLayout = (project?.workspace?.controlLayout as ControlLayout | undefined) || EMPTY_LAYOUT
+  const controlLayout = (project?.workspace?.controlLayout as ControlLayout | undefined) || {version:1 as const, areas:[], controls:[]}
   const motorPanelControls = React.useMemo<ControlInstance[]>(() => blocks.flatMap(block => {
     if (block.type !== "motor-buttons" || !block.controlAreaId) return []
     const area = controlLayout.areas.find(candidate => candidate.id === block.controlAreaId && candidate.sheetId === currentSheet.id)
@@ -294,14 +313,6 @@ function EditorWorkspace() {
   }), [blocks,controlLayout.areas,currentSheet.id])
   const controllerControls = React.useMemo(() => [...controlLayout.controls,...motorPanelControls], [controlLayout.controls,motorPanelControls])
   const controllerProgram = React.useMemo(() => project ? compileControllerProgram({...project,workspace:{...project.workspace,...snapshotSheets(),controlLayout:{...controlLayout,controls:controllerControls}}}) : null, [project,snapshotSheets,controlLayout,controllerControls])
-  const controllerErrorsByBlockId = React.useMemo(() => new Map(
-    controllerProgram?.errors.flatMap(error => error.blockId ? [[error.blockId, error.message] as const] : [])
-  ), [controllerProgram])
-  const keyboardInputs = React.useMemo(() => new Set(
-    controllerProgram?.handlers
-      .filter(handler => handler.target?.controlId === KEYBOARD_CONTROL_ID && handler.actions.length > 0)
-      .map(handler => handler.button)
-  ), [controllerProgram])
   const keyTargets = React.useMemo(() => {
     const visible=new Set(controlLayout.areas.filter(a=>a.sheetId===currentSheet.id).map(a=>a.id))
     const controls=controlLayout.controls.filter(c=>visible.has(c.areaId))
@@ -311,11 +322,8 @@ function EditorWorkspace() {
     for(const c of controls){const bindings=c.keyBindings || (c.id===first?.id?defaults:{})
       for(const [input,key] of Object.entries(bindings)) if(CONTROL_INPUTS[c.kind].includes(input)) (map[key] ||= []).push({controlId:c.id,input})
     }
-    for (const [code, input] of Object.entries(KEYBOARD_ARROWS)) {
-      if (keyboardInputs.has(input)) map[code] = [{controlId:KEYBOARD_CONTROL_ID,input}]
-    }
     return map
-  },[controlLayout.areas,controlLayout.controls,currentSheet.id,keyboardInputs])
+  },[controlLayout.areas,controlLayout.controls,currentSheet.id])
   const inputErrors = React.useMemo(() => {
     const errors = controllerProgram ? [...controllerProgram.errors,...controllerRuntimeErrors(controllerProgram,robotState.protocol,new Set(robotState.ports))] : []
     const mapped:Record<string,string> = {}
@@ -326,16 +334,12 @@ function EditorWorkspace() {
   async function startProgram() {
     const session = sessionRef.current
     if (!session || !controllerProgram || starting || checking) return
-    const attempt = ++startAttempt.current
     setStarting(true)
     setStartError("")
     try {
       await session.setViewMode('check')
-      if (attempt !== startAttempt.current) return
       if (session.getState().transport === 'connected') await session.startHub()
-      if (attempt !== startAttempt.current) return
       await session.startProgram(controllerProgram)
-      if (attempt !== startAttempt.current) return
       if (!['trial-running','live-running'].includes(session.getState().program)) {setStartError(session.getState().message);return}
       editViewRef.current = {panX,panY,zoom}
       const area = controlLayout.areas.find(a=>a.sheetId===currentSheet.id)
@@ -349,56 +353,25 @@ function EditorWorkspace() {
       setGesture(null);setSelectedId(null);setPaletteOpen(false);setChecking(true)
     } finally { setStarting(false) }
   }
-  const stopProgram = React.useCallback(async () => {
-    startAttempt.current++
+  async function stopProgram() {
     await sessionRef.current?.setViewMode('edit')
     const view=editViewRef.current
     if(view){setPanX(view.panX);setPanY(view.panY);setZoom(view.zoom);editViewRef.current=null}
     setChecking(false)
-  }, [sessionRef])
-  React.useEffect(() => () => {startAttempt.current++;void sessionRef.current?.stop("Проект изменён. Запустите программу снова.")}, [projectId,sessionRef])
+  }
+  React.useEffect(() => () => {void sessionRef.current?.stop("Проект изменён. Запустите программу снова.")}, [projectId,sessionRef])
   React.useEffect(() => {
-    const stop = () => { if (checking || starting) void stopProgram() }
+    const stop=()=>{void sessionRef.current?.stop("Проверка остановлена.")}
     const visibility=()=>{if(document.hidden)stop()}
     window.addEventListener("blur",stop);window.addEventListener("pagehide",stop);document.addEventListener("visibilitychange",visibility)
     return ()=>{window.removeEventListener("blur",stop);window.removeEventListener("pagehide",stop);document.removeEventListener("visibilitychange",visibility)}
-  },[checking, starting, stopProgram])
+  },[sessionRef])
   React.useEffect(() => {
     if (!checking) return
-    const held = new Map<string, {controlId:string;input:string}>()
-    const onKeyDown = (event: KeyboardEvent) => {
-      const element = event.target instanceof Element ? event.target : null
-      if (element?.closest("input,textarea,select,[contenteditable]:not([contenteditable='false']),[role='dialog']")) return
-      if (event.code === "Escape" && keyboardInputs.size) {
-        event.preventDefault()
-        if (!event.repeat) void stopProgram()
-        return
-      }
-      const targets = keyTargets[event.code]
-      if (event.altKey || event.ctrlKey || event.metaKey || targets?.length !== 1) return
-      const target = targets[0]
-      if (target.controlId !== KEYBOARD_CONTROL_ID &&
-          (!element?.closest("[data-control-check]") || inputErrors[`${target.controlId}:${target.input}`])) return
-      event.preventDefault()
-      if (event.repeat || held.has(event.code)) return
-      held.set(event.code, target)
-      dispatchControl(target, "pressed")
-    }
-    const onKeyUp = (event: KeyboardEvent) => {
-      const target = held.get(event.code)
-      if (!target) return
-      event.preventDefault()
-      held.delete(event.code)
-      dispatchControl(target, "released")
-    }
-    window.addEventListener("keydown", onKeyDown)
-    window.addEventListener("keyup", onKeyUp)
-    return () => {
-      window.removeEventListener("keydown", onKeyDown)
-      window.removeEventListener("keyup", onKeyUp)
-      for (const target of held.values()) dispatchControl(target, "released")
-    }
-  }, [checking, keyTargets, keyboardInputs, inputErrors, dispatchControl, stopProgram])
+    const handle=(e:KeyboardEvent)=>{const element=e.target as HTMLElement;if(!element?.closest('[data-control-check]') || element.closest('input,textarea,select,[contenteditable="true"],[role="dialog"]'))return;const targets=keyTargets[e.code];if(!targets||targets.length!==1||e.repeat)return;e.preventDefault();const target=targets[0];if(inputErrors[`${target.controlId}:${target.input}`])return;dispatchControl(target,e.type==="keydown"?"pressed":"released")}
+    window.addEventListener("keydown",handle);window.addEventListener("keyup",handle)
+    return ()=>{window.removeEventListener("keydown",handle);window.removeEventListener("keyup",handle)}
+  },[checking,keyTargets,inputErrors,dispatchControl])
   function saveLayout(next: ControlLayout) {
     try {validateControlLayout(next,sheetState.sheets.map(s=>s.id));return persistSheets(snapshotSheets(), next)}
     catch(error){setSaveMessage({text:error instanceof Error?error.message:"Неверная раскладка",isError:true});return Promise.resolve(false)}
@@ -865,28 +838,6 @@ function EditorWorkspace() {
                 </span>
               </button>
 
-              {(["pressed", "released"] as const).map(event => (
-                <button
-                  key={event}
-                  type="button"
-                  disabled={!project || project.hub !== "spike"}
-                  onPointerDown={e => {
-                    if (!project || project.hub !== "spike" || e.button !== 0) return
-                    e.preventDefault()
-                    setGesture({kind:"palette",type:"keyboard",clientX:e.clientX,clientY:e.clientY,initialOverrides:{event}})
-                  }}
-                  className="w-full rounded-[13px] border border-[#d4e1e9] bg-white p-3.5 text-left flex flex-col gap-2 touch-none hover:border-[#c2410c] hover:bg-[#fff7ed] transition-colors disabled:opacity-50 cursor-grab active:cursor-grabbing"
-                >
-                  <span aria-hidden="true" className="grid place-items-center w-[106px] h-[33px] rounded-[8px] bg-[#e85d2a] text-white text-base font-black shadow-[inset_0_-4px_#c2410c]">↑ ↓ ← →</span>
-                  <span className="text-[13px] font-extrabold text-[#18313b]">
-                    Когда стрелка {event === "pressed" ? "нажата" : "отпущена"}
-                  </span>
-                </button>
-              ))}
-              {project?.hub === "spike" && (
-                <p className="px-1 text-xs text-[#587681]">Присоедините блок со стрелкой к концу цепочки запуска.</p>
-              )}
-
               {/* Блок 2: Движение мотора */}
               <button
                 id="driveBlock"
@@ -1079,12 +1030,6 @@ function EditorWorkspace() {
             </button>
           </div>
 
-          {checking && keyboardInputs.size > 0 && (
-            <div className="px-4 py-2 text-xs font-semibold text-[#31525f] bg-[#eff8fb]">
-              Управление с клавиатуры {Array.from(keyboardInputs, input => BUTTON_LABELS[input]).join(" ")} · Esc — стоп
-              <div role="status">{robotState.log[robotState.log.length - 1]}</div>
-            </div>
-          )}
           {(checking || robotState.transport==='fault' || startError) && <div role="status" className="px-4 py-1 text-xs font-semibold text-[#31525f]">{startError || robotState.message}</div>}
           {/* Infinite Canvas Board */}
           <div
@@ -1311,8 +1256,7 @@ function EditorWorkspace() {
                 const paired = block.type === "pair"
                 const isIfBlock = block.type === "if"
                 const motorBlock = block.type === "drive" || paired
-                const isKeyboardBlock = block.type === "keyboard"
-                const isButtonBlock = block.type === "button" || isKeyboardBlock
+                const isButtonBlock = block.type === "button"
                 const isStopBlock = block.type === "stop"
                 const isMotorButtons = block.type === "motor-buttons"
                 const isSelected = block.id === selectedId
@@ -1335,7 +1279,7 @@ function EditorWorkspace() {
                 const radiusClass = isIfBlock
                   ? ""
                   : isButtonBlock
-                    ? `rounded-t-[22px] ${isKeyboardBlock && isConnected ? "rounded-tl-[5px]" : ""} ${
+                    ? `rounded-t-[22px] ${
                         hasChild ? "rounded-b-[5px]" : "rounded-b-[14px]"
                       }`
                     : motorBlock || isStopBlock
@@ -1352,12 +1296,12 @@ function EditorWorkspace() {
                     data-canvas-block="true"
                     data-block-id={block.id}
                     tabIndex={0}
-                    role={motorBlock || isIfBlock || isStopBlock || isMotorButtons || isButtonBlock ? "group" : "button"}
+                    role={motorBlock || isIfBlock || isStopBlock || isMotorButtons ? "group" : "button"}
                     aria-label={
                       isIfBlock
                         ? "Блок условия Если Иначе. Перетащите за заголовок"
                         : isButtonBlock
-                          ? isKeyboardBlock ? "Когда стрелка клавиатуры. Перетащите за заголовок" : "Когда кнопка пульта. Перетащите за заголовок"
+                          ? "Когда кнопка пульта. Перетащите за заголовок"
                         : isMotorButtons
                           ? "Кнопки моторов. Перетащите за заголовок"
                           : isStopBlock
@@ -1456,7 +1400,7 @@ function EditorWorkspace() {
                     }`}
                   >
                     {/* Top LEGO connector stud for motor, if, and stop blocks */}
-                    {(motorBlock || isIfBlock || isStopBlock || (isKeyboardBlock && isConnected)) && (
+                    {(motorBlock || isIfBlock || isStopBlock) && (
                       <span
                         aria-hidden="true"
                         className={`absolute -top-[8px] left-[32px] w-[44px] h-[11px] rounded-t-[6px] pointer-events-auto ${
@@ -1464,9 +1408,7 @@ function EditorWorkspace() {
                             ? "bg-[#7c3aed]"
                             : isStopBlock
                               ? "bg-[#b1372c]"
-                              : isKeyboardBlock
-                                ? "bg-[#e85d2a]"
-                                : paired
+                              : paired
                                 ? "bg-[#107e79]"
                                 : "bg-[#0589b1]"
                         }`}
@@ -1730,7 +1672,7 @@ function EditorWorkspace() {
                     ) : isButtonBlock ? (
                       <ControllerButtonBlock
                         block={block}
-                        controls={isKeyboardBlock ? undefined : controllerControls}
+                        controls={controllerControls}
                         ports={motorPorts}
                         isConnected={isConnected}
                         hasChild={hasChild}

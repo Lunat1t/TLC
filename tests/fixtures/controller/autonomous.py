@@ -1,4 +1,4 @@
-# Brick Studio: команды выполняются сверху вниз
+# TLC: команды выполняются сверху вниз
 from pybricks.pupdevices import Motor
 from pybricks.parameters import Port, Stop
 from pybricks.tools import wait
