@@ -24,6 +24,7 @@ test('an editor project dispatches its own control events to the safe session',a
 test('keyboard blocks can be snapped after start and run in TLC without a control area', async () => {
   const {addBlock, attachChain, generatePybricks, readBlocks, snapTargetInfo} = await import('../src/lib/workspace.ts');
   const {KEYBOARD_CONTROL_ID} = await import('../public/controller-program.js');
+  const {migrateControlWorkspace} = await import('../src/lib/control-workspace.ts');
   let blocks = [];
   for (const [id, type] of [['start', 'start'], ['setup', 'stop'], ['press', 'keyboard'],
     ['drive', 'drive'], ['release', 'keyboard'], ['stop', 'stop'], ['left', 'keyboard'], ['reverse', 'drive']]) {
@@ -44,7 +45,9 @@ test('keyboard blocks can be snapped after start and run in TLC without a contro
   blocks = attachChain(blocks, 'stop', 'release');
   blocks = attachChain(blocks, 'left', 'stop');
   blocks = attachChain(blocks, 'reverse', 'left');
-  blocks = readBlocks({blocks: structuredClone(blocks)});
+  const saved = structuredClone({hub: 'spike', workspace: {blocks}});
+  const {project: reopened} = migrateControlWorkspace(saved);
+  blocks = readBlocks(reopened.workspace);
   assert.equal(blocks.find(block => block.id === 'release').parentId, 'drive');
   assert.match(generatePybricks(blocks, 'spike'), /motor_b\.brake\(\)/);
   assert.doesNotMatch(generatePybricks(blocks, 'spike'), /motor_a/);

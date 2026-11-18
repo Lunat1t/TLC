@@ -45,11 +45,9 @@ import {
 import { BUTTON_LABELS, KEYBOARD_ARROWS, KEYBOARD_CONTROL_ID, compileControllerProgram } from "@/lib/controller-program"
 import { ControlAreaView } from "@/components/editor/control-area"
 import { useRobotSession } from "@/components/editor/robot-session"
-import { CONTROL_INPUTS } from "@/lib/control-workspace"
+import { CONTROL_INPUTS, EMPTY_LAYOUT } from "@/lib/control-workspace"
 import { controllerRuntimeErrors } from "@/lib/controller-program"
 import { CONTROL_MIN, validateControlLayout, type ControlInstance, type ControlLayout, type ControlKind } from "@/lib/control-workspace"
-
-const EMPTY_CONTROL_LAYOUT: ControlLayout = {version:1,areas:[],controls:[]}
 
 function newId() {
   return (
@@ -286,7 +284,7 @@ function EditorWorkspace() {
     [project, projects]
   )
 
-  const controlLayout = (project?.workspace?.controlLayout as ControlLayout | undefined) || EMPTY_CONTROL_LAYOUT
+  const controlLayout = (project?.workspace?.controlLayout as ControlLayout | undefined) || EMPTY_LAYOUT
   const motorPanelControls = React.useMemo<ControlInstance[]>(() => blocks.flatMap(block => {
     if (block.type !== "motor-buttons" || !block.controlAreaId) return []
     const area = controlLayout.areas.find(candidate => candidate.id === block.controlAreaId && candidate.sheetId === currentSheet.id)

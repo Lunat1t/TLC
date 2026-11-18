@@ -23,7 +23,11 @@ export type ControllerButton =
 export type ControllerEvent = "pressed" | "released"
 
 export type BlockType = "start" | "drive" | "pair" | "if" | "button" | "keyboard" | "stop" | "motor-buttons"
-const LIBRARY_BLOCK_TYPES = new Set<BlockType>(["start", "drive", "pair", "if", "keyboard", "stop", "motor-buttons"])
+const LIBRARY_BLOCK_TYPES = new Set<string>(["start", "drive", "pair", "if", "keyboard", "stop", "motor-buttons"])
+export function isLibraryBlockType(type: unknown): type is BlockType {
+  return typeof type === "string" && LIBRARY_BLOCK_TYPES.has(type)
+}
+
 export type MotorDirection = "forward" | "backward"
 export type TravelUnit = "rotations" | "degrees" | "seconds"
 export type MotorModule = "speed" | "power" | "travel"
@@ -316,7 +320,7 @@ export function readBlocks(
       (block): block is Record<string, unknown> =>
         Boolean(block) &&
         typeof block === "object" &&
-        LIBRARY_BLOCK_TYPES.has(String((block as { type?: unknown }).type) as BlockType) &&
+        isLibraryBlockType((block as { type?: unknown }).type) &&
         typeof (block as { id?: unknown }).id === "string" &&
         Number.isFinite((block as { x?: unknown }).x) &&
         Number.isFinite((block as { y?: unknown }).y)
@@ -452,7 +456,7 @@ export function addBlock(
     throw new Error("На доске слишком много блоков.")
   if (!Number.isFinite(x) || !Number.isFinite(y))
     throw new Error("Не удалось определить место блока.")
-  if (!LIBRARY_BLOCK_TYPES.has(type))
+  if (!isLibraryBlockType(type))
     throw new Error("Неизвестный блок.")
   const block: WorkspaceBlock = {
     id,
