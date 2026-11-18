@@ -1,4 +1,5 @@
 import type { HubType } from "./projects"
+import { KEYBOARD_ARROWS } from "../../public/controller-program.js"
 
 export const MAX_BLOCKS = 200
 export const MOTOR_SPEED = 360
@@ -21,8 +22,8 @@ export type ControllerButton =
   | "yellow"
 export type ControllerEvent = "pressed" | "released"
 
-export type BlockType = "start" | "drive" | "pair" | "if" | "button" | "stop" | "motor-buttons"
-const LIBRARY_BLOCK_TYPES = new Set<BlockType>(["start", "drive", "pair", "if", "stop", "motor-buttons"])
+export type BlockType = "start" | "drive" | "pair" | "if" | "button" | "keyboard" | "stop" | "motor-buttons"
+const LIBRARY_BLOCK_TYPES = new Set<BlockType>(["start", "drive", "pair", "if", "keyboard", "stop", "motor-buttons"])
 export type MotorDirection = "forward" | "backward"
 export type TravelUnit = "rotations" | "degrees" | "seconds"
 export type MotorModule = "speed" | "power" | "travel"
@@ -87,10 +88,11 @@ const PORTS: Record<HubType, string[]> = {
 
 const UNITS: TravelUnit[] = ["rotations", "degrees", "seconds"]
 
-function findChainRoot(blocks: WorkspaceBlock[], id: string): WorkspaceBlock | undefined {
+function findChainRoot(blocks: WorkspaceBlock[], id: string, stopAtKeyboard = false): WorkspaceBlock | undefined {
   let curr = blocks.find((b) => b.id === id)
   const seen = new Set<string>()
   while (curr?.parentId && !seen.has(curr.id)) {
+    if (stopAtKeyboard && curr.type === "keyboard") break
     seen.add(curr.id)
     curr = blocks.find((b) => b.id === curr!.parentId)
   }
@@ -106,7 +108,7 @@ export function blockHeight(block: Pick<WorkspaceBlock, "type" | "height">): num
       IF_EMPTY_MOUTH +
       IF_FOOT_HEIGHT
     )
-  if (block.type === "button") return 58
+  if (block.type === "button" || block.type === "keyboard") return 58
   if (block.type === "stop") return 58
   if (block.type === "motor-buttons") return block.height ?? 132
   return block.type === "pair" ? 64 : block.type === "drive" ? 64 : 58
@@ -159,7 +161,7 @@ export function cleanLinks(blocks: WorkspaceBlock[]): WorkspaceBlock[] {
   const occupied = new Set<string>()
   const clean = blocks.map((b) => {
     const next: WorkspaceBlock = { ...b }
-    if (next.type === "button") {
+    if (next.type === "button" || (next.type === "keyboard" && next.branch)) {
       delete next.parentId
       delete next.branch
       return next
@@ -201,9 +203,9 @@ export function cleanLinks(blocks: WorkspaceBlock[]): WorkspaceBlock[] {
   }
 
   for (const block of clean) {
-    if (block.parentId && !["drive", "pair", "stop"].includes(block.type)) {
-      const root = findChainRoot(clean, block.id)
-      if (root?.type === "button") {
+    if (block.parentId && !["drive", "pair", "stop", "keyboard"].includes(block.type)) {
+      const root = findChainRoot(clean, block.parentId, true)
+      if (root?.type === "button" || root?.type === "keyboard") {
         delete block.parentId
         delete block.branch
       }
@@ -361,29 +363,12 @@ export function readBlocks(
         }
       }
 
-      if (type === "button") {
-        const allowedButtons: ControllerButton[] = [
-          "up",
-          "down",
-          "left",
-          "right",
-          "a",
-          "b",
-          "x",
-          "y",
-          "l",
-          "r",
-        ]
-        const btn = allowedButtons.includes(block.button as ControllerButton)
-          ? (block.button as ControllerButton)
-          : "up"
-        const ev: ControllerEvent =
-          block.event === "released" ? "released" : "pressed"
+      if (type === "keyboard") {
+        const button = block.button as ControllerButton
         return {
           ...base,
-          button: btn,
-          ...(block.target && typeof block.target === "object" && typeof (block.target as {controlId?:unknown}).controlId === "string" && typeof (block.target as {input?:unknown}).input === "string" ? {target: {controlId: (block.target as {controlId:string}).controlId, input: (block.target as {input:string}).input}} : {}),
-          event: ev,
+          button: Object.values(KEYBOARD_ARROWS).some(arrow => arrow === button) ? button : "up",
+          event: block.event === "released" ? "released" : "pressed",
         }
       }
 
@@ -489,7 +474,7 @@ export function addBlock(
   if (type === "pair") {
     Object.assign(block, { motor2: "B", direction2: "backward" })
   }
-  if (type === "button") {
+  if (type === "keyboard") {
     Object.assign(block, { button: "up", event: "pressed" })
   }
   if (type === "stop") {
@@ -547,7 +532,7 @@ export function updateDrive(
   return readBlocks(
     {
       blocks: blocks.map((block) =>
-        block.id === id && ["drive", "pair", "if", "button", "stop"].includes(block.type)
+        block.id === id && ["drive", "pair", "if", "keyboard", "stop"].includes(block.type)
           ? { ...block, ...changes }
           : block
       ),
@@ -587,6 +572,26 @@ export function moveChain(
   )
 }
 
+function canAttachBelow(
+  blocks: WorkspaceBlock[],
+  moving: WorkspaceBlock,
+  parent: WorkspaceBlock
+): boolean {
+  if (["button", "motor-buttons"].includes(moving.type) || parent.type === "motor-buttons") return false
+  if (moving.type === "keyboard") {
+    const start = findChainRoot(blocks, parent.id)
+    return start?.type === "start" &&
+      outerChainIds(blocks, start.id).includes(parent.id) &&
+      !blocks.some(b => b.parentId === parent.id && !b.branch)
+  }
+  const event = findChainRoot(blocks, parent.id, true)
+  return (event?.type !== "button" && event?.type !== "keyboard") ||
+    chainIds(blocks, moving.id).every(id => {
+      const block = blocks.find(b => b.id === id)
+      return block && ["drive", "pair", "stop", "keyboard"].includes(block.type)
+    })
+}
+
 export function attachChain(
   blocks: WorkspaceBlock[],
   id: string,
@@ -594,23 +599,13 @@ export function attachChain(
   branch?: BranchSlot
 ): WorkspaceBlock[] {
   const movingBlock = blocks.find((b) => b.id === id)
-  if (movingBlock?.type === "button") return blocks
 
   const moving = chainIds(blocks, id)
   const parent = blocks.find((b) => b.id === parentId)
-  if (
-    !blocks.some((b) => b.id === id) ||
-    !parent ||
-    moving.includes(parentId)
-  ) {
+  if (!movingBlock || !parent || moving.includes(parentId) || !canAttachBelow(blocks, movingBlock, parent)) {
     return blocks
   }
-  const rootOfParent = findChainRoot(blocks, parentId)
-  if (rootOfParent?.type === "button") {
-    if (movingBlock && !["drive", "pair", "stop"].includes(movingBlock.type)) {
-      return blocks
-    }
-  }
+  if (movingBlock.type === "keyboard" && branch) return blocks
 
   const effectiveBranch =
     (branch === "body" || branch === "else") && parent.type === "if"
@@ -657,17 +652,9 @@ export function snapTargetInfo(
   let best: { id: string; branch?: BranchSlot } | null = null
   let distance = Infinity
   for (const b of blocks) {
-    if (b.type === "motor-buttons") continue
-    if (moving.has(b.id)) continue
+    if (moving.has(b.id) || (movingBlock && !canAttachBelow(blocks, movingBlock, b))) continue
 
-    const rootOfB = findChainRoot(blocks, b.id)
-    if (rootOfB?.type === "button") {
-      if (movingBlock && !["drive", "pair", "stop"].includes(movingBlock.type)) {
-        continue
-      }
-    }
-
-    if (b.type === "if") {
+    if (b.type === "if" && movingBlock?.type !== "keyboard") {
       const innerDx = Math.abs(b.x + IF_INDENT - x)
       const bodyDy = Math.abs(b.y + IF_TOP_HEIGHT - 4 - y)
       if (
@@ -718,14 +705,17 @@ export function generatePybricks(
   if (!PORTS[hub]) throw new Error("Неизвестный тип робота.")
   const clean = readBlocks({ blocks }, hub)
   const autonomousBlocks = clean.filter(
-    (b) => findChainRoot(clean, b.id)?.type !== "button"
+    (b) => !["button", "keyboard"].includes(findChainRoot(clean, b.id, true)?.type || "")
   )
   const ordered = executionOrder(autonomousBlocks)
   const driveBlocks = ordered.filter((block) =>
     ["drive", "pair", "stop"].includes(block.type)
   )
-  if (!driveBlocks.length)
-    throw new Error("Добавьте на доску блок движения.")
+  if (!driveBlocks.length) {
+    throw new Error(clean.some(block => block.type === "keyboard")
+      ? "Для управления стрелками нажмите «Запуск» в редакторе."
+      : "Добавьте на доску блок движения.")
+  }
 
   const used = [
     ...new Set(

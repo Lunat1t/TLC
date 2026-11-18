@@ -19,11 +19,16 @@ export const BUTTON_LABELS = Object.freeze({
   yellow: 'Жёлтая',
 });
 
-export const BUTTON_KEYS = Object.freeze({
+export const KEYBOARD_CONTROL_ID = "tlc-keyboard";
+export const KEYBOARD_ARROWS = Object.freeze({
   ArrowUp: 'up',
   ArrowDown: 'down',
   ArrowLeft: 'left',
   ArrowRight: 'right',
+});
+
+export const BUTTON_KEYS = Object.freeze({
+  ...KEYBOARD_ARROWS,
   KeyJ: 'a',
   KeyK: 'b',
   KeyU: 'x',
@@ -164,19 +169,47 @@ export function compileControllerProgram(project) {
 
   // Find button roots
   const buttonRoots = blocks.filter(b => b.type === 'button' && !b.parentId);
-  const startRoots = blocks.filter(b => b.type === 'start' && !b.parentId);
+  const hasKeyboardBlocks = blocks.some(b => b.type === "keyboard");
+  const sheets = project.workspace?.sheets;
+  const activeSheet = Array.isArray(sheets)
+    ? sheets.find(sheet => sheet?.id === project.workspace.activeSheetId) || sheets[0]
+    : null;
+  const programBlocks = hasKeyboardBlocks && Array.isArray(activeSheet?.blocks)
+    ? blocks.filter(b => activeSheet.blocks.includes(b))
+    : blocks;
+  const startRoots = programBlocks.filter(b => b.type === 'start' && !b.parentId);
+  const start = startRoots.length === 1 ? startRoots[0] : null;
+  const keyboardRoots = [];
+  if (start) {
+    const visited = new Set([start.id]);
+    let next = start;
+    while ((next = programBlocks.find(b => b.parentId === next.id && !b.branch)) && !visited.has(next.id)) {
+      visited.add(next.id);
+      if (next.type === "keyboard") keyboardRoots.push(next);
+    }
+  }
+  for (const block of programBlocks) {
+    if (block.type === "keyboard" && !keyboardRoots.includes(block)) {
+      result.errors.push({blockId:block.id, code:"keyboard-needs-start", scope:"handler",
+        message:"Присоедините блок со стрелкой к цепочке «Когда программа запускается»."});
+    }
+  }
   if (startRoots.length > 1) result.errors.push({code:'multiple-start', scope:'startup', message:'Оставьте одну шапку запуска'});
   const seenHandlers = new Map();
   const allUsedPorts = new Set();
   let maxProtocol = 2;
 
-  for (const root of [...buttonRoots, ...(startRoots.length === 1 ? startRoots : [])]) {
+  for (const root of [...buttonRoots, ...keyboardRoots, ...(start ? [start] : [])]) {
     const isStart = root.type === "start";
-    const target = root.target && typeof root.target.controlId === 'string' && typeof root.target.input === 'string' ? root.target : null;
+    const isKeyboard = root.type === "keyboard";
+    const arrow = Object.values(KEYBOARD_ARROWS).includes(root.button) ? root.button : "up";
+    const target = isKeyboard
+      ? {controlId: KEYBOARD_CONTROL_ID, input: arrow}
+      : root.target && typeof root.target.controlId === 'string' && typeof root.target.input === 'string' ? root.target : null;
     const btn = target?.input || (CONTROLLER_BUTTONS.includes(root.button) ? root.button : 'up');
     const errorStart = result.errors.length;
     if (!isStart && !target && project.workspace?.controlLayout) result.errors.push({button:btn, blockId:root.id, code:'missing-control', message:'Выберите элемент управления и кнопку'});
-    if (target) {
+    if (target && !isKeyboard) {
       const controls = project.workspace?.controlLayout?.controls || [];
       const control = controls.find(c => c.id === target.controlId);
       const inputs = {drivetrain:['up','down','left','right'],motor:['forward','backward'],'motor-group':['forward','backward'],'legacy-buttons':CONTROLLER_BUTTONS,'motor-panel':['blue','red','green','yellow']};
@@ -207,9 +240,10 @@ export function compileControllerProgram(project) {
     let curr = root;
     const visited = new Set([root.id]);
 
+    const chainBlocks = isStart || isKeyboard ? programBlocks : blocks;
     while (true) {
-      const child = blocks.find(b => b.parentId === curr.id && !b.branch);
-      if (!child || visited.has(child.id)) break;
+      const child = chainBlocks.find(b => b.parentId === curr.id && !b.branch);
+      if (!child || child.type === "keyboard" || visited.has(child.id)) break;
       visited.add(child.id);
       curr = child;
 
