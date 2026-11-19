@@ -1,5 +1,6 @@
 "use client"
 
+import "./student-card.css"
 import { StreakFlame } from "@/components/profile/streak-flame"
 
 import { useRef, useState } from "react"
@@ -64,6 +65,7 @@ export function StudentCard({ profile }: { profile: SessionProfile }) {
   const [age, setAge] = useState("")
   const [message, setMessage] = useState("")
   const [busy, setBusy] = useState(false)
+  const road = useRef<HTMLDialogElement>(null)
   const picker = useRef<HTMLInputElement>(null)
 
   async function changePhoto(file?: File) {
@@ -91,10 +93,10 @@ export function StudentCard({ profile }: { profile: SessionProfile }) {
   }
 
   return <div className="grid gap-4 text-[#393327]">
-    <section className="relative mt-3 rounded-[2rem] bg-white px-5 pb-6 pt-8 shadow-sm sm:px-8">
+    <section className="student-card relative mt-3 rounded-[2rem] bg-white px-5 pb-6 pt-8 shadow-sm sm:px-8">
       <span aria-hidden="true" className="absolute -top-2 left-1/2 h-4 w-16 -translate-x-1/2 rounded-md bg-[#af8860]" />
-      <div className="flex items-center gap-2 sm:gap-6">
-        <button type="button" className="relative grid h-20 w-20 shrink-0 place-items-center rounded-3xl bg-[#f7efd8] sm:h-32 sm:w-32" onClick={() => picker.current?.click()} disabled={!ready || busy} aria-label="Изменить фотографию профиля">
+      <div className="student-identity flex items-center gap-2 sm:gap-6">
+        <button type="button" className="student-photo relative grid h-20 w-20 shrink-0 place-items-center rounded-3xl bg-[#f7efd8] sm:h-32 sm:w-32" onClick={() => picker.current?.click()} disabled={!ready || busy} aria-label="Изменить фотографию профиля">
           {settings.profilePhoto ? <img src={settings.profilePhoto} alt="" className="h-full w-full rounded-3xl object-cover" /> : <AvatarDarwinV3 className="h-20 w-20 sm:h-28 sm:w-28" bodyColor={profile.avatar?.bodyColor} eyeColor={profile.avatar?.characterEyeColor} />}
           <span className="absolute -bottom-1 -right-1 rounded-full border-2 border-white bg-[#646b44] p-2 text-white"><Camera size={15} /></span>
         </button>
@@ -108,34 +110,36 @@ export function StudentCard({ profile }: { profile: SessionProfile }) {
             <button type="button" onClick={() => setEditing(false)}>Отмена</button>
           </form> : <button className="mt-2 inline-flex items-center gap-2 text-sm" onClick={() => { setAge(String(profile.age ?? "")); setEditing(true) }}>{profile.age ? counted(profile.age, "год", "года", "лет") : "Указать возраст"}<Pencil size={14} /></button>}
         </div>
-        {activeWeek && <span className="ml-auto inline-flex shrink-0 items-center self-start text-lg font-bold tabular-nums">
+        {activeWeek && <span className="student-streak ml-auto inline-flex shrink-0 items-center self-start text-lg font-bold tabular-nums">
           <StreakFlame size={40} />
           <span aria-hidden="true">{activeWeek.streak}</span>
           <span className="sr-only">{counted(activeWeek.streak, "день", "дня", "дней")} подряд</span>
         </span>}
       </div>
       {(message || error) && <p role="alert" className="mt-3 text-sm text-red-800">{message || error}</p>}
-      <div className="mt-6 border-t border-[#e9e2d4] pt-4">
-        <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Ранг по набору">
+      <div className="student-progress mt-6 border-t border-[#e9e2d4] pt-4">
+        <div className="kit-picker mb-4 flex flex-wrap gap-2" role="group" aria-label="Ранг по набору">
           {mapKits.map(item => <button key={item.id} aria-pressed={kit === item} onClick={() => setKit(item)} className="rounded-xl bg-stone-100 px-3 py-2 font-semibold aria-pressed:bg-cyan-800 aria-pressed:text-white">{item.label}</button>)}
         </div>
         {balances ? <>
-        <details>
-          <summary className="flex cursor-pointer list-none items-center gap-3 rounded-xl py-1">
+        <div>
+          <button type="button" aria-haspopup="dialog" onClick={() => road.current?.showModal()} className="flex w-full text-left cursor-pointer list-none items-center gap-3 rounded-xl py-1">
             <Badge index={rank} /><span className="grid"><small>Ранг · {kit.label}</small><strong className="text-xl">{rankNames[rank]}</strong></span>
             <span className="ml-auto flex items-center gap-1 text-right text-sm font-bold">Дорога рангов <ChevronDown size={16} /></span>
-          </summary>
+          </button>
+          <dialog className="rank-dialog" ref={road} aria-label="Дорога рангов"><header><strong>Дорога рангов</strong><form method="dialog"><button aria-label="Закрыть дорогу рангов">Закрыть</button></form></header>
           <ol className="my-3 grid gap-1 rounded-2xl bg-[#faf7ef] p-3">
             {rankNames.map((name, i) => <li key={name} aria-current={i === rank ? "step" : undefined} className="flex items-center gap-3 rounded-xl px-2 py-1.5 aria-[current=step]:bg-white">
               <Badge index={i} /><strong>{name}</strong><span className="ml-auto text-right text-xs">{i === rank ? "Ты здесь · " : ""}{i === 0 ? "Старт" : i === 1 ? counted(target, "очко", "очка", "очков") : ""}</span>
             </li>)}
           </ol>
-        </details>
+        </dialog>
+        </div>
         <div className="mt-4 flex justify-between"><strong>Очки</strong><span>{total}{rank === 0 && ` / ${target}`}</span></div>
         <div className="mb-4 mt-2 flex h-2.5 overflow-hidden rounded-full bg-stone-100" aria-hidden="true">
           {tokenSkills.map((skill, i) => <span key={skill.id} style={{ background: skill.color, width: (100 * amounts[i] / pointsScale) + "%" }} />)}
         </div>
-        <ul className="mb-4 grid gap-3">
+        <ul className="skill-list mb-4 grid gap-3">
           {tokenSkills.map((skill, i) => {
             const { icon: Icon, color, bg } = tokenBadges[skill.id]
             return <li key={skill.id} className="flex items-center gap-3">
