@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Camera, ChevronDown, Coins, Flame, Pencil, Check, Sprout, Leaf, Wrench, Cog, Rocket, Star, Crown } from "lucide-react"
+import { Camera, ChevronDown, Coins, CircuitBoard, Lightbulb, Pencil, Check, Sprout, Leaf, Wrench, Cog, Rocket, Star, Crown } from "lucide-react"
 import { useAccess, type SessionProfile } from "@/components/auth/access-provider"
 import { useWorkspaceSettings } from "@/components/lab/workspace-settings"
 import { counted, useStudyWeek } from "@/components/lab/work-study-widgets"
@@ -10,6 +10,8 @@ import Link from "next/link"
 import { mapKits, tokenSkills } from "@/lib/map-kits"
 import { rankNames } from "@/lib/student-level"
 import { createClient } from "@/utils/supabase/client"
+
+const tokenIcons = { mechanics: Cog, logic: CircuitBoard, creativity: Lightbulb }
 
 const badges = [
   { icon: Sprout, color: "#397337", bg: "#e5f2ce" },
@@ -132,19 +134,32 @@ export function StudentCard({ profile }: { profile: SessionProfile }) {
           </ol>
         </details>
         <div className="mt-4 flex justify-between"><strong>Токены</strong><span>{total}{rank === 0 && " / 5"}</span></div>
-        <div className="my-2 flex h-3 overflow-hidden rounded-full bg-stone-100" aria-hidden="true">
+        <div className="my-3 flex h-4 overflow-hidden rounded-md border-2 border-stone-800 bg-stone-100" aria-hidden="true">
           {tokenSkills.map((skill, i) => <span key={skill.id} style={{ background: skill.color, width: (100 * amounts[i] / Math.max(5, total)) + "%" }} />)}
+          {total === 0 && tokenSkills.map(skill => <span key={skill.id} className="flex-1 opacity-20" style={{ background: skill.color }} />)}
         </div>
-        <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm">{tokenSkills.map((skill, i) => <span key={skill.id}>{skill.icon} {skill.label} · {amounts[i]}</span>)}</div>
+        <div className="mb-3 grid grid-cols-3 gap-1">
+          {tokenSkills.map((skill, i) => {
+            const Icon = tokenIcons[skill.id]
+            return <div key={skill.id} className="grid justify-items-center gap-1">
+              <span className="flex items-center gap-1.5 text-lg font-black">
+                <span className="grid h-11 w-10 place-items-center bg-stone-900" style={{ clipPath: "polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)" }}>
+                  <span className="grid h-10 w-9 place-items-center text-stone-950" style={{ clipPath: "inherit", background: skill.color }}><Icon size={22} strokeWidth={3} aria-hidden="true" /></span>
+                </span>{amounts[i]}
+              </span><span className="text-xs font-semibold">{skill.label}</span>
+            </div>
+          })}
+        </div>
         {rank === 0 && <small>До Junior+ ещё {counted(5 - total, "токен", "токена", "токенов")}</small>}
         </> : <p role="status">Загружаем токены…</p>}
         <Link href={"/map?kit=" + kit.id} className="mt-4 block font-bold text-cyan-800">Открыть карту {kit.label} →</Link>
       </div>
       {failed && <button onClick={reload}>Обновить серию занятий</button>}
     </section>
-    {activeWeek && <section className="flex items-center gap-4 rounded-3xl bg-[#fff9e8] px-5 py-4 shadow-sm">
-      <span className="rounded-2xl bg-[#ffdc83] p-3 text-[#a74a18]"><Flame size={26} /></span>
-      <div><h2 className="text-xl font-black">{counted(activeWeek.streak, "день", "дня", "дней")} подряд</h2><p className="text-sm text-[#706754]">Серия занятий с подтверждённой работой</p></div>
-    </section>}
+    {activeWeek && <div className="inline-flex items-center gap-1 justify-self-start rounded-2xl bg-white px-3 py-1 text-xl font-black">
+      <img src="/profile-streak.gif" alt="" width={52} height={52} />
+      <span aria-hidden="true">{activeWeek.streak}</span>
+      <span className="sr-only">{counted(activeWeek.streak, "день", "дня", "дней")} подряд</span>
+    </div>}
   </div>
 }
