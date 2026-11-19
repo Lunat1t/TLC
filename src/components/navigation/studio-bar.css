@@ -12,19 +12,15 @@
 .studio-more > button { width: 50px; height: 50px; }
 .studio-bar :is(a:hover,a[aria-current],button:hover,button[aria-expanded=true]) { background: var(--active); }
 .studio-bar :focus-visible { outline: 2px solid #16889b; outline-offset: 1px; }
-.studio-more > button svg { transition: transform .32s cubic-bezier(.2,.8,.2,1); }
-.studio-more > button[aria-expanded=true] svg { transform: rotate(45deg); }
+.studio-more > button span { display: grid; }
 .studio-apps {
-  --collapsed: inset(calc(100% - 52px) 0 0 round 26px);
   position: absolute; left: 0; bottom: 0; width: calc(100% - 58px);
   max-height: calc(100dvh - 48px - env(safe-area-inset-bottom)); overflow: auto; padding: 8px; border-radius: 22px;
-  clip-path: var(--collapsed); opacity: 0; visibility: hidden; pointer-events: none;
-  transition: clip-path .38s cubic-bezier(.22,.8,.24,1), opacity .22s ease, visibility 0s .38s;
+  transform-origin: center bottom;
+  transform: scale(var(--breadth, 1), var(--length, .22));
+  pointer-events: none;
 }
-.studio-apps[data-open=true] {
-  clip-path: inset(0 round 22px); opacity: 1; visibility: visible; pointer-events: auto;
-  transition-delay: 0s;
-}
+.studio-apps[data-open=true] { pointer-events: auto; }
 .studio-tabs { transition: opacity .22s, transform .28s, visibility 0s; }
 .studio-bar:has(.studio-apps[data-open=true]) .studio-tabs {
   opacity: 0; transform: scale(.94); visibility: hidden; transition-delay: 0s, 0s, .22s; pointer-events: none;
@@ -39,14 +35,14 @@
 .tlc-os[data-bar] > .os-content { padding-bottom: calc(72px + env(safe-area-inset-bottom)) !important; }
 @media(min-width:601px) {
   [data-bar=top] .studio-bar { top: max(10px,env(safe-area-inset-top)); bottom: auto; }
-  [data-bar=top] .studio-apps { top: 0; bottom: auto; --collapsed: inset(0 0 calc(100% - 52px) round 26px); }
+  [data-bar=top] .studio-apps { top: 0; bottom: auto; transform-origin: center top; }
   [data-bar=left] .studio-bar, [data-bar=right] .studio-bar { top: 50%; bottom: auto; transform: translateY(-50%); flex-direction: column; }
   [data-bar=left] .studio-bar { left: 10px; }
   [data-bar=right] .studio-bar { right: 10px; left: auto; }
   :is([data-bar=left],[data-bar=right]) .studio-tabs { min-width: 0; flex-direction: column; }
   :is([data-bar=left],[data-bar=right]) .studio-apps { width: min(280px, calc(100vw - 80px)); bottom: 58px; top: auto; }
-  [data-bar=left] .studio-apps { left: 0; right: auto; --collapsed: inset(0 calc(100% - 52px) 0 0 round 26px); }
-  [data-bar=right] .studio-apps { right: 0; left: auto; --collapsed: inset(0 0 0 calc(100% - 52px) round 26px); }
+  [data-bar=left] .studio-apps { left: 0; right: auto; transform-origin: left center; transform: scale(var(--length, .22), var(--breadth, 1)); }
+  [data-bar=right] .studio-apps { right: 0; left: auto; transform-origin: right center; transform: scale(var(--length, .22), var(--breadth, 1)); }
   .tlc-os[data-bar=top] > .os-content { padding: 74px 0 0 !important; }
   .tlc-os[data-bar=left] > .os-content { padding: 0 0 0 74px !important; }
   .tlc-os[data-bar=right] > .os-content { padding: 0 74px 0 0 !important; }
