@@ -86,7 +86,7 @@ export function DesktopContextMenu({ children, onGame, onShortcut, onNote, onPro
     <button disabled={!canPin} onClick={()=>{phoneDialog.current?.close();onImage()}}><ImagePlus color="#d74c6b"/>Картинку</button>
     {onProject&&<button onClick={()=>{phoneDialog.current?.close();onProject()}}><FileCode2 color="#2875e8"/>Программу</button>}
     <button disabled={!canPin} onClick={()=>{phoneDialog.current?.close();onShortcut()}}><Globe color="#8958d6"/>Ярлык</button>
-    <button disabled={!canPin} onClick={() => { phoneDialog.current?.close(); widgets.current?.showModal() }}><Grid3X3 color="#087e83"/>Виджет</button>
+    <button disabled={!canPin} onClick={() => { phoneDialog.current?.close(); widgets.current?.showModal() }}><Grid3X3 color="#087e83"/>Виджеты</button>
     </div></dialog>
     <dialog ref={widgets} className="game-picker" aria-label="Виджеты">
       <header><strong>Виджеты</strong><button type="button" aria-label="Закрыть" onClick={() => widgets.current?.close()}><X size={20}/></button></header>
@@ -105,7 +105,7 @@ export function DesktopContextMenu({ children, onGame, onShortcut, onNote, onPro
         { label: "Ярлык", color:"#8b5bd9", icon: <Globe size={28} aria-hidden="true"/>, disabled: !canPin, onSelect: ()=>{close();onShortcut()} },
         { label: "Заметка", color:"#ca8a04", icon: <StickyNote size={28} aria-hidden="true"/>, disabled: !canPin, onSelect: ()=>{close();onNote()} },
         ...(onProject ? [{ label: "Программа", color:"#2875e8", icon: <FileCode2 size={28} aria-hidden="true"/>, onSelect: ()=>{close();onProject()} }] : []),
-        { label: "Виджет", color: "#087e83", icon: <Grid3X3 size={28}/>, disabled: !canPin, onSelect: () => { close(); widgets.current?.showModal() } },
+        { label: "Виджеты", color: "#087e83", icon: <Grid3X3 size={28}/>, disabled: !canPin, onSelect: () => { close(); widgets.current?.showModal() } },
         {label:"Картинка",color:"#df5970",icon:<ImagePlus size={28}/>,disabled:!canPin,onSelect:()=>{close();onImage()}},
       ]}/>
 
