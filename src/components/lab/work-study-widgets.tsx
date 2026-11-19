@@ -1,6 +1,6 @@
 "use client"
 
-import { CalendarDays } from "lucide-react"
+import { CalendarDays, Flame } from "lucide-react"
 import { useEffect, useState } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { rankNames } from "@/lib/student-level"
@@ -103,7 +103,9 @@ export function WorkStudyWidgets({ student }: { student: boolean }) {
               <li key={label} className={completed ? "is-complete" : undefined} aria-current={isToday ? "date" : undefined}>
                 {day && <span className="sr-only">{dateLabel.format(day)}{completed ? `, подтверждено: ${counted(completed, "работа", "работы", "работ")}` : ""}</span>}
                 <span aria-hidden={Boolean(day)}>{label}</span>
-                <strong aria-hidden="true">{day?.getUTCDate() ?? "–"}</strong>
+                <strong aria-hidden="true">
+                  {student ? <Flame size={15} strokeWidth={2} fill={completed ? "currentColor" : "none"} opacity={completed ? 1 : 0.45} /> : day?.getUTCDate() ?? "–"}
+                </strong>
               </li>
             )
           })}
