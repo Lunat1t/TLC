@@ -1,8 +1,9 @@
 "use client"
 
-import { CalendarDays, Check, Flame } from "lucide-react"
+import { CalendarDays, Check } from "lucide-react"
 import { useEffect, useState } from "react"
 import { createClient } from "@/utils/supabase/client"
+import { rankNames, studentLevel } from "@/lib/student-level"
 import "./work-study-widgets.css"
 
 type StudyWeek = {
@@ -20,7 +21,6 @@ const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
 const studioDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Aqtobe", year: "numeric", month: "2-digit", day: "2-digit" })
 const monthLabel = new Intl.DateTimeFormat("ru-RU", { month: "long", timeZone: "UTC" })
 const dateLabel = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", weekday: "long", timeZone: "UTC" })
-const number = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 })
 const plural = new Intl.PluralRules("ru-RU")
 
 export function counted(count: number, one: string, few: string, many: string) {
@@ -88,16 +88,9 @@ export function WorkStudyWidgets({ student }: { student: boolean }) {
   const { today, activeWeek, failed, reload } = useStudyWeek(student)
   const now = today ? new Date(`${today}T00:00:00Z`) : null
   const monday = activeWeek ? Date.parse(activeWeek.monday) : now ? +now - ((now.getUTCDay() + 6) % 7) * DAY : null
-  const streak = activeWeek?.streak
-
-  return (
-    <div className="study-widgets">
-      <section className="study-calendar" aria-label="Календарь недели" aria-busy={student && !activeWeek && !failed}>
-        <header>
-          <h2><CalendarDays size={17} aria-hidden="true" /> Неделя</h2>
-          {now && <span>{monthLabel.format(now)}</span>}
-        </header>
-        <ol className="study-calendar-days">
+  const progress = activeWeek ? studentLevel(activeWeek.total_xp) : null
+  const calendar = (
+    <ol className="study-calendar-days">
           {WEEKDAYS.map((label, i) => {
             const day = monday === null ? null : new Date(monday + i * DAY)
             const key = day?.toISOString().slice(0, 10)
@@ -107,29 +100,39 @@ export function WorkStudyWidgets({ student }: { student: boolean }) {
               <li key={label} className={completed ? "is-complete" : undefined} aria-current={isToday ? "date" : undefined}>
                 {day && <span className="sr-only">{dateLabel.format(day)}{completed ? `, подтверждено: ${counted(completed, "работа", "работы", "работ")}` : ""}</span>}
                 <span aria-hidden={Boolean(day)}>{label}</span>
-                <strong aria-hidden="true">{day?.getUTCDate() ?? "–"}</strong>
-                {completed > 0 && <Check size={12} aria-hidden="true" className="study-calendar-check" />}
+                <strong aria-hidden="true">{student ? (completed > 0 && <Check size={14} strokeWidth={3} />) : day?.getUTCDate() ?? "–"}</strong>
               </li>
             )
           })}
         </ol>
-      </section>
-      {student && (
-        <section className="study-fire" aria-label="Огонёк">
-          <span className="study-fire-icon" data-active={Boolean(streak)}><Flame size={24} aria-hidden="true" /></span>
-          <div>
-            <h2>Огонёк</h2>
-            {failed ? (
-              <button type="button" onClick={reload}>Повторить загрузку</button>
-            ) : activeWeek ? (
-              <>
-                <p><strong>{counted(activeWeek.streak, "день", "дня", "дней")} подряд</strong> <span className="study-multiplier" aria-label={`Множитель XP ${number.format(activeWeek.multiplier)}`}>×{number.format(activeWeek.multiplier)}</span></p>
-                <small>Всего {number.format(activeWeek.total_xp)} XP · следующий зачёт ×{number.format(activeWeek.next_multiplier)}</small>
-              </>
-            ) : <p role="status">Загружаем серию…</p>}
-          </div>
-        </section>
-      )}
-    </div>
   )
+
+  return <div className="study-widgets">
+    {student ? (
+      <section className="study-summary" data-rank={progress?.rank} aria-label="Прогресс занятий">
+        <div className="study-series">
+          <img src="/profile-streak.gif" alt="" width={48} height={48} />
+          <strong>{activeWeek ? counted(activeWeek.streak, "день", "дня", "дней") : "—"}</strong>
+          <small>подряд</small>
+        </div>
+        <div className="study-week">
+          {progress ? <>
+            <div className="study-level"><strong>{rankNames[progress.rank]} · Ур. {progress.level}</strong>
+              <span>{progress.earned} / {progress.required} XP</span>
+            </div>
+            <progress value={progress.earned} max={progress.required} aria-label={`Очки опыта до уровня ${progress.level + 1}`} />
+          </> : !failed && <small role="status">Загружаем прогресс…</small>}
+          {failed && <button type="button" onClick={reload}>Повторить загрузку</button>}
+          {calendar}
+        </div>
+      </section>
+    ) : (
+      <section className="study-calendar" aria-label="Календарь недели">
+        <header><h2><CalendarDays size={17} aria-hidden="true" /> Неделя</h2>
+          {now && <span>{monthLabel.format(now)}</span>}
+        </header>
+        {calendar}
+      </section>
+    )}
+  </div>
 }
