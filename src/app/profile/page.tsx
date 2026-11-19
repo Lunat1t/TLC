@@ -15,14 +15,11 @@ type Family = { account_id: string; name: string; role: string }
 export default function ProfilePage() {
   const router = useRouter()
   const [familyState, setFamilyState] = useState<{ owner: string | null; items: Family[] }>({ owner: null, items: [] })
-  const [qrState, setQrState] = useState<{ owner: string | null; value: string }>({ owner: null, value: "" })
   const [pending, setPending] = useState("")
   const [message, setMessage] = useState("")
   const { isAdmin: admin, profile, ready, userId, error: profileError } = useAccess()
   const family = familyState.owner === userId ? familyState.items : []
-  const qr = qrState.owner === userId ? qrState.value : ""
   function setFamily(items: Family[]) { setFamilyState({ owner: userId, items }) }
-  function setQr(value: string) { setQrState({ owner: userId, value }) }
   const [scanning, setScanning] = useState(false)
   const [busy, setBusy] = useState(false)
   const scanner = useRef<import("html5-qrcode").Html5Qrcode | null>(null)
@@ -31,23 +28,17 @@ export default function ProfilePage() {
     if (!ready || profileError) return
     if (!userId) { router.replace("/login"); return }
     if (!profile?.onboarding_complete) { router.replace("/register"); return }
+    if (profile.role === "student") return
     let active = true
     const controller = new AbortController()
     setFamily([])
-    setQr("")
     void createClient().rpc("my_family_links").abortSignal(controller.signal).then(({ data, error }) => {
       if (!active) return
       if (error) setMessage("Не удалось загрузить связанные аккаунты.")
       else setFamily(data || [])
     })
-    if (profile.role === "student") {
-      const token = profile.student_link_token
-      void import("qrcode").then(QRCode => QRCode.toDataURL(`${window.location.origin}/link-student?token=${token}`, { width: 320, margin: 2 }))
-        .then(value => { if (active) setQr(value) })
-        .catch(() => { if (active) setMessage("Не удалось создать QR ученика.") })
-    }
     return () => { active = false; controller.abort() }
-  }, [ready, userId, profile?.id, profile?.role, profile?.student_link_token, profile?.onboarding_complete, profileError, router])
+  }, [ready, userId, profile?.id, profile?.role, profile?.onboarding_complete, profileError, router])
 
   useEffect(() => {
     setPending(sessionStorage.getItem("tlc.pending-student") || "")
@@ -112,24 +103,23 @@ export default function ProfilePage() {
       <div className="mx-auto grid max-w-2xl gap-5">
         {profile && profile.role !== "parent" && <Link href="/dashboard" className="font-bold text-cyan-800">← К проектам</Link>}
         {profile?.role === "parent" && <button type="button" className="justify-self-end font-bold text-cyan-800" onClick={async () => { await createClient().auth.signOut(); router.replace("/"); router.refresh() }}>Выйти из аккаунта</button>}
-        {profile?.role === "student" && <StudentCard key={profile.id} profile={profile} />}
+        {profile?.role === "student" ? <StudentCard key={profile.id} profile={profile} /> :
         <Card className="grid gap-4 rounded-3xl bg-white p-6">
-          {profile?.role === "student" ? <h2 className="text-xl font-bold">Мой аккаунт</h2> : <h1 className="text-3xl font-black">Профиль</h1>}
+          <h1 className="text-3xl font-black">Профиль</h1>
           {profileError && <p role="alert">Не удалось обновить профиль. Попробуйте позже.</p>}
           {profile ? <>
-            {profile.role !== "student" && <><h2 className="text-2xl font-bold">{profile.nickname}</h2>
-            <p>{({ student: "Ученик", teacher: "Учитель", parent: "Родитель" })[profile.role]}{profile.role !== "parent" && profile.age !== null && <> · Возраст: {profile.age}</>}</p></>}
+            <h2 className="text-2xl font-bold">{profile.nickname}</h2>
+            <p>{({ student: "Ученик", teacher: "Учитель", parent: "Родитель" })[profile.role]}{profile.role !== "parent" && profile.age !== null && <> · Возраст: {profile.age}</>}</p>
             {profile.role === "teacher" && <p>{profile.disciplines.join(" · ")}</p>}
-            {(profile.role === "student" || profile.role === "teacher") && <Link href="/avatar" className="justify-self-start rounded-xl bg-cyan-700 px-5 py-3 font-bold text-white">Мои персонажи</Link>}
+            {profile.role === "teacher" && <Link href="/avatar" className="justify-self-start rounded-xl bg-cyan-700 px-5 py-3 font-bold text-white">Мои персонажи</Link>}
             {(profile.role === "teacher" || admin) && <Link href="/teacher/achievements" className="font-bold text-cyan-800">{admin ? "Прогресс и достижения учеников" : "Выдать достижение ученику"}</Link>}
             {profile.role !== "parent" && admin && <Link href="/instructions" className="font-bold text-cyan-800">Управление инструкциями</Link>}
             {profile.role === "teacher" && !admin && <Link href="/admin/instructions/drive" className="font-bold text-cyan-800">Добавить инструкцию</Link>}
-            {profile.role === "student" && <section className="grid gap-3"><h2 className="text-xl font-bold">QR для родителя</h2><p>Родитель сканирует этот QR в своём аккаунте, чтобы связать его с вашим.</p>{qr && <img src={qr} width={320} height={320} alt="QR для связи с аккаунтом родителя" className="max-w-full" />}</section>}
             {profile.role === "parent" && <section className="grid gap-3"><h2 className="text-xl font-bold">Связь с учеником</h2><p>{family.length ? "Можно связать ещё одного ученика." : "Чтобы завершить регистрацию, отсканируйте QR из профиля ученика."}</p>{pending ? <><p>QR ученика получен. Подтвердите связь аккаунтов.</p><Button disabled={busy} onClick={link}>{busy ? "Связываем…" : "Связать аккаунты"}</Button><button onClick={() => { setPending(""); sessionStorage.removeItem("tlc.pending-student") }}>Отмена</button></> : <Button onClick={() => void scan()} disabled={scanning}>Сканировать QR ученика</Button>}<div id="family-qr-reader" />{scanning && <Button variant="outline" onClick={() => void stop()}>Закрыть камеру</Button>}</section>}
-            <section><h2 className="text-xl font-bold">{profile.role === "student" ? "Связанные родители" : "Связанные ученики"}</h2>{family.map((item) => <p key={item.account_id} className="mt-2 rounded-xl border p-3">{item.name}</p>)}{!family.length && <p className="mt-2 text-slate-600">Пока нет связанных аккаунтов.</p>}</section>
+            <section><h2 className="text-xl font-bold">Связанные ученики</h2>{family.map((item) => <p key={item.account_id} className="mt-2 rounded-xl border p-3">{item.name}</p>)}{!family.length && <p className="mt-2 text-slate-600">Пока нет связанных аккаунтов.</p>}</section>
           </> : <p>Загружаем профиль…</p>}
           {message && <p role="status">{message}</p>}
-        </Card>
+        </Card>}
       </div>
     </main>
   )
