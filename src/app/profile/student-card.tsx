@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useRef, useState } from "react"
 import { Camera, ChevronDown, Puzzle, Lightbulb, Pencil, Check, Sprout, Leaf, Wrench, Cog, Rocket, Star, Crown } from "lucide-react"
 import { useAccess, type SessionProfile } from "@/components/auth/access-provider"
 import { useWorkspaceSettings } from "@/components/lab/workspace-settings"
@@ -8,6 +8,7 @@ import { counted, useStudyWeek } from "@/components/lab/work-study-widgets"
 import AvatarDarwinV3 from "@/components/profile/avatar-darwin-v3"
 import Link from "next/link"
 import { mapKits, tokenSkills } from "@/lib/map-kits"
+import { useSkillPoints } from "@/lib/use-skill-points"
 import { rankNames } from "@/lib/student-level"
 import { createClient } from "@/utils/supabase/client"
 
@@ -56,21 +57,7 @@ export function StudentCard({ profile }: { profile: SessionProfile }) {
   const { settings, update, ready, error } = useWorkspaceSettings()
   const { refreshProfile } = useAccess()
   const { activeWeek, failed, reload } = useStudyWeek(true)
-  const [kit, setKit] = useState<typeof mapKits[number]>(mapKits[0])
-  const [balances, setBalances] = useState<Record<string, Record<string, number>> | null>(null)
-  useEffect(() => {
-    const { data } = createClient().auth.onAuthStateChange((_event, session) => {
-      setBalances(session?.user.id === profile.id ? session.user.app_metadata.skill_tokens ?? {} : null)
-    })
-    return () => data.subscription.unsubscribe()
-  }, [profile.id])
-  const amounts = tokenSkills.map(skill => {
-    const value = balances?.[kit.id]?.[skill.id]
-    return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : 0
-  })
-  const total = amounts.reduce((sum, value) => sum + value, 0)
-  const pointsScale = Math.max(5, total)
-  const rank = total >= 5 ? 1 : 0
+  const { kit, setKit, balances, amounts, total, pointsScale, rank, target } = useSkillPoints(profile.id)
   const [editing, setEditing] = useState(false)
   const [age, setAge] = useState("")
   const [message, setMessage] = useState("")
@@ -138,11 +125,11 @@ export function StudentCard({ profile }: { profile: SessionProfile }) {
           </summary>
           <ol className="my-3 grid gap-1 rounded-2xl bg-[#faf7ef] p-3">
             {rankNames.map((name, i) => <li key={name} aria-current={i === rank ? "step" : undefined} className="flex items-center gap-3 rounded-xl px-2 py-1.5 aria-[current=step]:bg-white">
-              <Badge index={i} /><strong>{name}</strong><span className="ml-auto text-right text-xs">{i === rank ? "Ты здесь · " : ""}{i === 0 ? "Старт" : i === 1 ? "5 очков" : ""}</span>
+              <Badge index={i} /><strong>{name}</strong><span className="ml-auto text-right text-xs">{i === rank ? "Ты здесь · " : ""}{i === 0 ? "Старт" : i === 1 ? counted(target, "очко", "очка", "очков") : ""}</span>
             </li>)}
           </ol>
         </details>
-        <div className="mt-4 flex justify-between"><strong>Очки</strong><span>{total}{rank === 0 && " / 5"}</span></div>
+        <div className="mt-4 flex justify-between"><strong>Очки</strong><span>{total}{rank === 0 && ` / ${target}`}</span></div>
         <div className="mb-4 mt-2 flex h-2.5 overflow-hidden rounded-full bg-stone-100" aria-hidden="true">
           {tokenSkills.map((skill, i) => <span key={skill.id} style={{ background: skill.color, width: (100 * amounts[i] / pointsScale) + "%" }} />)}
         </div>
@@ -164,7 +151,7 @@ export function StudentCard({ profile }: { profile: SessionProfile }) {
             </li>
           })}
         </ul>
-        {rank === 0 && <small>До Junior+ ещё {counted(5 - total, "очко", "очка", "очков")}</small>}
+        {rank === 0 && <small>До Junior+ ещё {counted(target - total, "очко", "очка", "очков")}</small>}
         </> : <p role="status">Загружаем очки…</p>}
         <Link href={"/map?kit=" + kit.id} className="mt-4 block font-bold text-cyan-800">Открыть карту {kit.label} →</Link>
       </div>

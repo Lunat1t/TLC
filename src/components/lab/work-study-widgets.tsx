@@ -3,7 +3,9 @@
 import { CalendarDays, Check } from "lucide-react"
 import { useEffect, useState } from "react"
 import { createClient } from "@/utils/supabase/client"
-import { rankNames, studentLevel } from "@/lib/student-level"
+import { rankNames } from "@/lib/student-level"
+import { useSkillPoints } from "@/lib/use-skill-points"
+import { useAccess } from "@/components/auth/access-provider"
 import "./work-study-widgets.css"
 
 type StudyWeek = {
@@ -88,7 +90,8 @@ export function WorkStudyWidgets({ student }: { student: boolean }) {
   const { today, activeWeek, failed, reload } = useStudyWeek(student)
   const now = today ? new Date(`${today}T00:00:00Z`) : null
   const monday = activeWeek ? Date.parse(activeWeek.monday) : now ? +now - ((now.getUTCDay() + 6) % 7) * DAY : null
-  const progress = activeWeek ? studentLevel(activeWeek.total_xp) : null
+  const { userId } = useAccess()
+  const { balances, kit, total, rank, target, pointsScale } = useSkillPoints(student ? userId : null)
   const calendar = (
     <ol className="study-calendar-days">
           {WEEKDAYS.map((label, i) => {
@@ -109,19 +112,19 @@ export function WorkStudyWidgets({ student }: { student: boolean }) {
 
   return <div className="study-widgets">
     {student ? (
-      <section className="study-summary" data-rank={progress?.rank} aria-label="Прогресс занятий">
+      <section className="study-summary" data-rank={balances ? rank : undefined} aria-label="Прогресс занятий">
         <div className="study-series">
           <img src="/profile-streak.gif" alt="" width={48} height={48} />
           <strong>{activeWeek ? counted(activeWeek.streak, "день", "дня", "дней") : "—"}</strong>
           <small>подряд</small>
         </div>
         <div className="study-week">
-          {progress ? <>
-            <div className="study-level"><strong>{rankNames[progress.rank]} · Ур. {progress.level}</strong>
-              <span>{progress.earned} / {progress.required} XP</span>
+          {balances ? <>
+            <div className="study-level"><strong>{kit.label} · {rankNames[rank]}</strong>
+              <span>{rank === 0 ? `${total} / ${target} очков` : counted(total, "очко", "очка", "очков")}</span>
             </div>
-            <progress value={progress.earned} max={progress.required} aria-label={`Очки опыта до уровня ${progress.level + 1}`} />
-          </> : !failed && <small role="status">Загружаем прогресс…</small>}
+            <progress value={total} max={pointsScale} aria-label={`Очки · ${kit.label}`} />
+          </> : <small role="status">Загружаем очки…</small>}
           {failed && <button type="button" onClick={reload}>Повторить загрузку</button>}
           {calendar}
         </div>
