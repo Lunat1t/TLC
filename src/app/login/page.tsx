@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,7 +19,6 @@ import {
 } from "@/lib/auth"
 
 export default function LoginPage() {
-  const router = useRouter()
   const [auth, setAuth] = React.useState<AuthState>(() => loadAuthState(null))
   const [login, setLogin] = React.useState("")
   const [password, setPassword] = React.useState("")
@@ -52,13 +50,11 @@ export default function LoginPage() {
         message: `Добро пожаловать, ${next.user?.nickname}! Переходим к проектам...`,
         isError: false,
       })
-      setTimeout(() => {
-        const destination = new URLSearchParams(window.location.search).get("next")
-        const nextPath = destination === "/admin/instructions/drive" || destination === "/teacher/achievements"
-          ? destination
-          : "/dashboard"
-        router.replace(sessionStorage.getItem("tlc.pending-student") ? "/profile" : nextPath)
-      }, 500)
+      const destination = new URLSearchParams(window.location.search).get("next")
+      const nextPath = destination === "/admin/instructions/drive" || destination === "/teacher/achievements"
+        ? destination
+        : "/dashboard"
+      window.location.replace(sessionStorage.getItem("tlc.pending-student") ? "/profile" : nextPath)
     } catch (err) {
       setStatus({
         message: err instanceof Error ? err.message : "Не удалось выполнить вход.",

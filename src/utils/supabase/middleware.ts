@@ -47,7 +47,15 @@ export const createClient = async (request: NextRequest) => {
     let complete = false;
     let role: string | null = null;
     if (userId) {
-      const { data } = await supabase.from("profiles").select("onboarding_complete,role").eq("id", userId).maybeSingle();
+      const { data, error: profileError } = await supabase.from("profiles").select("onboarding_complete,role").eq("id", userId).maybeSingle();
+      if (profileError && (protectedPage || registerPage)) {
+        const response = new NextResponse("Не удалось загрузить профиль. Обновите страницу, чтобы попробовать ещё раз.", {
+          status: 503,
+          headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "Retry-After": "3" },
+        });
+        supabaseResponse.cookies.getAll().forEach(cookie => response.cookies.set(cookie));
+        return response;
+      }
       complete = data?.onboarding_complete === true;
       role = data?.role ?? null;
       if ((registerPage || loginPage) && complete) {
@@ -70,7 +78,7 @@ export const createClient = async (request: NextRequest) => {
       }
     }
     if (protectedPage && !complete) {
-      const response = NextResponse.redirect(new URL("/register", request.url));
+      const response = NextResponse.redirect(new URL(userId ? "/register" : "/login", request.url));
       supabaseResponse.cookies.getAll().forEach(cookie => response.cookies.set(cookie));
       return response;
     }
