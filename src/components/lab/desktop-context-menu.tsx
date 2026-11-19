@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { createPortal } from "react-dom"
 import { CircleMenu } from "@/components/ui/circle-menu"
-import { FileCode2, Globe, StickyNote, ImagePlus, Grid3X3, X } from "lucide-react"
+import { FileCode2, Globe, StickyNote, ImagePlus, Grid3X3, Hand, X } from "lucide-react"
 
-type Actions = { onGame: () => void; onShortcut: () => void; onNote: () => void; onProject?: () => void; onImage:()=>void; canPin: boolean }
+type Actions = { onGame: (game: "tic-tac-toe" | "camera-rps") => void; onShortcut: () => void; onNote: () => void; onProject?: () => void; onImage:()=>void; canPin: boolean }
 
 export function DesktopContextMenu({ children, onGame, onShortcut, onNote, onProject, onImage, canPin }: Actions & { children: ReactNode }) {
   const [phone,setPhone]=useState(false)
@@ -90,7 +90,8 @@ export function DesktopContextMenu({ children, onGame, onShortcut, onNote, onPro
     </div></dialog>
     <dialog ref={widgets} className="game-picker" aria-label="Виджеты">
       <header><strong>Виджеты</strong><button type="button" aria-label="Закрыть" onClick={() => widgets.current?.close()}><X size={20}/></button></header>
-      <button type="button" disabled={!canPin} onClick={() => { widgets.current?.close(); onGame() }}><Grid3X3/>Крестики-нолики</button>
+      <button type="button" disabled={!canPin} onClick={() => { widgets.current?.close(); onGame("tic-tac-toe") }}><Grid3X3/>Крестики-нолики</button>
+      <button type="button" disabled={!canPin} onClick={() => { widgets.current?.close(); onGame("camera-rps") }}><Hand/>Камень, ножницы, бумага</button>
     </dialog>
     {!phone && point && createPortal(<div ref={menu} className="desktop-action-menu" role="dialog" aria-label="Действия рабочего стола" style={{ left: point.x, top: point.y }} onContextMenu={event => event.preventDefault()} onKeyDown={event => {
       if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); close(true) }

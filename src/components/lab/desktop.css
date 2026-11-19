@@ -99,3 +99,13 @@
 .tic-grid button[data-win] { background: #bef1d8; }
 .tic-widget footer { font-size: 14px; }
 .tic-widget footer button { min-height: 44px; padding: 0 8px; font-weight: 700; color: #1a6084; }
+
+.game-picker > button + button { margin-top: 8px; }
+.rps-widget { text-align: center; }
+.rps-moves { font-size: 34px; padding: 8px 0; }
+.rps-widget > button, .rps-dialog button { background: #126958; color: white; border-radius: 12px; min-height: 44px; padding: 6px 16px; font-weight: 700; }
+.rps-dialog { margin: auto; padding: 0; width: min(720px, 96vw); height: min(600px, 94dvh); max-height: 96dvh; background: #f5f9f8; color: #19374a; border-radius: 18px; }
+.rps-dialog[open] { display: flex; flex-direction: column; }
+.rps-dialog::backdrop { background: #102735a8; }
+.rps-dialog header { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; gap: 8px; }
+.rps-dialog iframe { width: 100%; flex: 1; min-height: 0; border: 0; }
