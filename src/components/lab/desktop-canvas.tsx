@@ -21,7 +21,7 @@ export function DesktopCanvas({ userId, children }: { userId: string; children: 
       const clean:Positions={}
       for(const [id,value] of Object.entries(data)){
         const p=value as Point
-        if(p&&typeof p==='object'&&[p.x,p.y,p.z].every(Number.isFinite))clean[id]={desktop:Number.isInteger(p.desktop)?Math.max(0,Math.min(5,p.desktop!)):0,x:Math.min(1,Math.max(0,p.x)),y:Math.min(1,Math.max(0,p.y)),z:Math.min(999,Math.max(1,p.z)),locked:p.locked===true,title:typeof p.title==='string'?p.title.slice(0,64):undefined}
+        if(p&&typeof p==='object'&&[p.x,p.y,p.z].every(Number.isFinite))clean[id]={desktop:Number.isInteger(p.desktop)?Math.max(0,Math.min(5,p.desktop!)):0,x:Math.min(1,Math.max(0,p.x)),y:Math.min(2,Math.max(0,p.y)),z:Math.min(999,Math.max(1,p.z)),locked:p.locked===true,title:typeof p.title==='string'?p.title.slice(0,64):undefined}
       }
       setPositions(clean);setActive(true);setError('')
     }catch{setError('Не удалось загрузить расстановку аккаунта.')}
@@ -39,7 +39,7 @@ export function DesktopItem({ id, label, initial, children, className = "", mobi
   useEffect(()=>()=>cancelHold(),[])
   useEffect(()=>{if(!menuOpen)return;function dismiss(){setMenuOpen(false)};window.addEventListener("pointerdown",dismiss);window.addEventListener("scroll",dismiss,true);return()=>{window.removeEventListener("pointerdown",dismiss);window.removeEventListener("scroll",dismiss,true)}},[menuOpen])
   const node = useRef<HTMLDivElement>(null)
-  const drag = useRef<{ pointer: number; x: number; y: number; startX: number; startY: number; point: Point; moved: boolean } | null>(null)
+  const drag = useRef<{ pointer: number; x: number; y: number; startX: number; startY: number; scrollTop: number; pointerX: number; pointerY: number; point: Point; moved: boolean } | null>(null)
   const [size, setSize] = useState({w:0,h:0,mobile:false})
   const [moving, setMoving] = useState<Point | null>(null)
   const systemMobile: Record<string,[number,number]> = {clock:[.98,.02],projects:[0,.42],instructions:[.5,.42],profile:[1,.42]}
@@ -52,7 +52,24 @@ export function DesktopItem({ id, label, initial, children, className = "", mobi
     const observer=new ResizeObserver(measure);observer.observe(element);observer.observe(parent);measure()
     return ()=>observer.disconnect()
   }, [])
-  const clamp=(x:number,y:number):Point=>({...p,x:Math.min(1,Math.max(0,x)),y:Math.min(1,Math.max(0,y)),z:Math.min(999,Math.max(1,...Object.values(positions).map(v=>v.z))+1)})
+  const clamp=(x:number,y:number):Point=>({...p,x:Math.min(1,Math.max(0,x)),y:Math.min(2,Math.max(0,y)),z:Math.min(999,Math.max(1,...Object.values(positions).map(v=>v.z))+1)})
+  const frame = useRef(0)
+  useEffect(() => () => cancelAnimationFrame(frame.current), [])
+  function followDrag() {
+    const d = drag.current
+    const canvas = node.current?.parentElement
+    if (!canvas || !d?.moved) return
+    const bounds = canvas.getBoundingClientRect()
+    const bottom = Math.min(bounds.bottom, window.innerHeight - 58)
+    const edge = 44
+    const speed = d.pointerY > bottom - edge ? (d.pointerY - bottom + edge) / edge
+      : d.pointerY < bounds.top + edge ? (d.pointerY - bounds.top - edge) / edge : 0
+    if (speed) canvas.scrollTop += Math.round(Math.min(1, Math.max(-1, speed)) * 12)
+    d.point = clamp((d.startX + d.pointerX - d.x) / (size.w || 1),
+      (d.startY + d.pointerY - d.y + canvas.scrollTop - d.scrollTop) / (size.h || 1))
+    setMoving(d.point)
+    frame.current = requestAnimationFrame(followDrag)
+  }
   return <div ref={node} tabIndex={movable?0:undefined} aria-label={label} data-desktop-id={id} data-desktop-label={label} className={`desktop-item ${className}${moving ? " is-moving" : ""}`} style={{left:p.x*size.w,top:p.y*size.h,zIndex:menuOpen?1000:p.z}}
     onDragStart={e=>e.preventDefault()}
     onContextMenu={e=>{if(!movable)return;e.preventDefault();e.stopPropagation();cancelHold();setMenuOpen(true)}}
@@ -60,18 +77,18 @@ export function DesktopItem({ id, label, initial, children, className = "", mobi
       cancelHold();suppressed.current=false
       if(!movable||e.button!==0||(e.target as Element).closest("textarea,input,button:not(.desktop-launch)"))return
       start.current={x:e.clientX,y:e.clientY}
-      if(active&&!p.locked&&(e.target as Element).closest(".desktop-app-icon,.lab-pin-head"))drag.current={pointer:e.pointerId,x:e.clientX,y:e.clientY,startX:p.x*size.w,startY:p.y*size.h,point:p,moved:false}
+      if(!window.matchMedia("(max-width:600px)").matches&&active&&!p.locked&&(e.target as Element).closest(".desktop-app-icon,.lab-pin-head"))drag.current={pointer:e.pointerId,x:e.clientX,y:e.clientY,startX:p.x*size.w,startY:p.y*size.h,scrollTop:node.current?.parentElement?.scrollTop ?? 0,pointerX:e.clientX,pointerY:e.clientY,point:p,moved:false}
       hold.current=setTimeout(()=>{drag.current=null;suppressed.current=true;setMenuOpen(true)},600)
     }}
     onPointerMove={e=>{
       const distance=Math.hypot(e.clientX-start.current.x,e.clientY-start.current.y)
       if(distance>8)cancelHold()
       const d=drag.current;if(!d||d.pointer!==e.pointerId||distance<=8)return
-      if(!d.moved){d.moved=true;suppressed.current=true;e.currentTarget.setPointerCapture(e.pointerId)}
-      d.point=clamp(size.w?(d.startX+e.clientX-d.x)/size.w:0,size.h?(d.startY+e.clientY-d.y)/size.h:0);setMoving(d.point)
+      d.pointerX=e.clientX; d.pointerY=e.clientY
+      if(!d.moved){d.moved=true;suppressed.current=true;e.currentTarget.setPointerCapture(e.pointerId);followDrag()}
     }}
-    onPointerUp={e=>{cancelHold();const d=drag.current;if(d?.pointer===e.pointerId){if(d.moved)place(id,d.point);drag.current=null;setMoving(null);if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId)}}}
-    onPointerCancel={()=>{cancelHold();drag.current=null;setMoving(null)}}
+    onPointerUp={e=>{cancelHold();const d=drag.current;if(d?.pointer===e.pointerId){cancelAnimationFrame(frame.current);if(d.moved)place(id,d.point);drag.current=null;setMoving(null);if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId)}}}
+    onPointerCancel={()=>{cancelAnimationFrame(frame.current);cancelHold();drag.current=null;setMoving(null)}}
     onClickCapture={e=>{if(suppressed.current){e.preventDefault();e.stopPropagation();suppressed.current=false}}}
     onKeyDown={e=>{
       if(e.target!==e.currentTarget||!movable)return
