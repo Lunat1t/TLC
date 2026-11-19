@@ -137,11 +137,11 @@ export function StudentCard({ profile }: { profile: SessionProfile }) {
           </summary>
           <ol className="my-3 grid gap-1 rounded-2xl bg-[#faf7ef] p-3">
             {rankNames.map((name, i) => <li key={name} aria-current={i === rank ? "step" : undefined} className="flex items-center gap-3 rounded-xl px-2 py-1.5 aria-[current=step]:bg-white">
-              <Badge index={i} /><strong>{name}</strong><span className="ml-auto text-right text-xs">{i === rank ? "Ты здесь · " : ""}{i === 0 ? "Старт" : i === 1 ? "5 токенов" : ""}</span>
+              <Badge index={i} /><strong>{name}</strong><span className="ml-auto text-right text-xs">{i === rank ? "Ты здесь · " : ""}{i === 0 ? "Старт" : i === 1 ? "5 очков" : ""}</span>
             </li>)}
           </ol>
         </details>
-        <div className="mt-4 flex justify-between"><strong>Токены</strong><span>{total}{rank === 0 && " / 5"}</span></div>
+        <div className="mt-4 flex justify-between"><strong>Очки</strong><span>{total}{rank === 0 && " / 5"}</span></div>
         <div className="mb-4 mt-2 flex h-2.5 overflow-hidden rounded-full bg-stone-100" aria-hidden="true">
           {tokenSkills.map((skill, i) => <span key={skill.id} style={{ background: skill.color, width: (100 * amounts[i] / Math.max(5, total)) + "%" }} />)}
         </div>
@@ -157,8 +157,8 @@ export function StudentCard({ profile }: { profile: SessionProfile }) {
             </div>
           })}
         </div>
-        {rank === 0 && <small>До Junior+ ещё {counted(5 - total, "токен", "токена", "токенов")}</small>}
-        </> : <p role="status">Загружаем токены…</p>}
+        {rank === 0 && <small>До Junior+ ещё {counted(5 - total, "очко", "очка", "очков")}</small>}
+        </> : <p role="status">Загружаем очки…</p>}
         <Link href={"/map?kit=" + kit.id} className="mt-4 block font-bold text-cyan-800">Открыть карту {kit.label} →</Link>
       </div>
       {failed && <button onClick={reload}>Обновить серию занятий</button>}
