@@ -1,6 +1,8 @@
 "use client"
 
-import { CalendarDays, Flame } from "lucide-react"
+import { StreakFlame } from "@/components/profile/streak-flame"
+
+import { CalendarDays } from "lucide-react"
 import { useEffect, useState } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { rankNames } from "@/lib/student-level"
@@ -104,7 +106,7 @@ export function WorkStudyWidgets({ student }: { student: boolean }) {
                 {day && <span className="sr-only">{dateLabel.format(day)}{completed ? `, подтверждено: ${counted(completed, "работа", "работы", "работ")}` : ""}</span>}
                 <span aria-hidden={Boolean(day)}>{label}</span>
                 <strong aria-hidden="true">
-                  {student ? <Flame size={15} strokeWidth={2} fill={completed ? "currentColor" : "none"} opacity={completed ? 1 : 0.45} /> : day?.getUTCDate() ?? "–"}
+                  {student ? <StreakFlame size={16} muted={!completed} /> : day?.getUTCDate() ?? "–"}
                 </strong>
               </li>
             )
@@ -116,7 +118,7 @@ export function WorkStudyWidgets({ student }: { student: boolean }) {
     {student ? (
       <section className="study-summary" data-rank={balances ? rank : undefined} aria-label="Прогресс занятий">
         <div className="study-series">
-          <img src="/profile-streak.gif" alt="" width={48} height={48} />
+          <StreakFlame size={48} />
           <strong>{activeWeek ? counted(activeWeek.streak, "день", "дня", "дней") : "—"}</strong>
           <small>подряд</small>
         </div>

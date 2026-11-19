@@ -1,5 +1,7 @@
 "use client"
 
+import { StreakFlame } from "@/components/profile/streak-flame"
+
 import { useRef, useState } from "react"
 import { Camera, ChevronDown, Puzzle, Lightbulb, Pencil, Check, Sprout, Leaf, Wrench, Cog, Rocket, Star, Crown } from "lucide-react"
 import { useAccess, type SessionProfile } from "@/components/auth/access-provider"
@@ -107,7 +109,7 @@ export function StudentCard({ profile }: { profile: SessionProfile }) {
           </form> : <button className="mt-2 inline-flex items-center gap-2 text-sm" onClick={() => { setAge(String(profile.age ?? "")); setEditing(true) }}>{profile.age ? counted(profile.age, "год", "года", "лет") : "Указать возраст"}<Pencil size={14} /></button>}
         </div>
         {activeWeek && <span className="ml-auto inline-flex shrink-0 items-center self-start text-lg font-bold tabular-nums">
-          <img src="/profile-streak.gif" alt="" width={40} height={40} />
+          <StreakFlame size={40} />
           <span aria-hidden="true">{activeWeek.streak}</span>
           <span className="sr-only">{counted(activeWeek.streak, "день", "дня", "дней")} подряд</span>
         </span>}
