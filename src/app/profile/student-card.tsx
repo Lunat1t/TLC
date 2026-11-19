@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Camera, ChevronDown, Coins, CircuitBoard, Lightbulb, Pencil, Check, Sprout, Leaf, Wrench, Cog, Rocket, Star, Crown } from "lucide-react"
+import { Camera, ChevronDown, Puzzle, Lightbulb, Pencil, Check, Sprout, Leaf, Wrench, Cog, Rocket, Star, Crown } from "lucide-react"
 import { useAccess, type SessionProfile } from "@/components/auth/access-provider"
 import { useWorkspaceSettings } from "@/components/lab/workspace-settings"
 import { counted, useStudyWeek } from "@/components/lab/work-study-widgets"
@@ -11,7 +11,11 @@ import { mapKits, tokenSkills } from "@/lib/map-kits"
 import { rankNames } from "@/lib/student-level"
 import { createClient } from "@/utils/supabase/client"
 
-const tokenIcons = { mechanics: Cog, logic: CircuitBoard, creativity: Lightbulb }
+const tokenBadges = {
+  mechanics: { icon: Wrench, color: "#275dae", bg: "#dfeaff" },
+  logic: { icon: Puzzle, color: "#ab3944", bg: "#fce3e5" },
+  creativity: { icon: Lightbulb, color: "#397337", bg: "#e5f2ce" },
+}
 
 const badges = [
   { icon: Sprout, color: "#397337", bg: "#e5f2ce" },
@@ -99,8 +103,8 @@ export function StudentCard({ profile }: { profile: SessionProfile }) {
   return <div className="grid gap-4 text-[#393327]">
     <section className="relative mt-3 rounded-[2rem] bg-white px-5 pb-6 pt-8 shadow-sm sm:px-8">
       <span aria-hidden="true" className="absolute -top-2 left-1/2 h-4 w-16 -translate-x-1/2 rounded-md bg-[#af8860]" />
-      <div className="flex items-center gap-4 sm:gap-6">
-        <button type="button" className="relative grid h-24 w-24 shrink-0 place-items-center rounded-3xl bg-[#f7efd8] sm:h-32 sm:w-32" onClick={() => picker.current?.click()} disabled={!ready || busy} aria-label="Изменить фотографию профиля">
+      <div className="flex items-center gap-2 sm:gap-6">
+        <button type="button" className="relative grid h-20 w-20 shrink-0 place-items-center rounded-3xl bg-[#f7efd8] sm:h-32 sm:w-32" onClick={() => picker.current?.click()} disabled={!ready || busy} aria-label="Изменить фотографию профиля">
           {settings.profilePhoto ? <img src={settings.profilePhoto} alt="" className="h-full w-full rounded-3xl object-cover" /> : <AvatarDarwinV3 className="h-20 w-20 sm:h-28 sm:w-28" bodyColor={profile.avatar?.bodyColor} eyeColor={profile.avatar?.characterEyeColor} />}
           <span className="absolute -bottom-1 -right-1 rounded-full border-2 border-white bg-[#646b44] p-2 text-white"><Camera size={15} /></span>
         </button>
@@ -114,7 +118,11 @@ export function StudentCard({ profile }: { profile: SessionProfile }) {
             <button type="button" onClick={() => setEditing(false)}>Отмена</button>
           </form> : <button className="mt-2 inline-flex items-center gap-2 text-sm" onClick={() => { setAge(String(profile.age ?? "")); setEditing(true) }}>{profile.age ? counted(profile.age, "год", "года", "лет") : "Указать возраст"}<Pencil size={14} /></button>}
         </div>
-        <span className="ml-auto self-start rounded-full bg-amber-100 p-2 text-amber-700" role="img" aria-label="Номиналы" title="Номиналы"><Coins size={22} /></span>
+        {activeWeek && <span className="ml-auto inline-flex shrink-0 items-center self-start text-lg font-bold tabular-nums">
+          <img src="/profile-streak.gif" alt="" width={40} height={40} />
+          <span aria-hidden="true">{activeWeek.streak}</span>
+          <span className="sr-only">{counted(activeWeek.streak, "день", "дня", "дней")} подряд</span>
+        </span>}
       </div>
       {(message || error) && <p role="alert" className="mt-3 text-sm text-red-800">{message || error}</p>}
       <div className="mt-6 border-t border-[#e9e2d4] pt-4">
@@ -134,17 +142,16 @@ export function StudentCard({ profile }: { profile: SessionProfile }) {
           </ol>
         </details>
         <div className="mt-4 flex justify-between"><strong>Токены</strong><span>{total}{rank === 0 && " / 5"}</span></div>
-        <div className="my-3 flex h-4 overflow-hidden rounded-md border-2 border-stone-800 bg-stone-100" aria-hidden="true">
+        <div className="mb-4 mt-2 flex h-2.5 overflow-hidden rounded-full bg-stone-100" aria-hidden="true">
           {tokenSkills.map((skill, i) => <span key={skill.id} style={{ background: skill.color, width: (100 * amounts[i] / Math.max(5, total)) + "%" }} />)}
-          {total === 0 && tokenSkills.map(skill => <span key={skill.id} className="flex-1 opacity-20" style={{ background: skill.color }} />)}
         </div>
         <div className="mb-3 grid grid-cols-3 gap-1">
           {tokenSkills.map((skill, i) => {
-            const Icon = tokenIcons[skill.id]
+            const { icon: Icon, color, bg } = tokenBadges[skill.id]
             return <div key={skill.id} className="grid justify-items-center gap-1">
               <span className="flex items-center gap-1.5 text-lg font-black">
-                <span className="grid h-11 w-10 place-items-center bg-stone-900" style={{ clipPath: "polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)" }}>
-                  <span className="grid h-10 w-9 place-items-center text-stone-950" style={{ clipPath: "inherit", background: skill.color }}><Icon size={22} strokeWidth={3} aria-hidden="true" /></span>
+                <span className="grid h-12 w-12 place-items-center rounded-full" style={{ color, background: bg }}>
+                  <Icon size={30} strokeWidth={2.6} aria-hidden="true" />
                 </span>{amounts[i]}
               </span><span className="text-xs font-semibold">{skill.label}</span>
             </div>
@@ -156,10 +163,6 @@ export function StudentCard({ profile }: { profile: SessionProfile }) {
       </div>
       {failed && <button onClick={reload}>Обновить серию занятий</button>}
     </section>
-    {activeWeek && <div className="inline-flex items-center gap-1 justify-self-start rounded-2xl bg-white px-3 py-1 text-xl font-black">
-      <img src="/profile-streak.gif" alt="" width={52} height={52} />
-      <span aria-hidden="true">{activeWeek.streak}</span>
-      <span className="sr-only">{counted(activeWeek.streak, "день", "дня", "дней")} подряд</span>
-    </div>}
+
   </div>
 }
