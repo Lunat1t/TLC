@@ -124,8 +124,8 @@ export function StudentCard({ profile }: { profile: SessionProfile }) {
         {balances ? <>
         <div>
           <button type="button" aria-haspopup="dialog" onClick={() => road.current?.showModal()} className="flex w-full text-left cursor-pointer list-none items-center gap-3 rounded-xl py-1">
-            <Badge index={rank} /><span className="grid"><small>Ранг · {kit.label}</small><strong className="text-xl">{rankNames[rank]}</strong></span>
-            <span className="ml-auto flex items-center gap-1 text-right text-sm font-bold">Дорога рангов <ChevronDown size={16} /></span>
+            <Badge index={rank} /><span className="grid"><small>Ранг<span className="rank-kit"> · {kit.label}</span></small><strong className="text-xl">{rankNames[rank]}</strong></span>
+            <span className="ml-auto flex items-center gap-1 text-right text-sm font-bold">Все ранги <ChevronDown size={16} /></span>
           </button>
           <dialog className="rank-dialog" ref={road} aria-label="Дорога рангов"><header><strong>Дорога рангов</strong><form method="dialog"><button aria-label="Закрыть дорогу рангов">Закрыть</button></form></header>
           <ol className="my-3 grid gap-1 rounded-2xl bg-[#faf7ef] p-3">
@@ -159,7 +159,7 @@ export function StudentCard({ profile }: { profile: SessionProfile }) {
         </ul>
         {rank === 0 && <small>До Junior+ ещё {counted(target - total, "очко", "очка", "очков")}</small>}
         </> : <p role="status">Загружаем очки…</p>}
-        <Link href={"/map?kit=" + kit.id} className="mt-4 block font-bold text-cyan-800">Открыть карту {kit.label} →</Link>
+        <Link href={"/map?kit=" + kit.id} className="mt-4 block font-bold text-cyan-800">На карту<span className="rank-kit"> {kit.label}</span> →</Link>
       </div>
       {failed && <button onClick={reload}>Обновить серию занятий</button>}
     </section>
