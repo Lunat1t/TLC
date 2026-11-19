@@ -3,15 +3,14 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { createPortal } from "react-dom"
 import { CircleMenu } from "@/components/ui/circle-menu"
-import { FileCode2, Globe, StickyNote, ImagePlus, Plus, X } from "lucide-react"
+import { FileCode2, Globe, StickyNote, ImagePlus, Grid3X3, X } from "lucide-react"
 
-type Actions = { onShortcut: () => void; onNote: () => void; onProject?: () => void; onImage:()=>void; canPin: boolean }
+type Actions = { onGame: () => void; onShortcut: () => void; onNote: () => void; onProject?: () => void; onImage:()=>void; canPin: boolean }
 
-export function DesktopContextMenu({ children, onShortcut, onNote, onProject, onImage, canPin }: Actions & { children: ReactNode }) {
+export function DesktopContextMenu({ children, onGame, onShortcut, onNote, onProject, onImage, canPin }: Actions & { children: ReactNode }) {
   const [phone,setPhone]=useState(false)
-  const [phoneAddVisible,setPhoneAddVisible]=useState(false)
+  const widgets = useRef<HTMLDialogElement>(null)
   const phoneDialog=useRef<HTMLDialogElement>(null)
-  const addButton=useRef<HTMLButtonElement>(null)
   useEffect(()=>{const media=window.matchMedia("(max-width: 600px)");const sync=()=>{setPhone(media.matches);setPoint(null);phoneDialog.current?.close()};sync();media.addEventListener("change",sync);return()=>media.removeEventListener("change",sync)},[])
   const [point, setPoint] = useState<{ x: number; y: number } | null>(null)
   const surface = useRef<HTMLDivElement>(null)
@@ -25,7 +24,7 @@ export function DesktopContextMenu({ children, onShortcut, onNote, onProject, on
   }
   function open(x: number, y: number) {
     cancelHold()
-    if(phone){setPhoneAddVisible(true);return}
+    if(phone){phoneDialog.current?.showModal();return}
     previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     // Keep the entire radial menu inside the visible viewport.
     setPoint({ x: Math.max(165, Math.min(window.innerWidth - 165, x)), y: Math.max(165, Math.min(window.innerHeight - 165, y)) })
@@ -82,13 +81,17 @@ export function DesktopContextMenu({ children, onShortcut, onNote, onProject, on
     open(bounds.left + bounds.width / 2, Math.max(150, bounds.top + 150))
   }}>
     {children}
-    {phone&&phoneAddVisible&&<button ref={addButton} className="phone-desktop-add" type="button" aria-haspopup="dialog" onClick={()=>{setPhoneAddVisible(false);phoneDialog.current?.showModal()}}><Plus size={24} aria-hidden="true"/> Добавить</button>}
     <dialog ref={phoneDialog} className="phone-add-dialog" aria-label="Добавить на рабочий стол"><header><h2>Добавить</h2><button type="button" autoFocus aria-label="Закрыть" onClick={()=>phoneDialog.current?.close()}><X size={22}/></button></header><div>
     <button disabled={!canPin} onClick={()=>{phoneDialog.current?.close();onNote()}}><StickyNote color="#bc8508"/>Заметку</button>
     <button disabled={!canPin} onClick={()=>{phoneDialog.current?.close();onImage()}}><ImagePlus color="#d74c6b"/>Картинку</button>
     {onProject&&<button onClick={()=>{phoneDialog.current?.close();onProject()}}><FileCode2 color="#2875e8"/>Программу</button>}
     <button disabled={!canPin} onClick={()=>{phoneDialog.current?.close();onShortcut()}}><Globe color="#8958d6"/>Ярлык</button>
+    <button disabled={!canPin} onClick={() => { phoneDialog.current?.close(); widgets.current?.showModal() }}><Grid3X3 color="#087e83"/>Виджет</button>
     </div></dialog>
+    <dialog ref={widgets} className="game-picker" aria-label="Виджеты">
+      <header><strong>Виджеты</strong><button type="button" aria-label="Закрыть" onClick={() => widgets.current?.close()}><X size={20}/></button></header>
+      <button type="button" disabled={!canPin} onClick={() => { widgets.current?.close(); onGame() }}><Grid3X3/>Крестики-нолики</button>
+    </dialog>
     {!phone && point && createPortal(<div ref={menu} className="desktop-action-menu" role="dialog" aria-label="Действия рабочего стола" style={{ left: point.x, top: point.y }} onContextMenu={event => event.preventDefault()} onKeyDown={event => {
       if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); close(true) }
       if (["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(event.key)) {
@@ -102,6 +105,7 @@ export function DesktopContextMenu({ children, onShortcut, onNote, onProject, on
         { label: "Ярлык", color:"#8b5bd9", icon: <Globe size={28} aria-hidden="true"/>, disabled: !canPin, onSelect: ()=>{close();onShortcut()} },
         { label: "Заметка", color:"#ca8a04", icon: <StickyNote size={28} aria-hidden="true"/>, disabled: !canPin, onSelect: ()=>{close();onNote()} },
         ...(onProject ? [{ label: "Программа", color:"#2875e8", icon: <FileCode2 size={28} aria-hidden="true"/>, onSelect: ()=>{close();onProject()} }] : []),
+        { label: "Виджет", color: "#087e83", icon: <Grid3X3 size={28}/>, disabled: !canPin, onSelect: () => { close(); widgets.current?.showModal() } },
         {label:"Картинка",color:"#df5970",icon:<ImagePlus size={28}/>,disabled:!canPin,onSelect:()=>{close();onImage()}},
       ]}/>
 

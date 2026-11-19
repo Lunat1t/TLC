@@ -77,7 +77,7 @@ export function DesktopItem({ id, label, initial, children, className = "", mobi
       cancelHold();suppressed.current=false
       if(!movable||e.button!==0||(e.target as Element).closest("textarea,input,button:not(.desktop-launch)"))return
       start.current={x:e.clientX,y:e.clientY}
-      if(!window.matchMedia("(max-width:600px)").matches&&active&&!p.locked&&(e.target as Element).closest(".desktop-app-icon,.lab-pin-head"))drag.current={pointer:e.pointerId,x:e.clientX,y:e.clientY,startX:p.x*size.w,startY:p.y*size.h,scrollTop:node.current?.parentElement?.scrollTop ?? 0,pointerX:e.clientX,pointerY:e.clientY,point:p,moved:false}
+      if(!window.matchMedia("(max-width:600px)").matches&&active&&!p.locked&&(e.target as Element).closest(".desktop-app-icon,.lab-pin-head,.tic-handle"))drag.current={pointer:e.pointerId,x:e.clientX,y:e.clientY,startX:p.x*size.w,startY:p.y*size.h,scrollTop:node.current?.parentElement?.scrollTop ?? 0,pointerX:e.clientX,pointerY:e.clientY,point:p,moved:false}
       hold.current=setTimeout(()=>{drag.current=null;suppressed.current=true;setMenuOpen(true)},600)
     }}
     onPointerMove={e=>{

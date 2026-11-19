@@ -84,3 +84,18 @@
 .desktop-item:focus-visible { outline:2px solid #2875e8; outline-offset:4px; border-radius:12px; }
 .desktop-app-icon.is-project-ev3 { background:#fa6557; color:#fff; border-bottom-color:#c73c35; }
 .desktop-app-icon.is-project-spike { background:#ffce43; color:#694900; border-bottom-color:#d49a13; }
+
+.game-picker { width: min(300px, 92vw); margin: auto; padding: 16px; border-radius: 20px; background: white; color: #19364b; }
+.game-picker::backdrop { background: #17334b55; }
+.game-picker header, .tic-widget footer { display: flex; justify-content: space-between; align-items: center; }
+.game-picker header button, .game-picker > button { display: flex; align-items: center; justify-content: center; min-height: 44px; }
+.game-picker header button { width: 44px; }
+.game-picker > button { width: 100%; gap: 10px; background: #e0f4f2; border-radius: 12px; font-weight: 700; }
+.tic-widget { max-width: 230px; padding: 12px; background: #fff; color: #20394b; border: 1px solid #c7dae0; border-radius: 18px; box-shadow: 0 4px 16px #20445418; }
+.tic-handle { margin: 0 0 8px; font-size: 16px; font-weight: 750; cursor: grab; user-select: none; touch-action: none; }
+.tic-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.tic-grid button { min-height: 44px; border-radius: 8px; background: #edf2f5; color: #23679b; font: 800 25px/1 system-ui; opacity: 1; }
+.tic-grid button[data-mark=O] { color: #9b4322; }
+.tic-grid button[data-win] { background: #bef1d8; }
+.tic-widget footer { font-size: 14px; }
+.tic-widget footer button { min-height: 44px; padding: 0 8px; font-weight: 700; color: #1a6084; }
