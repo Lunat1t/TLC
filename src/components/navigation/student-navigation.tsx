@@ -3,7 +3,7 @@
 import { type ReactNode } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Map, Home, BookOpen, UserRound, Settings, FilePlus2, FolderOpen, Trophy } from "lucide-react"
+import { Map, Home, BookOpen, UserRound, Settings, FilePlus2, Trophy } from "lucide-react"
 import { useAccess } from "@/components/auth/access-provider"
 import { useRouteWarmup } from "@/components/auth/app-startup"
 import { AppLauncher } from "./app-launcher"
@@ -17,9 +17,8 @@ export function StudentNavigation({children}: {children: ReactNode}) {
   const path=usePathname(), access=useAccess(), warm=useRouteWarmup()
   const {settings}=useWorkspaceSettings()
   const home=path==="/dashboard", preferences=path==="/settings"
-  const appPage=path==="/map" || path==="/files" || path==="/settings" || home || path.startsWith("/instructions") || path==="/avatar" || path==="/profile" || path.startsWith("/teacher/") || path.startsWith("/admin/") || path==="/link-student"
+  const appPage=path==="/map" || path==="/settings" || home || path.startsWith("/instructions") || path==="/avatar" || path==="/profile" || path.startsWith("/teacher/") || path.startsWith("/admin/") || path==="/link-student"
   const pages = [
-    { path: "/files", label: "Файлы", icon: FolderOpen, color: "yellow" },
     { path: "/dashboard", label: "Рабочий стол", icon: Home, color: "blue" },
     ...(access.role === "student" || access.role === "teacher" ? [
       { path: "/map", label: "Карта", icon: Map, color: "blue" },
@@ -35,7 +34,7 @@ export function StudentNavigation({children}: {children: ReactNode}) {
     <div className="os-content">{appPage&&!home&&!preferences?<div className={`workshop-section${path==="/avatar"?" workshop-avatar":""}`}><div className="workshop-section-body">{children}</div></div>:children}</div>
     <nav className="studio-bar" aria-label="Разделы Brick Studio">
       <div className="studio-tabs">
-        {[{ path: "/dashboard", label: "Рабочий стол", icon: Home }, ...pages.filter(page => ["/files", "/map"].includes(page.path)), { path: "/profile", label: "Профиль", icon: UserRound }].map(page =>
+        {[{ path: "/dashboard", label: "Рабочий стол", icon: Home }, ...pages.filter(page => page.path === "/map"), { path: "/profile", label: "Профиль", icon: UserRound }].map(page =>
           <Link key={page.path} href={page.path} aria-label={page.label} title={page.label}
             aria-current={path === page.path ? "page" : undefined} onPointerEnter={() => warm(page.path)} onFocus={() => warm(page.path)}>
             <page.icon size={21} aria-hidden="true" />
