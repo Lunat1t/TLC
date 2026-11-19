@@ -23,12 +23,12 @@ const dateLabel = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "lon
 const number = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 })
 const plural = new Intl.PluralRules("ru-RU")
 
-function counted(count: number, one: string, few: string, many: string) {
+export function counted(count: number, one: string, few: string, many: string) {
   const form = plural.select(count)
   return `${count} ${form === "one" ? one : form === "few" ? few : many}`
 }
 
-export function WorkStudyWidgets({ student }: { student: boolean }) {
+export function useStudyWeek(student: boolean) {
   const [today, setToday] = useState("")
   const [week, setWeek] = useState<StudyWeek | null>(null)
   const [failed, setFailed] = useState(false)
@@ -80,6 +80,12 @@ export function WorkStudyWidgets({ student }: { student: boolean }) {
   }, [student, today, retry])
 
   const activeWeek = student && week?.today === today ? week : null
+  const reload = () => { setFailed(false); setRetry(value => value + 1) }
+  return { today, activeWeek, failed, reload }
+}
+
+export function WorkStudyWidgets({ student }: { student: boolean }) {
+  const { today, activeWeek, failed, reload } = useStudyWeek(student)
   const now = today ? new Date(`${today}T00:00:00Z`) : null
   const monday = activeWeek ? Date.parse(activeWeek.monday) : now ? +now - ((now.getUTCDay() + 6) % 7) * DAY : null
   const streak = activeWeek?.streak
@@ -114,7 +120,7 @@ export function WorkStudyWidgets({ student }: { student: boolean }) {
           <div>
             <h2>Огонёк</h2>
             {failed ? (
-              <button type="button" onClick={() => { setFailed(false); setRetry(value => value + 1) }}>Повторить загрузку</button>
+              <button type="button" onClick={reload}>Повторить загрузку</button>
             ) : activeWeek ? (
               <>
                 <p><strong>{counted(activeWeek.streak, "день", "дня", "дней")} подряд</strong> <span className="study-multiplier" aria-label={`Множитель XP ${number.format(activeWeek.multiplier)}`}>×{number.format(activeWeek.multiplier)}</span></p>

@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/card"
 import { createClient } from "@/utils/supabase/client"
 import { useAccess } from "@/components/auth/access-provider"
 
+import { StudentCard } from "./student-card"
+
 type Family = { account_id: string; name: string; role: string }
 
 export default function ProfilePage() {
@@ -106,16 +108,17 @@ export default function ProfilePage() {
   }
 
   return (
-    <main className="min-h-dvh bg-[#f4f9fb] p-5 md:p-12">
+    <main className="min-h-dvh bg-[#f3ead7] p-5 md:p-12">
       <div className="mx-auto grid max-w-2xl gap-5">
         {profile && profile.role !== "parent" && <Link href="/dashboard" className="font-bold text-cyan-800">← К проектам</Link>}
         {profile?.role === "parent" && <button type="button" className="justify-self-end font-bold text-cyan-800" onClick={async () => { await createClient().auth.signOut(); router.replace("/"); router.refresh() }}>Выйти из аккаунта</button>}
-        <Card className="grid gap-4 p-6">
-          <h1 className="text-3xl font-black">Профиль</h1>
+        {profile?.role === "student" && <StudentCard key={profile.id} profile={profile} />}
+        <Card className="grid gap-4 rounded-3xl bg-white p-6">
+          {profile?.role === "student" ? <h2 className="text-xl font-bold">Мой аккаунт</h2> : <h1 className="text-3xl font-black">Профиль</h1>}
           {profileError && <p role="alert">Не удалось обновить профиль. Попробуйте позже.</p>}
           {profile ? <>
-            <h2 className="text-2xl font-bold">{profile.nickname}</h2>
-            <p>{({ student: "Ученик", teacher: "Учитель", parent: "Родитель" })[profile.role]}{profile.role !== "parent" && profile.age !== null && <> · Возраст: {profile.age}</>}</p>
+            {profile.role !== "student" && <><h2 className="text-2xl font-bold">{profile.nickname}</h2>
+            <p>{({ student: "Ученик", teacher: "Учитель", parent: "Родитель" })[profile.role]}{profile.role !== "parent" && profile.age !== null && <> · Возраст: {profile.age}</>}</p></>}
             {profile.role === "teacher" && <p>{profile.disciplines.join(" · ")}</p>}
             {(profile.role === "student" || profile.role === "teacher") && <Link href="/avatar" className="justify-self-start rounded-xl bg-cyan-700 px-5 py-3 font-bold text-white">Мои персонажи</Link>}
             {(profile.role === "teacher" || admin) && <Link href="/teacher/achievements" className="font-bold text-cyan-800">{admin ? "Прогресс и достижения учеников" : "Выдать достижение ученику"}</Link>}
