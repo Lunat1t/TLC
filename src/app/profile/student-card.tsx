@@ -1,12 +1,14 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Camera, ChevronDown, Coins, Flame, Pencil, Check, Sprout, Leaf, Wrench, Cog, Rocket, Star, Crown } from "lucide-react"
 import { useAccess, type SessionProfile } from "@/components/auth/access-provider"
 import { useWorkspaceSettings } from "@/components/lab/workspace-settings"
 import { counted, useStudyWeek } from "@/components/lab/work-study-widgets"
 import AvatarDarwinV3 from "@/components/profile/avatar-darwin-v3"
-import { rankNames, studentLevel } from "@/lib/student-level"
+import Link from "next/link"
+import { mapKits, tokenSkills } from "@/lib/map-kits"
+import { rankNames } from "@/lib/student-level"
 import { createClient } from "@/utils/supabase/client"
 
 const badges = [
@@ -48,7 +50,20 @@ export function StudentCard({ profile }: { profile: SessionProfile }) {
   const { settings, update, ready, error } = useWorkspaceSettings()
   const { refreshProfile } = useAccess()
   const { activeWeek, failed, reload } = useStudyWeek(true)
-  const progress = activeWeek && studentLevel(activeWeek.total_xp)
+  const [kit, setKit] = useState<typeof mapKits[number]>(mapKits[0])
+  const [balances, setBalances] = useState<Record<string, Record<string, number>> | null>(null)
+  useEffect(() => {
+    const { data } = createClient().auth.onAuthStateChange((_event, session) => {
+      setBalances(session?.user.id === profile.id ? session.user.app_metadata.skill_tokens ?? {} : null)
+    })
+    return () => data.subscription.unsubscribe()
+  }, [profile.id])
+  const amounts = tokenSkills.map(skill => {
+    const value = balances?.[kit.id]?.[skill.id]
+    return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : 0
+  })
+  const total = amounts.reduce((sum, value) => sum + value, 0)
+  const rank = total >= 5 ? 1 : 0
   const [editing, setEditing] = useState(false)
   const [age, setAge] = useState("")
   const [message, setMessage] = useState("")
@@ -100,23 +115,32 @@ export function StudentCard({ profile }: { profile: SessionProfile }) {
         <span className="ml-auto self-start rounded-full bg-amber-100 p-2 text-amber-700" role="img" aria-label="Номиналы" title="Номиналы"><Coins size={22} /></span>
       </div>
       {(message || error) && <p role="alert" className="mt-3 text-sm text-red-800">{message || error}</p>}
-      {progress && <div className="mt-6 border-t border-[#e9e2d4] pt-4">
+      <div className="mt-6 border-t border-[#e9e2d4] pt-4">
+        <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Ранг по набору">
+          {mapKits.map(item => <button key={item.id} aria-pressed={kit === item} onClick={() => setKit(item)} className="rounded-xl bg-stone-100 px-3 py-2 font-semibold aria-pressed:bg-cyan-800 aria-pressed:text-white">{item.label}</button>)}
+        </div>
+        {balances ? <>
         <details>
           <summary className="flex cursor-pointer list-none items-center gap-3 rounded-xl py-1">
-            <Badge index={progress.rank} /><span className="grid"><small>Мой ранг</small><strong className="text-xl">{rankNames[progress.rank]}</strong></span>
+            <Badge index={rank} /><span className="grid"><small>Ранг · {kit.label}</small><strong className="text-xl">{rankNames[rank]}</strong></span>
             <span className="ml-auto flex items-center gap-1 text-right text-sm font-bold">Дорога рангов <ChevronDown size={16} /></span>
           </summary>
           <ol className="my-3 grid gap-1 rounded-2xl bg-[#faf7ef] p-3">
-            {rankNames.map((name, i) => <li key={name} aria-current={i === progress.rank ? "step" : undefined} className="flex items-center gap-3 rounded-xl px-2 py-1.5 aria-[current=step]:bg-white">
-              <Badge index={i} /><strong>{name}</strong><span className="ml-auto text-right text-xs">{i === progress.rank ? "Ты здесь · " : ""}с {i * 10 + 1} ур.</span>
+            {rankNames.map((name, i) => <li key={name} aria-current={i === rank ? "step" : undefined} className="flex items-center gap-3 rounded-xl px-2 py-1.5 aria-[current=step]:bg-white">
+              <Badge index={i} /><strong>{name}</strong><span className="ml-auto text-right text-xs">{i === rank ? "Ты здесь · " : ""}{i === 0 ? "Старт" : i === 1 ? "5 токенов" : ""}</span>
             </li>)}
           </ol>
         </details>
-        <div className="mt-5 flex items-baseline justify-between gap-2"><strong>Уровень {progress.level}</strong><span className="text-sm">{progress.earned} / {progress.required} XP</span></div>
-        <progress aria-label="Опыт до следующего уровня" className="my-2 block h-3 w-full overflow-hidden rounded-full [&::-webkit-progress-bar]:bg-[#eee9d8] [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:bg-[#79944b] [&::-moz-progress-bar]:bg-[#79944b]" value={progress.earned} max={progress.required} />
-        <small>До уровня {progress.level + 1} осталось {progress.required - progress.earned} XP</small>
-      </div>}
-      {failed ? <button className="mt-4 underline" onClick={reload}>Обновить прогресс</button> : !progress && <p className="mt-4" role="status">Загружаем прогресс…</p>}
+        <div className="mt-4 flex justify-between"><strong>Токены</strong><span>{total}{rank === 0 && " / 5"}</span></div>
+        <div className="my-2 flex h-3 overflow-hidden rounded-full bg-stone-100" aria-hidden="true">
+          {tokenSkills.map((skill, i) => <span key={skill.id} style={{ background: skill.color, width: (100 * amounts[i] / Math.max(5, total)) + "%" }} />)}
+        </div>
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm">{tokenSkills.map((skill, i) => <span key={skill.id}>{skill.icon} {skill.label} · {amounts[i]}</span>)}</div>
+        {rank === 0 && <small>До Junior+ ещё {counted(5 - total, "токен", "токена", "токенов")}</small>}
+        </> : <p role="status">Загружаем токены…</p>}
+        <Link href={"/map?kit=" + kit.id} className="mt-4 block font-bold text-cyan-800">Открыть карту {kit.label} →</Link>
+      </div>
+      {failed && <button onClick={reload}>Обновить серию занятий</button>}
     </section>
     {activeWeek && <section className="flex items-center gap-4 rounded-3xl bg-[#fff9e8] px-5 py-4 shadow-sm">
       <span className="rounded-2xl bg-[#ffdc83] p-3 text-[#a74a18]"><Flame size={26} /></span>

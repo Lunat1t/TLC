@@ -42,7 +42,7 @@ export const createClient = async (request: NextRequest) => {
   const registerPage = path === "/register" && !request.nextUrl.searchParams.has("student");
   const loginPage = path === "/login";
   const uploadPage = path === "/admin/instructions/drive";
-  const protectedPage = uploadPage || path === "/dashboard" || path === "/editor" || path === "/instructions" || path.startsWith("/instructions/");
+  const protectedPage = path === "/map" || uploadPage || path === "/dashboard" || path === "/editor" || path === "/instructions" || path.startsWith("/instructions/");
   if (protectedPage || registerPage || loginPage) {
     let complete = false;
     let role: string | null = null;
