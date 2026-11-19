@@ -69,6 +69,7 @@ export function StudentCard({ profile }: { profile: SessionProfile }) {
     return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : 0
   })
   const total = amounts.reduce((sum, value) => sum + value, 0)
+  const pointsScale = Math.max(5, total)
   const rank = total >= 5 ? 1 : 0
   const [editing, setEditing] = useState(false)
   const [age, setAge] = useState("")
@@ -143,20 +144,26 @@ export function StudentCard({ profile }: { profile: SessionProfile }) {
         </details>
         <div className="mt-4 flex justify-between"><strong>Очки</strong><span>{total}{rank === 0 && " / 5"}</span></div>
         <div className="mb-4 mt-2 flex h-2.5 overflow-hidden rounded-full bg-stone-100" aria-hidden="true">
-          {tokenSkills.map((skill, i) => <span key={skill.id} style={{ background: skill.color, width: (100 * amounts[i] / Math.max(5, total)) + "%" }} />)}
+          {tokenSkills.map((skill, i) => <span key={skill.id} style={{ background: skill.color, width: (100 * amounts[i] / pointsScale) + "%" }} />)}
         </div>
-        <div className="mb-3 grid grid-cols-3 gap-1">
+        <ul className="mb-4 grid gap-3">
           {tokenSkills.map((skill, i) => {
             const { icon: Icon, color, bg } = tokenBadges[skill.id]
-            return <div key={skill.id} className="grid justify-items-center gap-1">
-              <span className="flex items-center gap-1.5 text-lg font-black">
-                <span className="grid h-12 w-12 place-items-center rounded-full" style={{ color, background: bg }}>
-                  <Icon size={30} strokeWidth={2.6} aria-hidden="true" />
-                </span>{amounts[i]}
-              </span><span className="text-xs font-semibold">{skill.label}</span>
-            </div>
+            return <li key={skill.id} className="flex items-center gap-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full" style={{ color, background: bg }}>
+                <Icon size={25} strokeWidth={2.6} aria-hidden="true" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="mb-1 flex items-baseline justify-between gap-2 text-sm font-semibold">
+                  <span>{skill.label}</span><span className="tabular-nums">{amounts[i]}</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-stone-100" aria-hidden="true">
+                  <div className="h-full rounded-full" style={{ background: skill.color, width: (100 * amounts[i] / pointsScale) + "%" }} />
+                </div>
+              </div>
+            </li>
           })}
-        </div>
+        </ul>
         {rank === 0 && <small>До Junior+ ещё {counted(5 - total, "очко", "очка", "очков")}</small>}
         </> : <p role="status">Загружаем очки…</p>}
         <Link href={"/map?kit=" + kit.id} className="mt-4 block font-bold text-cyan-800">Открыть карту {kit.label} →</Link>
