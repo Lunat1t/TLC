@@ -7,7 +7,7 @@ import { Map, Home, BookOpen, UserRound, Settings, FilePlus2, FolderOpen, Trophy
 import { useAccess } from "@/components/auth/access-provider"
 import { useRouteWarmup } from "@/components/auth/app-startup"
 import { AppLauncher } from "./app-launcher"
-import { MobileMenu } from "./mobile-menu"
+import "./studio-bar.css"
 import "./student-navigation.css"
 import "./desktop-shell.css"
 import "./viewport-layout.css"
@@ -32,9 +32,18 @@ export function StudentNavigation({children}: {children: ReactNode}) {
     ? [{ path: "/teacher/achievements", label: access.isAdmin ? "Прогресс учеников" : "Достижения учеников", icon: Trophy, color: "purple" }]
     : []
   return <div data-wallpaper={settings.background==="wallpaper"&&!!settings.wallpaper?"true":undefined} data-theme={settings.theme} data-background={settings.background} data-bar={settings.bar} style={{"--workspace-background":settings.color,...(settings.background==="wallpaper"&&settings.wallpaper?{backgroundImage:`url("${settings.wallpaper}")`,backgroundSize:settings.wallpaperFit||"cover",backgroundPosition:"center top",backgroundRepeat:"no-repeat",backgroundAttachment:"fixed"}:{})} as React.CSSProperties} className={`tlc-os${home?" is-desktop":""}${preferences?" is-preferences":""}${appPage?" is-app":" is-public"}`}>
-    <header className="mobile-site-header"><MobileMenu pages={[...pages,...teacherPages,{path:"/settings",label:"Настройки",icon:Settings}]}/><Link href="/profile" className="mobile-header-button" aria-label="Профиль" aria-current={path==="/profile"?"page":undefined}><UserRound size={25} aria-hidden="true" /></Link></header>
     <div className="os-content">{appPage&&!home&&!preferences?<div className={`workshop-section${path==="/avatar"?" workshop-avatar":""}`}><div className="workshop-section-body">{children}</div></div>:children}</div>
-    {<nav className="os-dock" aria-label="Разделы Brick Studio"><AppLauncher fixedPaths={[...pages.map(p=>p.path),"/settings"]} apps={[...pages,{path:"/profile",label:"Профиль",icon:UserRound,color:"red"},...teacherPages,{path:"/settings",label:"Настройки",icon:Settings,color:"account"}]}/><Link href="/dashboard" className="os-dock-item dock-blue" aria-label="Главный экран" title="Главный экран" aria-current={home?"page":undefined} onPointerEnter={()=>warm("/dashboard")} onFocus={()=>warm("/dashboard")}><Home size={26}/><span>Главный экран</span></Link><Link href="/profile" className="os-dock-item dock-red" aria-label="Профиль" title="Профиль" aria-current={path==="/profile"?"page":undefined}><UserRound size={26}/><span>Профиль</span></Link><Link href="/settings" className="os-dock-item dock-account" aria-label="Настройки" aria-current={path==="/settings"?"page":undefined}><Settings size={26}/><span>Настройки</span></Link></nav>}
+    <nav className="studio-bar" aria-label="Разделы Brick Studio">
+      <div className="studio-tabs">
+        {[{ path: "/dashboard", label: "Рабочий стол", icon: Home }, ...pages.filter(page => ["/files", "/map"].includes(page.path)), { path: "/profile", label: "Профиль", icon: UserRound }].map(page =>
+          <Link key={page.path} href={page.path} aria-label={page.label} title={page.label}
+            aria-current={path === page.path ? "page" : undefined} onPointerEnter={() => warm(page.path)} onFocus={() => warm(page.path)}>
+            <page.icon size={21} aria-hidden="true" />
+          </Link>
+        )}
+      </div>
+      <AppLauncher apps={[...pages, { path: "/profile", label: "Профиль", icon: UserRound, color: "red" }, ...teacherPages, { path: "/settings", label: "Настройки", icon: Settings, color: "account" }]} />
+    </nav>
 
   </div>
 }
