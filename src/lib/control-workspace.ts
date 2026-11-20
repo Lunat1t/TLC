@@ -1,15 +1,30 @@
 import type { RobotProject } from './projects'
+import { isDriveSettings, type DriveSettings } from './controller-program.ts'
 
-export type ControlKind = 'drivetrain' | 'motor' | 'motor-group' | 'legacy-buttons' | 'motor-panel'
-export interface ControlArea { id: string; sheetId: string; title: string; x: number; y: number; width: number; height: number }
+export const DIRECTION_CONTROLS = {
+  'drive-turn': { label: 'Влево / вправо', inputs: ['left', 'right'] },
+  'drive-linear': { label: 'Вперёд / назад', inputs: ['up', 'down'] },
+} as const
+export type DirectionControlKind = keyof typeof DIRECTION_CONTROLS
+export const isDirectionControl = (kind: unknown): kind is DirectionControlKind =>
+  kind === 'drive-turn' || kind === 'drive-linear'
+export type PlaceableControlKind = DirectionControlKind | 'display'
+export const isPlaceableControl = (kind: unknown): kind is PlaceableControlKind =>
+  kind === 'display' || isDirectionControl(kind)
+export type ControlKind = 'drivetrain' | 'motor' | 'motor-group' | 'legacy-buttons' | 'motor-panel' | PlaceableControlKind
+export interface ControlArea { id: string; sheetId: string; title: string; x: number; y: number; width: number; height: number; drive?: DriveSettings }
 export interface ControlInstance { id: string; areaId: string; kind: ControlKind; label: string; x: number; y: number; width: number; height: number; keyBindings?: Record<string, string>; inputs?: readonly string[] }
 export interface ControlLayout { version: 1; areas: ControlArea[]; controls: ControlInstance[]; migration?: {source: 'legacy-button-events'; version: 1} }
 export const CONTROL_INPUTS: Record<ControlKind, readonly string[]> = {
   drivetrain: ['up', 'down', 'left', 'right'], motor: ['forward', 'backward'],
+  'drive-turn': DIRECTION_CONTROLS['drive-turn'].inputs, 'drive-linear': DIRECTION_CONTROLS['drive-linear'].inputs,
   'motor-group': ['forward', 'backward'], 'legacy-buttons': ['up','down','left','right','a','b','x','y','l','r'], 'motor-panel': ['blue','red','green','yellow'],
+  display: [],
 }
 export const CONTROL_MIN: Record<ControlKind, [number, number]> = {
   drivetrain: [160, 160], motor: [144, 96], 'motor-group': [144, 96], 'legacy-buttons': [300, 200], 'motor-panel': [144, 112],
+  'drive-turn': [132, 96], 'drive-linear': [120, 144],
+  display: [196, 144],
 }
 export const EMPTY_LAYOUT: ControlLayout = {version: 1, areas: [], controls: []}
 const obj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v)
@@ -25,13 +40,15 @@ export function validateControlLayout(raw: unknown, sheetIds: readonly string[])
   const areas: ControlArea[] = raw.areas.map((a: unknown) => {
     if (!obj(a) || !id(a.id) || ids.has(a.id as string) || !id(a.sheetId) || !sheetIds.includes(a.sheetId as string) || !label(a.title) || ![a.x,a.y,a.width,a.height].every(number) || Number(a.width)<320 || Number(a.height)<240 || Number(a.width)>2400 || Number(a.height)>2400) throw new Error('Неверная область управления.')
     if (areaSheets.has(a.sheetId as string)) throw new Error('На одном листе можно создать только одну область «Управление».')
+    const drive = a.drive
+    if (drive !== undefined && !isDriveSettings(drive)) throw new Error('Выберите разные порты для левого и правого моторов.')
     areaSheets.add(a.sheetId as string)
     ids.add(a.id as string)
-    return {id:a.id as string,sheetId:a.sheetId as string,title:(a.title as string).trim(),x:a.x as number,y:a.y as number,width:a.width as number,height:a.height as number}
+    return {id:a.id as string,sheetId:a.sheetId as string,title:(a.title as string).trim(),x:a.x as number,y:a.y as number,width:a.width as number,height:a.height as number,...(drive ? {drive} : {})}
   })
   const controls: ControlInstance[] = rawControls.map((c: unknown) => {
-    if (!obj(c) || !id(c.id) || ids.has(c.id as string) || !id(c.areaId) || !label(c.label) || c.kind !== 'motor-panel' || ![c.x,c.y,c.width,c.height].every(number)) throw new Error('Неверный элемент управления.')
-    const area=areas.find(a=>a.id===c.areaId); const kind: ControlKind = 'motor-panel'; const [w,h]=CONTROL_MIN[kind]
+    if (!obj(c) || !id(c.id) || ids.has(c.id as string) || !id(c.areaId) || !label(c.label) || (c.kind !== 'motor-panel' && !isPlaceableControl(c.kind)) || ![c.x,c.y,c.width,c.height].every(number)) throw new Error('Неверный элемент управления.')
+    const area=areas.find(a=>a.id===c.areaId); const kind = c.kind; const [w,h]=CONTROL_MIN[kind]
     if (!area || Number(c.x)<0 || Number(c.y)<0 || Number(c.width)<w || Number(c.height)<h || Number(c.x)+Number(c.width)>area.width || Number(c.y)+Number(c.height)>area.height-44) throw new Error('Элемент управления вне области.')
     if (rawControls.filter((v:unknown)=>obj(v)&&v.areaId===c.areaId).length>12) throw new Error('Можно добавить не более 12 элементов в область.')
     ids.add(c.id as string)

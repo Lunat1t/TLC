@@ -19,6 +19,22 @@ export type ControllerButton =
 
 export type ControllerEvent = "pressed" | "released"
 
+export type DrivePort = "A" | "B" | "C" | "D" | "E" | "F"
+
+export interface DriveSettings {
+  leftPort: DrivePort
+  rightPort: DrivePort
+  leftReversed: boolean
+  rightReversed: boolean
+}
+
+export const DRIVE_PORTS = RawControllerProgram.DRIVE_PORTS as readonly DrivePort[]
+export const DEFAULT_DRIVE_SETTINGS = RawControllerProgram.DEFAULT_DRIVE_SETTINGS as Readonly<DriveSettings>
+
+export function isDriveSettings(value: unknown): value is DriveSettings {
+  return RawControllerProgram.isDriveSettings(value)
+}
+
 export type ControllerAction =
   | { kind: "run"; port: string; speed: number }
   | { kind: "dc"; port: string; power: number }
@@ -30,6 +46,7 @@ export type ControllerAction =
 
 export interface ControllerHandler {
   target?: { controlId: string; input: string }
+  driveAreaId?: string
   button: ControllerButton
   event: ControllerEvent
   sourceBlockId: string

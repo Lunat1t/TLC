@@ -4,10 +4,12 @@ import * as React from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import {
+  ArrowDownUp,
   ArrowRight,
   ArrowRightLeft,
   Gamepad2,
   LayoutGrid,
+  Monitor,
   PanelLeftClose,
   PanelLeftOpen,
   Play,
@@ -58,9 +60,18 @@ import {
 import { compileControllerProgram } from "@/lib/controller-program"
 import { ControlAreaView } from "@/components/editor/control-area"
 import { useRobotSession } from "@/components/editor/robot-session"
-import { CONTROL_INPUTS } from "@/lib/control-workspace"
 import { controllerRuntimeErrors } from "@/lib/controller-program"
-import { CONTROL_MIN, validateControlLayout, type ControlInstance, type ControlLayout, type ControlKind } from "@/lib/control-workspace"
+import {
+  CONTROL_INPUTS,
+  CONTROL_MIN,
+  DIRECTION_CONTROLS,
+  isPlaceableControl,
+  validateControlLayout,
+  type ControlArea,
+  type ControlInstance,
+  type ControlLayout,
+  type PlaceableControlKind,
+} from "@/lib/control-workspace"
 
 const ALL_BLOCKS = {
   id: "all",
@@ -69,6 +80,8 @@ const ALL_BLOCKS = {
   color: "#475569",
 } as const
 
+const DISPLAY_LABEL = "Дисплей"
+const DISPLAY_SIZE = [224, 160] as const
 
 const BLOCK_CATEGORIES = [
   {
@@ -108,6 +121,9 @@ const BLOCK_CATEGORIES = [
     blocks: [
       { type: "area", label: "Область управления", icon: RectangleHorizontal },
       { type: "motor-buttons", label: "Кнопки моторов", icon: Gamepad2 },
+      { type: "drive-turn", label: DIRECTION_CONTROLS["drive-turn"].label, icon: ArrowRightLeft },
+      { type: "drive-linear", label: DIRECTION_CONTROLS["drive-linear"].label, icon: ArrowDownUp },
+      { type: "display", label: DISPLAY_LABEL, icon: Monitor },
     ],
   },
 ] as const
@@ -117,6 +133,20 @@ const COMPACT_PALETTE_QUERY = "(min-width: 768px)"
 
 function pointerOver(element: HTMLElement | null, x: number, y: number) {
   return element?.contains(document.elementFromPoint(x, y)) ?? false
+}
+
+function panelOverlapsControls(
+  area: ControlArea,
+  controls: readonly ControlInstance[],
+  panel: { x: number; y: number; width: number; height: number },
+) {
+  return controls.some(control => {
+    if (control.areaId !== area.id || !isPlaceableControl(control.kind)) return false
+    const left = area.x + control.x
+    const top = area.y + 44 + control.y
+    return panel.x < left + control.width && panel.x + panel.width > left
+      && panel.y < top + control.height && panel.y + panel.height > top
+  })
 }
 
 function newId() {
@@ -458,40 +488,78 @@ function EditorWorkspace() {
     try {validateControlLayout(next,sheetState.sheets.map(s=>s.id));return persistSheets(snapshotSheets(), next)}
     catch(error){setSaveMessage({text:error instanceof Error?error.message:"Неверная раскладка",isError:true});return Promise.resolve(false)}
   }
-  function addControlArea(location?: {x:number;y:number}) {
-    if (!project) return
-    if (controlLayout.areas.some(area=>area.sheetId===currentSheet.id)) {setSaveMessage({text:"На одном листе можно создать только одну область «Управление».",isError:true});return}
-    if (controlLayout.areas.length >= 12) {setSaveMessage({text:"Можно добавить не более 12 областей.",isError:true});return}
-    const board = boardRef.current
-    const x = ((board?.clientWidth || 640)/2 - panX)/zoom - 320
-    const y = ((board?.clientHeight || 360)/2 - panY)/zoom - 180
-    void saveLayout({...controlLayout, areas:[...controlLayout.areas,{id:newId(),sheetId:currentSheet.id,title:"Управление",x:location ? location.x-320 : x,y:location ? location.y-20 : y,width:640,height:360}]})
-  }
-  function addControl(kind: Exclude<ControlKind,"legacy-buttons"|"motor-panel">, location?:{x:number;y:number}) {
-    if (!project) return
-    const area=controlLayout.areas.find(a=>a.sheetId===currentSheet.id && (!location || (location.x>=a.x && location.x<=a.x+a.width && location.y>=a.y+44 && location.y<=a.y+a.height)))
-    if (!area) {setSaveMessage({text:"Сначала добавьте область «Управление».",isError:true});return}
-    const siblings=controlLayout.controls.filter(c=>c.areaId===area.id)
-    if(siblings.length>=12) {setSaveMessage({text:"В области уже 12 элементов.",isError:true});return}
-    const [width,height]=CONTROL_MIN[kind]
-    let spot:{x:number;y:number}|null=null
-    if(location){const x=Math.max(0,Math.min(area.width-width,location.x-area.x-width/2)),y=Math.max(0,Math.min(area.height-44-height,location.y-area.y-44-height/2));if(!siblings.some(c=>x<c.x+c.width&&x+width>c.x&&y<c.y+c.height&&y+height>c.y))spot={x,y}}
-    for(let y=0;y+height<=area.height-44&&!spot;y+=16) for(let x=0;x+width<=area.width;x+=16) {
-      if(!siblings.some(c=>x<c.x+c.width&&x+width>c.x&&y<c.y+c.height&&y+height>c.y)){spot={x,y};break}
+  async function addControlArea(location: { x: number; y: number }) {
+    if (!project) return false
+    if (controlLayout.areas.some(area => area.sheetId === currentSheet.id)) {
+      setSaveMessage({ text: "На одном листе можно создать только одну область «Управление».", isError: true })
+      return false
     }
-    if(!spot){setSaveMessage({text:"Увеличьте область: свободного места нет.",isError:true});return}
-    const label=kind==="drivetrain"?"Drivetrain":kind==="motor"?"Мотор":"Группа моторов"
-    void saveLayout({...controlLayout,controls:[...controlLayout.controls,{id:newId(),areaId:area.id,kind,label,x:spot.x,y:spot.y,width,height}]})
+    if (controlLayout.areas.length >= 12) {
+      setSaveMessage({ text: "Можно добавить не более 12 областей.", isError: true })
+      return false
+    }
+    const area = {
+      id: newId(), sheetId: currentSheet.id, title: "Управление",
+      x: location.x - 320, y: location.y - 20, width: 640, height: 360,
+    }
+    return saveLayout({ ...controlLayout, areas: [...controlLayout.areas, area] })
   }
 
-  function dragControlFromPalette(e:React.PointerEvent<HTMLButtonElement>,kind:"area"|Exclude<ControlKind,"legacy-buttons"|"motor-panel">) {
+  async function addControl(kind: PlaceableControlKind, location: { x: number; y: number }) {
+    if (!project) return false
+    const area = controlLayout.areas.find(candidate => candidate.sheetId === currentSheet.id
+      && location.x >= candidate.x && location.x <= candidate.x + candidate.width
+      && location.y >= candidate.y + 44 && location.y <= candidate.y + candidate.height)
+    if (!area) {
+      setSaveMessage({ text: "Перетащите блок внутрь области «Управление».", isError: true })
+      return false
+    }
+
+    const siblings = controlLayout.controls.filter(control => control.areaId === area.id)
+    if (siblings.length >= 12) {
+      setSaveMessage({ text: "В области уже 12 элементов.", isError: true })
+      return false
+    }
+    const panels = blocks.filter(block => block.type === "motor-buttons" && block.controlAreaId === area.id)
+      .map(block => ({ x: block.x - area.x, y: block.y - area.y - 44, width: block.width || 180, height: block.height || 132 }))
+    const occupied = [...siblings, ...panels]
+    const [width, height] = kind === "display" ? DISPLAY_SIZE : CONTROL_MIN[kind]
+    const maxX = area.width - width
+    const maxY = area.height - 44 - height
+    const x = Math.max(0, Math.min(maxX, location.x - area.x - width / 2))
+    const y = Math.max(0, Math.min(maxY, location.y - area.y - 44 - height / 2))
+    const fits = (x: number, y: number) => !occupied.some(control =>
+      x < control.x + control.width && x + width > control.x
+      && y < control.y + control.height && y + height > control.y)
+    let spot = fits(x, y) ? { x, y } : null
+    for (let top = 0; top <= maxY && !spot; top += 16) {
+      for (let left = 0; left <= maxX && !spot; left += 16) {
+        if (fits(left, top)) spot = { x: left, y: top }
+      }
+    }
+    if (!spot) {
+      setSaveMessage({ text: "Увеличьте область: свободного места нет.", isError: true })
+      return false
+    }
+    const label = kind === "display" ? DISPLAY_LABEL : DIRECTION_CONTROLS[kind].label
+    const control = { id: newId(), areaId: area.id, kind, label, ...spot, width, height }
+    return saveLayout({ ...controlLayout, controls: [...controlLayout.controls, control] })
+  }
+
+  function dragControlFromPalette(e: React.PointerEvent<HTMLButtonElement>, kind: "area" | PlaceableControlKind) {
     if(!project || e.button!==0)return
     e.preventDefault();const element=e.currentTarget,sx=e.clientX,sy=e.clientY;let moved=false
     element.setPointerCapture(e.pointerId)
     const move=(ev:PointerEvent)=>{if(Math.hypot(ev.clientX-sx,ev.clientY-sy)>5)moved=true}
     const clean=()=>{element.removeEventListener("pointermove",move);element.removeEventListener("pointerup",up);element.removeEventListener("pointercancel",cancel)}
     const cancel=()=>clean()
-    const up=(ev:PointerEvent)=>{clean();if(!moved || pointerOver(paletteRef.current,ev.clientX,ev.clientY))return;const rect=boardRef.current?.getBoundingClientRect();if(!rect||ev.clientX<rect.left||ev.clientX>rect.right||ev.clientY<rect.top||ev.clientY>rect.bottom)return;const world={x:(ev.clientX-rect.left-panX)/zoom,y:(ev.clientY-rect.top-panY)/zoom};if(kind==="area")addControlArea(world);else addControl(kind,world)}
+    const up = async (event: PointerEvent) => {
+      clean()
+      if (!moved || !pointerOver(boardRef.current, event.clientX, event.clientY)) return
+      const world = worldFromClient(event.clientX, event.clientY)
+      const added = await (kind === "area" ? addControlArea(world) : addControl(kind, world))
+      if (added && compactPalette) setPaletteExpanded(false)
+    }
     element.addEventListener("pointermove",move);element.addEventListener("pointerup",up);element.addEventListener("pointercancel",cancel)
   }
 
@@ -535,6 +603,10 @@ function EditorWorkspace() {
         if (!area) return
         x = Math.max(area.x, Math.min(area.x + area.width - width, x))
         y = Math.max(area.y + 44, Math.min(area.y + area.height - height, y))
+        if (panelOverlapsControls(area, controlLayout.controls, { x, y, width, height })) {
+          setSaveMessage({ text: "Панель моторов перекрывает другой блок.", isError: true })
+          return
+        }
         const withArea = blocks.map((block) => block.id === id ? { ...block, controlAreaId: area.id } : block)
         const next = moveChain(withArea, id, x, y)
         saveBlocks(next)
@@ -548,7 +620,7 @@ function EditorWorkspace() {
       }
       saveBlocks(next)
     },
-    [blocks, controlLayout.areas, currentSheet.id, saveBlocks, triggerSnapAnimation]
+    [blocks, controlLayout.areas, controlLayout.controls, currentSheet.id, saveBlocks, triggerSnapAnimation]
   )
 
   const worldFromClient = React.useCallback(
@@ -585,6 +657,10 @@ function EditorWorkspace() {
           }
           x = Math.max(area.x, Math.min(area.x + area.width - width, point.x - width / 2))
           y = Math.max(area.y + 44, Math.min(area.y + area.height - height, point.y - height / 2))
+          if (panelOverlapsControls(area, controlLayout.controls, { x, y, width, height })) {
+            setSaveMessage({ text: "Панель моторов перекрывает другой блок.", isError: true })
+            return
+          }
           initialOverrides = { ...initialOverrides, controlAreaId: area.id }
         }
         const id = newId()
@@ -618,6 +694,7 @@ function EditorWorkspace() {
       worldFromClient,
       blocks,
       controlLayout.areas,
+      controlLayout.controls,
       currentSheet.id,
       saveBlocks,
       triggerSnapAnimation,
@@ -633,14 +710,7 @@ function EditorWorkspace() {
           ? { ...prev, clientX: e.clientX, clientY: e.clientY }
           : prev
       )
-      const rect = boardRef.current?.getBoundingClientRect()
-      if (
-        rect && !pointerOver(paletteRef.current, e.clientX, e.clientY) &&
-        e.clientX >= rect.left &&
-        e.clientX <= rect.right &&
-        e.clientY >= rect.top &&
-        e.clientY <= rect.bottom
-      ) {
+      if (pointerOver(boardRef.current, e.clientX, e.clientY)) {
         const pt = worldFromClient(e.clientX, e.clientY)
         const target = snapTargetInfo(
           blocks,
@@ -658,22 +728,21 @@ function EditorWorkspace() {
       const initialOverrides = gesture.initialOverrides
       setGesture(null)
       setSnapTargetSlot(null)
-      const rect = boardRef.current?.getBoundingClientRect()
-      if (
-        rect && !pointerOver(paletteRef.current, e.clientX, e.clientY) &&
-        e.clientX >= rect.left &&
-        e.clientX <= rect.right &&
-        e.clientY >= rect.top &&
-        e.clientY <= rect.bottom
-      ) {
+      if (pointerOver(boardRef.current, e.clientX, e.clientY)) {
         addBlockAtClient(e.clientX, e.clientY, type, initialOverrides)
       }
     }
+    const handleCancel = () => {
+      setGesture(null)
+      setSnapTargetSlot(null)
+    }
     window.addEventListener("pointermove", handleMove)
     window.addEventListener("pointerup", handleUp)
+    window.addEventListener("pointercancel", handleCancel)
     return () => {
       window.removeEventListener("pointermove", handleMove)
       window.removeEventListener("pointerup", handleUp)
+      window.removeEventListener("pointercancel", handleCancel)
     }
   }, [gesture, blocks, worldFromClient, addBlockAtClient])
 
@@ -746,7 +815,7 @@ function EditorWorkspace() {
     const startW = block.width || 180
     const startH = block.height || 132
     const maxW = Math.min(420, area.x + area.width - block.x)
-    const maxH = Math.min(320, area.y + area.height - 44 - block.y)
+    const maxH = Math.min(320, area.y + area.height - block.y)
     const widthAt = (clientX: number) => Math.min(maxW, Math.max(144, Math.round(startW + (clientX - startX) / zoom)))
     const heightAt = (clientY: number) => Math.min(maxH, Math.max(112, Math.round(startH + (clientY - startY) / zoom)))
     const move = (ev: PointerEvent) => setPanelResize({id:block.id,width:widthAt(ev.clientX),height:heightAt(ev.clientY)})
@@ -760,6 +829,10 @@ function EditorWorkspace() {
       const width = widthAt(ev.clientX)
       const height = heightAt(ev.clientY)
       setPanelResize(null)
+      if (panelOverlapsControls(area, controlLayout.controls, { x: block.x, y: block.y, width, height })) {
+        setSaveMessage({ text: "Панель моторов перекрывает другой блок.", isError: true })
+        return
+      }
       saveBlocks(blocks.map((item) => item.id === block.id ? {...item,width,height} : item))
     }
     const cancel = () => {cleanup();setPanelResize(null)}
@@ -808,8 +881,8 @@ function EditorWorkspace() {
 
         <span
           role="status"
-          className={`ml-auto text-xs font-semibold whitespace-nowrap hidden sm:inline ${
-            saveMessage.isError ? "text-[#b1372c]" : "text-[#6f8992]"
+          className={`ml-auto text-xs font-semibold ${
+            saveMessage.isError ? "text-[#b1372c] max-sm:order-last max-sm:w-full" : "hidden whitespace-nowrap text-[#6f8992] sm:inline"
           }`}
         >
           {saveMessage.text}
@@ -904,7 +977,7 @@ function EditorWorkspace() {
                         title={areaAlreadyExists ? "На этом листе уже есть область управления" : undefined}
                         onPointerDown={(event) => {
                           if (!project || event.button !== 0) return
-                          if (type === "area") {
+                          if (type === "area" || isPlaceableControl(type)) {
                             dragControlFromPalette(event, type)
                             return
                           }
@@ -1060,7 +1133,7 @@ function EditorWorkspace() {
               }}
               className="absolute top-0 left-0 w-0 h-0"
             >
-              {controlLayout.areas.filter(a=>a.sheetId===currentSheet.id).map(area=><ControlAreaView key={area.id} area={area} controls={controlLayout.controls.filter(c=>c.areaId===area.id)} attachedPanels={blocks.filter(b=>b.type==="motor-buttons"&&b.controlAreaId===area.id)} editing={!checking} zoom={zoom} errors={inputErrors} onAreaChange={changed=>{
+              {controlLayout.areas.filter(a=>a.sheetId===currentSheet.id).map(area=><ControlAreaView key={area.id} area={area} controls={controlLayout.controls.filter(c=>c.areaId===area.id)} attachedPanels={blocks.filter(b=>b.type==="motor-buttons"&&b.controlAreaId===area.id)} editing={!checking} inputActive={robotState.program === "trial-running" || robotState.program === "live-running"} zoom={zoom} errors={inputErrors} onAreaChange={changed=>{
                 const dx=changed.x-area.x,dy=changed.y-area.y
                 const nextBlocks=dx||dy?blocks.map(b=>b.type==="motor-buttons"&&b.controlAreaId===area.id?{...b,x:b.x+dx,y:b.y+dy}:b):blocks
                 const nextLayout={...controlLayout,areas:controlLayout.areas.map(a=>a.id===changed.id?changed:a)}

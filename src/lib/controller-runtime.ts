@@ -1,4 +1,4 @@
-import {commandsFor, controllerHandler, controllerRuntimeErrors, describeAction, type ControllerAction, type ControllerEvent, type ControllerProgram} from './controller-program.ts'
+import {commandsFor, controllerHandler, controllerRuntimeErrors, describeAction, type ControllerAction, type ControllerEvent, type ControllerHandler, type ControllerProgram} from './controller-program.ts'
 import {SERVICE, COMMAND_EVENT, commandBytes, parseEvent} from '../../public/pybricks-protocol.js'
 import {subscribeNotifications} from '../../public/notifications.js'
 
@@ -22,6 +22,36 @@ const sleep=(ms:number,signal?:AbortSignal,clock:Clock=systemClock)=>new Promise
 
 function withTimeout<T>(promise:Promise<T>,ms:number,message:string,clock:Clock=systemClock):Promise<T>{
   return new Promise<T>((resolve,reject)=>{const timer=clock.setTimeout(()=>reject(new Error(message)),ms);promise.then(value=>{clock.clearTimeout(timer);resolve(value)},error=>{clock.clearTimeout(timer);reject(error)})})
+}
+
+function targetKey(target: Target) {
+  return `${target.controlId}:${target.input}`
+}
+
+function driveActions(handler: ControllerHandler, handlers: ControllerHandler[], held: ReadonlySet<string>): ControllerAction[] {
+  const speeds = new Map<string, number>()
+  for (const action of handler.actions) {
+    if ('port' in action) speeds.set(action.port, 0)
+  }
+
+  const directions = new Set<ControllerHandler['button']>()
+  let maxSpeed = 1
+  for (const candidate of handlers) {
+    if (candidate.driveAreaId !== handler.driveAreaId || candidate.event !== 'pressed' ||
+        !candidate.target || !held.has(targetKey(candidate.target)) || directions.has(candidate.button)) continue
+    directions.add(candidate.button)
+    for (const action of candidate.actions) {
+      if (action.kind !== 'run') continue
+      speeds.set(action.port, (speeds.get(action.port) ?? 0) + action.speed)
+      maxSpeed = Math.max(maxSpeed, Math.abs(action.speed))
+    }
+  }
+
+  const scale = Math.max(1, ...Array.from(speeds.values(), speed => Math.abs(speed) / maxSpeed))
+  return Array.from(speeds, ([port, total]) => {
+    const speed = Math.round(total / scale)
+    return speed ? {kind:'run', port, speed} : {kind:'stop', port}
+  })
 }
 
 /** One owner for the transport, queues, motors and cancellation epoch. */
@@ -139,14 +169,16 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
     },
     dispatch(target:Target,event:ControllerEvent){
       if(!snapshot||state.viewMode!=='check'||!['trial-running','live-running'].includes(state.program))return
-      const key=`${target.controlId}:${target.input}`
+      const key=targetKey(target)
       if(event==='pressed'){if(held.has(key))return;held.add(key)}else{if(!held.delete(key))return}
       const errors=[...snapshot.errors,...(state.program==='live-running'?controllerRuntimeErrors(snapshot,state.protocol,new Set(state.ports)):[])]
       const error=errors.find(e=>e.severity!=='warning'&&e.target?.controlId===target.controlId&&e.target?.input===target.input)
-      if(error){log(`⚠ ${error.message}`);return}
-      const handler=controllerHandler(snapshot,target,event);const actions=handler?.actions||[]
+      if(error){held.delete(key);log(`⚠ ${error.message}`);return}
+      const handler = controllerHandler(snapshot,target,event)
+      const actions = handler?.driveAreaId ? driveActions(handler, snapshot.handlers, held) : handler?.actions || []
+      const runnerKey = handler?.driveAreaId ? `drive-area:${handler.driveAreaId}` : `input:${key}`
       log(`${target.input} ${event==='pressed'?'нажата':'отпущена'} → ${actions.map(describeAction).filter(Boolean).join(' · ')||'нет действий'}`)
-      if(state.program==='live-running'&&actions.length)void runActions(key,actions,epoch)
+      if(state.program==='live-running'&&actions.length)void runActions(runnerKey,actions,epoch)
     },
     stop,
     async disconnect(){await stop();clear();await disconnectTransport();publish({transport:'disconnected',program:'stopped',message:'Хаб отключён.',ports:[],protocol:null})},

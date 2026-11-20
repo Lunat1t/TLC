@@ -35,6 +35,70 @@ export const BUTTON_KEYS = Object.freeze({
 const DEFAULT_SPEED = 360;
 const DEFAULT_POWER = 50;
 
+export const DRIVE_PORTS = Object.freeze(['A', 'B', 'C', 'D', 'E', 'F']);
+export const DEFAULT_DRIVE_SETTINGS = Object.freeze({
+  leftPort: 'A',
+  rightPort: 'B',
+  leftReversed: false,
+  rightReversed: true,
+});
+
+export function isDriveSettings(value) {
+  return DRIVE_PORTS.includes(value?.leftPort) && DRIVE_PORTS.includes(value?.rightPort) &&
+    value.leftPort !== value.rightPort &&
+    typeof value.leftReversed === 'boolean' && typeof value.rightReversed === 'boolean';
+}
+
+const DIRECTION_INPUTS = Object.freeze({
+  'drive-turn': ['left', 'right'],
+  'drive-linear': ['up', 'down'],
+});
+const WHEEL_DIRECTIONS = {
+  up: [1, 1],
+  down: [-1, -1],
+  left: [-1, 1],
+  right: [1, -1],
+};
+
+function compileDriveControls(layout, result, usedPorts) {
+  if (!Array.isArray(layout?.controls)) return;
+  const areas = Array.isArray(layout.areas) ? layout.areas : [];
+  for (const control of layout.controls) {
+    const inputs = Object.hasOwn(DIRECTION_INPUTS, control?.kind) ? DIRECTION_INPUTS[control.kind] : null;
+    if (!inputs || typeof control.id !== 'string' || !control.id) continue;
+    const area = typeof control.areaId === 'string' && control.areaId && areas.find(candidate => candidate?.id === control.areaId);
+    const settings = area?.drive === undefined ? DEFAULT_DRIVE_SETTINGS : area.drive;
+    if (!area || !isDriveSettings(settings)) {
+      for (const input of inputs) {
+        result.errors.push({
+          target: {controlId: control.id, input}, scope: 'handler', severity: 'error',
+          code: 'invalid-drive-settings', message: 'Выберите два разных порта для привода в области управления.',
+        });
+      }
+      continue;
+    }
+
+    const {leftPort, rightPort, leftReversed, rightReversed} = settings;
+    usedPorts.add(leftPort);
+    usedPorts.add(rightPort);
+    for (const input of inputs) {
+      const [left, right] = WHEEL_DIRECTIONS[input];
+      const base = {target: {controlId: control.id, input}, button: input, sourceBlockId: control.id, driveAreaId: area.id};
+      result.handlers.push({
+        ...base, event: 'pressed', actions: [
+          {kind: 'run', port: leftPort, speed: left * DEFAULT_SPEED * (leftReversed ? -1 : 1)},
+          {kind: 'run', port: rightPort, speed: right * DEFAULT_SPEED * (rightReversed ? -1 : 1)},
+        ],
+      }, {
+        ...base, event: 'released', actions: [
+          {kind: 'stop', port: leftPort},
+          {kind: 'stop', port: rightPort},
+        ],
+      });
+    }
+  }
+}
+
 export function describeAction(action) {
   if (!action || typeof action !== 'object') return '';
   switch (action.kind) {
@@ -358,6 +422,7 @@ export function compileControllerProgram(project) {
     });
   }
 
+  compileDriveControls(project.workspace?.controlLayout, result, allUsedPorts);
   result.protocol = maxProtocol;
   result.ports = Array.from(allUsedPorts).sort();
   return result;
