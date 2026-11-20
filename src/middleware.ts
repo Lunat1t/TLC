@@ -4,7 +4,7 @@ import { createClient } from "@/utils/supabase/middleware";
 export function middleware(request: NextRequest) {
   // APIs verify their own access. Public pages/media never need a session refresh.
   const path = request.nextUrl.pathname;
-  if (path.startsWith("/api/") || path === "/" || path === "/trial" || path === "/display-camera" || path === "/manifest.webmanifest") {
+  if (path.startsWith("/api/") || path === "/" || path === "/trial" || path === "/display-camera" || path === "/auth/callback" || path === "/manifest.webmanifest") {
     return NextResponse.next({ request });
   }
   if (

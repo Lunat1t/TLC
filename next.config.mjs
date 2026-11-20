@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  ...(process.env.BRICK_STUDIO_LAN_DEV === "1" ? { distDir: ".next-lan" } : {}),
   reactStrictMode: true,
   serverExternalPackages: ["@napi-rs/canvas", "pdfjs-dist"],
   outputFileTracingIncludes: {

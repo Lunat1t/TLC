@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
+    "dev:lan": "node scripts/display-lan.mjs",
     "build": "next build",
     "start": "next start -p 8080",
     "test": "node --experimental-strip-types tests/run.js && python3 -B tests/test_controller_hub.py",
@@ -17,7 +18,8 @@
     "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug",
     "test:accounts": "node --experimental-strip-types --test tests/account-credentials.test.ts",
     "prebuild": "node scripts/sync-pdf-worker.mjs",
-    "predev": "node scripts/sync-pdf-worker.mjs"
+    "predev": "node scripts/sync-pdf-worker.mjs",
+    "predev:lan": "node scripts/sync-pdf-worker.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",

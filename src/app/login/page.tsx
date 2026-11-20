@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { afterLoginPath } from "@/lib/auth-destination"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -15,11 +16,10 @@ import {
 import {
   loadAuthState,
   signInStudentWithSupabase,
-  type AuthState,
 } from "@/lib/auth"
 
 export default function LoginPage() {
-  const [auth, setAuth] = React.useState<AuthState>(() => loadAuthState(null))
+  const [busy, setBusy] = React.useState(false)
   const [login, setLogin] = React.useState("")
   const [password, setPassword] = React.useState("")
   const [status, setStatus] = React.useState<{
@@ -29,7 +29,6 @@ export default function LoginPage() {
 
   React.useEffect(() => {
     const loaded = loadAuthState(window.localStorage)
-    setAuth(loaded)
     if (loaded.user?.login) {
       setLogin(loaded.user.login)
     }
@@ -41,6 +40,9 @@ export default function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (busy) return
+    setBusy(true)
+    setStatus(null)
     try {
       const next = await signInStudentWithSupabase(window.localStorage, {
         login,
@@ -51,11 +53,9 @@ export default function LoginPage() {
         isError: false,
       })
       const destination = new URLSearchParams(window.location.search).get("next")
-      const nextPath = destination === "/admin/instructions/drive" || destination === "/teacher/achievements"
-        ? destination
-        : "/dashboard"
-      window.location.replace(sessionStorage.getItem("tlc.pending-student") ? "/profile" : nextPath)
+      window.location.replace(sessionStorage.getItem("tlc.pending-student") ? "/profile" : afterLoginPath(destination))
     } catch (err) {
+      setBusy(false)
       setStatus({
         message: err instanceof Error ? err.message : "Не удалось выполнить вход.",
         isError: true,
@@ -145,7 +145,7 @@ export default function LoginPage() {
               )}
 
               <div className="grid gap-2.5 mt-1.5">
-                <Button id="studentLoginBtn" type="submit" className="w-full">
+                <Button id="studentLoginBtn" type="submit" disabled={busy} className="w-full">
                   Войти в аккаунт <span aria-hidden="true">→</span>
                 </Button>
 

@@ -147,6 +147,13 @@ export function loadAuthState(storage?: Storage | null): AuthState {
   }
 }
 
+export async function readOnboardingProfile(client: ReturnType<typeof createSupabaseBrowserClient>, userId: string) {
+  const { data, error } = await client.from("profiles")
+    .select("onboarding_complete,role").eq("id", userId).maybeSingle()
+  if (error || !data) throw new Error("Не удалось прочитать профиль. Попробуйте ещё раз.")
+  return data
+}
+
 export async function registerStudentWithSupabase(
   storage: Storage | null | undefined,
   input: {
@@ -196,29 +203,20 @@ export async function registerStudentWithSupabase(
     throw new Error(`Ошибка регистрации: ${error.message}`)
   }
 
-  if (data?.user?.id && !data.session) {
-    const signedIn = await supabase.auth.signInWithPassword({ email, password });
-    if (signedIn.error || !signedIn.data.session) throw new Error("Аккаунт создан, но вход не выполнен. Попробуйте войти по логину и паролю.");
-    data.session = signedIn.data.session;
+  let session = data.session
+  if (data.user?.id && !session) {
+    const signedIn = await supabase.auth.signInWithPassword({ email, password })
+    if (signedIn.error || !signedIn.data.session) {
+      throw new Error("Аккаунт создан, но вход не выполнен. Попробуйте войти по логину и паролю.")
+    }
+    session = signedIn.data.session
   }
-  if (!data?.user?.id || !data.session) {
-    throw new Error("Регистрация создана, но вход ещё не подтверждён. Проверьте настройки подтверждения в Supabase.")
-  }
-  const userId = data.user.id
+  if (!session) throw new Error("Вход ещё не подтверждён. Попробуйте войти по логину и паролю.")
+  const userId = session.user.id
 
-  try {
-    await supabase.from("profiles").upsert(
-      {
-        id: userId,
-        login,
-        nickname,
-        avatar,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "id" }
-    )
-  } catch {
-    // Таблица profiles опциональна, основные метаданные уже в auth.users
+  if (input.avatar) {
+    const { error: avatarError } = await supabase.from("profiles").update({ avatar }).eq("id", userId)
+    if (avatarError) throw new Error("Не удалось сохранить настройки профиля.")
   }
 
   const nextState: AuthState = {
@@ -230,9 +228,7 @@ export async function registerStudentWithSupabase(
     },
     avatar,
   }
-  storage?.setItem(AUTH_STORAGE_KEY, JSON.stringify(nextState))
-  storage?.removeItem?.("tlc.supabase.accounts.v1")
-
+  cacheAuthDisplay(storage, nextState)
   return { state: nextState, supabaseUserId: userId }
 }
 
@@ -291,9 +287,17 @@ export async function signInStudentWithSupabase(
     },
     avatar: nextAvatar,
   }
-  storage?.setItem(AUTH_STORAGE_KEY, JSON.stringify(next))
-  storage?.removeItem?.("tlc.supabase.accounts.v1")
+  cacheAuthDisplay(storage, next)
   return next
+}
+
+function cacheAuthDisplay(storage: Storage | null | undefined, state: AuthState) {
+  try {
+    storage?.setItem(AUTH_STORAGE_KEY, JSON.stringify(state))
+    storage?.removeItem?.("tlc.supabase.accounts.v1")
+  } catch {
+    // Supabase cookies own the session. Local storage only remembers display data.
+  }
 }
 
 export async function syncSessionFromSupabase(

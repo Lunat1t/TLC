@@ -3,9 +3,8 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useAccess } from "@/components/auth/access-provider"
 import { ArrowLeft, Blocks, Bot, Check, Code2, Cpu, GraduationCap, Heart, KeyRound, Smile, Sparkles, UserRound } from "lucide-react"
-import { registerStudentWithSupabase } from "@/lib/auth"
+import { readOnboardingProfile, registerStudentWithSupabase } from "@/lib/auth"
 import { createClient } from "@/utils/supabase/client"
 import { fullNameLogin, validateAccountPassword } from "@/lib/account-credentials"
 import "./onboarding.css"
@@ -26,7 +25,6 @@ type Role = typeof roles[number]["id"]
 
 export default function RegisterPage() {
   const router = useRouter()
-  const { refreshProfile } = useAccess()
   const [language, setLanguage] = React.useState<"ru" | "kk">("ru")
   const [selectedCourses, setSelectedCourses] = React.useState<string[]>([])
   const [role, setRole] = React.useState<Role | null>(null)
@@ -35,7 +33,6 @@ export default function RegisterPage() {
   const [lastName, setLastName] = React.useState("")
   const [age, setAge] = React.useState("")
   const [password, setPassword] = React.useState("")
-  const [googleUser, setGoogleUser] = React.useState(false)
   const [busy, setBusy] = React.useState(false)
   const [error, setError] = React.useState("")
   const heading = React.useRef<HTMLHeadingElement>(null)
@@ -46,7 +43,6 @@ export default function RegisterPage() {
     if (localStorage.getItem("tlc.site-language") === "kk") setLanguage("kk")
     const token = new URLSearchParams(window.location.search).get("student")
     if (token && /^[0-9a-f-]{36}$/i.test(token)) sessionStorage.setItem("tlc.pending-student", token)
-    void createClient().auth.getUser().then(({ data }) => setGoogleUser(!!data.user)).catch(() => {})
   }, [])
   React.useEffect(() => { heading.current?.focus() }, [step])
 
@@ -81,19 +77,40 @@ export default function RegisterPage() {
     try { login = fullNameLogin(name, lastName); validateAccountPassword(password) } catch (e) { setError(e instanceof Error ? e.message : "Проверь данные."); return }
     setBusy(true)
     try {
-      if (googleUser) {
-        const client = createClient()
-        const { error: passwordError } = await client.auth.updateUser({ password, data: { login, nickname: `${name.trim()} ${lastName.trim()}`, first_name: name.trim(), last_name: lastName.trim() } })
+      const client = createClient()
+      const { data: current, error: sessionError } = await client.auth.getSession()
+      if (sessionError) throw new Error(t("Не удалось проверить вход. Попробуй ещё раз.", "Кіру күйін тексеру мүмкін болмады. Қайта көр."))
+      const userId = current.session?.user.id ?? (await registerStudentWithSupabase(localStorage, {
+        login, firstName: name, lastName, password, age: role === "parent" ? null : Number(age),
+        role: role!, disciplines,
+      })).supabaseUserId
+      if (!userId) throw new Error(t("Войди в аккаунт, чтобы продолжить.", "Жалғастыру үшін аккаунтқа кір."))
+      let profile = await readOnboardingProfile(client, userId)
+
+      if (!profile.onboarding_complete) {
+        const { error: passwordError } = await client.auth.updateUser({
+          password,
+          data: { login, nickname: `${name.trim()} ${lastName.trim()}`, first_name: name.trim(), last_name: lastName.trim() },
+        })
         if (passwordError) throw passwordError
-        const { error } = await client.rpc("complete_tlc_onboarding", { p_login: login, p_age: role === "parent" ? null : Number(age), p_role: role, p_disciplines: disciplines })
+        const { error } = await client.rpc("complete_tlc_onboarding", {
+          p_login: login, p_age: role === "parent" ? null : Number(age), p_role: role, p_disciplines: disciplines,
+        })
         if (error) throw error
-      } else await registerStudentWithSupabase(localStorage, { login, firstName: name, lastName, password, age: role === "parent" ? null : Number(age), role: role!, disciplines: disciplines })
-      if (role !== "parent") localStorage.setItem("tlc.learning-interests", JSON.stringify(selectedCourses))
-      await refreshProfile()
-      router.replace(role === "parent" ? "/profile" : "/dashboard")
-      router.refresh()
-    } catch (e) { setError(e instanceof Error ? e.message : t("Не удалось создать аккаунт. Попробуй ещё раз.", "Аккаунт жасау мүмкін болмады. Қайта көр.")) }
-    finally { setBusy(false) }
+        profile = await readOnboardingProfile(client, userId)
+      }
+      if (!profile.onboarding_complete) {
+        throw new Error(t("Профиль ещё не сохранён. Попробуй ещё раз.", "Профиль әлі сақталмады. Қайта көр."))
+      }
+      if (profile.role !== "parent") {
+        try { localStorage.setItem("tlc.learning-interests", JSON.stringify(selectedCourses)) } catch {}
+      }
+      // Reload the route tree after the session cookie and profile are ready.
+      window.location.replace(profile.role === "parent" ? "/profile" : "/dashboard")
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("Не удалось создать аккаунт. Попробуй ещё раз.", "Аккаунт жасау мүмкін болмады. Қайта көр."))
+      setBusy(false)
+    }
   }
 
   return <main className="onboarding" lang={language}>

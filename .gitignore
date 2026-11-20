@@ -1,5 +1,6 @@
 .vercel/
 .next/
+.next-lan/
 out/
 node_modules/
 dist/
