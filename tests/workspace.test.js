@@ -245,22 +245,34 @@ test('if/else block supports empty condition, body and else branches, and Pybric
   assert.match(code,/\nmotor_b\.run_time\(360, 1000, then=Stop\.BRAKE\)/);
 });
 
-test('removed button handlers are discarded while standalone stop settings persist', async () => {
+test('button handlers persist while standalone stop settings remain editable', async () => {
   const {updateDrive, generatePybricks} = await import('../src/lib/workspace.ts');
   const blocks = readBlocks({blocks:[
     {id:'legacy-button',type:'button',x:0,y:0,button:'a',event:'released'},
     {id:'stop',type:'stop',x:0,y:60,motor:'A'},
   ]});
-  assert.deepEqual(blocks.map(block=>block.id),['stop']);
+  assert.deepEqual(blocks.map(block=>block.id),['legacy-button','stop']);
+  assert.equal(blocks[0].event,'released');
+  assert.equal(blocks[0].button,'a');
   const updated = updateDrive(blocks,'stop',{motor:'B',motor2:'C'},'spike');
-  assert.equal(updated[0].motor,'B');
-  assert.equal(updated[0].motor2,'C');
+  assert.equal(updated.find(block=>block.id==='stop').motor,'B');
+  assert.equal(updated.find(block=>block.id==='stop').motor2,'C');
   const code=generatePybricks(updated,'spike');
   assert.match(code,/motor_b\.brake\(\)/);
   assert.match(code,/motor_c\.brake\(\)/);
   assert.doesNotMatch(code,/motor_a/);
 });
 
-test('retired button handlers cannot be added to the editor',()=>{
-  assert.throws(()=>addBlock([], 'legacy', 0, 0, 'button'),/Неизвестный блок/);
+test('button events can be added and retain colored targets through JSON reload',()=>{
+  const blocks=addBlock([], 'event', 0, 0, 'button');
+  assert.equal(blocks[0].event,'pressed');
+  for (const button of ['up','down','left','right','blue','red','green','yellow']) {
+    for (const event of ['pressed','released']) {
+      const saved={...blocks[0],button,event,target:{controlId:'panel',input:button}};
+      const [restored]=readBlocks(JSON.parse(JSON.stringify({blocks:[saved]})));
+      assert.equal(restored.button,button);
+      assert.equal(restored.event,event);
+      assert.deepEqual(restored.target,saved.target);
+    }
+  }
 });

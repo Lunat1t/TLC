@@ -91,6 +91,8 @@ const BLOCK_CATEGORIES = [
     color: "#9a4b08",
     blocks: [
       { type: "start", label: "При запуске", icon: Play },
+      { type: "button", event: "pressed", label: "Когда кнопка нажата", icon: Gamepad2 },
+      { type: "button", event: "released", label: "Когда кнопку отпустили", icon: Gamepad2 },
     ],
   },
   {
@@ -413,13 +415,13 @@ function EditorWorkspace() {
   )
 
   const controlLayout = (project?.workspace?.controlLayout as ControlLayout | undefined) || {version:1 as const, areas:[], controls:[]}
-  const motorPanelControls = React.useMemo<ControlInstance[]>(() => blocks.flatMap(block => {
+  const motorPanelControls = React.useMemo<ControlInstance[]>(() => sheetState.sheets.flatMap(sheet => sheet.blocks).flatMap(block => {
     if (block.type !== "motor-buttons" || !block.controlAreaId) return []
-    const area = controlLayout.areas.find(candidate => candidate.id === block.controlAreaId && candidate.sheetId === currentSheet.id)
+    const area = controlLayout.areas.find(candidate => candidate.id === block.controlAreaId)
     if (!area) return []
     const inputs = (["blue", ...(block.controlModules || [])] as const).filter(color => !(block.hiddenControlButtons || []).includes(color))
     return [{id:block.id,areaId:area.id,kind:"motor-panel",label:"Панель моторов",x:0,y:0,width:block.width||180,height:block.height||132,inputs}]
-  }), [blocks,controlLayout.areas,currentSheet.id])
+  }), [sheetState.sheets,controlLayout.areas])
   const controllerControls = React.useMemo(() => [...controlLayout.controls,...motorPanelControls], [controlLayout.controls,motorPanelControls])
   const controllerProgram = React.useMemo(() => project ? compileControllerProgram({...project,workspace:{...project.workspace,...snapshotSheets(),controlLayout:{...controlLayout,controls:controllerControls}}}) : null, [project,snapshotSheets,controlLayout,controllerControls])
   const keyTargets = React.useMemo(() => {
@@ -967,11 +969,13 @@ function EditorWorkspace() {
               <section key={id} aria-label={label} className="mb-3">
                 <h2 className="mb-1 px-1 text-xs font-extrabold" style={{ color }}>{label}</h2>
                 <div className="space-y-1">
-                  {entries.map(({ type, label, icon: Icon }) => {
+                  {entries.map((entry) => {
+                    const { type, label, icon: Icon } = entry
+                    const buttonEvent = "event" in entry ? entry.event : undefined
                     const areaAlreadyExists = type === "area" && controlLayout.areas.some((area) => area.sheetId === currentSheet.id)
                     return (
                       <button
-                        key={type}
+                        key={`${type}:${buttonEvent || ""}`}
                         type="button"
                         disabled={!project || areaAlreadyExists}
                         title={areaAlreadyExists ? "На этом листе уже есть область управления" : undefined}
@@ -985,6 +989,7 @@ function EditorWorkspace() {
                           setGesture({
                             kind: "palette",
                             type,
+                            initialOverrides: buttonEvent ? { event: buttonEvent } : undefined,
                             clientX: event.clientX,
                             clientY: event.clientY,
                           })
@@ -1544,6 +1549,18 @@ function EditorWorkspace() {
                                     const key=`${block.id}:${color}`
                                     if (checking) {setPressedPanelButtons(previous=>previous.filter(item=>item!==key));dispatchControl({controlId:block.id,input:color},'released')}
                                     else setButtonDrag(prev=>prev?.blockId===block.id&&prev.pointerId===e.pointerId?null:prev)
+                                  }}
+                                  onLostPointerCapture={() => {
+                                    if (!checking) return
+                                    const key = `${block.id}:${color}`
+                                    setPressedPanelButtons(previous => previous.filter(item => item !== key))
+                                    dispatchControl({controlId:block.id,input:color}, 'released')
+                                  }}
+                                  onBlur={() => {
+                                    if (!checking) return
+                                    const key = `${block.id}:${color}`
+                                    setPressedPanelButtons(previous => previous.filter(item => item !== key))
+                                    dispatchControl({controlId:block.id,input:color}, 'released')
                                   }}
                                   onKeyDown={e=>{
                                     if (!checking || (e.key!==" "&&e.key!=="Enter") || e.repeat) return

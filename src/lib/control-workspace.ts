@@ -98,7 +98,7 @@ export function migrateControlWorkspace(project: RobotProject): {project: RobotP
   const stripUnlisted = (rawBlocks: unknown[]): unknown[] => {
     const removed = new Set<string>()
     for (const block of rawBlocks) {
-      if (obj(block) && typeof block.id === 'string' && (typeof block.type !== 'string' || !['start','drive','pair','if','stop','motor-buttons'].includes(block.type))) removed.add(block.id)
+      if (obj(block) && typeof block.id === 'string' && (typeof block.type !== 'string' || !['start','drive','pair','if','button','stop','motor-buttons'].includes(block.type))) removed.add(block.id)
     }
     return rawBlocks
       .filter(block => !(obj(block) && typeof block.id === 'string' && removed.has(block.id)))
@@ -160,7 +160,8 @@ export function cloneControlSheet(state: import('./workspace').SheetState, layou
   const sourceAreas=layout.areas.filter(a=>a.sheetId===sheetId),areaIds=new Map(sourceAreas.map(a=>[a.id,createId()]))
   const sourceControls=layout.controls.filter(c=>areaIds.has(c.areaId)),controlIds=new Map(sourceControls.map(c=>[c.id,createId()]))
   const blockIds=new Map(source.blocks.map(b=>[b.id,createId()]))
-  const blocks=source.blocks.map(b=>({...b,id:blockIds.get(b.id)!,...(b.parentId?{parentId:blockIds.get(b.parentId)||b.parentId}:{}),...(b.controlAreaId?{controlAreaId:areaIds.get(b.controlAreaId)||b.controlAreaId}:{}),...(b.target?{target:{...b.target,controlId:controlIds.get(b.target.controlId)||b.target.controlId}}:{})}))
+  const panelIds=new Map(source.blocks.filter(b=>b.type==='motor-buttons').map(b=>[b.id,blockIds.get(b.id)!]))
+  const blocks=source.blocks.map(b=>({...b,id:blockIds.get(b.id)!,...(b.parentId?{parentId:blockIds.get(b.parentId)||b.parentId}:{}),...(b.controlAreaId?{controlAreaId:areaIds.get(b.controlAreaId)||b.controlAreaId}:{}),...(b.target?{target:{...b.target,controlId:controlIds.get(b.target.controlId)||panelIds.get(b.target.controlId)||b.target.controlId}}:{})}))
   const copied={...source,id:newSheetId,name:name.trim(),blocks}
   const nextState={...state,activeSheetId:newSheetId,sheets:[...state.sheets,copied]}
   const nextLayout:ControlLayout={...layout,areas:[...layout.areas,...sourceAreas.map(a=>({...a,id:areaIds.get(a.id)!,sheetId:newSheetId}))],controls:[...layout.controls,...sourceControls.map(c=>({...c,id:controlIds.get(c.id)!,areaId:areaIds.get(c.areaId)!}))]}

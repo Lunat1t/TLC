@@ -22,7 +22,7 @@ export type ControllerButton =
 export type ControllerEvent = "pressed" | "released"
 
 export type BlockType = "start" | "drive" | "pair" | "if" | "button" | "stop" | "motor-buttons"
-const LIBRARY_BLOCK_TYPES = new Set<BlockType>(["start", "drive", "pair", "if", "stop", "motor-buttons"])
+const LIBRARY_BLOCK_TYPES = new Set<BlockType>(["start", "drive", "pair", "if", "button", "stop", "motor-buttons"])
 export type MotorDirection = "forward" | "backward"
 export type TravelUnit = "rotations" | "degrees" | "seconds"
 export type MotorModule = "speed" | "power" | "travel"
@@ -373,6 +373,10 @@ export function readBlocks(
           "y",
           "l",
           "r",
+          "blue",
+          "red",
+          "green",
+          "yellow",
         ]
         const btn = allowedButtons.includes(block.button as ControllerButton)
           ? (block.button as ControllerButton)

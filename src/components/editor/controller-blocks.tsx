@@ -37,6 +37,7 @@ export function ControllerButtonBlock({
   controls,
   onChange,
 }: ControllerBlockProps) {
+  const buttonControls = controls?.filter(control => (control.inputs || CONTROL_INPUTS[control.kind]).length > 0)
   const currentButton = (block.button || "up") as ControllerButton
   const currentEvent = (block.event || "pressed") as ControllerEvent
 
@@ -51,15 +52,15 @@ export function ControllerButtonBlock({
         </span>
 
         {/* Цель обработчика — конкретный элемент и его кнопка. */}
-        {controls ? <>
-          <select value={block.target?.controlId || ""} aria-label="Выбрать элемент управления" onChange={e=>onChange({target:{controlId:e.target.value,input:""}})} className="h-[36px] max-w-[150px] px-2 rounded-[9px] bg-white text-[#18313b] font-black text-sm border-2 border-[#c2410c]">
+        {buttonControls ? <>
+          <select value={block.target?.controlId || ""} aria-label="Выбрать элемент управления" onChange={e=>{const control=buttonControls.find(item=>item.id===e.target.value);onChange({target:{controlId:e.target.value,input:control ? (control.inputs || CONTROL_INPUTS[control.kind])[0] || "" : ""}})}} className="h-[36px] max-w-[150px] px-2 rounded-[9px] bg-white text-[#18313b] font-black text-sm border-2 border-[#c2410c]">
             <option value="">Выберите управление</option>
-            {block.target?.controlId && !controls.some(c=>c.id===block.target?.controlId) && <option value={block.target.controlId}>Удалённое управление</option>}
-            {controls.map(c=><option key={c.id} value={c.id}>{c.label} · {c.id.slice(-5)}</option>)}
+            {block.target?.controlId && !buttonControls.some(c=>c.id===block.target?.controlId) && <option value={block.target.controlId}>Удалённое управление</option>}
+            {buttonControls.map(c=><option key={c.id} value={c.id}>{c.label} · {c.id.slice(-5)}</option>)}
           </select>
           <select value={block.target?.input || ""} aria-label="Выбрать кнопку элемента" onChange={e=>onChange({target:{controlId:block.target?.controlId || "",input:e.target.value}})} className="h-[36px] max-w-[100px] px-2 rounded-[9px] bg-white text-[#18313b] font-black text-sm border-2 border-[#c2410c]">
             <option value="">Кнопка</option>
-            {(() => {const c=controls.find(item=>item.id===block.target?.controlId);return c ? (c.inputs || CONTROL_INPUTS[c.kind]).map(input=><option key={input} value={input}>{({up:'▲',down:'▼',left:'◀',right:'▶',forward:'▲',backward:'▼',blue:'🔵 Синяя',red:'🔴 Красная',green:'🟢 Зелёная',yellow:'🟡 Жёлтая'} as Record<string,string>)[input] || input.toUpperCase()}</option>) : null})()}
+            {(() => {const c=buttonControls.find(item=>item.id===block.target?.controlId);return c ? (c.inputs || CONTROL_INPUTS[c.kind]).map(input=><option key={input} value={input}>{({up:'▲',down:'▼',left:'◀',right:'▶',forward:'▲',backward:'▼',blue:'🔵 Синяя',red:'🔴 Красная',green:'🟢 Зелёная',yellow:'🟡 Жёлтая'} as Record<string,string>)[input] || input.toUpperCase()}</option>) : null})()}
           </select>
         </> : <select
           value={currentButton}

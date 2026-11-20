@@ -86,7 +86,7 @@ function DirectionButton({
         release(event.key)
       }}
       onBlur={() => {
-        if (typeof key.current === "string") release(key.current)
+        if (key.current !== null) release(key.current)
       }}
     >
       {arrow}

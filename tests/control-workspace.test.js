@@ -14,8 +14,23 @@ const panelProject = () => {
   project.workspace.sheets[0].blocks.push({id:'panel-block',type:'motor-buttons',x:0,y:0,controlAreaId:'area'});
   return project;
 };
-test('migration removes unavailable handlers, detaches actions, preserves source and is idempotent',()=>{
+// A genuinely retired type still requires backup and child detachment.
+const retiredProject = () => {
+  const project=fixture('controller.json');
+  for (const block of project.workspace.sheets[0].blocks) if (block.type==='button') block.type='empty';
+  return project;
+};
+test('migration preserves supported button events and their action chains',()=>{
   const source=fixture('controller.json'), before=JSON.stringify(source);
+  const result=migrateControlWorkspace(source);
+  assert.equal(result.changed,false);
+  assert.equal(JSON.stringify(source),before);
+  assert.deepEqual(readBlocks(result.project.workspace.sheets[0]).map(block=>[block.id,block.parentId]),[
+    ['press',undefined],['drive','press'],['release',undefined],['stop','release'],
+  ]);
+});
+test('migration removes retired blocks, detaches actions, preserves source and is idempotent',()=>{
+  const source=retiredProject(), before=JSON.stringify(source);
   const a=migrateControlWorkspace(source), b=migrateControlWorkspace(source);
   assert.equal(JSON.stringify(source),before);
   assert.deepEqual(a,b);assert.equal(a.changed,true);
@@ -54,7 +69,7 @@ test('layout rejects overlap, out of bounds and unknown controls',()=>{
 
 test('project migration backs up source before writing and rejects stale writes', async()=>{
   const {prepareEditorProjects,saveEditorProjects,STORAGE_KEY}=await import('../src/lib/projects.ts');
-  const source=JSON.stringify([fixture('controller.json')]); const data=new Map([[STORAGE_KEY,source]]);
+  const source=JSON.stringify([retiredProject()]); const data=new Map([[STORAGE_KEY,source]]);
   const storage={getItem:key=>data.get(key)??null,setItem:(key,value)=>data.set(key,String(value)),removeItem:key=>data.delete(key)};
   const locks={request:async (_name,callback)=>callback()};
   const ready=await prepareEditorProjects(storage,'fixture-controller',locks);
@@ -67,7 +82,7 @@ test('project migration backs up source before writing and rejects stale writes'
 
 test('backup quota failure never overwrites original projects', async()=>{
   const {prepareEditorProjects,STORAGE_KEY}=await import('../src/lib/projects.ts');
-  const source=JSON.stringify([fixture('controller.json')]); const data=new Map([[STORAGE_KEY,source]]);
+  const source=JSON.stringify([retiredProject()]); const data=new Map([[STORAGE_KEY,source]]);
   const storage={getItem:key=>data.get(key)??null,setItem:(key,value)=>{if(key.includes('.backup.')) throw Error('quota');data.set(key,value)}};
   await assert.rejects(prepareEditorProjects(storage,'fixture-controller',{request:async (_n,cb)=>cb()}),/quota/);
   assert.equal(data.get(STORAGE_KEY),source);
@@ -75,7 +90,7 @@ test('backup quota failure never overwrites original projects', async()=>{
 
 test('when cross-tab locks are unavailable projects remain readable without storage writes',async()=>{
   const {prepareEditorProjects,saveEditorProjects,STORAGE_KEY}=await import('../src/lib/projects.ts');
-  const source=JSON.stringify([fixture('controller.json')]);let writes=0;
+  const source=JSON.stringify([retiredProject()]);let writes=0;
   const storage={getItem:key=>key===STORAGE_KEY?source:null,setItem:()=>writes++};
   const result=await prepareEditorProjects(storage,'fixture-controller',undefined);
   assert.equal(result.readOnly,true);
@@ -130,4 +145,37 @@ test('migration rejects unknown controls without changing source',()=>{
   assert.throws(()=>migrateControlWorkspace(project),/Неверный элемент/);
   assert.equal(JSON.stringify(project),raw);
   assert.notEqual(raw,before);
+});
+
+test('cloning remaps local color and arrow targets but preserves external references',async()=>{
+  const {cloneControlSheet}=await import('../src/lib/control-workspace.ts');
+  const project=panelProject(), sheet=project.workspace.sheets[0];
+  sheet.blocks.find(block=>block.id==='panel-block').controlModules=['red','green','yellow'];
+  const layout=project.workspace.controlLayout;
+  layout.controls.push({id:'arrows',areaId:'area',kind:'drive-turn',label:'Стрелки',x:200,y:0,width:132,height:96});
+  for (const input of ['blue','red','green','yellow']) for (const event of ['pressed','released']) {
+    const id=`${input}-${event}`;
+    sheet.blocks.push({id,type:'button',x:0,y:0,event,target:{controlId:'panel-block',input}});
+    sheet.blocks.push({id:`action-${id}`,type:'stop',parentId:id,x:0,y:54,motor:'A'});
+  }
+  sheet.blocks.push({id:'arrow-event',type:'button',x:0,y:0,event:'pressed',target:{controlId:'arrows',input:'left'}});
+  sheet.blocks.push({id:'external-event',type:'button',x:0,y:0,event:'released',target:{controlId:'external-panel',input:'red'}});
+  project.workspace.sheets.push({id:'outside',name:'Другой',blocks:[{id:'external-panel',type:'motor-buttons',x:0,y:0}]});
+  const before=JSON.stringify(project);let i=0;
+  const result=cloneControlSheet({sheets:project.workspace.sheets,activeSheetId:sheet.id},layout,sheet.id,'copy','Копия',()=>`copy-${++i}`);
+  const copied=result.state.sheets.find(item=>item.id==='copy');
+  const newPanel=copied.blocks.find(block=>block.type==='motor-buttons');
+  const newArea=result.layout.areas.find(area=>area.sheetId==='copy');
+  const newArrows=result.layout.controls.find(control=>control.kind==='drive-turn'&&control.areaId===newArea.id);
+  assert.notEqual(newPanel.id,'panel-block');
+  for (const input of ['blue','red','green','yellow']) for (const event of ['pressed','released']) {
+    const handler=copied.blocks.find(block=>block.type==='button'&&block.event===event&&block.target?.input===input&&block.target.controlId===newPanel.id);
+    assert.ok(handler,`${input} ${event} must target the copied panel`);
+    assert.ok(copied.blocks.some(block=>block.parentId===handler.id));
+  }
+  assert.ok(copied.blocks.some(block=>block.target?.controlId===newArrows.id&&block.target.input==='left'));
+  assert.equal(copied.blocks.filter(block=>block.target?.controlId==='external-panel').length,1);
+  assert.equal(JSON.stringify(project),before);
+  const roundTrip=JSON.parse(JSON.stringify(copied));
+  assert.deepEqual(readBlocks(roundTrip).filter(block=>block.type==='button').map(block=>block.target),copied.blocks.filter(block=>block.type==='button').map(block=>block.target));
 });

@@ -79,9 +79,11 @@ function compileDriveControls(layout, result, usedPorts) {
     }
 
     const {leftPort, rightPort, leftReversed, rightReversed} = settings;
-    usedPorts.add(leftPort);
-    usedPorts.add(rightPort);
     for (const input of inputs) {
+      // Explicit event blocks replace automatic driving for this arrow.
+      if (result.handlers.some(handler => handler.target?.controlId === control.id && handler.target.input === input && !handler.driveAreaId)) continue;
+      usedPorts.add(leftPort);
+      usedPorts.add(rightPort);
       const [left, right] = WHEEL_DIRECTIONS[input];
       const base = {target: {controlId: control.id, input}, button: input, sourceBlockId: control.id, driveAreaId: area.id};
       result.handlers.push({
@@ -243,9 +245,9 @@ export function compileControllerProgram(project) {
     if (target) {
       const controls = project.workspace?.controlLayout?.controls || [];
       const control = controls.find(c => c.id === target.controlId);
-      const inputs = {drivetrain:['up','down','left','right'],motor:['forward','backward'],'motor-group':['forward','backward'],'legacy-buttons':CONTROLLER_BUTTONS,'motor-panel':['blue','red','green','yellow']};
+      const inputs = {...DIRECTION_INPUTS, drivetrain:['up','down','left','right'],motor:['forward','backward'],'motor-group':['forward','backward'],'legacy-buttons':CONTROLLER_BUTTONS,'motor-panel':['blue','red','green','yellow']};
       if (!control) result.errors.push({blockId:root.id, target, code:'missing-control', message:'Выберите существующий элемент управления'});
-      else if (!inputs[control.kind]?.includes(target.input)) result.errors.push({blockId:root.id, target, code:'invalid-input', message:'Выберите доступную кнопку элемента'});
+      else if (!inputs[control.kind]?.includes(target.input) || (Array.isArray(control.inputs) && !control.inputs.includes(target.input))) result.errors.push({blockId:root.id, target, code:'invalid-input', message:'Выберите доступную кнопку элемента'});
     }
     const ev = root.event === 'released' ? 'released' : 'pressed';
     const handlerKey = `${target?.controlId || "legacy"}:${btn}:${ev}`;
