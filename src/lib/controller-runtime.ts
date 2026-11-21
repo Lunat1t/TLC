@@ -1,4 +1,4 @@
-import {commandsFor, controllerHandler, controllerRuntimeErrors, describeAction, type ControllerAction, type ControllerEvent, type ControllerHandler, type ControllerProgram} from './controller-program.ts'
+import {commandsFor, controllerHandler, controllerRuntimeErrors, describeAction, DRIVE_PORTS, type ControllerAction, type ControllerEvent, type ControllerHandler, type ControllerProgram} from './controller-program.ts'
 import {
   SERVICE,
   COMMAND_EVENT,
@@ -129,9 +129,11 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
   let uploadedThisConnect=false
   let snapshot:ControllerProgram|null=null
   const runners=new Map<string,AbortController>();const owners=new Map<string,AbortController>();const held=new Set<string>()
+  type ActiveHold={key:string;handler:ControllerHandler;ports:string[];ownedRunners:Set<AbortController>}
+  const activeHolds=new Map<string,ActiveHold>()
   const publish=(patch:Partial<SessionState>)=>{if(disposed)return;state={...state,...patch};for(const f of listeners)f(state)}
   const log=(line:string)=>publish({log:[...state.log,line].slice(-30)})
-  const clear=()=>{epoch++;for(const run of runners.values())run.abort();runners.clear();owners.clear();held.clear();snapshot=null;if(heartbeat)clock.clearInterval(heartbeat);heartbeat=null}
+  const clear=()=>{epoch++;for(const run of runners.values())run.abort();runners.clear();owners.clear();held.clear();activeHolds.clear();snapshot=null;if(heartbeat)clock.clearInterval(heartbeat);heartbeat=null}
   const disconnectTransport=async()=>{
     connection++
     startAbort?.abort();startAbort=null
@@ -200,21 +202,41 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
     })()
     return stopPromise
   }
-  async function runActions(key:string,actions:ControllerAction[],generation:number) {
+  function stopAllPorts(){
+    return state.ports.length?state.ports:(snapshot?.ports?.length?snapshot.ports:[...DRIVE_PORTS])
+  }
+  function startActions(key:string,actions:ControllerAction[],generation:number):AbortController {
     runners.get(key)?.abort()
     const runner=new AbortController();runners.set(key,runner)
-    for(const action of actions)if('port' in action)owners.set(action.port,runner)
-    try {
-      for(const action of actions){
-        if(runner.signal.aborted||epoch!==generation)break
-        if(action.kind==='wait'){await sleep(action.ms,runner.signal,clock);continue}
-        const port='port' in action?action.port:null
-        for(const command of commandsFor(action,state.protocol||3)){
-          await write(command,()=>!runner.signal.aborted&&epoch===generation&&(!port||owners.get(port)===runner))
+    for(const action of actions){
+      if(action.kind==='stopAll'){for(const port of stopAllPorts())owners.set(port,runner)}
+      else if('port' in action)owners.set(action.port,runner)
+    }
+    void (async()=>{
+      try {
+        for(const action of actions){
+          if(runner.signal.aborted||epoch!==generation)break
+          if(action.kind==='wait'){await sleep(action.ms,runner.signal,clock);continue}
+          if(action.kind==='stopAll'){
+            for(const port of stopAllPorts()){
+              for(const command of commandsFor({kind:'stop',port},state.protocol||3)){
+                await write(command,()=>!runner.signal.aborted&&epoch===generation&&owners.get(port)===runner)
+              }
+            }
+            continue
+          }
+          const port='port' in action?action.port:null
+          for(const command of commandsFor(action,state.protocol||3)){
+            await write(command,()=>!runner.signal.aborted&&epoch===generation&&(!port||owners.get(port)===runner))
+          }
         }
-      }
-    } catch(error){if(!runner.signal.aborted&&epoch===generation)await fault(`Ошибка связи: ${error instanceof Error?error.message:String(error)}`)}
-    finally{if(runners.get(key)===runner)runners.delete(key)}
+      } catch(error){if(!runner.signal.aborted&&epoch===generation)await fault(`Ошибка связи: ${error instanceof Error?error.message:String(error)}`)}
+      finally{if(runners.get(key)===runner)runners.delete(key)}
+    })()
+    return runner
+  }
+  function runActions(key:string,actions:ControllerAction[],generation:number){
+    startActions(key,actions,generation)
   }
   function beginHeartbeat() {
     if(heartbeat)clock.clearInterval(heartbeat)
@@ -338,14 +360,56 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
       if(!snapshot||state.viewMode!=='check'||!['trial-running','live-running'].includes(state.program))return
       const key=targetKey(target)
       if(event==='pressed'){if(held.has(key))return;held.add(key)}else{if(!held.delete(key))return}
+      if(event==='released'){
+        const holdEntry=activeHolds.get(key)
+        if(holdEntry){
+          activeHolds.delete(key)
+          runners.get(`input:${key}`)?.abort()
+          const remainingHolds=Array.from(activeHolds.values()).reverse()
+          const stopActions:ControllerAction[]=[]
+          const resumeRuns:{hold:ActiveHold;action:ControllerAction}[]=[]
+          for(const port of holdEntry.ports){
+            const currentOwner=owners.get(port)
+            if(state.program==='live-running' && currentOwner && !holdEntry.ownedRunners.has(currentOwner))continue
+            let resumed=false
+            for(const other of remainingHolds){
+              const continuous=other.handler.actions.filter((a):a is Extract<ControllerAction,{kind:'run'|'dc'}> => (a.kind==='run'||a.kind==='dc')&&a.port===port)
+              const last=continuous[continuous.length-1]
+              if(last){resumeRuns.push({hold:other,action:last});resumed=true;break}
+            }
+            if(!resumed)stopActions.push({kind:'stop',port})
+          }
+          const summary=[...stopActions,...resumeRuns.map(r=>r.action)].map(describeAction).filter(Boolean).join(' · ')||'нет действий'
+          log(`${target.input} отпущена → ${summary}`)
+          if(state.program==='live-running'){
+            if(stopActions.length)startActions(`hold-stop:${key}`,stopActions,epoch)
+            for(const {hold,action} of resumeRuns){
+              if('port' in action){
+                const runner=startActions(`hold-resume:${hold.key}:${action.port}`,[action],epoch)
+                hold.ownedRunners.add(runner)
+              }
+            }
+          }
+          return
+        }
+      }
       const errors=[...snapshot.errors,...(state.program==='live-running'?controllerRuntimeErrors(snapshot,state.protocol,new Set(state.ports)):[])]
       const error=errors.find(e=>e.severity!=='warning'&&e.target?.controlId===target.controlId&&e.target?.input===target.input)
       if(error){held.delete(key);log(`⚠ ${error.message}`);return}
-      const handler = controllerHandler(snapshot,target,event)
+      const handler = event==='pressed'
+        ? (controllerHandler(snapshot,target,'hold') || controllerHandler(snapshot,target,'pressed'))
+        : controllerHandler(snapshot,target,event)
       const actions = handler?.driveAreaId ? driveActions(handler, snapshot.handlers, held) : handler?.actions || []
       const runnerKey = handler?.driveAreaId ? `drive-area:${handler.driveAreaId}` : `input:${key}`
       log(`${target.input} ${event==='pressed'?'нажата':'отпущена'} → ${actions.map(describeAction).filter(Boolean).join(' · ')||'нет действий'}`)
-      if(state.program==='live-running'&&actions.length)void runActions(runnerKey,actions,epoch)
+      let startedRunner:AbortController|null=null
+      if(state.program==='live-running'&&actions.length)startedRunner=startActions(runnerKey,actions,epoch)
+      if(event==='pressed' && handler?.event==='hold'){
+        const drivenPorts=[...new Set(actions.filter((a):a is Exclude<ControllerAction,{kind:'wait'}|{kind:'stop'}|{kind:'stopAll'}> => a.kind!=='wait'&&a.kind!=='stop'&&a.kind!=='stopAll'&&'port' in a).map(a=>a.port))]
+        const ownedRunners=new Set<AbortController>()
+        if(startedRunner)ownedRunners.add(startedRunner)
+        activeHolds.set(key,{key,handler,ports:drivenPorts,ownedRunners})
+      }
     },
     stop,
     async disconnect(){await stop();clear();await disconnectTransport();publish({transport:'disconnected',program:'stopped',uploadProgress:null,hubName:null,needsManualHubProgram:false,message:'Хаб отключён.',ports:[],protocol:null})},

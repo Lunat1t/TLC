@@ -98,7 +98,7 @@ export function migrateControlWorkspace(project: RobotProject): {project: RobotP
   const stripUnlisted = (rawBlocks: unknown[]): unknown[] => {
     const removed = new Set<string>()
     for (const block of rawBlocks) {
-      if (obj(block) && typeof block.id === 'string' && (typeof block.type !== 'string' || !['start','drive','pair','if','button','stop','motor-buttons'].includes(block.type))) removed.add(block.id)
+      if (obj(block) && typeof block.id === 'string' && (typeof block.type !== 'string' || !['start','drive','pair','chassis','if','button','stop','motor-buttons'].includes(block.type))) removed.add(block.id)
     }
     return rawBlocks
       .filter(block => !(obj(block) && typeof block.id === 'string' && removed.has(block.id)))

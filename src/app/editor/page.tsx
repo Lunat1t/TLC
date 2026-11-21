@@ -4,6 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import {
+  AlertTriangle,
   ArrowDownUp,
   ArrowRight,
   ArrowRightLeft,
@@ -12,10 +13,12 @@ import {
   MoreHorizontal,
   LayoutGrid,
   Monitor,
+  Navigation,
   PanelLeftClose,
   PanelLeftOpen,
   Play,
   RectangleHorizontal,
+  Settings2,
   Square,
   Trash2,
   Workflow,
@@ -56,10 +59,18 @@ import {
   type WorkspaceBlock,
 } from "@/lib/workspace"
 import {
+  BlockErrorBar,
+  ChassisBlock,
   ControllerButtonBlock,
   ControllerStopBlock,
 } from "@/components/editor/controller-blocks"
-import { compileControllerProgram } from "@/lib/controller-program"
+import {
+  DEFAULT_DRIVE_SETTINGS,
+  compileControllerProgram,
+  resolveProjectChassis,
+  type DrivePort,
+  type DriveSettings,
+} from "@/lib/controller-program"
 import { ControlAreaView } from "@/components/editor/control-area"
 import { DirectionPalettePreview, MotorButtonsPalettePreview } from "@/components/editor/direction-control"
 import { useRobotSession } from "@/components/editor/robot-session"
@@ -96,8 +107,7 @@ const BLOCK_CATEGORIES = [
     color: "#9a4b08",
     blocks: [
       { type: "start", label: "При запуске", icon: Play },
-      { type: "button", event: "pressed", label: "Кнопка нажата", icon: Gamepad2 },
-      { type: "button", event: "released", label: "Кнопка отпущена", icon: Gamepad2 },
+      { type: "button", event: "hold", label: "Кнопка пульта", icon: Gamepad2 },
     ],
   },
   {
@@ -106,6 +116,7 @@ const BLOCK_CATEGORIES = [
     icon: ArrowRight,
     color: "#087692",
     blocks: [
+      { type: "chassis", label: "Ехать", icon: Navigation },
       { type: "drive", label: "Движение мотора", icon: ArrowRight },
       { type: "stop", label: "Стоп мотора", icon: Square },
       { type: "pair", label: "Связанные моторы", icon: ArrowRightLeft },
@@ -309,6 +320,9 @@ function EditorWorkspace() {
     title: string
     code: string
   }>({ open: false, title: "", code: "" })
+  const [chassisDialogOpen, setChassisDialogOpen] = React.useState(false)
+  const [chassisDraft, setChassisDraft] = React.useState<DriveSettings>({ ...DEFAULT_DRIVE_SETTINGS })
+  const [panelErrorModal, setPanelErrorModal] = React.useState<string | null>(null)
 
   const currentSheet = React.useMemo(
     () =>
@@ -398,7 +412,7 @@ function EditorWorkspace() {
   }
 
   const persistSheets = React.useCallback(
-    async (nextState: SheetState, nextLayout?: ControlLayout): Promise<boolean> => {
+    async (nextState: SheetState, nextLayout?: ControlLayout, nextChassis?: DriveSettings): Promise<boolean> => {
       if (!project) return false
       if (saveBusyRef.current) {
         setSaveMessage({ text: "Сохранение выполняется. Повторите изменение.", isError: true })
@@ -408,7 +422,12 @@ function EditorWorkspace() {
       const updated: RobotProject = {
         ...project,
         updatedAt: new Date().toISOString(),
-        workspace: { ...project.workspace, ...nextState, ...(nextLayout ? {controlLayout:nextLayout} : {}) } as unknown as Record<string, unknown>,
+        workspace: {
+          ...project.workspace,
+          ...nextState,
+          ...(nextLayout ? { controlLayout: nextLayout } : {}),
+          ...(nextChassis ? { chassis: nextChassis } : {}),
+        } as unknown as Record<string, unknown>,
       }
       const nextProjects = projects.map((p) =>
         p.id === project.id ? updated : p
@@ -431,6 +450,11 @@ function EditorWorkspace() {
   )
 
   const controlLayout = (project?.workspace?.controlLayout as ControlLayout | undefined) || {version:1 as const, areas:[], controls:[]}
+  const projectChassis = React.useMemo(() => resolveProjectChassis(project), [project])
+  const openChassisDialog = React.useCallback(() => {
+    setChassisDraft({ ...projectChassis.settings, speed: projectChassis.settings.speed ?? 360 })
+    setChassisDialogOpen(true)
+  }, [projectChassis.settings])
   const motorPanelControls = React.useMemo<ControlInstance[]>(() => sheetState.sheets.flatMap(sheet => sheet.blocks).flatMap(block => {
     if (block.type !== "motor-buttons" || !block.controlAreaId) return []
     const area = controlLayout.areas.find(candidate => candidate.id === block.controlAreaId)
@@ -439,6 +463,10 @@ function EditorWorkspace() {
     return [{id:block.id,areaId:area.id,kind:"motor-panel",label:"Панель моторов",x:0,y:0,width:block.width||180,height:block.height||132,inputs}]
   }), [sheetState.sheets,controlLayout.areas])
   const controllerControls = React.useMemo(() => [...controlLayout.controls,...motorPanelControls], [controlLayout.controls,motorPanelControls])
+  const sheetControlIds = React.useMemo(() => {
+    const areaIds = new Set(controlLayout.areas.filter(a => a.sheetId === currentSheet.id).map(a => a.id))
+    return new Set(controllerControls.filter(c => areaIds.has(c.areaId)).map(c => c.id))
+  }, [controlLayout.areas, controllerControls, currentSheet.id])
   const controllerProgram = React.useMemo(() => project ? compileControllerProgram({...project,workspace:{...project.workspace,...snapshotSheets(),controlLayout:{...controlLayout,controls:controllerControls}}}) : null, [project,snapshotSheets,controlLayout,controllerControls])
   const controllerErrorsByBlockId = React.useMemo(() => {
     const errMap = new Map<string, string>()
@@ -552,6 +580,7 @@ function EditorWorkspace() {
     await session.setViewMode('edit')
     const view=editViewRef.current
     if(view){setPanX(view.panX);setPanY(view.panY);setZoom(view.zoom);editViewRef.current=null}
+    setPressedPanelButtons([])
     setChecking(false)
   }
 
@@ -574,11 +603,17 @@ function EditorWorkspace() {
   }, [robotMenuOpen, moreMenuOpen])
 
   React.useEffect(() => {
-    if (!runPromptOpen) return
-    const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') setRunPromptOpen(false) }
+    if (!runPromptOpen && !chassisDialogOpen && !panelErrorModal) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setRunPromptOpen(false)
+        setChassisDialogOpen(false)
+        setPanelErrorModal(null)
+      }
+    }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [runPromptOpen])
+  }, [runPromptOpen, chassisDialogOpen, panelErrorModal])
 
   React.useEffect(() => () => {void sessionRef.current?.stop("Проект изменён. Запустите программу снова.")}, [projectId,sessionRef])
   React.useEffect(() => {
@@ -655,7 +690,20 @@ function EditorWorkspace() {
     }
     const label = kind === "display" ? DISPLAY_LABEL : DIRECTION_CONTROLS[kind].label
     const control = { id: newId(), areaId: area.id, kind, label, ...spot, width, height }
-    return saveLayout({ ...controlLayout, controls: [...controlLayout.controls, control] })
+    const nextLayout = { ...controlLayout, controls: [...controlLayout.controls, control] }
+    const existingInputControls = controllerControls.filter(c => sheetControlIds.has(c.id) && (c.inputs || CONTROL_INPUTS[c.kind]).length > 0)
+    const newInputs = CONTROL_INPUTS[kind]
+    if (existingInputControls.length === 0 && newInputs.length > 0 && blocks.some(b => b.type === "button" && !b.target?.controlId)) {
+      const boundBlocks = blocks.map(b => b.type === "button" && !b.target?.controlId ? { ...b, target: { controlId: control.id, input: newInputs[0] } } : b)
+      try {
+        validateControlLayout(nextLayout, sheetState.sheets.map(s => s.id))
+        return persistSheets(snapshotSheets(boundBlocks), nextLayout)
+      } catch (error) {
+        setSaveMessage({ text: error instanceof Error ? error.message : "Неверная раскладка", isError: true })
+        return Promise.resolve(false)
+      }
+    }
+    return saveLayout(nextLayout)
   }
 
   function dragControlFromPalette(e: React.PointerEvent<HTMLButtonElement>, kind: "area" | PlaceableControlKind) {
@@ -682,6 +730,29 @@ function EditorWorkspace() {
     },
     [snapshotSheets, persistSheets]
   )
+
+  const autoBindSigRef = React.useRef<string>("")
+  React.useEffect(() => {
+    if (!project || saveBusyRef.current) return
+    const sheetButtonControls = controllerControls.filter(
+      (c) => sheetControlIds.has(c.id) && (c.inputs || CONTROL_INPUTS[c.kind]).length > 0
+    )
+    if (sheetButtonControls.length !== 1) return
+    const single = sheetButtonControls[0]
+    const unbound = blocks.filter((b) => b.type === "button" && !b.target?.controlId)
+    if (unbound.length === 0) return
+    const sig = `${project.id}:${currentSheet.id}:${single.id}:${unbound.map((b) => b.id).join(",")}`
+    if (autoBindSigRef.current === sig) return
+    autoBindSigRef.current = sig
+    const firstInput = (single.inputs || CONTROL_INPUTS[single.kind])[0] || ""
+    saveBlocks(
+      blocks.map((b) =>
+        b.type === "button" && !b.target?.controlId
+          ? { ...b, target: { controlId: single.id, input: firstInput } }
+          : b
+      )
+    )
+  }, [project, currentSheet.id, controllerControls, sheetControlIds, blocks, saveBlocks])
 
   const triggerSnapAnimation = React.useCallback(
     (nextBlocks: WorkspaceBlock[], headId: string) => {
@@ -791,6 +862,12 @@ function EditorWorkspace() {
             b.id === id ? { ...b, ...initialOverrides } : b
           )
         }
+        if (type === "motor-buttons" && initialOverrides?.controlAreaId) {
+          const existingInputControls = controllerControls.filter(c => sheetControlIds.has(c.id) && (c.inputs || CONTROL_INPUTS[c.kind]).length > 0)
+          if (existingInputControls.length === 0) {
+            next = next.map(b => b.type === "button" && !b.target?.controlId ? { ...b, target: { controlId: id, input: "blue" } } : b)
+          }
+        }
         const target = snapTargetInfo(next, id, x, y)
         if (target) {
           next = attachChain(next, id, target.id, target.branch)
@@ -890,7 +967,7 @@ function EditorWorkspace() {
   function handleExportCode() {
     if (!project) return
     try {
-      const code = `# Лист: ${currentSheet.name.replace(/[\r\n]/g, " ")}\n${generatePybricks(blocks, project.hub)}`
+      const code = `# Лист: ${currentSheet.name.replace(/[\r\n]/g, " ")}\n${generatePybricks(blocks, project.hub, projectChassis.configured ? projectChassis.settings : undefined)}`
       setCodeModal({
         open: true,
         title: `Программа Pybricks — ${currentSheet.name}`,
@@ -1316,6 +1393,24 @@ function EditorWorkspace() {
             <span className="text-[13px] font-extrabold text-[#57717d] hidden sm:inline">
               Рабочая область
             </span>
+            <button
+              type="button"
+              disabled={!project}
+              onClick={openChassisDialog}
+              aria-label="Настройки шасси"
+              title="Настройки шасси"
+              className={`min-h-[40px] h-[40px] px-3 rounded-[10px] border text-xs font-extrabold flex items-center gap-1.5 transition-colors disabled:opacity-40 ${
+                !projectChassis.configured && blocks.some(b => b.type === "chassis")
+                  ? "border-amber-400 bg-amber-50 text-amber-900 hover:bg-amber-100"
+                  : "border-[#dce7ec] bg-white hover:bg-[#f1f9fb] text-[#31525f]"
+              }`}
+            >
+              <Settings2 size={15} aria-hidden="true" />
+              <span>Шасси</span>
+              {!projectChassis.configured && blocks.some(b => b.type === "chassis") && (
+                <AlertTriangle size={14} className="text-amber-600" aria-hidden="true" />
+              )}
+            </button>
             <span className="flex-1" />
             <button
               type="button"
@@ -1501,16 +1596,27 @@ function EditorWorkspace() {
               }}
               className="absolute top-0 left-0 w-0 h-0"
             >
-              {controlLayout.areas.filter(a=>a.sheetId===currentSheet.id).map(area=><ControlAreaView key={area.id} area={area} controls={controlLayout.controls.filter(c=>c.areaId===area.id)} attachedPanels={blocks.filter(b=>b.type==="motor-buttons"&&b.controlAreaId===area.id)} editing={!checking} inputActive={(robotState.program === "trial-running" || robotState.program === "live-running") && robotState.transport !== "fault"} zoom={zoom} errors={inputErrors} onAreaChange={changed=>{
+              {controlLayout.areas.filter(a=>a.sheetId===currentSheet.id).map(area=>{
+                const displayArea = projectChassis.configured ? {...area, drive: projectChassis.settings} : area
+                return <ControlAreaView key={area.id} area={displayArea} controls={controlLayout.controls.filter(c=>c.areaId===area.id)} attachedPanels={blocks.filter(b=>b.type==="motor-buttons"&&b.controlAreaId===area.id)} editing={!checking} inputActive={(robotState.program === "trial-running" || robotState.program === "live-running") && robotState.transport !== "fault"} zoom={zoom} errors={inputErrors} onAreaChange={changed=>{
                 const dx=changed.x-area.x,dy=changed.y-area.y
                 const nextBlocks=dx||dy?blocks.map(b=>b.type==="motor-buttons"&&b.controlAreaId===area.id?{...b,x:b.x+dx,y:b.y+dy}:b):blocks
-                const nextLayout={...controlLayout,areas:controlLayout.areas.map(a=>a.id===changed.id?changed:a)}
-                void persistSheets(snapshotSheets(nextBlocks),nextLayout)
+                const displayedDrive = projectChassis.configured ? projectChassis.settings : area.drive
+                const driveEdited = Boolean(changed.drive) && JSON.stringify(changed.drive) !== JSON.stringify(displayedDrive)
+                const { drive: _droppedDrive, ...changedWithoutDrive } = changed
+                const nextArea = driveEdited ? changedWithoutDrive : (area.drive ? { ...changedWithoutDrive, drive: area.drive } : changedWithoutDrive)
+                const nextLayout={...controlLayout,areas:controlLayout.areas.map(a=>{
+                  if (a.id===changed.id) return nextArea
+                  if (driveEdited && a.drive !== undefined) { const { drive: _d, ...rest } = a; return rest }
+                  return a
+                })}
+                const driveChanged = driveEdited ? changed.drive : undefined
+                void persistSheets(snapshotSheets(nextBlocks), nextLayout, driveChanged)
               }} onControlChange={changed=>void saveLayout({...controlLayout,controls:controlLayout.controls.map(c=>c.id===changed.id?changed:c)})} onDeleteControl={id=>void saveLayout({...controlLayout,controls:controlLayout.controls.filter(c=>c.id!==id)})} onDeleteArea={id=>{
                 const nextBlocks=blocks.filter(b=>!(b.type==="motor-buttons"&&b.controlAreaId===id))
                 const nextLayout={...controlLayout,areas:controlLayout.areas.filter(a=>a.id!==id),controls:controlLayout.controls.filter(c=>c.areaId!==id)}
                 void persistSheets(snapshotSheets(nextBlocks),nextLayout)
-              }} onInput={(controlId,input,event)=>dispatchControl({controlId,input},event)} onCancel={()=>void sessionRef.current?.stop("Нажатие отменено.")} />)}
+              }} onInput={(controlId,input,event)=>dispatchControl({controlId,input},event)} onCancel={()=>void sessionRef.current?.stop("Нажатие отменено.")} />})}
               {/* Magnetic LEGO socket preview under or inside snapTarget */}
               {snapTargetSlot &&
                 (() => {
@@ -1617,10 +1723,12 @@ function EditorWorkspace() {
                   : rawDisplayY
                 const paired = block.type === "pair"
                 const isIfBlock = block.type === "if"
+                const isChassisBlock = block.type === "chassis"
                 const motorBlock = block.type === "drive" || paired
                 const isButtonBlock = block.type === "button"
                 const isStopBlock = block.type === "stop"
                 const isMotorButtons = block.type === "motor-buttons"
+                const blockError = controllerErrorsByBlockId.get(block.id)
                 const isSelected = block.id === selectedId
                 const isSnapTarget = block.id === snapTargetSlot?.id
                 const hasChild = blocks.some(
@@ -1644,7 +1752,7 @@ function EditorWorkspace() {
                     ? `rounded-t-[22px] ${
                         hasChild ? "rounded-b-[5px]" : "rounded-b-[14px]"
                       }`
-                    : motorBlock || isStopBlock
+                    : motorBlock || isStopBlock || isChassisBlock
                       ? `${isConnected ? "rounded-t-[5px]" : "rounded-t-[14px]"} ${
                           hasChild ? "rounded-b-[5px]" : "rounded-b-[14px]"
                         }`
@@ -1658,21 +1766,23 @@ function EditorWorkspace() {
                     data-canvas-block="true"
                     data-block-id={block.id}
                     tabIndex={0}
-                    role={motorBlock || isIfBlock || isStopBlock || isMotorButtons ? "group" : "button"}
+                    role={motorBlock || isChassisBlock || isIfBlock || isStopBlock || isMotorButtons ? "group" : "button"}
                     aria-label={
                       isIfBlock
                         ? "Блок условия Если Иначе. Перетащите за заголовок"
                         : isButtonBlock
-                          ? "Когда кнопка пульта. Перетащите за заголовок"
+                          ? "Кнопка пульта. Перетащите за заголовок"
                         : isMotorButtons
                           ? checking ? "Панель цветных кнопок" : "Панель цветных кнопок. Перетащите за фон"
                           : isStopBlock
                             ? "Стоп мотора. Перетащите за заголовок"
-                            : motorBlock
-                              ? paired
-                                ? "Связанные моторы. Перетащите за заголовок"
-                                : "Блок движения мотора. Перетащите за заголовок"
-                              : "Когда программа запускается. Стрелки перемещают, Delete удаляет"
+                            : isChassisBlock
+                              ? "Блок движения шасси Ехать. Перетащите за заголовок"
+                              : motorBlock
+                                ? paired
+                                  ? "Связанные моторы. Перетащите за заголовок"
+                                  : "Блок движения мотора. Перетащите заголовок"
+                                : "Когда программа запускается. Стрелки перемещают, Delete удаляет"
                     }
                     style={{
                       left: `${displayX}px`,
@@ -1748,15 +1858,21 @@ function EditorWorkspace() {
                           ? "w-max min-h-[58px] bg-[#e85d2a] text-white shadow-[inset_0_-4px_#c2410c,0_8px_18px_rgba(232,93,42,0.16)]"
                           : isStopBlock
                             ? "w-max min-h-[64px] bg-[#b1372c] text-white shadow-[inset_0_-4px_#8f2a21,0_8px_18px_rgba(177,55,44,0.16)]"
-                            : motorBlock
-                              ? paired
-                                ? "w-max h-[64px] bg-[#107e79] text-white shadow-[inset_0_-4px_#086560,0_8px_18px_rgba(20,105,123,0.16)]"
-                                : "w-max h-[64px] bg-[#0589b1] text-white shadow-[inset_0_-4px_#00759b,0_8px_18px_rgba(20,105,123,0.16)]"
-                              : "w-[320px] h-[58px] bg-[#f59e0b] text-white px-5 flex items-center shadow-[inset_0_-4px_#d97706,0_8px_18px_rgba(120,53,15,0.16)]"
+                            : isChassisBlock
+                              ? "w-max min-h-[64px] bg-[#0284c7] text-white shadow-[inset_0_-4px_#0369a1,0_8px_18px_rgba(3,105,161,0.16)]"
+                              : motorBlock
+                                ? paired
+                                  ? "w-max min-h-[64px] bg-[#107e79] text-white shadow-[inset_0_-4px_#086560,0_8px_18px_rgba(20,105,123,0.16)]"
+                                  : "w-max min-h-[64px] bg-[#0589b1] text-white shadow-[inset_0_-4px_#00759b,0_8px_18px_rgba(20,105,123,0.16)]"
+                                : "w-[320px] min-h-[58px] bg-[#f59e0b] text-white px-5 flex items-center shadow-[inset_0_-4px_#d97706,0_8px_18px_rgba(120,53,15,0.16)]"
                     } ${
                       isJustAdded ? "animate-lego-spawn" : ""
                     } ${
                       isJustSnapped ? "animate-lego-snap" : ""
+                    } ${
+                      !isIfBlock && !isMotorButtons && blockError
+                        ? "ring-2 ring-[#dc2626]"
+                        : ""
                     } ${
                       !isIfBlock && isSelected
                         ? "outline-3 outline-[#087996] outline-offset-2"
@@ -1767,8 +1883,8 @@ function EditorWorkspace() {
                         : ""
                     }`}
                   >
-                    {/* Top LEGO connector stud for motor, if, and stop blocks */}
-                    {(motorBlock || isIfBlock || isStopBlock) && (
+                    {/* Top LEGO connector stud for motor, chassis, if, and stop blocks */}
+                    {(motorBlock || isChassisBlock || isIfBlock || isStopBlock) && (
                       <span
                         aria-hidden="true"
                         className={`absolute -top-[8px] left-[32px] w-[44px] h-[11px] rounded-t-[6px] pointer-events-auto ${
@@ -1776,9 +1892,11 @@ function EditorWorkspace() {
                             ? "bg-[#7c3aed]"
                             : isStopBlock
                               ? "bg-[#b1372c]"
-                              : paired
-                                ? "bg-[#107e79]"
-                                : "bg-[#0589b1]"
+                              : isChassisBlock
+                                ? "bg-[#0284c7]"
+                                : paired
+                                  ? "bg-[#107e79]"
+                                  : "bg-[#0589b1]"
                         }`}
                       />
                     )}
@@ -1830,6 +1948,7 @@ function EditorWorkspace() {
                           const hiddenButtons = block.hiddenControlButtons || []
                           const colors = (["blue", ...(block.controlModules || [])] as MotorPanelButton[])
                             .filter(color => !hiddenButtons.includes(color))
+                          const panelErrors = [...new Set(colors.map(color => inputErrors[`${block.id}:${color}`]).filter(Boolean))]
                           const paint: Record<MotorPanelButton, { face: string; shade: string }> = {
                             blue: { face: "#1687b3", shade: "#0e688a" },
                             red: { face: "#d9473d", shade: "#a92b26" },
@@ -1895,6 +2014,23 @@ function EditorWorkspace() {
                             }))
                           }
                           return (
+                            <>
+                        {panelErrors.length > 0 && (
+                          <button
+                            type="button"
+                            title={panelErrors[0]}
+                            aria-label={`Показать причину ошибки: ${panelErrors[0]}`}
+                            aria-haspopup="dialog"
+                            onPointerDown={e => e.stopPropagation()}
+                            onClick={e => {
+                              e.stopPropagation()
+                              setPanelErrorModal(panelErrors.join("\n"))
+                            }}
+                            className="pointer-events-auto absolute left-1 top-1 z-20 grid size-5 place-items-center rounded-full bg-[#dc2626] text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+                          >
+                            <AlertTriangle size={12} strokeWidth={2.6} aria-hidden="true" />
+                          </button>
+                        )}
                             <div
                               className={isCross
                                 ? "grid min-h-0 flex-1 content-center justify-center gap-0.5 p-1"
@@ -1979,6 +2115,7 @@ function EditorWorkspace() {
                                 >+</button>
                               )}
                             </div>
+                            </>
                           )
                         })()}
                         {!checking && <button type="button" aria-label="Изменить размер панели кнопок" onPointerDown={e=>resizeMotorPanel(e,block)} className="absolute bottom-0 right-0 z-20 grid h-6 w-6 cursor-nwse-resize place-items-center rounded-tl bg-white/80 text-sm text-[#31525f]">◢</button>}
@@ -2068,10 +2205,11 @@ function EditorWorkspace() {
                       <ControllerButtonBlock
                         block={block}
                         controls={controllerControls}
+                        sheetControlIds={sheetControlIds}
                         ports={motorPorts}
                         isConnected={isConnected}
                         hasChild={hasChild}
-                        errorMessage={controllerErrorsByBlockId.get(block.id)}
+                        errorMessage={blockError}
                         onChange={(changes) => {
                           if (!project) return
                           saveBlocks(
@@ -2087,13 +2225,24 @@ function EditorWorkspace() {
                         ports={motorPorts}
                         isConnected={isConnected}
                         hasChild={hasChild}
-                        errorMessage={controllerErrorsByBlockId.get(block.id)}
+                        errorMessage={blockError}
                         onChange={(changes) => {
                           if (!project) return
                           saveBlocks(
-                            blocks.map((b) =>
-                              b.id === block.id ? { ...b, ...changes } : b
-                            )
+                            updateDrive(blocks, block.id, changes, project.hub)
+                          )
+                        }}
+                      />
+                    ) : isChassisBlock ? (
+                      <ChassisBlock
+                        block={block}
+                        chassisConfigured={projectChassis.configured}
+                        errorMessage={blockError}
+                        onOpenChassis={openChassisDialog}
+                        onChange={(changes) => {
+                          if (!project) return
+                          saveBlocks(
+                            updateDrive(blocks, block.id, changes, project.hub)
                           )
                         }}
                       />
@@ -2102,7 +2251,8 @@ function EditorWorkspace() {
                         ▶ &nbsp;Когда программа запускается
                       </div>
                     ) : (
-                      <div className="group flex flex-nowrap items-center h-full px-5 gap-3">
+                      <div className="flex flex-col">
+                      <div className="group flex flex-nowrap items-center min-h-[64px] px-5 gap-3">
                         {/* Base inline action: Начать движение [порт] [вперёд] */}
                         <div className="shrink-0 flex items-center gap-2.5">
                           <span className="text-[16px] font-extrabold whitespace-nowrap tracking-tight">
@@ -2132,31 +2282,32 @@ function EditorWorkspace() {
                               </option>
                             ))}
                           </select>
-                          <select
+                          <button
+                            type="button"
                             aria-label={
                               paired
-                                ? "Направление первого мотора"
-                                : "Направление мотора"
+                                ? `Направление первого мотора: ${block.direction === "backward" ? "назад" : "вперёд"}`
+                                : `Направление мотора: ${block.direction === "backward" ? "назад" : "вперёд"}`
                             }
-                            value={block.direction || "forward"}
-                            onChange={(e) =>
+                            aria-pressed={block.direction === "backward"}
+                            title={block.direction === "backward" ? "Назад (↺)" : "Вперёд (↻)"}
+                            onClick={() =>
                               project &&
                               saveBlocks(
                                 updateDrive(
                                   blocks,
                                   block.id,
                                   {
-                                    direction: e.target.value as MotorDirection,
+                                    direction: (block.direction === "backward" ? "forward" : "backward") as MotorDirection,
                                   },
                                   project.hub
                                 )
                               )
                             }
-                            className="h-[38px] rounded-full px-3.5 bg-white text-[#0d3b4c] font-extrabold text-[15px] shadow-xs cursor-pointer"
+                            className="min-h-[36px] min-w-[36px] h-[38px] w-[38px] rounded-full bg-white text-[#0d3b4c] hover:bg-[#e7f4f8] font-black text-lg shadow-xs grid place-items-center cursor-pointer"
                           >
-                            <option value="forward">вперёд</option>
-                            <option value="backward">назад</option>
-                          </select>
+                            {block.direction === "backward" ? "↺" : "↻"}
+                          </button>
 
                           {paired && (
                             <>
@@ -2185,28 +2336,28 @@ function EditorWorkspace() {
                                   </option>
                                 ))}
                               </select>
-                              <select
-                                aria-label="Направление второго мотора"
-                                value={block.direction2 || "backward"}
-                                onChange={(e) =>
+                              <button
+                                type="button"
+                                aria-label={`Направление второго мотора: ${block.direction2 === "backward" ? "назад" : "вперёд"}`}
+                                aria-pressed={block.direction2 === "backward"}
+                                title={block.direction2 === "backward" ? "Назад (↺)" : "Вперёд (↻)"}
+                                onClick={() =>
                                   project &&
                                   saveBlocks(
                                     updateDrive(
                                       blocks,
                                       block.id,
                                       {
-                                        direction2: e.target
-                                          .value as MotorDirection,
+                                        direction2: (block.direction2 === "backward" ? "forward" : "backward") as MotorDirection,
                                       },
                                       project.hub
                                     )
                                   )
                                 }
-                                className="h-[38px] rounded-full px-3.5 bg-white text-[#0d3b4c] font-extrabold text-[15px] shadow-xs cursor-pointer"
+                                className="min-h-[36px] min-w-[36px] h-[38px] w-[38px] rounded-full bg-white text-[#0d3b4c] hover:bg-[#e7f4f8] font-black text-lg shadow-xs grid place-items-center cursor-pointer"
                               >
-                                <option value="forward">вперёд</option>
-                                <option value="backward">назад</option>
-                              </select>
+                                {block.direction2 === "backward" ? "↺" : "↻"}
+                              </button>
                             </>
                           )}
                         </div>
@@ -2405,6 +2556,8 @@ function EditorWorkspace() {
                           )}
                         </div>
                       </div>
+                      <BlockErrorBar errorMessage={blockError} />
+                      </div>
                     )}
                   </div>
                 )
@@ -2438,7 +2591,9 @@ function EditorWorkspace() {
                       ? "w-[160px] h-[52px] rounded-[14px] border border-[#b9d0da] bg-[#f4f8fa] text-[#18313b] shadow-[inset_0_-4px_#d6e4e9]"
                       : gesture.type === "stop"
                         ? "w-[220px] h-[56px] rounded-[12px] bg-[#b1372c] shadow-[inset_0_-6px_#8f2a21]"
-                        : "w-[220px] h-[56px] rounded-[12px] bg-[#0589b1] shadow-[inset_0_-6px_#00759b]"
+                        : gesture.type === "chassis"
+                          ? "w-[220px] h-[56px] rounded-[12px] bg-[#0284c7] shadow-[inset_0_-6px_#0369a1]"
+                          : "w-[220px] h-[56px] rounded-[12px] bg-[#0589b1] shadow-[inset_0_-6px_#00759b]"
           }`}
         >
           {gesture.type === "start"
@@ -2448,12 +2603,14 @@ function EditorWorkspace() {
               : gesture.type === "pair"
                 ? "⇉  Связанные моторы"
                 : gesture.type === "button"
-                  ? "🎮  Кнопка"
+                  ? "Кнопка пульта"
                   : gesture.type === "motor-buttons"
                     ? "🔵 🔴 🟢 🟡"
                     : gesture.type === "stop"
                       ? "■  Стоп мотора"
-                      : "↗  Движение мотора"}
+                      : gesture.type === "chassis"
+                        ? "↑  Ехать"
+                        : "↗  Движение мотора"}
         </div>
       )}
 
@@ -2518,6 +2675,132 @@ function EditorWorkspace() {
                 className="mt-1 min-h-[40px] text-xs font-bold text-[#57717d] hover:text-[#18313b]"
               >
                 Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {chassisDialogOpen && project && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Настройки шасси"
+          onClick={(e) => { if (e.target === e.currentTarget) setChassisDialogOpen(false) }}
+          className="fixed inset-0 z-50 bg-[#112a36]/50 grid place-items-center p-4"
+        >
+          <div className="w-full max-w-[380px] rounded-[20px] border border-[#dce8ec] bg-white p-5 text-[#18313b] shadow-2xl">
+            <h2 className="text-lg font-black mb-3">Настройки шасси</h2>
+            <div className="flex flex-col gap-3">
+              {([
+                { label: "Левый мотор", portKey: "leftPort", revKey: "leftReversed" },
+                { label: "Правый мотор", portKey: "rightPort", revKey: "rightReversed" },
+              ] as const).map(({ label, portKey, revKey }) => (
+                <div key={portKey} className="flex items-center justify-between gap-2 rounded-xl border border-[#e1eaee] bg-[#f8fbfc] px-3 py-2">
+                  <span className="text-sm font-bold">{label}</span>
+                  <div className="flex items-center gap-2">
+                    <select
+                      aria-label={label}
+                      value={chassisDraft[portKey]}
+                      onChange={(e) => {
+                        const port = e.target.value as DrivePort
+                        const otherKey = portKey === "leftPort" ? "rightPort" : "leftPort"
+                        setChassisDraft((prev) => ({
+                          ...prev,
+                          [portKey]: port,
+                          [otherKey]: prev[otherKey] === port ? prev[portKey] : prev[otherKey],
+                        }))
+                      }}
+                      className="min-h-[36px] h-[36px] rounded-lg border border-[#c6dce2] bg-white px-2.5 text-sm font-black"
+                    >
+                      {motorPorts.map((p) => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                    <button
+                      type="button"
+                      aria-label={`Инверсия: ${label.toLowerCase()}`}
+                      aria-pressed={chassisDraft[revKey]}
+                      title={chassisDraft[revKey] ? "Реверс (↺)" : "Прямо (↻)"}
+                      onClick={() => setChassisDraft((prev) => ({ ...prev, [revKey]: !prev[revKey] }))}
+                      className={`min-h-[36px] min-w-[36px] h-[36px] px-2.5 rounded-lg border text-sm font-black flex items-center gap-1 ${
+                        chassisDraft[revKey]
+                          ? "border-[#087996] bg-[#e7f4f8] text-[#086985]"
+                          : "border-[#c6dce2] bg-white text-[#31525f]"
+                      }`}
+                    >
+                      <span>{chassisDraft[revKey] ? "↺" : "↻"}</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <div className="flex items-center justify-between gap-2 rounded-xl border border-[#e1eaee] bg-[#f8fbfc] px-3 py-2">
+                <label htmlFor="chassis-speed-input" className="text-sm font-bold">Базовая скорость</label>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    id="chassis-speed-input"
+                    type="number"
+                    min="1"
+                    max="1000"
+                    value={chassisDraft.speed ?? 360}
+                    onChange={(e) => {
+                      const val = Number(e.target.value)
+                      if (!Number.isFinite(val)) return
+                      setChassisDraft((prev) => ({ ...prev, speed: Math.max(1, Math.min(1000, Math.round(val))) }))
+                    }}
+                    className="w-[80px] min-h-[36px] h-[36px] rounded-lg border border-[#c6dce2] bg-white px-2 text-center text-sm font-black"
+                  />
+                  <span className="text-xs font-bold text-[#57717d]">°/с</span>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button type="button" variant="outline" className="min-h-[40px]" onClick={() => setChassisDialogOpen(false)}>Отмена</Button>
+              <Button
+                type="button"
+                className="min-h-[40px] bg-[#087996] hover:bg-[#06637a] text-white font-extrabold"
+                onClick={async () => {
+                  const normalized: DriveSettings = {
+                    ...chassisDraft,
+                    speed: Math.max(1, Math.min(1000, Math.round(chassisDraft.speed ?? 360))),
+                  }
+                  const nextLayout = controlLayout.areas.some((a) => a.drive !== undefined)
+                    ? {
+                        ...controlLayout,
+                        areas: controlLayout.areas.map((a) => {
+                          if (a.drive === undefined) return a
+                          const { drive: _d, ...rest } = a
+                          return rest
+                        }),
+                      }
+                    : undefined
+                  const ok = await persistSheets(snapshotSheets(), nextLayout, normalized)
+                  if (ok) setChassisDialogOpen(false)
+                }}
+              >
+                Сохранить
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {panelErrorModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Кнопка недоступна"
+          onClick={(e) => { if (e.target === e.currentTarget) setPanelErrorModal(null) }}
+          className="fixed inset-0 z-50 bg-[#112a36]/50 grid place-items-center p-4"
+        >
+          <div className="w-full max-w-sm rounded-2xl border border-[#dfae87] bg-white p-5 text-[#18313b] shadow-xl">
+            <h2 className="mb-3 text-lg font-extrabold">Кнопка недоступна</h2>
+            <p className="whitespace-pre-line text-sm">{panelErrorModal}</p>
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setPanelErrorModal(null)}
+                className="min-h-[40px] rounded-full bg-[#0e7668] px-4 py-2 font-bold text-white"
+              >
+                Понятно
               </button>
             </div>
           </div>

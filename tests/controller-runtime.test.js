@@ -415,3 +415,71 @@ test('offline compileBundledHubProgram has embedded source ready', async () => {
   assert.match(HUB_PROGRAM_SOURCE, /PROGRAM_VERSION = "4"/);
   assert.match(HUB_PROGRAM_SOURCE, /LINK_TIMEOUT_MS = 2000/);
 });
+
+function fakePorts(portsStr){let onLine;let disconnected=false;const writes=[];return {writes,connect:async(fn)=>{onLine=fn},startHub:async()=>{},write:async(line)=>{writes.push(line);if(line==='h\n')onLine('SOCER3_READY|'+portsStr);if(line==='x\n')onLine('SOCER2_STOP')},disconnect:async()=>{disconnected=true},get disconnected(){return disconnected}}}
+test('hold mode autostops ports on release and resolves overlapping button conflicts safely', async () => {
+  const t = fakePorts('A,B');
+  const session = createControllerSession(t);
+  const p = {
+    projectId: 'p-hold', projectName: 'Hold', hub: 'spike', protocol: 3, ports: ['A', 'B'], startup: [], errors: [],
+    handlers: [
+      { target: { controlId: 'p1', input: 'blue' }, button: 'blue', event: 'hold', sourceBlockId: 'b1', actions: [{ kind: 'run', port: 'A', speed: 300 }, { kind: 'run', port: 'B', speed: -300 }] },
+      { target: { controlId: 'p1', input: 'red' }, button: 'red', event: 'hold', sourceBlockId: 'b2', actions: [{ kind: 'run', port: 'A', speed: -200 }, { kind: 'run', port: 'B', speed: -200 }] },
+    ],
+  };
+  await session.connect(); await session.startHub(); await session.setViewMode('check'); await session.startProgram(p);
+
+  // Simple press & release autostop
+  session.dispatch({ controlId: 'p1', input: 'blue' }, 'pressed'); await tick();
+  assert.ok(t.writes.includes('m,A,300\n'));
+  assert.ok(t.writes.includes('m,B,-300\n'));
+  t.writes.length = 0;
+
+  session.dispatch({ controlId: 'p1', input: 'blue' }, 'released'); await tick();
+  assert.ok(t.writes.includes('m,A,0\n'));
+  assert.ok(t.writes.includes('m,B,0\n'));
+  t.writes.length = 0;
+
+  // Overlapping holds: press blue, press red, release blue -> red stays running; release red -> stops both
+  session.dispatch({ controlId: 'p1', input: 'blue' }, 'pressed'); await tick();
+  session.dispatch({ controlId: 'p1', input: 'red' }, 'pressed'); await tick();
+  t.writes.length = 0;
+  session.dispatch({ controlId: 'p1', input: 'blue' }, 'released'); await tick();
+  assert.equal(t.writes.includes('m,A,0\n'), false);
+  assert.equal(t.writes.includes('m,B,0\n'), false);
+  session.dispatch({ controlId: 'p1', input: 'red' }, 'released'); await tick();
+  assert.ok(t.writes.includes('m,A,0\n'));
+  assert.ok(t.writes.includes('m,B,0\n'));
+
+  // Hold blue, then press red -> release red while blue still held resumes blue
+  t.writes.length = 0;
+  session.dispatch({ controlId: 'p1', input: 'blue' }, 'pressed'); await tick();
+  session.dispatch({ controlId: 'p1', input: 'red' }, 'pressed'); await tick();
+  t.writes.length = 0;
+  session.dispatch({ controlId: 'p1', input: 'red' }, 'released'); await tick();
+  assert.ok(t.writes.includes('m,A,300\n'));
+  assert.ok(t.writes.includes('m,B,-300\n'));
+  assert.equal(t.writes.includes('m,A,0\n'), false);
+  t.writes.length = 0;
+  session.dispatch({ controlId: 'p1', input: 'blue' }, 'released'); await tick();
+  assert.ok(t.writes.includes('m,A,0\n'));
+  assert.ok(t.writes.includes('m,B,0\n'));
+
+  await session.dispose();
+});
+
+test('stopAll action stops connected ports', async () => {
+  const t = fakePorts('A,B');
+  const session = createControllerSession(t);
+  const p = {
+    projectId: 'p-all', projectName: 'All', hub: 'spike', protocol: 3, ports: ['A', 'B'], startup: [], errors: [],
+    handlers: [
+      { target: { controlId: 'p1', input: 'blue' }, button: 'blue', event: 'pressed', sourceBlockId: 'b1', actions: [{ kind: 'stopAll' }] },
+    ],
+  };
+  await session.connect(); await session.startHub(); await session.setViewMode('check'); await session.startProgram(p);
+  session.dispatch({ controlId: 'p1', input: 'blue' }, 'pressed'); await tick();
+  assert.ok(t.writes.includes('m,A,0\n'));
+  assert.ok(t.writes.includes('m,B,0\n'));
+  await session.dispose();
+});

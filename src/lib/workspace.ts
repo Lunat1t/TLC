@@ -1,4 +1,16 @@
 import type { HubType } from "./projects"
+import {
+  ACTION_BLOCK_TYPES,
+  BLOCK_TYPES,
+  CHASSIS_DIRECTIONS,
+  DEFAULT_DRIVE_SETTINGS,
+  HUB_PORTS,
+  WHEEL_DIRECTIONS,
+  getStopPorts,
+  isDriveSettings,
+  type ChassisDirection,
+  type DriveSettings,
+} from "./block-registry.ts"
 
 export const MAX_BLOCKS = 200
 export const MOTOR_SPEED = 360
@@ -19,10 +31,11 @@ export type ControllerButton =
   | "red"
   | "green"
   | "yellow"
-export type ControllerEvent = "pressed" | "released"
+export type ControllerEvent = "hold" | "pressed" | "released"
+export type { ChassisDirection }
 
-export type BlockType = "start" | "drive" | "pair" | "if" | "button" | "stop" | "motor-buttons"
-const LIBRARY_BLOCK_TYPES = new Set<BlockType>(["start", "drive", "pair", "if", "button", "stop", "motor-buttons"])
+export type BlockType = "start" | "drive" | "pair" | "chassis" | "if" | "button" | "stop" | "motor-buttons"
+const LIBRARY_BLOCK_TYPES = new Set<BlockType>(BLOCK_TYPES as readonly BlockType[])
 export type MotorDirection = "forward" | "backward"
 export type TravelUnit = "rotations" | "degrees" | "seconds"
 export type MotorModule = "speed" | "power" | "travel"
@@ -46,8 +59,11 @@ export interface WorkspaceBlock {
   branch?: BranchSlot
   motor?: string
   motor2?: string
+  motors?: string[]
+  stopAll?: boolean
   direction?: MotorDirection
   direction2?: MotorDirection
+  chassisDirection?: ChassisDirection
   modules?: MotorModule[]
   controlModules?: MotorButtonModule[]
   hiddenControlButtons?: MotorPanelButton[]
@@ -80,10 +96,7 @@ export interface SheetState {
   sheets: WorkspaceSheet[]
 }
 
-const PORTS: Record<HubType, string[]> = {
-  spike: ["A", "B", "C", "D", "E", "F"],
-  ev3: ["A", "B", "C", "D"],
-}
+const PORTS: Record<HubType, readonly string[]> = HUB_PORTS
 
 const UNITS: TravelUnit[] = ["rotations", "degrees", "seconds"]
 
@@ -107,9 +120,9 @@ export function blockHeight(block: Pick<WorkspaceBlock, "type" | "height">): num
       IF_FOOT_HEIGHT
     )
   if (block.type === "button") return 58
-  if (block.type === "stop") return 58
+  if (block.type === "stop") return 64
   if (block.type === "motor-buttons") return block.height ?? 132
-  return block.type === "pair" ? 64 : block.type === "drive" ? 64 : 58
+  return block.type === "pair" || block.type === "drive" || block.type === "chassis" ? 64 : 58
 }
 
 export function ifInnerHeight(
@@ -201,7 +214,7 @@ export function cleanLinks(blocks: WorkspaceBlock[]): WorkspaceBlock[] {
   }
 
   for (const block of clean) {
-    if (block.parentId && !["drive", "pair", "stop"].includes(block.type)) {
+    if (block.parentId && !ACTION_BLOCK_TYPES.includes(block.type)) {
       const root = findChainRoot(clean, block.id)
       if (root?.type === "button") {
         delete block.parentId
@@ -382,7 +395,7 @@ export function readBlocks(
           ? (block.button as ControllerButton)
           : "up"
         const ev: ControllerEvent =
-          block.event === "released" ? "released" : "pressed"
+          block.event === "hold" ? "hold" : block.event === "released" ? "released" : "pressed"
         return {
           ...base,
           button: btn,
@@ -392,6 +405,25 @@ export function readBlocks(
       }
 
       if (type === "stop") {
+        if (block.stopAll === true) {
+          return {
+            ...base,
+            stopAll: true,
+            motor: PORTS[hub]?.includes(String(block.motor)) ? String(block.motor) : "A",
+          }
+        }
+        if (Array.isArray(block.motors) && block.motors.length > 0) {
+          const valid = block.motors
+            .map(String)
+            .filter((p) => PORTS[hub]?.includes(p))
+          const motors = valid.length ? valid : ["A"]
+          return {
+            ...base,
+            motor: motors[0],
+            ...(motors[1] ? { motor2: motors[1] } : {}),
+            motors,
+          }
+        }
         const motor = PORTS[hub]?.includes(String(block.motor))
           ? String(block.motor)
           : "A"
@@ -405,6 +437,26 @@ export function readBlocks(
           ...base,
           motor,
           ...(motor2 ? { motor2 } : {}),
+        }
+      }
+
+      if (type === "chassis") {
+        const chassisDirection = CHASSIS_DIRECTIONS.includes(block.chassisDirection as ChassisDirection)
+          ? (block.chassisDirection as ChassisDirection)
+          : "forward"
+        const rawModules = Array.isArray(block.modules)
+          ? ([...new Set(block.modules.filter((m): m is MotorModule => String(m) === "speed"))] as MotorModule[])
+          : ([] as MotorModule[])
+        return {
+          ...base,
+          chassisDirection,
+          modules: rawModules,
+          speed:
+            Number.isFinite(block.speed) &&
+            Number(block.speed) > 0 &&
+            Number(block.speed) <= 1000
+              ? Number(block.speed)
+              : MOTOR_SPEED,
         }
       }
 
@@ -494,10 +546,13 @@ export function addBlock(
     Object.assign(block, { motor2: "B", direction2: "backward" })
   }
   if (type === "button") {
-    Object.assign(block, { button: "up", event: "pressed" })
+    Object.assign(block, { button: "up", event: "hold" })
   }
   if (type === "stop") {
-    Object.assign(block, { motor: "A" })
+    Object.assign(block, { motor: "A", motors: ["A"] })
+  }
+  if (type === "chassis") {
+    Object.assign(block, { chassisDirection: "forward", modules: [], speed: MOTOR_SPEED })
   }
   if (type === "motor-buttons") {
     Object.assign(block, { width: 180, height: 132, controlModules: [], hiddenControlButtons: [] })
@@ -550,11 +605,25 @@ export function updateDrive(
 ): WorkspaceBlock[] {
   return readBlocks(
     {
-      blocks: blocks.map((block) =>
-        block.id === id && ["drive", "pair", "if", "button", "stop"].includes(block.type)
-          ? { ...block, ...changes }
-          : block
-      ),
+      blocks: blocks.map((block) => {
+        if (block.id !== id || !["drive", "pair", "chassis", "if", "button", "stop"].includes(block.type)) return block
+        const merged: WorkspaceBlock = { ...block, ...changes }
+        if (block.type === "stop") {
+          if (changes.stopAll === true) {
+            delete merged.motors
+            delete merged.motor2
+          } else if (changes.motors) {
+            delete merged.stopAll
+            merged.motor = changes.motors[0] || merged.motor || "A"
+            if (changes.motors[1]) merged.motor2 = changes.motors[1]
+            else delete merged.motor2
+          } else if ("motor" in changes || "motor2" in changes) {
+            delete merged.stopAll
+            delete merged.motors
+          }
+        }
+        return merged
+      }),
     },
     hub
   )
@@ -611,7 +680,7 @@ export function attachChain(
   }
   const rootOfParent = findChainRoot(blocks, parentId)
   if (rootOfParent?.type === "button") {
-    if (movingBlock && !["drive", "pair", "stop"].includes(movingBlock.type)) {
+    if (movingBlock && !ACTION_BLOCK_TYPES.includes(movingBlock.type)) {
       return blocks
     }
   }
@@ -666,7 +735,7 @@ export function snapTargetInfo(
 
     const rootOfB = findChainRoot(blocks, b.id)
     if (rootOfB?.type === "button") {
-      if (movingBlock && !["drive", "pair", "stop"].includes(movingBlock.type)) {
+      if (movingBlock && !ACTION_BLOCK_TYPES.includes(movingBlock.type)) {
         continue
       }
     }
@@ -717,7 +786,8 @@ export function snapTarget(
 
 export function generatePybricks(
   blocks: WorkspaceBlock[],
-  hub: HubType
+  hub: HubType,
+  chassis?: DriveSettings
 ): string {
   if (!PORTS[hub]) throw new Error("Неизвестный тип робота.")
   const clean = readBlocks({ blocks }, hub)
@@ -726,20 +796,33 @@ export function generatePybricks(
   )
   const ordered = executionOrder(autonomousBlocks)
   const driveBlocks = ordered.filter((block) =>
-    ["drive", "pair", "stop"].includes(block.type)
+    ACTION_BLOCK_TYPES.includes(block.type)
   )
   if (!driveBlocks.length)
     throw new Error("Добавьте на доску блок движения.")
 
-  const used = [
-    ...new Set(
-      driveBlocks.flatMap((block) =>
-        block.type === "pair" || (block.type === "stop" && block.motor2)
-          ? [block.motor || "A", block.motor2 || "B"]
-          : [block.motor || "A"]
-      )
-    ),
-  ].sort()
+  const resolvedChassis = isDriveSettings(chassis) ? chassis : DEFAULT_DRIVE_SETTINGS
+  const explicitPorts = new Set<string>()
+  let hasStopAll = false
+  for (const block of driveBlocks) {
+    if (block.type === "pair") {
+      explicitPorts.add(block.motor || "A")
+      explicitPorts.add(block.motor2 || "B")
+    } else if (block.type === "chassis") {
+      explicitPorts.add(resolvedChassis.leftPort)
+      explicitPorts.add(resolvedChassis.rightPort)
+    } else if (block.type === "stop") {
+      if (block.stopAll) hasStopAll = true
+      else for (const port of getStopPorts(block, hub).ports) explicitPorts.add(port)
+    } else {
+      explicitPorts.add(block.motor || "A")
+    }
+  }
+  if (hasStopAll && explicitPorts.size === 0) {
+    explicitPorts.add(resolvedChassis.leftPort)
+    explicitPorts.add(resolvedChassis.rightPort)
+  }
+  const used = [...explicitPorts].sort()
 
   const lines = [
     "# Brick Studio: команды выполняются сверху вниз",
@@ -758,12 +841,26 @@ export function generatePybricks(
   function emitBlock(block: WorkspaceBlock, indent: string) {
     if (block.type === "start" || block.type === "button") return
     if (block.type === "stop") {
-      const motor = `motor_${(block.motor || "A").toLowerCase()}`
-      lines.push(`${indent}${motor}.brake()`)
-      if (block.motor2) {
-        const motor2 = `motor_${block.motor2.toLowerCase()}`
-        lines.push(`${indent}${motor2}.brake()`)
+      const stopPorts = block.stopAll
+        ? used
+        : [...new Set(getStopPorts(block, hub).ports)]
+      for (const port of stopPorts) {
+        lines.push(`${indent}motor_${port.toLowerCase()}.brake()`)
       }
+      return
+    }
+    if (block.type === "chassis") {
+      const dir = block.chassisDirection || "forward"
+      const [lMul, rMul] = WHEEL_DIRECTIONS[dir] || WHEEL_DIRECTIONS.forward
+      const spd = block.modules?.includes("speed")
+        ? block.speed || MOTOR_SPEED
+        : resolvedChassis.speed || MOTOR_SPEED
+      const leftSpeed = lMul * spd * (resolvedChassis.leftReversed ? -1 : 1)
+      const rightSpeed = rMul * spd * (resolvedChassis.rightReversed ? -1 : 1)
+      lines.push(
+        `${indent}motor_${resolvedChassis.leftPort.toLowerCase()}.run(${leftSpeed})`,
+        `${indent}motor_${resolvedChassis.rightPort.toLowerCase()}.run(${rightSpeed})`
+      )
       return
     }
     if (block.type === "if") {

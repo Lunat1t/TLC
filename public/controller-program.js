@@ -1,104 +1,80 @@
-export const CONTROLLER_BUTTONS = Object.freeze([
-  'up', 'down', 'left', 'right', 'a', 'b', 'x', 'y', 'l', 'r'
-]);
+import {
+  CONTROLLER_BUTTONS,
+  BUTTON_LABELS,
+  BUTTON_KEYS,
+  DEFAULT_SPEED,
+  DRIVE_PORTS,
+  DEFAULT_DRIVE_SETTINGS,
+  DIRECTION_INPUTS,
+  CONTROL_KIND_INPUTS,
+  WHEEL_DIRECTIONS,
+  isDriveSettings,
+  normalizeChassisSettings,
+  resolveProjectChassis,
+  getStopPorts,
+  expandActionBlock,
+} from './block-registry.js';
 
-export const BUTTON_LABELS = Object.freeze({
-  up: '▲',
-  down: '▼',
-  left: '◀',
-  right: '▶',
-  a: 'A',
-  b: 'B',
-  x: 'X',
-  y: 'Y',
-  l: 'L',
-  r: 'R',
-  blue: 'Синяя',
-  red: 'Красная',
-  green: 'Зелёная',
-  yellow: 'Жёлтая',
-});
-
-export const BUTTON_KEYS = Object.freeze({
-  ArrowUp: 'up',
-  ArrowDown: 'down',
-  ArrowLeft: 'left',
-  ArrowRight: 'right',
-  KeyJ: 'a',
-  KeyK: 'b',
-  KeyU: 'x',
-  KeyI: 'y',
-  KeyQ: 'l',
-  KeyE: 'r',
-});
-
-const DEFAULT_SPEED = 360;
-const DEFAULT_POWER = 50;
-
-export const DRIVE_PORTS = Object.freeze(['A', 'B', 'C', 'D', 'E', 'F']);
-export const DEFAULT_DRIVE_SETTINGS = Object.freeze({
-  leftPort: 'A',
-  rightPort: 'B',
-  leftReversed: false,
-  rightReversed: true,
-});
-
-export function isDriveSettings(value) {
-  return DRIVE_PORTS.includes(value?.leftPort) && DRIVE_PORTS.includes(value?.rightPort) &&
-    value.leftPort !== value.rightPort &&
-    typeof value.leftReversed === 'boolean' && typeof value.rightReversed === 'boolean';
-}
-
-const DIRECTION_INPUTS = Object.freeze({
-  'drive-turn': ['left', 'right'],
-  'drive-linear': ['up', 'down'],
-});
-const WHEEL_DIRECTIONS = {
-  up: [1, 1],
-  down: [-1, -1],
-  left: [-1, 1],
-  right: [1, -1],
+export {
+  CONTROLLER_BUTTONS,
+  BUTTON_LABELS,
+  BUTTON_KEYS,
+  DRIVE_PORTS,
+  DEFAULT_DRIVE_SETTINGS,
+  isDriveSettings,
+  resolveProjectChassis,
+  getStopPorts,
 };
 
-function compileDriveControls(layout, result, usedPorts) {
-  if (!Array.isArray(layout?.controls)) return;
+function compileDriveControls(layout, result, usedPorts, projectChassis, directWorkspaceChassis) {
+  if (!Array.isArray(layout?.controls)) return 2;
   const areas = Array.isArray(layout.areas) ? layout.areas : [];
+  let maxProtocol = 2;
   for (const control of layout.controls) {
     const inputs = Object.hasOwn(DIRECTION_INPUTS, control?.kind) ? DIRECTION_INPUTS[control.kind] : null;
     if (!inputs || typeof control.id !== 'string' || !control.id) continue;
     const area = typeof control.areaId === 'string' && control.areaId && areas.find(candidate => candidate?.id === control.areaId);
-    const settings = area?.drive === undefined ? DEFAULT_DRIVE_SETTINGS : area.drive;
+    const settings = directWorkspaceChassis
+      ? directWorkspaceChassis
+      : area?.drive !== undefined
+        ? area.drive
+        : projectChassis?.configured
+          ? projectChassis.settings
+          : DEFAULT_DRIVE_SETTINGS;
     if (!area || !isDriveSettings(settings)) {
       for (const input of inputs) {
         result.errors.push({
-          target: {controlId: control.id, input}, scope: 'handler', severity: 'error',
-          code: 'invalid-drive-settings', message: 'Выберите два разных порта для привода в области управления.',
+          target: { controlId: control.id, input }, scope: 'handler', severity: 'error',
+          code: 'invalid-drive-settings', message: 'Выберите разные порты шасси',
         });
       }
       continue;
     }
 
-    const {leftPort, rightPort, leftReversed, rightReversed} = settings;
+    const { leftPort, rightPort, leftReversed, rightReversed } = settings;
+    const speed = Number.isFinite(settings.speed) ? Math.max(1, Math.min(1000, Math.round(settings.speed))) : DEFAULT_SPEED;
+    if (speed > 600) maxProtocol = 3;
     for (const input of inputs) {
       // Explicit event blocks replace automatic driving for this arrow.
       if (result.handlers.some(handler => handler.target?.controlId === control.id && handler.target.input === input && !handler.driveAreaId)) continue;
       usedPorts.add(leftPort);
       usedPorts.add(rightPort);
       const [left, right] = WHEEL_DIRECTIONS[input];
-      const base = {target: {controlId: control.id, input}, button: input, sourceBlockId: control.id, driveAreaId: area.id};
+      const base = { target: { controlId: control.id, input }, button: input, sourceBlockId: control.id, driveAreaId: area.id };
       result.handlers.push({
         ...base, event: 'pressed', actions: [
-          {kind: 'run', port: leftPort, speed: left * DEFAULT_SPEED * (leftReversed ? -1 : 1)},
-          {kind: 'run', port: rightPort, speed: right * DEFAULT_SPEED * (rightReversed ? -1 : 1)},
+          { kind: 'run', port: leftPort, speed: left * speed * (leftReversed ? -1 : 1) },
+          { kind: 'run', port: rightPort, speed: right * speed * (rightReversed ? -1 : 1) },
         ],
       }, {
         ...base, event: 'released', actions: [
-          {kind: 'stop', port: leftPort},
-          {kind: 'stop', port: rightPort},
+          { kind: 'stop', port: leftPort },
+          { kind: 'stop', port: rightPort },
         ],
       });
     }
   }
+  return maxProtocol;
 }
 
 export function describeAction(action) {
@@ -127,6 +103,9 @@ export function describeAction(action) {
     case 'stop': {
       return `Стоп мотора ${action.port}`;
     }
+    case 'stopAll': {
+      return 'Стоп всех моторов';
+    }
     case 'wait': {
       return `Пауза ${action.ms} мс`;
     }
@@ -142,6 +121,8 @@ export function commandsFor(action, protocol = 3) {
       return [`m,${action.port},${action.speed}\n`];
     case 'stop':
       return [`m,${action.port},0\n`];
+    case 'stopAll':
+      return DRIVE_PORTS.map(port => `m,${port},0\n`);
     case 'dc':
       if (protocol < 3) throw new Error('Мощность мотора требует прошивку протокола v3');
       return [`d,${action.port},${action.power}\n`];
@@ -162,7 +143,7 @@ export function commandsFor(action, protocol = 3) {
 }
 
 export function controllerHandler(program, button, event) {
-  return program?.handlers?.find(handler => (typeof button === "object" ? handler.target?.controlId === button.controlId && handler.target?.input === button.input : handler.button === button) && handler.event === event) || null;
+  return program?.handlers?.find(handler => (typeof button === 'object' ? handler.target?.controlId === button.controlId && handler.target?.input === button.input : handler.button === button) && handler.event === event) || null;
 }
 
 export function controllerRuntimeErrors(program, protocol, availablePorts) {
@@ -172,14 +153,18 @@ export function controllerRuntimeErrors(program, protocol, availablePorts) {
   for (const handler of program.handlers || []) {
     const missing = [...new Set(handler.actions.map(action => action.port).filter(port => port && !ports.has(port)))];
     if (missing.length) {
-      errors.push({button: handler.button, target: handler.target, scope: "handler", severity: "error", blockId: handler.sourceBlockId,
-        code: 'missing-port', message: `Кнопка ${BUTTON_LABELS[handler.button]}: подключите мотор к порту ${missing.join(', ')}`});
+      errors.push({
+        button: handler.button, target: handler.target, scope: 'handler', severity: 'error', blockId: handler.sourceBlockId,
+        code: 'missing-port', message: `Подключите мотор ${missing.join(', ')}`,
+      });
     }
     if (protocol < 3 && handler.actions.some(action =>
       ['dc', 'angle', 'time', 'dcTime'].includes(action.kind) ||
       (action.kind === 'run' && Math.abs(action.speed) > 600))) {
-      errors.push({button: handler.button, target: handler.target, scope: "handler", severity: "error", blockId: handler.sourceBlockId,
-        code: 'protocol-upgrade', message: `Кнопка ${BUTTON_LABELS[handler.button]}: переподключите робота для обновления программы хаба`});
+      errors.push({
+        button: handler.button, target: handler.target, scope: 'handler', severity: 'error', blockId: handler.sourceBlockId,
+        code: 'protocol-upgrade', message: 'Переподключите робота для обновления хаба',
+      });
     }
   }
   return errors;
@@ -196,6 +181,37 @@ function extractBlocks(project) {
     return ws.blocks;
   }
   return [];
+}
+
+function buildKnownControls(project, blocks) {
+  const layoutControls = Array.isArray(project?.workspace?.controlLayout?.controls)
+    ? project.workspace.controlLayout.controls
+    : [];
+  const areas = Array.isArray(project?.workspace?.controlLayout?.areas)
+    ? project.workspace.controlLayout.areas
+    : [];
+  const knownIds = new Set(layoutControls.map(c => c?.id).filter(Boolean));
+  const merged = [...layoutControls];
+  for (const block of blocks) {
+    if (block?.type !== 'motor-buttons' || !block.controlAreaId || knownIds.has(block.id)) continue;
+    if (!areas.some(area => area?.id === block.controlAreaId)) continue;
+    const hidden = Array.isArray(block.hiddenControlButtons) ? block.hiddenControlButtons : [];
+    const mods = Array.isArray(block.controlModules) ? block.controlModules : [];
+    const inputs = ['blue', ...mods].filter(color => !hidden.includes(color));
+    merged.push({
+      id: block.id,
+      areaId: block.controlAreaId,
+      kind: 'motor-panel',
+      label: 'Панель моторов',
+      inputs,
+    });
+    knownIds.add(block.id);
+  }
+  return merged;
+}
+
+function eventsConflict(a, b) {
+  return a === b || a === 'hold' || b === 'hold';
 }
 
 export function compileControllerProgram(project) {
@@ -220,55 +236,68 @@ export function compileControllerProgram(project) {
   if (hub === 'ev3') {
     result.errors.push({
       code: 'unsupported-hub',
-      message: 'Пульт поддерживает только роботов SPIKE Prime / Robot Inventor',
+      message: 'Пульт поддерживает только SPIKE Prime',
     });
     return result;
   }
 
   const rawBlocks = extractBlocks(project);
   const blocks = rawBlocks.filter(b => b && typeof b === 'object' && typeof b.id === 'string');
+  const chassis = resolveProjectChassis(project);
+  const controls = buildKnownControls(project, blocks);
 
-  // Find button roots
   const buttonRoots = blocks.filter(b => b.type === 'button' && !b.parentId);
   const startRoots = blocks.filter(b => b.type === 'start' && !b.parentId);
-  if (startRoots.length > 1) result.errors.push({code:'multiple-start', scope:'startup', message:'Оставьте одну шапку запуска'});
+  if (startRoots.length > 1) result.errors.push({ code: 'multiple-start', scope: 'startup', message: 'Оставьте одну шапку запуска' });
+
   const seenHandlers = new Map();
   const allUsedPorts = new Set();
   let maxProtocol = 2;
 
   for (const root of [...buttonRoots, ...(startRoots.length === 1 ? startRoots : [])]) {
-    const isStart = root.type === "start";
+    const isStart = root.type === 'start';
     const target = root.target && typeof root.target.controlId === 'string' && typeof root.target.input === 'string' ? root.target : null;
     const btn = target?.input || (CONTROLLER_BUTTONS.includes(root.button) ? root.button : 'up');
     const errorStart = result.errors.length;
-    if (!isStart && !target && project.workspace?.controlLayout) result.errors.push({button:btn, blockId:root.id, code:'missing-control', message:'Выберите элемент управления и кнопку'});
+    if (!isStart && !target && project.workspace?.controlLayout) {
+      result.errors.push({ button: btn, blockId: root.id, code: 'missing-control', message: 'Выберите пульт и кнопку' });
+    }
     if (target) {
-      const controls = project.workspace?.controlLayout?.controls || [];
       const control = controls.find(c => c.id === target.controlId);
-      const inputs = {...DIRECTION_INPUTS, drivetrain:['up','down','left','right'],motor:['forward','backward'],'motor-group':['forward','backward'],'legacy-buttons':CONTROLLER_BUTTONS,'motor-panel':['blue','red','green','yellow']};
-      if (!control) result.errors.push({blockId:root.id, target, code:'missing-control', message:'Выберите существующий элемент управления'});
-      else if (!inputs[control.kind]?.includes(target.input) || (Array.isArray(control.inputs) && !control.inputs.includes(target.input))) result.errors.push({blockId:root.id, target, code:'invalid-input', message:'Выберите доступную кнопку элемента'});
-    }
-    const ev = root.event === 'released' ? 'released' : 'pressed';
-    const handlerKey = `${target?.controlId || "legacy"}:${btn}:${ev}`;
-
-    if (!isStart && seenHandlers.has(handlerKey)) {
-      const first = seenHandlers.get(handlerKey);
-      if (!result.errors.some(error => error.code === 'duplicate-handler' && error.blockId === first)) {
-        result.errors.push({button: btn, blockId: first, code: 'duplicate-handler',
-          message: `Дубликат обработчика: кнопка ${BUTTON_LABELS[btn]} ${ev === 'released' ? 'отпущена' : 'нажата'}`});
+      if (!control) {
+        result.errors.push({ blockId: root.id, target, code: 'missing-control', message: 'Выберите пульт' });
+      } else if (!CONTROL_KIND_INPUTS[control.kind]?.includes(target.input) || (Array.isArray(control.inputs) && !control.inputs.includes(target.input))) {
+        result.errors.push({ blockId: root.id, target, code: 'invalid-input', message: 'Кнопка недоступна' });
       }
-      result.errors.push({
-        button: btn,
-        blockId: root.id,
-        code: 'duplicate-handler',
-        message: `Дубликат обработчика: кнопка ${BUTTON_LABELS[btn] || btn} ${ev === 'released' ? 'отпущена' : 'нажата'}`,
-      });
-    } else if (!isStart) {
-      seenHandlers.set(handlerKey, root.id);
+    }
+    const ev = root.event === 'hold' ? 'hold' : root.event === 'released' ? 'released' : 'pressed';
+    const inputKey = `${target?.controlId || 'legacy'}:${btn}`;
+
+    if (!isStart) {
+      const previous = seenHandlers.get(inputKey) || [];
+      const conflicting = previous.filter(entry => eventsConflict(entry.event, ev));
+      if (conflicting.length > 0) {
+        const label = BUTTON_LABELS[btn] || btn;
+        for (const prev of conflicting) {
+          if (!result.errors.some(error => error.code === 'duplicate-handler' && error.blockId === prev.blockId)) {
+            result.errors.push({
+              button: btn,
+              blockId: prev.blockId,
+              code: 'duplicate-handler',
+              message: `Дубль ${label}`,
+            });
+          }
+        }
+        result.errors.push({
+          button: btn,
+          blockId: root.id,
+          code: 'duplicate-handler',
+          message: `Дубль ${label}`,
+        });
+      }
+      seenHandlers.set(inputKey, [...previous, { event: ev, blockId: root.id }]);
     }
 
-    // Collect child chain
     const actions = [];
     let curr = root;
     const visited = new Set([root.id]);
@@ -284,123 +313,21 @@ export function compileControllerProgram(project) {
           button: btn,
           blockId: child.id,
           code: isStart ? 'unsupported-block' : 'bad-child',
-          message: 'В программе пульта нельзя использовать этот блок',
+          message: 'Блок здесь не работает',
         });
         continue;
       }
 
-      if (child.type === 'stop') {
-        const port = String(child.motor || 'A');
-        const port2 = child.motor2 ? String(child.motor2) : undefined;
-        if (![port, ...(port2 ? [port2] : [])].every(p => ['A','B','C','D','E','F'].includes(p))) result.errors.push({button:btn,blockId:child.id,code:'invalid-port',message:'Выберите существующий порт мотора'});
-        if (port2 && port2 === port) {
-          result.errors.push({
-            button: btn,
-            blockId: child.id,
-            code: 'same-ports',
-            message: 'Для остановки двух моторов выберите разные порты',
-          });
-        }
-        actions.push({ kind: 'stop', port });
-        allUsedPorts.add(port);
-        if (port2 && port2 !== port) {
-          actions.push({ kind: 'stop', port: port2 });
-          allUsedPorts.add(port2);
-        }
+      if (['stop', 'drive', 'pair', 'chassis'].includes(child.type)) {
+        const expanded = expandActionBlock(child, { hub, button: btn, chassis });
+        result.errors.push(...expanded.errors);
+        actions.push(...expanded.actions);
+        for (const port of expanded.usedPorts) allUsedPorts.add(port);
+        if (expanded.maxProtocol > maxProtocol) maxProtocol = expanded.maxProtocol;
         continue;
       }
 
-      if (child.type === 'drive' || child.type === 'pair') {
-        const modules = Array.isArray(child.modules) ? child.modules : [];
-        if (modules.includes('speed') && modules.includes('power')) {
-          result.errors.push({
-            button: btn,
-            blockId: child.id,
-            code: 'speed-and-power',
-            message: 'Выберите скорость или мощность, а не оба режима',
-          });
-        }
-
-        const isPair = child.type === 'pair';
-        const portA = String(child.motor || 'A');
-        const portB = isPair ? String(child.motor2 || 'B') : null;
-        if (![portA, ...(portB ? [portB] : [])].every(p => ['A','B','C','D','E','F'].includes(p))) result.errors.push({button:btn,blockId:child.id,code:'invalid-port',message:'Выберите существующий порт мотора'});
-
-        if (isPair && portA === portB) {
-          result.errors.push({
-            button: btn,
-            blockId: child.id,
-            code: 'same-ports',
-            message: 'Для связанных моторов выберите два разных порта',
-          });
-        }
-
-        const powered = modules.includes('power');
-        const hasTravel = modules.includes('travel');
-        const unit = child.unit || 'rotations';
-
-        if (powered && hasTravel && unit !== 'seconds') {
-          result.errors.push({
-            button: btn,
-            blockId: child.id,
-            code: 'power-travel',
-            message: 'Для мощности выберите секунды. Для оборотов и градусов используйте скорость',
-          });
-        }
-
-        const rawSpeed = modules.includes('speed') && Number.isFinite(child.speed) ? Number(child.speed) : DEFAULT_SPEED;
-        const clampedSpeed = Math.max(1, Math.min(1000, Math.round(rawSpeed)));
-        if (clampedSpeed > 600) maxProtocol = 3;
-
-        const rawPower = Number.isFinite(child.power) ? Number(child.power) : DEFAULT_POWER;
-        const clampedPower = Math.max(1, Math.min(100, Math.round(rawPower)));
-
-        const value = Number.isFinite(child.value) && Number(child.value) > 0 ? Number(child.value) : 1;
-        const signA = child.direction === 'backward' ? -1 : 1;
-        const signB = child.direction2 === 'backward' ? -1 : 1;
-
-        allUsedPorts.add(portA);
-        if (portB) allUsedPorts.add(portB);
-
-        if (!hasTravel) {
-          // Continuous run
-          if (powered) {
-            maxProtocol = 3;
-            actions.push({ kind: 'dc', port: portA, power: signA * clampedPower });
-            if (portB) actions.push({ kind: 'dc', port: portB, power: signB * clampedPower });
-          } else {
-            actions.push({ kind: 'run', port: portA, speed: signA * clampedSpeed });
-            if (portB) actions.push({ kind: 'run', port: portB, speed: signB * clampedSpeed });
-          }
-        } else {
-          // Travel with finish
-          maxProtocol = 3;
-          if (unit === 'seconds') {
-            const ms = Math.max(10, Math.min(600000, Math.round(value * 1000)));
-            if (powered) {
-              actions.push({ kind: 'dcTime', port: portA, power: signA * clampedPower, ms });
-              if (portB) actions.push({ kind: 'dcTime', port: portB, power: signB * clampedPower, ms });
-            } else {
-              actions.push({ kind: 'time', port: portA, speed: signA * clampedSpeed, ms });
-              if (portB) actions.push({ kind: 'time', port: portB, speed: signB * clampedSpeed, ms });
-            }
-            actions.push({ kind: 'wait', ms });
-            if (powered) {
-              actions.push({ kind: 'stop', port: portA });
-              if (portB) actions.push({ kind: 'stop', port: portB });
-            }
-          } else {
-            // Rotations or degrees
-            const degrees = Math.max(1, Math.round(value * (unit === 'rotations' ? 360 : 1)));
-            actions.push({ kind: 'angle', port: portA, speed: signA * clampedSpeed, degrees });
-            if (portB) actions.push({ kind: 'angle', port: portB, speed: signB * clampedSpeed, degrees });
-            const waitMs = Math.round((degrees / clampedSpeed) * 1000) + 150;
-            actions.push({ kind: 'wait', ms: waitMs });
-          }
-        }
-        continue;
-      }
-      result.errors.push({button:btn,blockId:child.id,code:'unsupported-block',message:'Этот блок не поддерживается при управлении'});
+      result.errors.push({ button: btn, blockId: child.id, code: 'unsupported-block', message: 'Блок не поддерживается' });
     }
 
     if (actions.length > 50) {
@@ -408,15 +335,21 @@ export function compileControllerProgram(project) {
         button: btn,
         blockId: root.id,
         code: 'too-many-actions',
-        message: 'Слишком много действий в обработчике (максимум 50)',
+        message: 'Максимум 50 действий',
       });
     }
 
-    for (const error of result.errors.slice(errorStart)) { error.target = target || undefined; error.scope = isStart ? "startup" : "handler"; error.severity = "error"; }
-    if (!isStart && target && actions.length === 0 && result.errors.length === errorStart) result.errors.push({target, blockId:root.id, code:'empty-handler', scope:'handler', severity:'warning', message:'Добавьте действия под событием кнопки'});
+    for (const error of result.errors.slice(errorStart)) {
+      error.target = target || undefined;
+      error.scope = isStart ? 'startup' : 'handler';
+      error.severity = 'error';
+    }
+    if (!isStart && target && actions.length === 0 && result.errors.length === errorStart) {
+      result.errors.push({ target, blockId: root.id, code: 'empty-handler', scope: 'handler', severity: 'warning', message: 'Добавьте действия под событием кнопки' });
+    }
     if (isStart) { result.startup = actions; continue; }
     result.handlers.push({
-      ...(target ? {target} : {}),
+      ...(target ? { target } : {}),
       button: btn,
       event: ev,
       sourceBlockId: root.id,
@@ -424,7 +357,9 @@ export function compileControllerProgram(project) {
     });
   }
 
-  compileDriveControls(project.workspace?.controlLayout, result, allUsedPorts);
+  const directWorkspaceChassis = normalizeChassisSettings(project.workspace?.chassis);
+  const driveProtocol = compileDriveControls(project.workspace?.controlLayout, result, allUsedPorts, chassis, directWorkspaceChassis);
+  if (driveProtocol > maxProtocol) maxProtocol = driveProtocol;
   result.protocol = maxProtocol;
   result.ports = Array.from(allUsedPorts).sort();
   return result;

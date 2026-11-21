@@ -201,3 +201,150 @@ test('unsupported startup structure prevents a partial startup program',()=>{
   const compiled=compileControllerProgram(project);
   assert.ok(compiled.errors.some(e=>e.code==='unsupported-block'&&e.scope==='startup'));
 });
+
+test('hold mode conflicts with pressed/released/hold on same button, while pressed+released stays valid', () => {
+  const validLegacy = compileControllerProgram({
+    id: 'p-leg', hub: 'spike',
+    workspace: {
+      controlLayout: { version: 1, areas: [{ id: 'a1' }], controls: [{ id: 'c1', areaId: 'a1', kind: 'motor-panel', inputs: ['blue'] }] },
+      blocks: [
+        { id: 'b1', type: 'button', event: 'pressed', target: { controlId: 'c1', input: 'blue' } },
+        { id: 'd1', type: 'drive', parentId: 'b1', motor: 'A' },
+        { id: 'b2', type: 'button', event: 'released', target: { controlId: 'c1', input: 'blue' } },
+        { id: 's1', type: 'stop', parentId: 'b2', motor: 'A' },
+      ],
+    },
+  });
+  assert.equal(validLegacy.errors.length, 0);
+
+  const conflict = compileControllerProgram({
+    id: 'p-conf', hub: 'spike',
+    workspace: {
+      controlLayout: { version: 1, areas: [{ id: 'a1' }], controls: [{ id: 'c1', areaId: 'a1', kind: 'motor-panel', inputs: ['blue'] }] },
+      blocks: [
+        { id: 'b1', type: 'button', event: 'hold', target: { controlId: 'c1', input: 'blue' } },
+        { id: 'd1', type: 'drive', parentId: 'b1', motor: 'A' },
+        { id: 'b2', type: 'button', event: 'released', target: { controlId: 'c1', input: 'blue' } },
+        { id: 's1', type: 'stop', parentId: 'b2', motor: 'A' },
+      ],
+    },
+  });
+  assert.equal(conflict.errors.filter(e => e.code === 'duplicate-handler').length, 2);
+});
+
+test('group stop compiles multi-port, detects duplicates, and stopAll avoids false missing-port errors', () => {
+  const prog = compileControllerProgram({
+    id: 'p-stop', hub: 'spike',
+    workspace: {
+      blocks: [
+        { id: 'b1', type: 'button', button: 'a', event: 'pressed' },
+        { id: 's1', type: 'stop', parentId: 'b1', motors: ['A', 'C', 'D'] },
+        { id: 'b2', type: 'button', button: 'b', event: 'pressed' },
+        { id: 's2', type: 'stop', parentId: 'b2', stopAll: true },
+      ],
+    },
+  });
+  assert.equal(prog.errors.length, 0);
+  assert.deepEqual(controllerHandler(prog, 'a', 'pressed').actions, [
+    { kind: 'stop', port: 'A' },
+    { kind: 'stop', port: 'C' },
+    { kind: 'stop', port: 'D' },
+  ]);
+  assert.deepEqual(controllerHandler(prog, 'b', 'pressed').actions, [{ kind: 'stopAll' }]);
+  assert.deepEqual(controllerRuntimeErrors(prog, 3, new Set(['A', 'C', 'D'])), []);
+
+  const dup = compileControllerProgram({
+    id: 'p-dup', hub: 'spike',
+    workspace: {
+      blocks: [
+        { id: 'b1', type: 'button', button: 'a', event: 'pressed' },
+        { id: 's1', type: 'stop', parentId: 'b1', motors: ['B', 'B'] },
+      ],
+    },
+  });
+  assert.ok(dup.errors.some(e => e.code === 'same-ports' && e.blockId === 's1'));
+});
+
+test('chassis block requires configured chassis and compiles wheel speeds with reversals', () => {
+  const unconfigured = compileControllerProgram({
+    id: 'p-ch0', hub: 'spike',
+    workspace: {
+      blocks: [
+        { id: 'b1', type: 'button', button: 'up', event: 'hold' },
+        { id: 'c1', type: 'chassis', parentId: 'b1', chassisDirection: 'forward' },
+      ],
+    },
+  });
+  assert.ok(unconfigured.errors.some(e => e.code === 'chassis-unconfigured' && e.blockId === 'c1'));
+
+  const configured = compileControllerProgram({
+    id: 'p-ch1', hub: 'spike',
+    workspace: {
+      chassis: { leftPort: 'A', rightPort: 'B', leftReversed: false, rightReversed: true, speed: 400 },
+      blocks: [
+        { id: 'b1', type: 'button', button: 'up', event: 'hold' },
+        { id: 'c1', type: 'chassis', parentId: 'b1', chassisDirection: 'forward' },
+        { id: 'b2', type: 'button', button: 'left', event: 'hold' },
+        { id: 'c2', type: 'chassis', parentId: 'b2', chassisDirection: 'left', modules: ['speed'], speed: 700 },
+      ],
+    },
+  });
+  assert.equal(configured.errors.length, 0);
+  assert.equal(configured.protocol, 3);
+  assert.deepEqual(controllerHandler(configured, 'up', 'hold').actions, [
+    { kind: 'run', port: 'A', speed: 400 },
+    { kind: 'run', port: 'B', speed: -400 },
+  ]);
+  assert.deepEqual(controllerHandler(configured, 'left', 'hold').actions, [
+    { kind: 'run', port: 'A', speed: -700 },
+    { kind: 'run', port: 'B', speed: -700 },
+  ]);
+});
+
+test('compileControllerProgram discovers motor-buttons panels directly from workspace blocks', () => {
+  const prog = compileControllerProgram({
+    id: 'p-panel', hub: 'spike',
+    workspace: {
+      controlLayout: { version: 1, areas: [{ id: 'area1', sheetId: 's1', title: 'P', x: 0, y: 0, width: 400, height: 300 }], controls: [] },
+      sheets: [{
+        id: 's1', name: 'Main',
+        blocks: [
+          { id: 'panel1', type: 'motor-buttons', controlAreaId: 'area1', x: 0, y: 44, controlModules: ['red'] },
+          { id: 'b1', type: 'button', event: 'hold', target: { controlId: 'panel1', input: 'red' } },
+          { id: 'd1', type: 'drive', parentId: 'b1', motor: 'A' },
+        ],
+      }],
+    },
+  });
+  assert.equal(prog.errors.length, 0);
+});
+
+test('workspace.chassis stays synchronized with drive-linear control area even if area.drive had stale ports', () => {
+  const prog = compileControllerProgram({
+    id: 'p-sync',
+    hub: 'spike',
+    workspace: {
+      chassis: { leftPort: 'E', rightPort: 'F', leftReversed: false, rightReversed: true, speed: 420 },
+      controlLayout: {
+        version: 1,
+        areas: [{ id: 'a1', drive: { leftPort: 'C', rightPort: 'D', leftReversed: false, rightReversed: true, speed: 360 } }],
+        controls: [{ id: 'c1', areaId: 'a1', kind: 'drive-linear' }],
+      },
+      blocks: [
+        { id: 'b1', type: 'button', event: 'hold', target: { controlId: 'c1', input: 'up' } },
+        { id: 'ch1', type: 'chassis', parentId: 'b1', chassisDirection: 'forward', modules: [] },
+      ],
+    },
+  });
+  assert.equal(prog.errors.length, 0);
+  const blockHandler = prog.handlers.find(h => h.sourceBlockId === 'b1');
+  const downHandler = prog.handlers.find(h => h.target?.input === 'down' && h.event === 'pressed');
+  assert.deepEqual(blockHandler.actions, [
+    { kind: 'run', port: 'E', speed: 420 },
+    { kind: 'run', port: 'F', speed: -420 },
+  ]);
+  assert.deepEqual(downHandler.actions, [
+    { kind: 'run', port: 'E', speed: -420 },
+    { kind: 'run', port: 'F', speed: 420 },
+  ]);
+});

@@ -265,9 +265,9 @@ test('button handlers persist while standalone stop settings remain editable', a
 
 test('button events can be added and retain colored targets through JSON reload',()=>{
   const blocks=addBlock([], 'event', 0, 0, 'button');
-  assert.equal(blocks[0].event,'pressed');
+  assert.equal(blocks[0].event,'hold');
   for (const button of ['up','down','left','right','blue','red','green','yellow']) {
-    for (const event of ['pressed','released']) {
+    for (const event of ['hold','pressed','released']) {
       const saved={...blocks[0],button,event,target:{controlId:'panel',input:button}};
       const [restored]=readBlocks(JSON.parse(JSON.stringify({blocks:[saved]})));
       assert.equal(restored.button,button);
@@ -275,4 +275,50 @@ test('button events can be added and retain colored targets through JSON reload'
       assert.deepEqual(restored.target,saved.target);
     }
   }
+});
+
+test('legacy button without event restores as pressed, while new button defaults to hold', () => {
+  const [legacy] = readBlocks({ blocks: [{ id: 'old', type: 'button', x: 0, y: 0, button: 'a' }] });
+  assert.equal(legacy.event, 'pressed');
+  const created = addBlock([], 'btn-new', 0, 0, 'button');
+  assert.equal(created[0].event, 'hold');
+});
+
+test('group stop supports multiple ports, stopAll, and Pybricks export', async () => {
+  const { attachChain, blockHeight, generatePybricks, updateDrive } = await import('../src/lib/workspace.ts');
+  assert.equal(blockHeight({ type: 'stop' }), 64);
+  let blocks = addBlock([], 's1', 0, 0, 'stop');
+  blocks = updateDrive(blocks, 's1', { motors: ['A', 'C', 'D'] }, 'spike');
+  assert.deepEqual(blocks[0].motors, ['A', 'C', 'D']);
+  const codeMulti = generatePybricks(blocks, 'spike');
+  assert.match(codeMulti, /motor_a\.brake\(\)/);
+  assert.match(codeMulti, /motor_c\.brake\(\)/);
+  assert.match(codeMulti, /motor_d\.brake\(\)/);
+
+  blocks = updateDrive(blocks, 's1', { stopAll: true }, 'spike');
+  assert.equal(blocks[0].stopAll, true);
+  const codeAll = generatePybricks(blocks, 'spike', { leftPort: 'E', rightPort: 'F', leftReversed: false, rightReversed: true, speed: 400 });
+  assert.match(codeAll, /motor_e\.brake\(\)/);
+  assert.match(codeAll, /motor_f\.brake\(\)/);
+  let chain = addBlock([], 's_top', 0, 0, 'stop');
+  chain = addBlock(chain, 'd_sub', 0, 60, 'drive');
+  chain = attachChain(chain, 'd_sub', 's_top');
+  assert.equal(chain.find(b => b.id === 'd_sub').y, 60);
+});
+
+test('chassis block attaches under button/start and generates Pybricks drive code', async () => {
+  const { attachChain, snapTarget, updateDrive, generatePybricks } = await import('../src/lib/workspace.ts');
+  let blocks = addBlock([], 'btn', 0, 0, 'button');
+  blocks = addBlock(blocks, 'ch', 0, 58, 'chassis');
+  assert.equal(snapTarget(blocks, 'ch', 0, 54), 'btn');
+  blocks = attachChain(blocks, 'ch', 'btn');
+  assert.equal(blocks.find(b => b.id === 'ch').parentId, 'btn');
+
+  let auto = addBlock([], 'st', 0, 0, 'start');
+  auto = addBlock(auto, 'ch2', 0, 58, 'chassis');
+  auto = updateDrive(auto, 'ch2', { chassisDirection: 'left', modules: ['speed'], speed: 500 }, 'spike');
+  auto = attachChain(auto, 'ch2', 'st');
+  const code = generatePybricks(auto, 'spike', { leftPort: 'C', rightPort: 'D', leftReversed: false, rightReversed: true, speed: 300 });
+  assert.match(code, /motor_c\.run\(-500\)/);
+  assert.match(code, /motor_d\.run\(-500\)/);
 });

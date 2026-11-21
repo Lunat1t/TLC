@@ -1,5 +1,8 @@
 // Typed re-export of public/controller-program.js
 import * as RawControllerProgram from "../../public/controller-program.js"
+import type { DrivePort, DriveSettings } from "./block-registry.ts"
+
+export type { DrivePort, DriveSettings }
 
 export type ControllerButton =
   | "up"
@@ -17,22 +20,21 @@ export type ControllerButton =
   | "green"
   | "yellow"
 
-export type ControllerEvent = "pressed" | "released"
-
-export type DrivePort = "A" | "B" | "C" | "D" | "E" | "F"
-
-export interface DriveSettings {
-  leftPort: DrivePort
-  rightPort: DrivePort
-  leftReversed: boolean
-  rightReversed: boolean
-}
+export type ControllerEvent = "hold" | "pressed" | "released"
 
 export const DRIVE_PORTS = RawControllerProgram.DRIVE_PORTS as readonly DrivePort[]
 export const DEFAULT_DRIVE_SETTINGS = RawControllerProgram.DEFAULT_DRIVE_SETTINGS as Readonly<DriveSettings>
 
 export function isDriveSettings(value: unknown): value is DriveSettings {
   return RawControllerProgram.isDriveSettings(value)
+}
+
+export function resolveProjectChassis(project: unknown): { configured: boolean; settings: DriveSettings } {
+  return RawControllerProgram.resolveProjectChassis(project) as { configured: boolean; settings: DriveSettings }
+}
+
+export function getStopPorts(block: unknown, hub: "spike" | "ev3" = "spike"): { stopAll: boolean; ports: string[] } {
+  return RawControllerProgram.getStopPorts(block, hub)
 }
 
 export type ControllerAction =
@@ -42,6 +44,7 @@ export type ControllerAction =
   | { kind: "time"; port: string; speed: number; ms: number }
   | { kind: "dcTime"; port: string; power: number; ms: number }
   | { kind: "stop"; port: string }
+  | { kind: "stopAll" }
   | { kind: "wait"; ms: number }
 
 export interface ControllerHandler {

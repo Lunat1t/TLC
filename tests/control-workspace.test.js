@@ -179,3 +179,13 @@ test('cloning remaps local color and arrow targets but preserves external refere
   const roundTrip=JSON.parse(JSON.stringify(copied));
   assert.deepEqual(readBlocks(roundTrip).filter(block=>block.type==='button').map(block=>block.target),copied.blocks.filter(block=>block.type==='button').map(block=>block.target));
 });
+
+test('migration preserves chassis blocks and project chassis configuration', () => {
+  const project = panelProject();
+  project.workspace.chassis = { leftPort: 'A', rightPort: 'B', leftReversed: false, rightReversed: true, speed: 450 };
+  project.workspace.sheets[0].blocks.push({ id: 'ch1', type: 'chassis', x: 0, y: 60, chassisDirection: 'forward' });
+  const migrated = migrateControlWorkspace(project);
+  assert.equal(migrated.changed, false);
+  assert.ok(migrated.project.workspace.sheets[0].blocks.some(b => b.id === 'ch1'));
+  assert.deepEqual(migrated.project.workspace.chassis, project.workspace.chassis);
+});
