@@ -155,6 +155,12 @@ export function resolveProjectChassis(project) {
   return { configured: false, settings: DEFAULT_DRIVE_SETTINGS };
 }
 
+export function isPairedBlock(block) {
+  if (!block || typeof block !== 'object') return false;
+  if (block.type === 'pair') return true;
+  return block.type === 'drive' && Array.isArray(block.modules) && block.modules.includes('pair');
+}
+
 export function getRawStopPorts(block) {
   if (block?.stopAll === true) {
     return { stopAll: true, ports: [] };
@@ -268,7 +274,7 @@ export function expandActionBlock(child, context = {}) {
       });
     }
 
-    const isPair = child.type === 'pair';
+    const isPair = isPairedBlock(child);
     const portA = String(child.motor || 'A');
     const portB = isPair ? String(child.motor2 || 'B') : null;
     if (![portA, ...(portB ? [portB] : [])].every(p => validPorts.includes(p))) {

@@ -322,3 +322,44 @@ test('chassis block attaches under button/start and generates Pybricks drive cod
   assert.match(code, /motor_c\.run\(-500\)/);
   assert.match(code, /motor_d\.run\(-500\)/);
 });
+
+test('drive block supports pair module add/remove, motor2 selection, legacy conversion, and Pybricks', async () => {
+  const { generatePybricks, isPairedBlock, updateDrive } = await import('../src/lib/workspace.ts');
+  let blocks = addBlock([], 'st', 0, 0, 'start');
+  blocks = addBlock(blocks, 'd1', 0, 58, 'drive');
+  blocks[1].parentId = 'st';
+
+  // Enable pair module when primary motor is B -> picks motor2 = A, direction2 = backward
+  blocks = updateDrive(blocks, 'd1', { motor: 'B' }, 'spike');
+  blocks = updateDrive(blocks, 'd1', { modules: ['pair', 'travel'], value: 2, unit: 'rotations' }, 'spike');
+  assert.equal(isPairedBlock(blocks[1]), true);
+  assert.equal(blocks[1].motor2, 'A');
+  assert.equal(blocks[1].direction2, 'backward');
+
+  const restored = readBlocks({ blocks }, 'spike');
+  assert.equal(isPairedBlock(restored[1]), true);
+  assert.equal(restored[1].motor2, 'A');
+  assert.equal(restored[1].direction2, 'backward');
+
+  const code = generatePybricks(restored, 'spike');
+  assert.match(code, /motor_b\.run_angle\(360, 720/);
+  assert.match(code, /motor_a\.run_angle\(-360, 720/);
+
+  // Same ports throw Pybricks error
+  const samePort = updateDrive(restored, 'd1', { motor2: 'B' }, 'spike');
+  assert.throws(() => generatePybricks(samePort, 'spike'), /разных порта/);
+
+  // Remove pair module cleans motor2/direction2
+  const unpaired = updateDrive(samePort, 'd1', { modules: ['travel'] }, 'spike');
+  assert.equal(isPairedBlock(unpaired[1]), false);
+  assert.equal(unpaired[1].motor2, undefined);
+  assert.equal(unpaired[1].direction2, undefined);
+
+  // Legacy 'pair' block converts cleanly back to 'drive'
+  let legacy = addBlock([], 'p_leg', 0, 0, 'pair');
+  assert.equal(isPairedBlock(legacy[0]), true);
+  legacy = updateDrive(legacy, 'p_leg', { type: 'drive', modules: [] }, 'spike');
+  assert.equal(legacy[0].type, 'drive');
+  assert.equal(isPairedBlock(legacy[0]), false);
+  assert.equal(legacy[0].motor2, undefined);
+});

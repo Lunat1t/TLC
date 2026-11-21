@@ -8,6 +8,7 @@ import {
   WHEEL_DIRECTIONS,
   getStopPorts,
   isDriveSettings,
+  isPairedBlock,
   type ChassisDirection,
   type DriveSettings,
 } from "./block-registry.ts"
@@ -32,13 +33,14 @@ export type ControllerButton =
   | "green"
   | "yellow"
 export type ControllerEvent = "hold" | "pressed" | "released"
+export { isPairedBlock }
 export type { ChassisDirection }
 
 export type BlockType = "start" | "drive" | "pair" | "chassis" | "if" | "button" | "stop" | "motor-buttons"
 const LIBRARY_BLOCK_TYPES = new Set<BlockType>(BLOCK_TYPES as readonly BlockType[])
 export type MotorDirection = "forward" | "backward"
 export type TravelUnit = "rotations" | "degrees" | "seconds"
-export type MotorModule = "speed" | "power" | "travel"
+export type MotorModule = "pair" | "speed" | "power" | "travel"
 export type MotorButtonModule = "red" | "green" | "yellow"
 export type MotorPanelButton = "blue" | MotorButtonModule
 export type BranchSlot = "body" | "else"
@@ -464,19 +466,21 @@ export function readBlocks(
         ? ([
             ...new Set(
               block.modules.filter((m): m is MotorModule =>
-                ["speed", "power", "travel"].includes(String(m))
+                ["pair", "speed", "power", "travel"].includes(String(m))
               )
             ),
           ] as MotorModule[])
         : (["travel"] as MotorModule[])
 
+      const paired = type === "pair" || (type === "drive" && rawModules.includes("pair"))
+      const defaultMotor2 = base.motor === "B" ? "A" : "B"
       return {
         ...base,
-        ...(type === "pair"
+        ...(paired
           ? {
               motor2: PORTS[hub]?.includes(String(block.motor2))
                 ? String(block.motor2)
-                : "B",
+                : defaultMotor2,
               direction2:
                 block.direction2 === "backward" ? "backward" : "forward",
             }
@@ -608,6 +612,26 @@ export function updateDrive(
       blocks: blocks.map((block) => {
         if (block.id !== id || !["drive", "pair", "chassis", "if", "button", "stop"].includes(block.type)) return block
         const merged: WorkspaceBlock = { ...block, ...changes }
+        if (block.type === "pair" && changes.type === "drive") {
+          merged.type = "drive"
+        } else {
+          merged.type = block.type
+        }
+        if (merged.type === "drive" || merged.type === "pair") {
+          const nextModules = Array.isArray(merged.modules) ? merged.modules : []
+          const wasPaired = isPairedBlock(block)
+          const nowPaired = merged.type === "pair" || nextModules.includes("pair")
+          if (nowPaired) {
+            if (!wasPaired) {
+              const primary = merged.motor || "A"
+              if (!changes.motor2) merged.motor2 = primary === "B" ? "A" : "B"
+              if (!changes.direction2) merged.direction2 = "backward"
+            }
+          } else {
+            delete merged.motor2
+            delete merged.direction2
+          }
+        }
         if (block.type === "stop") {
           if (changes.stopAll === true) {
             delete merged.motors
@@ -805,7 +829,7 @@ export function generatePybricks(
   const explicitPorts = new Set<string>()
   let hasStopAll = false
   for (const block of driveBlocks) {
-    if (block.type === "pair") {
+    if (isPairedBlock(block)) {
       explicitPorts.add(block.motor || "A")
       explicitPorts.add(block.motor2 || "B")
     } else if (block.type === "chassis") {
@@ -925,7 +949,7 @@ export function generatePybricks(
     const sign = block.direction === "backward" ? -1 : 1
     const motor = `motor_${(block.motor || "A").toLowerCase()}`
 
-    if (block.type === "pair") {
+    if (isPairedBlock(block)) {
       if (block.motor === block.motor2)
         throw new Error("Для связанных моторов выберите два разных порта.")
       const motor2 = `motor_${(block.motor2 || "B").toLowerCase()}`

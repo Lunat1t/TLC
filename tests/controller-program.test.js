@@ -348,3 +348,34 @@ test('workspace.chassis stays synchronized with drive-linear control area even i
     { kind: 'run', port: 'F', speed: 420 },
   ]);
 });
+
+test('drive block with pair module compiles both motors and flags same-ports error', () => {
+  const ok = compileControllerProgram({
+    id: 'p-drive-pair',
+    hub: 'spike',
+    workspace: {
+      blocks: [
+        { id: 'b1', type: 'button', button: 'a', event: 'hold' },
+        { id: 'd1', type: 'drive', parentId: 'b1', motor: 'B', motor2: 'C', direction: 'forward', direction2: 'backward', modules: ['pair', 'speed'], speed: 400 },
+      ],
+    },
+  });
+  assert.equal(ok.errors.length, 0);
+  assert.deepEqual(ok.ports, ['B', 'C']);
+  assert.deepEqual(ok.handlers[0].actions, [
+    { kind: 'run', port: 'B', speed: 400 },
+    { kind: 'run', port: 'C', speed: -400 },
+  ]);
+
+  const dup = compileControllerProgram({
+    id: 'p-drive-pair-dup',
+    hub: 'spike',
+    workspace: {
+      blocks: [
+        { id: 'b1', type: 'button', button: 'a', event: 'hold' },
+        { id: 'd1', type: 'drive', parentId: 'b1', motor: 'C', motor2: 'C', modules: ['pair'] },
+      ],
+    },
+  });
+  assert.ok(dup.errors.some(e => e.code === 'same-ports' && e.blockId === 'd1'));
+});

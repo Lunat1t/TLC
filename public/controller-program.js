@@ -9,6 +9,7 @@ import {
   CONTROL_KIND_INPUTS,
   WHEEL_DIRECTIONS,
   isDriveSettings,
+  isPairedBlock,
   normalizeChassisSettings,
   resolveProjectChassis,
   getStopPorts,
@@ -22,6 +23,7 @@ export {
   DRIVE_PORTS,
   DEFAULT_DRIVE_SETTINGS,
   isDriveSettings,
+  isPairedBlock,
   resolveProjectChassis,
   getStopPorts,
 };

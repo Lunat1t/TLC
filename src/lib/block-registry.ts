@@ -42,6 +42,10 @@ export function resolveProjectChassis(project: unknown): { configured: boolean; 
   return RawRegistry.resolveProjectChassis(project) as { configured: boolean; settings: DriveSettings }
 }
 
+export function isPairedBlock(block: unknown): boolean {
+  return RawRegistry.isPairedBlock(block)
+}
+
 export function getRawStopPorts(block: unknown): { stopAll: boolean; ports: string[] } {
   return RawRegistry.getRawStopPorts(block)
 }

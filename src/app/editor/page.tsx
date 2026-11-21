@@ -43,6 +43,7 @@ import {
   chainIds,
   generatePybricks,
   ifInnerHeight,
+  isPairedBlock,
   layoutChains,
   moveChain,
   readSheets,
@@ -119,7 +120,6 @@ const BLOCK_CATEGORIES = [
       { type: "chassis", label: "Ехать", icon: Navigation },
       { type: "drive", label: "Движение мотора", icon: ArrowRight },
       { type: "stop", label: "Стоп мотора", icon: Square },
-      { type: "pair", label: "Связанные моторы", icon: ArrowRightLeft },
     ],
   },
   {
@@ -1721,7 +1721,7 @@ function EditorWorkspace() {
                 const displayY = panelArea && isMoving
                   ? Math.max(panelArea.y + 44, Math.min(panelArea.y + panelArea.height - panelHeight, rawDisplayY))
                   : rawDisplayY
-                const paired = block.type === "pair"
+                const paired = isPairedBlock(block)
                 const isIfBlock = block.type === "if"
                 const isChassisBlock = block.type === "chassis"
                 const motorBlock = block.type === "drive" || paired
@@ -2310,8 +2310,8 @@ function EditorWorkspace() {
                           </button>
 
                           {paired && (
-                            <>
-                              <span className="text-[16px] font-extrabold opacity-95">
+                            <div className="shrink-0 flex flex-nowrap items-center gap-2 min-h-[36px]">
+                              <span className="text-[16px] font-extrabold opacity-95 whitespace-nowrap">
                                 и
                               </span>
                               <select
@@ -2354,11 +2354,33 @@ function EditorWorkspace() {
                                     )
                                   )
                                 }
-                                className="min-h-[36px] min-w-[36px] h-[38px] w-[38px] rounded-full bg-white text-[#0d3b4c] hover:bg-[#e7f4f8] font-black text-lg shadow-xs grid place-items-center cursor-pointer"
+                                className="min-h-[36px] min-w-[36px] h-[38px] w-[38px] rounded-full bg-white text-[#0d3b4c] hover:bg-[#e7f4f8] font-black text-lg shadow-xs grid place-items-center cursor-pointer shrink-0"
                               >
                                 {block.direction2 === "backward" ? "↺" : "↻"}
                               </button>
-                            </>
+                              <button
+                                type="button"
+                                aria-label="Удалить второй мотор"
+                                title="Удалить второй мотор"
+                                onClick={() =>
+                                  project &&
+                                  saveBlocks(
+                                    updateDrive(
+                                      blocks,
+                                      block.id,
+                                      {
+                                        ...(block.type === "pair" ? { type: "drive" as BlockType } : {}),
+                                        modules: modules.filter((m) => m !== "pair"),
+                                      },
+                                      project.hub
+                                    )
+                                  )
+                                }
+                                className="min-h-[36px] min-w-[36px] rounded-full bg-white/20 hover:bg-white/40 text-white text-base leading-none font-black grid place-items-center cursor-pointer shrink-0"
+                              >
+                                ×
+                              </button>
+                            </div>
                           )}
                         </div>
 
@@ -2513,6 +2535,7 @@ function EditorWorkspace() {
                             <div className="absolute top-[calc(100%+8px)] right-0 z-50 w-[240px] p-2.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-1.5">
                               {(
                                 [
+                                  ["pair", "второй мотор (связь)"],
                                   ["speed", "со скоростью"],
                                   ["power", "с мощностью"],
                                   ["travel", "на [значение] [ед. изм.]"],
@@ -2521,7 +2544,7 @@ function EditorWorkspace() {
                                 <button
                                   key={modName}
                                   type="button"
-                                  disabled={modules.includes(modName)}
+                                  disabled={modName === "pair" ? paired : modules.includes(modName)}
                                   onClick={() => {
                                     if (!project) return
                                     const filtered = modules.filter(
@@ -2538,6 +2561,12 @@ function EditorWorkspace() {
                                             ...filtered,
                                             modName as MotorModule,
                                           ],
+                                          ...(modName === "pair"
+                                            ? {
+                                                motor2: (block.motor || "A") === "B" ? "A" : "B",
+                                                direction2: "backward",
+                                              }
+                                            : {}),
                                           ...(modName === "power"
                                             ? { unit: "seconds" }
                                             : {}),
