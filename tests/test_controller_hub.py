@@ -61,7 +61,7 @@ def read_input_byte():
 def wait(ms):
     global now
     now += ms
-    if now > 900:
+    if now > 2100:
         raise EndSimulation
 
 
@@ -90,6 +90,7 @@ with contextlib.redirect_stdout(output):
         pass
 
 out = output.getvalue()
+assert "SOCER_VER|4" in out
 assert "SOCER3_READY|A,D" in out, f"Unexpected ready output: {out}"
 assert "SOCER2_ACK" in out
 assert "SOCER2_LINK_LOST" in out

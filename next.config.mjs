@@ -3,6 +3,12 @@ const nextConfig = {
   ...(process.env.BRICK_STUDIO_LAN_DEV === "1" ? { distDir: ".next-lan" } : {}),
   reactStrictMode: true,
   serverExternalPackages: ["@napi-rs/canvas", "pdfjs-dist"],
+  webpack(config, { isServer }) {
+    if (!isServer) {
+      config.resolve.fallback = { ...config.resolve.fallback, fs: false, path: false, crypto: false };
+    }
+    return config;
+  },
   outputFileTracingIncludes: {
     "/api/instructions/*/preview": ["./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"],
     "/api/admin/instructions/link": ["./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"],

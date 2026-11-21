@@ -78,5 +78,340 @@ test('missing heartbeat acknowledgement closes the connection',async()=>{
  let now=0,interval,notify,closed=false;const clock={now:()=>now,setTimeout,clearTimeout,setInterval:(fn)=>{interval=fn;return 1},clearInterval:()=>{interval=null}};
  const t={connect:async(fn)=>{notify=fn},startHub:async()=>{},write:async(line)=>{if(line==='h\n')notify('SOCER3_READY|A')},disconnect:async()=>{closed=true}};
  const session=createControllerSession(t,clock),p=program();p.startup=[];await session.connect();await session.startHub();await session.setViewMode('check');await session.startProgram(p);
- now=1801;interval();await tick();assert.equal(session.getState().transport,'fault');assert.equal(session.getState().program,'stopped');assert.equal(closed,true);assert.equal(interval,null);await session.dispose();
+ now=3501;interval();await tick();assert.equal(session.getState().transport,'fault');assert.equal(session.getState().program,'stopped');assert.equal(closed,true);assert.equal(interval,null);await session.dispose();
+});
+
+import {readFileSync} from 'node:fs';
+import {buildMultiMpy6Blob, HUB_PROGRAM_VERSION, parseEvent, parseHubCapabilities} from '../public/pybricks-protocol.js';
+import {compilePythonToMultiMpy6} from '../src/lib/mpy-compiler.ts';
+
+test('hybrid fast probe skips upload when hub already has matching controller version', async () => {
+  let notify, uploads = 0;
+  const t = {
+    connect: async (fn) => { notify = fn; return { hubName: 'SPIKE-01' }; },
+    startHub: async () => {},
+    write: async (line) => {
+      if (line === 'h\n') {
+        notify(`SOCER_VER|${HUB_PROGRAM_VERSION}`);
+        notify('SOCER3_READY|A,B');
+      }
+    },
+    uploadProgram: async () => { uploads++; },
+    disconnect: async () => {},
+  };
+  const session = createControllerSession(t, undefined, {
+    compileHubProgram: async () => new Uint8Array([1, 2, 3]),
+    probeTimeoutMs: 50,
+  });
+  await session.connect();
+  assert.equal(session.getState().hubName, 'SPIKE-01');
+  await session.startHub();
+  assert.equal(uploads, 0);
+  assert.equal(session.getState().transport, 'ready');
+  await session.dispose();
+});
+
+test('hybrid auto-uploads on clean or outdated hub and reports progress', async () => {
+  let notify, uploaded = false, uploads = 0;
+  const progress = [];
+  const t = {
+    connect: async (fn) => { notify = fn; },
+    startHub: async () => {},
+    write: async (line) => {
+      if (line === 'h\n') {
+        if (!uploaded) {
+          // Simulate old controller without SOCER_VER
+          notify('SOCER3_READY|A');
+        } else {
+          notify(`SOCER_VER|${HUB_PROGRAM_VERSION}`);
+          notify('SOCER3_READY|A,D');
+        }
+      }
+    },
+    uploadProgram: async (blob, onProgress) => {
+      uploads++;
+      assert.deepEqual([...blob], [9, 8, 7]);
+      onProgress(50);
+      onProgress(100);
+      uploaded = true;
+    },
+    disconnect: async () => {},
+  };
+  const session = createControllerSession(t, undefined, {
+    compileHubProgram: async () => new Uint8Array([9, 8, 7]),
+    probeTimeoutMs: 50,
+  });
+  session.subscribe((s) => { if (s.uploadProgress !== null) progress.push(s.uploadProgress); });
+  await session.connect();
+  await session.startHub();
+  assert.equal(uploads, 1);
+  assert.ok(progress.includes(50) && progress.includes(100));
+  assert.equal(session.getState().transport, 'ready');
+  assert.deepEqual(session.getState().ports, ['A', 'D']);
+  await session.dispose();
+});
+
+test('short hub script exit during probe triggers auto-upload instead of fault', async () => {
+  let notify, uploaded = false, uploads = 0;
+  const t = {
+    connect: async (fn) => { notify = fn; },
+    startHub: async () => {},
+    write: async (line) => {
+      if (line === 'h\n') {
+        if (!uploaded) notify('SOCER2_LINK_LOST');
+        else {
+          notify(`SOCER_VER|${HUB_PROGRAM_VERSION}`);
+          notify('SOCER3_READY|A');
+        }
+      }
+    },
+    uploadProgram: async (_blob, onProgress) => {
+      uploads++;
+      onProgress(100);
+      uploaded = true;
+    },
+    disconnect: async () => {},
+  };
+  const session = createControllerSession(t, undefined, {
+    compileHubProgram: async () => new Uint8Array([1, 2]),
+    probeTimeoutMs: 200,
+  });
+  await session.connect();
+  await session.startHub();
+  assert.equal(uploads, 1);
+  assert.equal(session.getState().transport, 'ready');
+  await session.dispose();
+});
+
+test('cancelling upload returns to connected without fault and user picker cancel stays disconnected', async () => {
+  const cancelTransport = {
+    connect: async () => { const e = new Error('User cancelled'); e.name = 'NotFoundError'; throw e; },
+    startHub: async () => {},
+    write: async () => {},
+    disconnect: async () => {},
+  };
+  const s1 = createControllerSession(cancelTransport);
+  await s1.connect();
+  assert.equal(s1.getState().transport, 'disconnected');
+  await s1.dispose();
+
+  const t2 = {
+    connect: async () => {},
+    startHub: async () => {},
+    write: async () => {},
+    uploadProgram: async (_blob, _onProgress, signal) => {
+      await new Promise((_resolve, reject) => {
+        signal.addEventListener('abort', () => { const e = new Error('Aborted'); e.name = 'AbortError'; reject(e); });
+      });
+    },
+    disconnect: async () => {},
+  };
+  const s2 = createControllerSession(t2, undefined, {
+    compileHubProgram: async () => new Uint8Array([1]),
+    probeTimeoutMs: 15,
+  });
+  await s2.connect();
+  const starting = s2.startHub();
+  await new Promise((r) => setTimeout(r, 30));
+  assert.equal(s2.getState().transport, 'uploading');
+  s2.cancelStart();
+  await starting;
+  assert.equal(s2.getState().transport, 'connected');
+  await s2.dispose();
+});
+
+test('pybricks protocol helpers and mpy compiler produce valid multi-mpy6 hub blob', async () => {
+  const capBytes = new Uint8Array(11);
+  const view = new DataView(capBytes.buffer);
+  view.setUint16(0, 250, true);
+  view.setUint32(2, 3, true);
+  view.setUint32(6, 65536, true);
+  capBytes[10] = 5;
+  const caps = parseHubCapabilities(capBytes);
+  assert.deepEqual(caps, { maxCharSize: 250, featureFlags: 3, maxUserProgramSize: 65536, numOfSlots: 5 });
+
+  const status = parseEvent(Uint8Array.of(0, 64, 2, 0, 0, 1));
+  assert.equal(status.running, true);
+  assert.equal(status.hostConnected, true);
+  assert.equal(status.activeSlot, 1);
+
+  const wasmB64 = readFileSync(new URL('../public/vendor/mpy-cross-v6.wasm', import.meta.url)).toString('base64');
+  const hubPy = readFileSync(new URL('../public/hub_program.py', import.meta.url), 'utf8');
+  const blob = await compilePythonToMultiMpy6(hubPy, { wasmPath: 'data:application/wasm;base64,' + wasmB64 });
+  assert.ok(blob.byteLength > 500);
+  const dv = new DataView(blob.buffer, blob.byteOffset, blob.byteLength);
+  const mpyLen = dv.getUint32(0, true);
+  const name = new TextDecoder().decode(blob.subarray(4, 12));
+  assert.equal(name, '__main__');
+  assert.equal(blob[12], 0);
+  assert.equal(blob.byteLength, 4 + 9 + mpyLen);
+  const emptyBlob = buildMultiMpy6Blob([{ name: '__main__', mpy: new Uint8Array([77, 6]) }]);
+  assert.equal(emptyBlob.byteLength, 15);
+});
+
+import {createBluetoothTransport} from '../src/lib/controller-runtime.ts';
+import {compileBundledHubProgram} from '../src/lib/mpy-compiler.ts';
+
+function fakeWebBluetooth({ rejectFirstStart = false, initialRunning = false } = {}) {
+  const listeners = new Map();
+  const writes = [];
+  let running = initialRunning;
+  let uploadedSize = 0;
+  let hasController = false;
+  let notifyFn = null;
+
+  const emitStatus = (isRunning) => {
+    running = isRunning;
+    const buf = new Uint8Array(5);
+    buf[0] = 0;
+    new DataView(buf.buffer).setUint32(1, isRunning ? 64 : 0, true);
+    notifyFn?.({ target: { value: new DataView(buf.buffer) } });
+  };
+
+  const emitStdout = (text) => {
+    const encoded = new TextEncoder().encode(text);
+    const buf = new Uint8Array(1 + encoded.length);
+    buf[0] = 1;
+    buf.set(encoded, 1);
+    notifyFn?.({ target: { value: new DataView(buf.buffer) } });
+  };
+
+  const capBuf = new Uint8Array(11);
+  const capView = new DataView(capBuf.buffer);
+  capView.setUint16(0, 250, true);
+  capView.setUint32(2, 3, true);
+  capView.setUint32(6, 65536, true);
+  capBuf[10] = 5;
+
+  const cmdChar = {
+    startNotifications: async () => {},
+    stopNotifications: async () => {},
+    addEventListener: (ev, fn) => { if (ev === 'characteristicvaluechanged') notifyFn = fn; },
+    removeEventListener: () => { notifyFn = null; },
+    writeValueWithResponse: async (bytes) => {
+      const arr = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+      writes.push([...arr]);
+      const cmd = arr[0];
+      if (cmd === 0x00) {
+        emitStatus(false);
+        return;
+      }
+      if (cmd === 0x01) {
+        if (rejectFirstStart && !hasController) {
+          throw new Error('GATT VALUE_NOT_ALLOWED');
+        }
+        emitStatus(true);
+        if (hasController) {
+          emitStdout(`SOCER_VER|${HUB_PROGRAM_VERSION}\nSOCER3_READY|A\n`);
+        }
+        return;
+      }
+      if (cmd === 0x03) {
+        const size = new DataView(arr.buffer, arr.byteOffset, arr.byteLength).getUint32(1, true);
+        uploadedSize = size;
+        if (size > 0) hasController = true;
+        return;
+      }
+      if (cmd === 0x06) {
+        const text = new TextDecoder().decode(arr.subarray(1));
+        if (text === 'h\n') {
+          if (hasController) {
+            emitStdout(`SOCER_VER|${HUB_PROGRAM_VERSION}\nSOCER3_READY|A\n`);
+          } else if (initialRunning && running) {
+            // Legacy/old controller without SOCER_VER
+            emitStdout('SOCER3_READY|A\n');
+          }
+        } else if (text === 'x\n') {
+          emitStdout('SOCER2_STOP\n');
+        }
+      }
+    },
+  };
+
+  const capChar = {
+    readValue: async () => new DataView(capBuf.buffer),
+  };
+
+  const service = {
+    getCharacteristic: async (uuid) => uuid.endsWith('0003-8280-46da-89f4-6d8051e4aeef') ? capChar : cmdChar,
+  };
+
+  const device = {
+    name: 'SPIKE-Test',
+    gatt: {
+      connected: true,
+      connect: async () => ({ getPrimaryService: async () => service }),
+      disconnect: () => { device.gatt.connected = false; },
+    },
+    addEventListener: (ev, fn) => listeners.set(ev, fn),
+    removeEventListener: (ev) => listeners.delete(ev),
+  };
+
+  return {
+    writes,
+    get uploadedSize() { return uploadedSize; },
+    install() {
+      const prevNav = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+      const prevWin = Object.getOwnPropertyDescriptor(globalThis, 'window');
+      Object.defineProperty(globalThis, 'navigator', {
+        configurable: true,
+        value: { bluetooth: { requestDevice: async () => { queueMicrotask(() => emitStatus(initialRunning)); return device; } } },
+      });
+      Object.defineProperty(globalThis, 'window', {
+        configurable: true,
+        value: { isSecureContext: true },
+      });
+      return () => {
+        if (prevNav) Object.defineProperty(globalThis, 'navigator', prevNav);
+        if (prevWin) Object.defineProperty(globalThis, 'window', prevWin);
+      };
+    },
+  };
+}
+
+test('createBluetoothTransport upgrades running old hub script without faulting on 0x00 stop', async () => {
+  const bt = fakeWebBluetooth({ initialRunning: true });
+  const restore = bt.install();
+  try {
+    const session = createControllerSession(createBluetoothTransport(), undefined, {
+      compileHubProgram: async () => new Uint8Array([1, 2, 3, 4, 5]),
+      probeTimeoutMs: 80,
+    });
+    await session.connect();
+    await tick();
+    await session.startHub();
+    assert.equal(session.getState().transport, 'ready');
+    assert.equal(bt.uploadedSize, 5);
+    assert.ok(bt.writes.some((w) => w[0] === 0x00));
+    assert.ok(bt.writes.some((w) => w[0] === 0x04));
+    await session.dispose();
+  } finally {
+    restore();
+  }
+});
+
+test('createBluetoothTransport auto-uploads when clean hub rejects 0x01 start probe', async () => {
+  const bt = fakeWebBluetooth({ rejectFirstStart: true, initialRunning: false });
+  const restore = bt.install();
+  try {
+    const session = createControllerSession(createBluetoothTransport(), undefined, {
+      compileHubProgram: async () => new Uint8Array([10, 20, 30]),
+      probeTimeoutMs: 80,
+    });
+    await session.connect();
+    await session.startHub();
+    assert.equal(session.getState().transport, 'ready');
+    assert.equal(bt.uploadedSize, 3);
+    assert.equal(bt.writes.filter((w) => w[0] === 0x01).length, 2);
+    await session.dispose();
+  } finally {
+    restore();
+  }
+});
+
+test('offline compileBundledHubProgram has embedded source ready', async () => {
+  assert.equal(typeof compileBundledHubProgram, 'function');
+  const {HUB_PROGRAM_SOURCE} = await import('../src/lib/hub-program-source.ts');
+  assert.match(HUB_PROGRAM_SOURCE, /PROGRAM_VERSION = "4"/);
+  assert.match(HUB_PROGRAM_SOURCE, /LINK_TIMEOUT_MS = 2000/);
 });

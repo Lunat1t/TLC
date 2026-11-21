@@ -17,9 +17,9 @@
     "android:run": "npm run android:sync && npx cap run android",
     "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug",
     "test:accounts": "node --experimental-strip-types --test tests/account-credentials.test.ts",
-    "prebuild": "node scripts/sync-pdf-worker.mjs",
-    "predev": "node scripts/sync-pdf-worker.mjs",
-    "predev:lan": "node scripts/sync-pdf-worker.mjs"
+    "prebuild": "node scripts/sync-pdf-worker.mjs && node scripts/sync-mpy-wasm.mjs",
+    "predev": "node scripts/sync-pdf-worker.mjs && node scripts/sync-mpy-wasm.mjs",
+    "predev:lan": "node scripts/sync-pdf-worker.mjs && node scripts/sync-mpy-wasm.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",
@@ -28,6 +28,7 @@
     "@capacitor/filesystem": "^8.0.0",
     "@capacitor/share": "^8.0.0",
     "@napi-rs/canvas": "^1.1.0",
+    "@pybricks/mpy-cross-v6": "^2.0.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.118.0",
     "class-variance-authority": "^0.7.1",

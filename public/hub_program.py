@@ -8,7 +8,8 @@ from pybricks.parameters import Port, Stop
 from pybricks.tools import StopWatch, wait, read_input_byte
 
 MAX_SPEED = 1000
-LINK_TIMEOUT_MS = 600
+PROGRAM_VERSION = "4"
+LINK_TIMEOUT_MS = 2000
 PORT_NAMES = ("A", "B", "C", "D", "E", "F")
 
 motors = {}
@@ -36,6 +37,7 @@ def stop_all():
 
 
 def ready():
+    print("SOCER_VER|" + PROGRAM_VERSION)
     print("SOCER3_READY|" + ",".join(motors))
 
 
@@ -145,7 +147,7 @@ try:
         if link_active and now - last_command > LINK_TIMEOUT_MS:
             stop_all()
             print("SOCER2_LINK_LOST")
-        if link_active and now - last_ack >= 200:
+        if link_active and now - last_ack >= 250:
             print("SOCER2_ACK")
             last_ack = now
         wait(10)

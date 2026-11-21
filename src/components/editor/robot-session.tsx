@@ -2,7 +2,18 @@
 import * as React from 'react'
 import {createBluetoothTransport,createControllerSession,type SessionState} from '@/lib/controller-runtime'
 
-const initial:SessionState={viewMode:'edit',transport:'disconnected',program:'idle',message:'Не подключён',log:[],ports:[],protocol:null}
+const initial:SessionState={
+  viewMode:'edit',
+  transport:'disconnected',
+  program:'idle',
+  message:'Не подключён',
+  log:[],
+  ports:[],
+  protocol:null,
+  uploadProgress:null,
+  hubName:null,
+  needsManualHubProgram:false,
+}
 export function useRobotSession(){
   const [state,setState]=React.useState(initial)
   const ref=React.useRef<ReturnType<typeof createControllerSession>|null>(null)

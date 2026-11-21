@@ -7,7 +7,9 @@ import {
   ArrowDownUp,
   ArrowRight,
   ArrowRightLeft,
+  Bluetooth,
   Gamepad2,
+  MoreHorizontal,
   LayoutGrid,
   Monitor,
   PanelLeftClose,
@@ -254,7 +256,38 @@ function EditorWorkspace() {
   const editViewRef = React.useRef<{panX:number;panY:number;zoom:number}|null>(null)
   const [starting, setStarting] = React.useState(false)
   const [startError, setStartError] = React.useState("")
+  const [robotMenuOpen, setRobotMenuOpen] = React.useState(false)
+  const [moreMenuOpen, setMoreMenuOpen] = React.useState(false)
+  const [runPromptOpen, setRunPromptOpen] = React.useState(false)
+  const [bleSupport, setBleSupport] = React.useState<{ checked: boolean; available: boolean; reason: string }>({
+    checked: false,
+    available: true,
+    reason: "",
+  })
+  const robotMenuRef = React.useRef<HTMLDivElement | null>(null)
+  const moreMenuRef = React.useRef<HTMLDivElement | null>(null)
+  const runButtonRef = React.useRef<HTMLButtonElement | null>(null)
+  const wasRunPromptOpen = React.useRef(false)
   const {state: robotState, ref: sessionRef} = useRobotSession()
+
+  React.useEffect(() => {
+    const hasBluetooth = typeof navigator !== "undefined" && Boolean((navigator as Navigator & { bluetooth?: unknown }).bluetooth)
+    const isSecure = typeof window !== "undefined" && window.isSecureContext
+    if (!isSecure) {
+      setBleSupport({ checked: true, available: false, reason: "Для Bluetooth нужен адрес по HTTPS." })
+    } else if (!hasBluetooth) {
+      setBleSupport({ checked: true, available: false, reason: "Нужен Chrome или Edge на компьютере или Android." })
+    } else {
+      setBleSupport({ checked: true, available: true, reason: "" })
+    }
+  }, [])
+
+  React.useEffect(() => {
+    if (wasRunPromptOpen.current && !runPromptOpen) {
+      runButtonRef.current?.focus()
+    }
+    wasRunPromptOpen.current = runPromptOpen
+  }, [runPromptOpen])
   const inputStarted = React.useRef<number | null>(null)
   const dispatchControl = React.useCallback((target:{controlId:string;input:string},event:"pressed"|"released")=>{
     if(event==="pressed" && (robotState.program==="trial-running"||robotState.program==="live-running")) inputStarted.current=performance.now()
@@ -442,40 +475,124 @@ function EditorWorkspace() {
     for(const [key,targets] of Object.entries(keyTargets)) if(targets.length>1) for(const target of targets) mapped[`${target.controlId}:${target.input}`]=`Клавиша ${key} назначена нескольким кнопкам.`
     return mapped
   },[controllerProgram,robotState.protocol,robotState.ports,keyTargets])
+  function enterCheckView() {
+    if (!editViewRef.current) editViewRef.current = {panX,panY,zoom}
+    const area = controlLayout.areas.find(a=>a.sheetId===currentSheet.id)
+    const board = boardRef.current
+    if (area && board) {
+      const scale = Math.min(1, Math.max(0.5, Math.min((board.clientWidth-32)/area.width,(board.clientHeight-32)/area.height)))
+      setZoom(scale)
+      setPanX((board.clientWidth-area.width*scale)/2-area.x*scale)
+      setPanY((board.clientHeight-area.height*scale)/2-area.y*scale)
+    }
+    setGesture(null)
+    setSelectedId(null)
+    if (compactPalette) setPaletteExpanded(false)
+    setChecking(true)
+  }
+
+  async function runSessionProgram(session: NonNullable<typeof sessionRef.current>) {
+    if (!controllerProgram) return
+    await session.setViewMode('check')
+    if (session.getState().transport === 'connected') await session.startHub()
+    if (session.getState().viewMode !== 'check') return
+    if (session.getState().transport === 'fault') {
+      setStartError(session.getState().message)
+      return
+    }
+    await session.startProgram(controllerProgram)
+    if (!['trial-running','live-running'].includes(session.getState().program)) {
+      setStartError(session.getState().message)
+      await session.setViewMode('edit')
+      return
+    }
+    enterCheckView()
+  }
+
   async function startProgram() {
     const session = sessionRef.current
     if (!session || !controllerProgram || starting || checking) return
     setStarting(true)
     setStartError("")
     try {
-      await session.setViewMode('check')
-      if (session.getState().transport === 'connected') await session.startHub()
-      await session.startProgram(controllerProgram)
-      if (!['trial-running','live-running'].includes(session.getState().program)) {setStartError(session.getState().message);return}
-      editViewRef.current = {panX,panY,zoom}
-      const area = controlLayout.areas.find(a=>a.sheetId===currentSheet.id)
-      const board = boardRef.current
-      if (area && board) {
-        const scale = Math.min(1, Math.max(0.5, Math.min((board.clientWidth-32)/area.width,(board.clientHeight-32)/area.height)))
-        setZoom(scale)
-        setPanX((board.clientWidth-area.width*scale)/2-area.x*scale)
-        setPanY((board.clientHeight-area.height*scale)/2-area.y*scale)
-      }
-      setGesture(null)
-      setSelectedId(null)
-      if (compactPalette) setPaletteExpanded(false)
-      setChecking(true)
+      await runSessionProgram(session)
     } finally { setStarting(false) }
   }
+
+  async function connectAndStart() {
+    const session = sessionRef.current
+    if (!session || !controllerProgram || starting) return
+    setRunPromptOpen(false)
+    setRobotMenuOpen(false)
+    setStarting(true)
+    setStartError("")
+    try {
+      await session.connect()
+      if (session.getState().transport !== 'connected') {
+        if (session.getState().transport === 'fault') setStartError(session.getState().message)
+        return
+      }
+      await runSessionProgram(session)
+    } finally { setStarting(false) }
+  }
+
+  function handleRunClick() {
+    if (!project || !sessionRef.current || starting || checking) return
+    if (['connecting', 'uploading', 'starting-hub'].includes(robotState.transport)) return
+    setRobotMenuOpen(false)
+    setMoreMenuOpen(false)
+    if (project.hub === 'spike' && (robotState.transport === 'disconnected' || robotState.transport === 'fault')) {
+      setStartError("")
+      setRunPromptOpen(true)
+      return
+    }
+    void startProgram()
+  }
+
   async function stopProgram() {
-    await sessionRef.current?.setViewMode('edit')
+    const session = sessionRef.current
+    if (!session) return
+    if (['uploading', 'starting-hub'].includes(session.getState().transport) || starting) {
+      session.cancelStart()
+      setStarting(false)
+    }
+    await session.setViewMode('edit')
     const view=editViewRef.current
     if(view){setPanX(view.panX);setPanY(view.panY);setZoom(view.zoom);editViewRef.current=null}
     setChecking(false)
   }
+
+  React.useEffect(() => {
+    if (!robotMenuOpen && !moreMenuOpen) return
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node
+      if (robotMenuOpen && robotMenuRef.current && !robotMenuRef.current.contains(target)) setRobotMenuOpen(false)
+      if (moreMenuOpen && moreMenuRef.current && !moreMenuRef.current.contains(target)) setMoreMenuOpen(false)
+    }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setRobotMenuOpen(false); setMoreMenuOpen(false) }
+    }
+    window.addEventListener('pointerdown', onPointerDown)
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('pointerdown', onPointerDown)
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [robotMenuOpen, moreMenuOpen])
+
+  React.useEffect(() => {
+    if (!runPromptOpen) return
+    const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') setRunPromptOpen(false) }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [runPromptOpen])
+
   React.useEffect(() => () => {void sessionRef.current?.stop("Проект изменён. Запустите программу снова.")}, [projectId,sessionRef])
   React.useEffect(() => {
-    const stop=()=>{void sessionRef.current?.stop("Проверка остановлена.")}
+    const stop=()=>{
+      const st=sessionRef.current?.getState()
+      if(st && (st.program==='live-running' || st.program==='trial-running')) void sessionRef.current?.stop("Проверка остановлена.")
+    }
     const visibility=()=>{if(document.hidden)stop()}
     window.addEventListener("blur",stop);window.addEventListener("pagehide",stop);document.addEventListener("visibilitychange",visibility)
     return ()=>{window.removeEventListener("blur",stop);window.removeEventListener("pagehide",stop);document.removeEventListener("visibilitychange",visibility)}
@@ -896,23 +1013,152 @@ function EditorWorkspace() {
           size="sm"
           disabled={!project || checking}
           onClick={handleExportCode}
-          className="rounded-[11px] min-h-[41px] px-3.5 font-extrabold border-[#c6dce2] text-[#086985]"
+          className="hidden md:inline-flex rounded-[11px] min-h-[40px] px-3.5 font-extrabold border-[#c6dce2] text-[#086985]"
         >
-          Программа Pybricks
+          Код Pybricks
         </Button>
 
-        <details className="relative" onClick={e=>e.stopPropagation()}>
-          <summary className="cursor-pointer rounded-lg border border-[#c6dce2] px-3 py-2 text-sm font-bold">Робот</summary>
-          <div className="absolute right-0 top-full z-50 w-64 rounded-xl border bg-white p-3 shadow-lg flex flex-col gap-2">
-            <p role="status" className="text-xs text-slate-700">{robotState.message}</p>
-            <button type="button" onClick={()=>void sessionRef.current?.connect()} disabled={checking||project?.hub!=="spike"||(robotState.transport!=="disconnected"&&robotState.transport!=="fault")} className="rounded-lg border px-3 py-2 disabled:opacity-40">Подключить Bluetooth</button>
-            <button type="button" onClick={()=>void sessionRef.current?.disconnect()} disabled={checking||robotState.transport==="disconnected"} className="rounded-lg border px-3 py-2 disabled:opacity-40">Отключить</button>
-            <a className="rounded-lg border px-3 py-2" href="/hub_program.py" download="tlc_pybricks_controller.py">Скачать программу хаба</a>
-            {project?.hub==="ev3"&&<p className="text-xs">Bluetooth доступен для SPIKE Prime.</p>}
-          </div>
-        </details>
-        <Button type="button" disabled={!project||checking||starting||robotState.transport==='connecting'||robotState.transport==='starting-hub'} onClick={()=>void startProgram()} className="rounded-[11px] min-h-[41px] px-4 font-extrabold bg-emerald-700 hover:bg-emerald-800 text-white">▶ Запуск</Button>
-        <Button type="button" disabled={!checking||starting} onClick={()=>void stopProgram()} className="rounded-[11px] min-h-[41px] px-4 font-extrabold bg-red-700 hover:bg-red-800 text-white">■ Стоп</Button>
+        <div ref={moreMenuRef} className="relative md:hidden">
+          <button
+            type="button"
+            aria-label="Дополнительные действия"
+            aria-expanded={moreMenuOpen}
+            disabled={!project || checking}
+            onClick={() => { setRobotMenuOpen(false); setMoreMenuOpen((prev) => !prev) }}
+            className="grid size-10 place-items-center rounded-[11px] border border-[#c6dce2] bg-white text-[#086985] hover:bg-[#f4f8fa] disabled:opacity-40"
+          >
+            <MoreHorizontal size={18} aria-hidden="true" />
+          </button>
+          {moreMenuOpen && (
+            <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-52 rounded-xl border border-[#dce8ec] bg-white p-1.5 shadow-xl">
+              <button
+                type="button"
+                onClick={() => { setMoreMenuOpen(false); handleExportCode() }}
+                className="w-full rounded-lg px-3 py-2 text-left text-sm font-bold text-[#18313b] hover:bg-[#eff8fb]"
+              >
+                Код Pybricks (.py)
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div ref={robotMenuRef} className="relative">
+          <button
+            type="button"
+            aria-expanded={robotMenuOpen}
+            aria-label={`Статус робота: ${robotState.message}`}
+            onClick={() => { setMoreMenuOpen(false); setRobotMenuOpen((prev) => !prev) }}
+            className="flex min-h-[40px] items-center gap-2 rounded-full border border-[#c6dce2] bg-[#f8fbfc] px-3 py-1.5 text-sm font-bold text-[#18313b] hover:bg-[#eff7fa]"
+          >
+            <span
+              aria-hidden="true"
+              className={`size-2.5 shrink-0 rounded-full ${
+                robotState.transport === "ready" || robotState.transport === "connected"
+                  ? "bg-emerald-500"
+                  : robotState.transport === "connecting"
+                    ? "bg-sky-500 animate-pulse"
+                    : robotState.transport === "uploading" || robotState.transport === "starting-hub"
+                      ? "bg-[#087996] animate-pulse"
+                      : robotState.transport === "fault"
+                        ? "bg-red-500"
+                        : "bg-slate-400"
+              }`}
+            />
+            <Bluetooth size={14} className="shrink-0 text-[#4c6b77] sm:hidden" aria-hidden="true" />
+            <span className="truncate max-w-[116px]">
+              {robotState.transport === "disconnected"
+                ? (<><span className="max-sm:hidden">Робот</span><span className="sm:hidden">Нет</span></>)
+                : robotState.transport === "connecting"
+                  ? "Поиск…"
+                  : robotState.transport === "uploading"
+                    ? `Загрузка ${robotState.uploadProgress ?? 0}%`
+                    : robotState.transport === "starting-hub"
+                      ? "Запуск…"
+                      : robotState.transport === "fault"
+                        ? "Нет связи"
+                        : robotState.hubName || (robotState.transport === "ready" ? "Готов" : "Подключён")}
+            </span>
+          </button>
+
+          {robotMenuOpen && (
+            <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-72 rounded-2xl border border-[#dce8ec] bg-white p-3.5 shadow-xl flex flex-col gap-2.5">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-xs font-extrabold uppercase tracking-wide text-[#57717d]">
+                    {robotState.hubName || (project?.hub === "ev3" ? "LEGO EV3" : "SPIKE Prime")}
+                  </p>
+                  <p role="status" className="mt-0.5 text-xs font-medium text-[#18313b]">{robotState.message}</p>
+                </div>
+              </div>
+              {robotState.ports.length > 0 && (
+                <p className="text-[11px] font-semibold text-[#57717d]">
+                  Порты моторов: {robotState.ports.join(", ")}
+                </p>
+              )}
+              {project?.hub === "ev3" ? (
+                <p className="rounded-lg bg-[#f4f8fa] px-2.5 py-2 text-xs font-semibold text-[#475569]">
+                  Bluetooth в браузере доступен только для SPIKE Prime. Для EV3 используйте «Код Pybricks».
+                </p>
+              ) : bleSupport.checked && !bleSupport.available ? (
+                <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-xs font-semibold text-amber-900">
+                  {bleSupport.reason} Доступны «Пробный режим» и «Код Pybricks».
+                </p>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {(robotState.transport === "disconnected" || robotState.transport === "fault") && (
+                    <button
+                      type="button"
+                      disabled={checking}
+                      onClick={() => { setRobotMenuOpen(false); void sessionRef.current?.connect() }}
+                      className="min-h-[40px] rounded-xl bg-[#087996] px-3 py-2 text-sm font-extrabold text-white hover:bg-[#06637a] disabled:opacity-40"
+                    >
+                      {robotState.transport === "fault" ? "Переподключить робота" : "Подключить робота"}
+                    </button>
+                  )}
+                  {robotState.transport !== "disconnected" && (
+                    <button
+                      type="button"
+                      disabled={checking && robotState.transport !== "connecting"}
+                      onClick={() => { setRobotMenuOpen(false); void sessionRef.current?.disconnect() }}
+                      className="min-h-[38px] rounded-xl border border-[#dce8ec] px-3 py-2 text-xs font-bold text-[#31525f] hover:bg-[#f4f8fa] disabled:opacity-40"
+                    >
+                      {robotState.transport === "connecting" ? "Отменить подключение" : "Отключить"}
+                    </button>
+                  )}
+                  {robotState.needsManualHubProgram && (
+                    <a
+                      className="mt-1 text-center text-xs font-semibold text-[#086985] underline"
+                      href="/hub_program.py"
+                      download="tlc_pybricks_controller.py"
+                    >
+                      На хабе не найден Pybricks: скачать программу вручную
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {checking || starting || robotState.transport === "uploading" || robotState.transport === "starting-hub" ? (
+          <Button
+            type="button"
+            onClick={() => void stopProgram()}
+            className="rounded-[11px] min-h-[40px] px-4 font-extrabold bg-red-700 hover:bg-red-800 text-white"
+          >
+            ■ Стоп
+          </Button>
+        ) : (
+          <Button
+            ref={runButtonRef}
+            type="button"
+            disabled={!project || robotState.transport === "connecting"}
+            onClick={handleRunClick}
+            className="rounded-[11px] min-h-[40px] px-4 font-extrabold bg-emerald-700 hover:bg-emerald-800 text-white"
+          >
+            ▶ Запуск
+          </Button>
+        )}
       </header>
 
       {/* Main Editor Body */}
@@ -1045,7 +1291,70 @@ function EditorWorkspace() {
             </button>
           </div>
 
-          {(checking || robotState.transport==='fault' || startError) && <div role="status" className="px-4 py-1 text-xs font-semibold text-[#31525f]">{startError || robotState.message}</div>}
+          {(checking || robotState.transport === "uploading" || robotState.transport === "starting-hub" || robotState.transport === "fault" || startError) && (
+            <div
+              role={robotState.transport === "fault" ? "alert" : "status"}
+              className={`flex flex-wrap items-center justify-between gap-2 border-b px-4 py-1.5 text-xs font-semibold ${
+                robotState.transport === "fault"
+                  ? "border-red-200 bg-red-50 text-red-900"
+                  : "border-[#dce8ec] bg-[#f4fafc] text-[#31525f]"
+              }`}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="truncate">{startError || robotState.message}</span>
+                {robotState.transport === "uploading" && (
+                  <div className="h-1.5 w-24 overflow-hidden rounded-full bg-[#d3e8ef]">
+                    <div
+                      className="h-full bg-[#087996] transition-all duration-150"
+                      style={{ width: `${Math.max(5, robotState.uploadProgress ?? 0)}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+              {robotState.transport === "fault" && project?.hub === "spike" && (
+                <div className="flex items-center gap-2 shrink-0">
+                  {robotState.needsManualHubProgram && (
+                    <a
+                      href="/hub_program.py"
+                      download="tlc_pybricks_controller.py"
+                      className="underline text-[#086985]"
+                    >
+                      Скачать вручную
+                    </a>
+                  )}
+                  {bleSupport.available && (
+                    <button
+                      type="button"
+                      disabled={starting}
+                      onClick={() => checking ? void connectAndStart() : void sessionRef.current?.connect()}
+                      className="rounded-lg bg-red-700 px-2.5 py-1 text-xs font-extrabold text-white hover:bg-red-800 disabled:opacity-50"
+                    >
+                      Переподключить
+                    </button>
+                  )}
+                  {checking && (
+                    <button
+                      type="button"
+                      onClick={() => void stopProgram()}
+                      className="rounded-lg border border-red-300 bg-white px-2.5 py-1 text-xs font-bold text-red-900 hover:bg-red-100"
+                    >
+                      В редактор
+                    </button>
+                  )}
+                </div>
+              )}
+              {checking && robotState.program === "trial-running" && robotState.transport !== "fault" && project?.hub === "spike" && bleSupport.available && (
+                <button
+                  type="button"
+                  disabled={starting}
+                  onClick={() => void connectAndStart()}
+                  className="shrink-0 rounded-lg bg-[#087996] px-2.5 py-1 text-xs font-extrabold text-white hover:bg-[#06637a] disabled:opacity-50"
+                >
+                  Подключить робота
+                </button>
+              )}
+            </div>
+          )}
           {/* Infinite Canvas Board */}
           <div
             ref={boardRef}
@@ -1138,7 +1447,7 @@ function EditorWorkspace() {
               }}
               className="absolute top-0 left-0 w-0 h-0"
             >
-              {controlLayout.areas.filter(a=>a.sheetId===currentSheet.id).map(area=><ControlAreaView key={area.id} area={area} controls={controlLayout.controls.filter(c=>c.areaId===area.id)} attachedPanels={blocks.filter(b=>b.type==="motor-buttons"&&b.controlAreaId===area.id)} editing={!checking} inputActive={robotState.program === "trial-running" || robotState.program === "live-running"} zoom={zoom} errors={inputErrors} onAreaChange={changed=>{
+              {controlLayout.areas.filter(a=>a.sheetId===currentSheet.id).map(area=><ControlAreaView key={area.id} area={area} controls={controlLayout.controls.filter(c=>c.areaId===area.id)} attachedPanels={blocks.filter(b=>b.type==="motor-buttons"&&b.controlAreaId===area.id)} editing={!checking} inputActive={(robotState.program === "trial-running" || robotState.program === "live-running") && robotState.transport !== "fault"} zoom={zoom} errors={inputErrors} onAreaChange={changed=>{
                 const dx=changed.x-area.x,dy=changed.y-area.y
                 const nextBlocks=dx||dy?blocks.map(b=>b.type==="motor-buttons"&&b.controlAreaId===area.id?{...b,x:b.x+dx,y:b.y+dy}:b):blocks
                 const nextLayout={...controlLayout,areas:controlLayout.areas.map(a=>a.id===changed.id?changed:a)}
@@ -2066,6 +2375,73 @@ function EditorWorkspace() {
                   : gesture.type === "stop"
                     ? "■  Стоп мотора"
                     : "↗  Движение мотора"}
+        </div>
+      )}
+
+      {runPromptOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Запуск программы"
+          onClick={(e) => { if (e.target === e.currentTarget) setRunPromptOpen(false) }}
+          className="fixed inset-0 z-50 bg-[#112a36]/50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+        >
+          <div className="w-full max-w-[420px] rounded-t-[24px] sm:rounded-[20px] bg-white p-5 pb-6 sm:pb-5 shadow-2xl border border-[#dce8ec]">
+            <h2 className="text-lg font-black text-[#18313b]">
+              {bleSupport.checked && !bleSupport.available
+                ? "Bluetooth недоступен в этом браузере"
+                : robotState.transport === "fault"
+                  ? "Связь с роботом потеряна"
+                  : "Робот ещё не подключён"}
+            </h2>
+            <p className="mt-1.5 text-sm text-[#475569]">
+              {bleSupport.checked && !bleSupport.available
+                ? `${bleSupport.reason} Можно проверить управление в пробном режиме или скачать код Pybricks.`
+                : robotState.transport === "fault"
+                  ? "Переподключите хаб по Bluetooth, и программа сразу запустится."
+                  : "IDE сама подготовит хаб по Bluetooth и сразу запустит ваше управление."}
+            </p>
+            <div className="mt-4 flex flex-col gap-2">
+              {(!bleSupport.checked || bleSupport.available) && (
+                <Button
+                  type="button"
+                  onClick={() => void connectAndStart()}
+                  className="min-h-[44px] w-full rounded-xl bg-emerald-700 hover:bg-emerald-800 text-sm font-extrabold text-white"
+                >
+                  {robotState.transport === "fault" ? "Переподключить и запустить" : "Подключить и запустить"}
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant={bleSupport.checked && !bleSupport.available ? "default" : "outline"}
+                onClick={() => { setRunPromptOpen(false); void startProgram() }}
+                className={`min-h-[44px] w-full rounded-xl text-sm font-bold ${
+                  bleSupport.checked && !bleSupport.available
+                    ? "bg-[#087996] hover:bg-[#06637a] text-white font-extrabold"
+                    : "border-[#c6dce2] text-[#18313b]"
+                }`}
+              >
+                Пробный режим (без робота)
+              </Button>
+              {bleSupport.checked && !bleSupport.available && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => { setRunPromptOpen(false); handleExportCode() }}
+                  className="min-h-[44px] w-full rounded-xl border-[#c6dce2] text-sm font-bold text-[#086985]"
+                >
+                  Код Pybricks (.py)
+                </Button>
+              )}
+              <button
+                type="button"
+                onClick={() => setRunPromptOpen(false)}
+                className="mt-1 min-h-[40px] text-xs font-bold text-[#57717d] hover:text-[#18313b]"
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

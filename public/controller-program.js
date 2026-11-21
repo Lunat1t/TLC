@@ -179,7 +179,7 @@ export function controllerRuntimeErrors(program, protocol, availablePorts) {
       ['dc', 'angle', 'time', 'dcTime'].includes(action.kind) ||
       (action.kind === 'run' && Math.abs(action.speed) > 600))) {
       errors.push({button: handler.button, target: handler.target, scope: "handler", severity: "error", blockId: handler.sourceBlockId,
-        code: 'protocol-upgrade', message: `Кнопка ${BUTTON_LABELS[handler.button]}: скачайте новую программу хаба`});
+        code: 'protocol-upgrade', message: `Кнопка ${BUTTON_LABELS[handler.button]}: переподключите робота для обновления программы хаба`});
     }
   }
   return errors;
