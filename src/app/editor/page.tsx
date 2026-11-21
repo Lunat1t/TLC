@@ -1665,7 +1665,7 @@ function EditorWorkspace() {
                         : isButtonBlock
                           ? "Когда кнопка пульта. Перетащите за заголовок"
                         : isMotorButtons
-                          ? "Кнопки моторов. Перетащите за заголовок"
+                          ? checking ? "Панель цветных кнопок" : "Панель цветных кнопок. Перетащите за фон"
                           : isStopBlock
                             ? "Стоп мотора. Перетащите за заголовок"
                             : motorBlock
@@ -1707,6 +1707,12 @@ function EditorWorkspace() {
                     }}
                     onKeyDown={(e) => {
                       if (e.target !== e.currentTarget) return
+                      if (checking && isMotorButtons) {
+                        if (["Delete", "Backspace", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
+                          e.preventDefault()
+                        }
+                        return
+                      }
                       if (e.key === "Delete" || e.key === "Backspace") {
                         e.preventDefault()
                         setSelectedId(null)
@@ -1902,7 +1908,7 @@ function EditorWorkspace() {
                                   aria-label={`${({blue:"Синяя",red:"Красная",green:"Зелёная",yellow:"Жёлтая"} as Record<MotorPanelButton,string>)[color]} кнопка${checking?"":". Перетащите за пределы панели, чтобы удалить"}`}
                                   aria-pressed={pressedPanelButtons.includes(`${block.id}:${color}`)}
                                   title={checking?"Нажмите для управления":"Перетащите за пределы панели, чтобы удалить"}
-                                  className={`block touch-none appearance-none p-0 rounded-full border border-black/10 ${checking?"cursor-pointer":"cursor-grab"} ${isCross ? fourButtonPositions[color] : ""} ${buttonDrag?.blockId === block.id && buttonDrag.color === color ? "z-30 cursor-grabbing opacity-80" : ""}`}
+                                  className={`block touch-none appearance-none p-0 rounded-full border border-black/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 ${checking?"cursor-pointer":"cursor-grab"} ${isCross ? fourButtonPositions[color] : ""} ${buttonDrag?.blockId === block.id && buttonDrag.color === color ? "z-30 cursor-grabbing opacity-80" : ""}`}
                                   style={{
                                     width: buttonSize,
                                     height: buttonSize,
