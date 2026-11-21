@@ -61,7 +61,7 @@ import {
 } from "@/components/editor/controller-blocks"
 import { compileControllerProgram } from "@/lib/controller-program"
 import { ControlAreaView } from "@/components/editor/control-area"
-import { DirectionPalettePreview } from "@/components/editor/direction-control"
+import { DirectionPalettePreview, MotorButtonsPalettePreview } from "@/components/editor/direction-control"
 import { useRobotSession } from "@/components/editor/robot-session"
 import { controllerRuntimeErrors } from "@/lib/controller-program"
 import {
@@ -96,8 +96,8 @@ const BLOCK_CATEGORIES = [
     color: "#9a4b08",
     blocks: [
       { type: "start", label: "При запуске", icon: Play },
-      { type: "button", event: "pressed", label: "Когда кнопка нажата", icon: Gamepad2 },
-      { type: "button", event: "released", label: "Когда кнопку отпустили", icon: Gamepad2 },
+      { type: "button", event: "pressed", label: "Кнопка нажата", icon: Gamepad2 },
+      { type: "button", event: "released", label: "Кнопка отпущена", icon: Gamepad2 },
     ],
   },
   {
@@ -389,26 +389,6 @@ function EditorWorkspace() {
     [sheetState, panX, panY, zoom]
   )
 
-  const controllerErrorsByBlockId = React.useMemo(() => {
-    if (!project) return new Map<string, string>()
-    try {
-      const currentProject: RobotProject = {
-        ...project,
-        workspace: { ...project.workspace, ...snapshotSheets() } as unknown as Record<string, unknown>,
-      }
-      const compiled = compileControllerProgram(currentProject)
-      const errMap = new Map<string, string>()
-      for (const err of compiled.errors) {
-        if (err.blockId) {
-          errMap.set(err.blockId, err.message)
-        }
-      }
-      return errMap
-    } catch {
-      return new Map<string, string>()
-    }
-  }, [project, snapshotSheets])
-
   async function renameProgram(){
     if(!project||saveBusyRef.current)return
     const name=nameDraft.trim().slice(0,64)
@@ -460,6 +440,16 @@ function EditorWorkspace() {
   }), [sheetState.sheets,controlLayout.areas])
   const controllerControls = React.useMemo(() => [...controlLayout.controls,...motorPanelControls], [controlLayout.controls,motorPanelControls])
   const controllerProgram = React.useMemo(() => project ? compileControllerProgram({...project,workspace:{...project.workspace,...snapshotSheets(),controlLayout:{...controlLayout,controls:controllerControls}}}) : null, [project,snapshotSheets,controlLayout,controllerControls])
+  const controllerErrorsByBlockId = React.useMemo(() => {
+    const errMap = new Map<string, string>()
+    if (!controllerProgram) return errMap
+    for (const err of controllerProgram.errors) {
+      if (err.severity !== "warning" && err.blockId) {
+        errMap.set(err.blockId, err.message)
+      }
+    }
+    return errMap
+  }, [controllerProgram])
   const keyTargets = React.useMemo(() => {
     const visible=new Set(controlLayout.areas.filter(a=>a.sheetId===currentSheet.id).map(a=>a.id))
     const controls=controlLayout.controls.filter(c=>visible.has(c.areaId))
@@ -785,6 +775,15 @@ function EditorWorkspace() {
           }
           initialOverrides = { ...initialOverrides, controlAreaId: area.id }
         }
+        if (type === "button" && !initialOverrides?.target) {
+          const sheetAreaIds = new Set(controlLayout.areas.filter(a => a.sheetId === currentSheet.id).map(a => a.id))
+          const sheetControls = controllerControls.filter(c => sheetAreaIds.has(c.areaId) && (c.inputs || CONTROL_INPUTS[c.kind]).length > 0)
+          if (sheetControls.length === 1) {
+            const single = sheetControls[0]
+            const firstInput = (single.inputs || CONTROL_INPUTS[single.kind])[0] || ""
+            initialOverrides = { ...initialOverrides, target: { controlId: single.id, input: firstInput } }
+          }
+        }
         const id = newId()
         let next = addBlock(blocks, id, x, y, type)
         if (initialOverrides) {
@@ -817,6 +816,7 @@ function EditorWorkspace() {
       blocks,
       controlLayout.areas,
       controlLayout.controls,
+      controllerControls,
       currentSheet.id,
       saveBlocks,
       triggerSnapAnimation,
@@ -1219,6 +1219,30 @@ function EditorWorkspace() {
                 <h2 className="mb-1 px-1 text-xs font-extrabold" style={{ color }}>{label}</h2>
                 <div className="space-y-1">
                   {entries.map((entry) => {
+                    if (entry.type === "motor-buttons") {
+                      return (
+                        <button
+                          key="motor-buttons"
+                          type="button"
+                          disabled={!project}
+                          aria-label={entry.label}
+                          title={entry.label}
+                          onPointerDown={(event) => {
+                            if (!project || event.button !== 0) return
+                            event.preventDefault()
+                            setGesture({
+                              kind: "palette",
+                              type: "motor-buttons",
+                              clientX: event.clientX,
+                              clientY: event.clientY,
+                            })
+                          }}
+                          className="grid h-12 w-full touch-none cursor-grab place-items-center rounded-xl border-2 border-[#b9d0da] bg-[#f4f8fa] p-1 hover:border-[#087996] hover:bg-[#e7f3f8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal-700 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <MotorButtonsPalettePreview />
+                        </button>
+                      )
+                    }
                     if (isDirectionControl(entry.type)) {
                       if (entry.type === "drive-linear") return null
                       const directionEntries = entries.filter((item) => isDirectionControl(item.type))
@@ -1661,7 +1685,7 @@ function EditorWorkspace() {
                         (e.target as HTMLElement).closest(
                           "button, select, input"
                         ) ||
-                        (isMotorButtons && !(e.target as HTMLElement).closest("[data-panel-drag]"))
+                        (isMotorButtons && (checking || !(e.target as HTMLElement).closest("[data-panel-drag]")))
                       )
                         return
                       e.preventDefault()
@@ -1701,7 +1725,7 @@ function EditorWorkspace() {
                       setSelectedId(block.id)
                       finishBlockMove(block.id, block.x + dx, block.y + dy)
                     }}
-                    className={`absolute touch-none select-none cursor-grab ${
+                    className={`absolute touch-none select-none ${checking && isMotorButtons ? "cursor-default" : "cursor-grab"} ${
                       isMoving
                         ? "z-30 cursor-grabbing scale-[1.02] shadow-2xl"
                         : checking && isMotorButtons
@@ -1762,7 +1786,7 @@ function EditorWorkspace() {
                     )}
 
                     {/* Delete button */}
-                    {isSelected && (
+                    {isSelected && !isMotorButtons && (
                       <button
                         type="button"
                         aria-label="Удалить блок"
@@ -1779,8 +1803,23 @@ function EditorWorkspace() {
 
                     {/* Block Content */}
                     {isMotorButtons ? (
-                      <div data-button-panel="true" className="relative flex h-full w-full flex-col">
-                        <div data-panel-drag className="flex h-8 shrink-0 items-center rounded-t-[13px] bg-[#e7f3f8] px-2 text-xs font-extrabold text-[#31525f]">Кнопки моторов</div>
+                      <div data-button-panel="true" data-panel-drag={!checking ? "true" : undefined} className="relative flex h-full w-full flex-col">
+                        {!checking && (
+                          <button
+                            type="button"
+                            aria-label="Удалить кнопки моторов"
+                            title="Удалить"
+                            onPointerDown={e => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedId(null)
+                              saveBlocks(removeBlock(blocks, block.id))
+                            }}
+                            className="pointer-events-auto absolute right-1 top-1 z-20 grid size-[22px] place-items-center rounded-full border border-[#b9d0da] bg-white/95 text-xs font-extrabold leading-none text-[#31525f] shadow-sm hover:bg-[#fee2e2] hover:text-[#991b1b]"
+                          >
+                            ×
+                          </button>
+                        )}
                         {(() => {
                           const hiddenButtons = block.hiddenControlButtons || []
                           const colors = (["blue", ...(block.controlModules || [])] as MotorPanelButton[])
@@ -1803,14 +1842,14 @@ function EditorWorkspace() {
                           const panelWidth = panelResize?.id === block.id ? panelResize.width : block.width || 180
                           const panelHeight = panelResize?.id === block.id ? panelResize.height : block.height || 132
                           const isCross = colors.length === 4
-                          const itemCount = colors.length + (nextColor ? 1 : 0)
+                          const itemCount = colors.length + (!checking && nextColor ? 1 : 0)
                           const buttonSize = Math.max(20, Math.min(
                             64,
                             isCross
-                              ? Math.floor(Math.min((panelWidth - 24) / 3, (panelHeight - 44) / 3))
+                              ? Math.floor(Math.min((panelWidth - 24) / 3, (panelHeight - 20) / 3))
                               : Math.floor(Math.min(
                                   (panelWidth - 16 - 8 * Math.max(0, itemCount - 1)) / Math.max(1, itemCount),
-                                  panelHeight - 44
+                                  panelHeight - 16
                                 ))
                           ))
                           const startButtonDrag = (e: React.PointerEvent<HTMLButtonElement>, color: MotorPanelButton) => {
@@ -1916,7 +1955,7 @@ function EditorWorkspace() {
                                   }}
                                 />
                               ))}
-                              {nextColor && block.controlAreaId && (
+                              {!checking && nextColor && block.controlAreaId && (
                                 <button
                                   type="button"
                                   aria-label="Добавить кнопку в панель"
@@ -1936,7 +1975,7 @@ function EditorWorkspace() {
                             </div>
                           )
                         })()}
-                        <button type="button" aria-label="Изменить размер панели кнопок" onPointerDown={e=>resizeMotorPanel(e,block)} className="absolute bottom-0 right-0 z-20 grid h-6 w-6 cursor-nwse-resize place-items-center rounded-tl bg-white/80 text-sm text-[#31525f]">◢</button>
+                        {!checking && <button type="button" aria-label="Изменить размер панели кнопок" onPointerDown={e=>resizeMotorPanel(e,block)} className="absolute bottom-0 right-0 z-20 grid h-6 w-6 cursor-nwse-resize place-items-center rounded-tl bg-white/80 text-sm text-[#31525f]">◢</button>}
                       </div>
                     ) : isIfBlock ? (
                       <div className="flex flex-col items-start">
@@ -2388,10 +2427,12 @@ function EditorWorkspace() {
                 : gesture.type === "pair"
                   ? "w-[220px] h-[56px] rounded-[12px] bg-[#107e79] shadow-[inset_0_-6px_#086560]"
                   : gesture.type === "button"
-                    ? "w-[240px] h-[52px] rounded-t-[20px] rounded-b-[12px] bg-[#e85d2a] shadow-[inset_0_-6px_#c2410c]"
-                    : gesture.type === "stop"
-                      ? "w-[220px] h-[56px] rounded-[12px] bg-[#b1372c] shadow-[inset_0_-6px_#8f2a21]"
-                      : "w-[220px] h-[56px] rounded-[12px] bg-[#0589b1] shadow-[inset_0_-6px_#00759b]"
+                    ? "w-[200px] h-[52px] rounded-t-[20px] rounded-b-[12px] bg-[#e85d2a] shadow-[inset_0_-6px_#c2410c]"
+                    : gesture.type === "motor-buttons"
+                      ? "w-[160px] h-[52px] rounded-[14px] border border-[#b9d0da] bg-[#f4f8fa] text-[#18313b] shadow-[inset_0_-4px_#d6e4e9]"
+                      : gesture.type === "stop"
+                        ? "w-[220px] h-[56px] rounded-[12px] bg-[#b1372c] shadow-[inset_0_-6px_#8f2a21]"
+                        : "w-[220px] h-[56px] rounded-[12px] bg-[#0589b1] shadow-[inset_0_-6px_#00759b]"
           }`}
         >
           {gesture.type === "start"
@@ -2401,10 +2442,12 @@ function EditorWorkspace() {
               : gesture.type === "pair"
                 ? "⇉  Связанные моторы"
                 : gesture.type === "button"
-                  ? "🎮  Когда кнопка пульта"
-                  : gesture.type === "stop"
-                    ? "■  Стоп мотора"
-                    : "↗  Движение мотора"}
+                  ? "🎮  Кнопка"
+                  : gesture.type === "motor-buttons"
+                    ? "🔵 🔴 🟢 🟡"
+                    : gesture.type === "stop"
+                      ? "■  Стоп мотора"
+                      : "↗  Движение мотора"}
         </div>
       )}
 

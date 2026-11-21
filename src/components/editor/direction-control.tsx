@@ -155,6 +155,28 @@ export function DirectionPalettePreview({ kind }: { kind: DirectionControlKind }
   )
 }
 
+
+const PALETTE_MOTOR_DOTS = [
+  { face: "#1687b3", shade: "#0e688a" },
+  { face: "#d9473d", shade: "#a92b26" },
+  { face: "#32a66a", shade: "#21804e" },
+  { face: "#edc13d", shade: "#c59b24" },
+] as const
+
+export function MotorButtonsPalettePreview() {
+  return (
+    <span aria-hidden="true" className="flex items-center justify-center gap-1.5">
+      {PALETTE_MOTOR_DOTS.map((dot, index) => (
+        <span
+          key={index}
+          className="size-5 rounded-full border border-black/10"
+          style={{ background: dot.face, boxShadow: `inset 0 -2px ${dot.shade}` }}
+        />
+      ))}
+    </span>
+  )
+}
+
 export function DriveSettingsButton({ settings, onChange }: {
   settings: DriveSettings
   onChange: (settings: DriveSettings) => void
