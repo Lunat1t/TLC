@@ -56,7 +56,7 @@ export function ControllerButtonBlock({
           <select value={block.target?.controlId || ""} aria-label="Выбрать элемент управления" onChange={e=>{const control=buttonControls.find(item=>item.id===e.target.value);onChange({target:{controlId:e.target.value,input:control ? (control.inputs || CONTROL_INPUTS[control.kind])[0] || "" : ""}})}} className="h-[36px] max-w-[150px] px-2 rounded-[9px] bg-white text-[#18313b] font-black text-sm border-2 border-[#c2410c]">
             <option value="">Выберите управление</option>
             {block.target?.controlId && !buttonControls.some(c=>c.id===block.target?.controlId) && <option value={block.target.controlId}>Удалённое управление</option>}
-            {buttonControls.map(c=><option key={c.id} value={c.id}>{c.label} · {c.id.slice(-5)}</option>)}
+            {buttonControls.map(c=><option key={c.id} value={c.id}>{(c.kind==='drive-turn'?'◀ ▶':c.kind==='drive-linear'?'▲ ▼':c.label)} · {c.id.slice(-5)}</option>)}
           </select>
           <select value={block.target?.input || ""} aria-label="Выбрать кнопку элемента" onChange={e=>onChange({target:{controlId:block.target?.controlId || "",input:e.target.value}})} className="h-[36px] max-w-[100px] px-2 rounded-[9px] bg-white text-[#18313b] font-black text-sm border-2 border-[#c2410c]">
             <option value="">Кнопка</option>

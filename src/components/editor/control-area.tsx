@@ -4,6 +4,7 @@ import * as React from 'react'
 import {CONTROL_INPUTS, CONTROL_MIN, DIRECTION_CONTROLS, isDirectionControl, isPlaceableControl, type ControlArea, type ControlInstance} from '@/lib/control-workspace'
 import type {WorkspaceBlock} from '@/lib/workspace'
 import {DEFAULT_DRIVE_SETTINGS} from '@/lib/controller-program'
+import {AlertTriangle} from 'lucide-react'
 import {DirectionButtons, DriveSettingsButton} from './direction-control'
 import {DisplayStreamView} from './display-stream-view'
 
@@ -96,16 +97,54 @@ export function ControlAreaView({area,controls,attachedPanels,editing,inputActiv
         const nearAreaResize = isPlaceable && control.x + control.width > area.width - 34
           && control.y + control.height > area.height - 44 - 34
         const directionErrors = directionKind ? Object.fromEntries(DIRECTION_CONTROLS[directionKind].inputs.map(input => [input, errors[`${control.id}:${input}`]])) : {}
+        const directionError = directionKind ? DIRECTION_CONTROLS[directionKind].inputs.map(input => errors[`${control.id}:${input}`]).find(Boolean) : undefined
+        const moveByKey = (e: React.KeyboardEvent<HTMLElement>) => {
+          const d = arrow(e.key)
+          if (!editing || !d) return
+          e.preventDefault()
+          e.stopPropagation()
+          const c = {...control, x: Math.max(0, Math.min(area.width - control.width, control.x + d[0])), y: Math.max(0, Math.min(area.height - 44 - control.height, control.y + d[1]))}
+          if (fits(c)) onControlChange(c)
+        }
         return <div key={control.id} role={isPlaceable ? "group" : undefined} aria-label={isPlaceable ? control.label : undefined}
-          style={{position:'absolute',left:control.x,top:control.y,width:control.width,height:control.height,border:'2px solid #dfae87',borderRadius:12,background:'#fff',padding:6,overflow:isPlaceable?'hidden':'auto',display:isPlaceable?'flex':undefined,flexDirection:isPlaceable?'column':undefined}}>
-        {(!isPlaceable || editing) &&
-        <div tabIndex={editing?0:-1} role="button" aria-label={`Переместить ${control.label}`} onKeyDown={e=>{const d=arrow(e.key);if(!editing||!d)return;e.preventDefault();e.stopPropagation();const c={...control,x:Math.max(0,Math.min(area.width-control.width,control.x+d[0])),y:Math.max(0,Math.min(area.height-44-control.height,control.y+d[1]))};if(fits(c))onControlChange(c)}} onPointerDown={e=>dragControl(e,control)} style={{fontWeight:700,cursor:editing?'grab':'default',touchAction:'none',minHeight:isPlaceable?24:undefined,fontSize:isPlaceable?12:undefined}}>{rename?.id===control.id ? <input autoFocus aria-label={`Название ${control.label}`} value={rename.value} maxLength={40} onPointerDown={e=>e.stopPropagation()} onChange={e=>setRename({id:control.id,value:e.target.value})} onBlur={()=>{if(rename.value.trim())onControlChange({...control,label:rename.value.trim()});setRename(null)}} onKeyDown={e=>{e.stopPropagation();if(e.key==='Enter')e.currentTarget.blur()}}/> : control.label}{editing&&<span style={{float:'right'}}><button type="button" aria-label={`Переименовать ${control.label}`} onPointerDown={e=>e.stopPropagation()} onClick={()=>setRename({id:control.id,value:control.label})}>✎</button>{onDeleteControl&&<button type="button" aria-label={`Удалить ${control.label}`} onPointerDown={e=>e.stopPropagation()} onClick={()=>onDeleteControl(control.id)}>×</button>}</span>}</div>}
+          style={{position:'absolute',left:control.x,top:control.y,width:control.width,height:control.height,border:directionError?'2px solid #dc2626':'2px solid #dfae87',borderRadius:12,background:directionError?'#fef2f2':'#fff',padding:6,overflow:isPlaceable?'hidden':'auto',display:isPlaceable?'flex':undefined,flexDirection:isPlaceable?'column':undefined}}>
+        {!directionKind && (!isPlaceable || editing) &&
+        <div tabIndex={editing?0:-1} role="button" aria-label={`Переместить ${control.label}`} onKeyDown={moveByKey} onPointerDown={e=>dragControl(e,control)} style={{fontWeight:700,cursor:editing?'grab':'default',touchAction:'none',minHeight:isPlaceable?24:undefined,fontSize:isPlaceable?12:undefined}}>{rename?.id===control.id ? <input autoFocus aria-label={`Название ${control.label}`} value={rename.value} maxLength={40} onPointerDown={e=>e.stopPropagation()} onChange={e=>setRename({id:control.id,value:e.target.value})} onBlur={()=>{if(rename.value.trim())onControlChange({...control,label:rename.value.trim()});setRename(null)}} onKeyDown={e=>{e.stopPropagation();if(e.key==='Enter')e.currentTarget.blur()}}/> : control.label}{editing&&<span style={{float:'right'}}><button type="button" aria-label={`Переименовать ${control.label}`} onPointerDown={e=>e.stopPropagation()} onClick={()=>setRename({id:control.id,value:control.label})}>✎</button>{onDeleteControl&&<button type="button" aria-label={`Удалить ${control.label}`} onPointerDown={e=>e.stopPropagation()} onClick={()=>onDeleteControl(control.id)}>×</button>}</span>}</div>}
+        {directionKind && directionError && (
+          <span
+            role="alert"
+            title={directionError}
+            aria-label={directionError}
+            className="absolute left-1 top-1 z-20 grid size-5 place-items-center rounded-full bg-[#dc2626] text-white shadow-sm"
+          >
+            <AlertTriangle size={12} strokeWidth={2.6} aria-hidden="true" />
+          </span>
+        )}
+        {directionKind && editing && onDeleteControl && (
+          <button
+            type="button"
+            aria-label={`Удалить ${control.label}`}
+            title="Удалить"
+            onPointerDown={e=>e.stopPropagation()}
+            onClick={()=>onDeleteControl(control.id)}
+            className="absolute right-1 top-1 z-20 grid size-[22px] place-items-center rounded-full border border-[#dfae87] bg-white/95 text-xs font-extrabold leading-none text-[#7c2d12] shadow-sm hover:bg-[#fee2e2] hover:text-[#991b1b]"
+          >
+            ×
+          </button>
+        )}
         {isDisplay ? (
           <div className="flex min-h-0 flex-1">
             <DisplayStreamView editing={editing} />
           </div>
         ) : directionKind ? (
-          <div className={`flex min-h-0 flex-1 ${editing ? 'touch-none cursor-grab' : ''}`} onPointerDown={editing ? event => dragControl(event, control) : undefined}>
+          <div
+            tabIndex={editing ? 0 : -1}
+            role={editing ? "button" : undefined}
+            aria-label={editing ? `Переместить ${control.label}` : undefined}
+            onKeyDown={moveByKey}
+            className={`flex min-h-0 flex-1 ${editing ? 'touch-none cursor-grab rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal-700' : ''}`}
+            onPointerDown={editing ? event => dragControl(event, control) : undefined}
+          >
             <DirectionButtons kind={directionKind} width={control.width} height={control.height} editing={editing} active={inputActive}
               errors={directionErrors} onInput={(direction,event)=>onInput(control.id,direction,event)} />
           </div>
@@ -113,8 +152,8 @@ export function ControlAreaView({area,controls,attachedPanels,editing,inputActiv
           const error=errors[`${control.id}:${input}`]
           return <button key={input} type="button" disabled={editing||Boolean(error)} aria-label={`${control.label}: ${LABELS[input]||input}`} title={error} onPointerDown={e=>{if(e.button!==0)return;e.stopPropagation();e.currentTarget.setPointerCapture(e.pointerId);onInput(control.id,input,'pressed')}} onPointerUp={e=>{e.stopPropagation();onInput(control.id,input,'released')}} onPointerCancel={onCancel} onKeyDown={e=>{if((e.key===' '||e.key==='Enter')&&!e.repeat){e.preventDefault();onInput(control.id,input,'pressed')}}} onKeyUp={e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();onInput(control.id,input,'released')}}} style={{minWidth:44,minHeight:44,borderRadius:8,background:error?'#fee2e2':'#ffe4c8',border:'1px solid #b75c28',fontWeight:800}}>{LABELS[input]||input}{error&&<span aria-label={`Ошибка: ${error}`}> ⚠</span>}</button>
         })}</div>}
-        {editing&&<button type="button" aria-label={`Изменить размер ${control.label}`} onPointerDown={e=>resizeControl(e,control)} style={{position:'absolute',right:nearAreaResize?32:0,bottom:0,width:28,height:28,touchAction:'none',cursor:'nwse-resize'}}>◢</button>}
-        {CONTROL_INPUTS[control.kind].some(input=>errors[`${control.id}:${input}`])&&<p role="alert" style={{color:'#991b1b',fontSize:12,position:directionKind?'absolute':undefined,bottom:directionKind?0:undefined,background:directionKind?'#fff':undefined}}>{CONTROL_INPUTS[control.kind].map(input=>errors[`${control.id}:${input}`]).find(Boolean)}</p>}
+        {editing&&<button type="button" aria-label={`Изменить размер ${control.label}`} onPointerDown={e=>resizeControl(e,control)} style={{position:'absolute',right:nearAreaResize?32:0,bottom:0,width:28,height:28,zIndex:20,touchAction:'none',cursor:'nwse-resize'}}>◢</button>}
+        {!directionKind && CONTROL_INPUTS[control.kind].some(input=>errors[`${control.id}:${input}`])&&<p role="alert" style={{color:'#991b1b',fontSize:12}}>{CONTROL_INPUTS[control.kind].map(input=>errors[`${control.id}:${input}`]).find(Boolean)}</p>}
       </div>})}
     </div>
     {editing&&<button type="button" aria-label="Изменить размер области" onPointerDown={e=>dragArea(e,true)} style={{position:'absolute',right:0,bottom:0,width:32,height:32,touchAction:'none',cursor:'nwse-resize'}}>◢</button>}

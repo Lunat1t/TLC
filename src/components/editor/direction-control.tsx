@@ -107,11 +107,11 @@ export function DirectionButtons({
 }) {
   const vertical = kind === "drive-linear"
   const bodyWidth = width - 16
-  const bodyHeight = height - (editing ? 40 : 16)
-  const size = Math.floor(Math.min(
+  const bodyHeight = height - 16
+  const size = Math.max(24, Math.floor(Math.min(
     vertical ? bodyWidth : (bodyWidth - 8) / 2,
     vertical ? (bodyHeight - 8) / 2 : bodyHeight,
-  ))
+  )))
 
   return (
     <div className={`flex min-h-0 flex-1 items-center justify-center gap-2 ${vertical ? "flex-col" : ""}`}>
@@ -127,6 +127,31 @@ export function DirectionButtons({
         />
       ))}
     </div>
+  )
+}
+
+
+export function DirectionPalettePreview({ kind }: { kind: DirectionControlKind }) {
+  const vertical = kind === "drive-linear"
+  const btnSize = vertical ? "size-5" : "size-6"
+  const iconSize = vertical ? 12 : 13
+  return (
+    <span
+      aria-hidden="true"
+      className={`flex items-center justify-center ${vertical ? "flex-col gap-1" : "gap-1.5"}`}
+    >
+      {DIRECTION_CONTROLS[kind].inputs.map(direction => {
+        const Icon = DIRECTIONS[direction].icon
+        return (
+          <span
+            key={direction}
+            className={`grid ${btnSize} place-items-center rounded-full border-[1.5px] border-slate-500 bg-[#3a444d] text-white shadow-[inset_0_-2px_#25313c]`}
+          >
+            <Icon size={iconSize} strokeWidth={3.2} />
+          </span>
+        )
+      })}
+    </span>
   )
 }
 

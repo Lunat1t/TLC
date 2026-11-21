@@ -61,12 +61,15 @@ import {
 } from "@/components/editor/controller-blocks"
 import { compileControllerProgram } from "@/lib/controller-program"
 import { ControlAreaView } from "@/components/editor/control-area"
+import { DirectionPalettePreview } from "@/components/editor/direction-control"
 import { useRobotSession } from "@/components/editor/robot-session"
 import { controllerRuntimeErrors } from "@/lib/controller-program"
 import {
   CONTROL_INPUTS,
   CONTROL_MIN,
   DIRECTION_CONTROLS,
+  type DirectionControlKind,
+  isDirectionControl,
   isPlaceableControl,
   validateControlLayout,
   type ControlArea,
@@ -1216,6 +1219,33 @@ function EditorWorkspace() {
                 <h2 className="mb-1 px-1 text-xs font-extrabold" style={{ color }}>{label}</h2>
                 <div className="space-y-1">
                   {entries.map((entry) => {
+                    if (isDirectionControl(entry.type)) {
+                      if (entry.type === "drive-linear") return null
+                      const directionEntries = entries.filter((item) => isDirectionControl(item.type))
+                      return (
+                        <div key="direction-tiles" className="grid grid-cols-2 gap-1.5 pt-0.5">
+                          {directionEntries.map((dirEntry) => {
+                            const dirKind = dirEntry.type as DirectionControlKind
+                            return (
+                              <button
+                                key={dirKind}
+                                type="button"
+                                disabled={!project}
+                                aria-label={dirEntry.label}
+                                title={dirEntry.label}
+                                onPointerDown={(event) => {
+                                  if (!project || event.button !== 0) return
+                                  dragControlFromPalette(event, dirKind)
+                                }}
+                                className="grid h-14 w-full touch-none cursor-grab place-items-center rounded-xl border-2 border-[#dfae87] bg-white p-1 hover:border-[#c35117] hover:bg-[#fff8ef] focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal-700 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                <DirectionPalettePreview kind={dirKind} />
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )
+                    }
                     const { type, label, icon: Icon } = entry
                     const buttonEvent = "event" in entry ? entry.event : undefined
                     const areaAlreadyExists = type === "area" && controlLayout.areas.some((area) => area.sheetId === currentSheet.id)
