@@ -2,11 +2,14 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Video } from "lucide-react"
+import { DisplayDiagnostics } from "@/components/editor/display-diagnostics"
 
 import {
   closeDisplaySignal,
   publishDisplaySignal,
   readDisplaySignal,
+  pollActiveDisplaySignal,
+  type DisplaySignalHealth,
   waitForDisplayIce,
   waitForDisplayPoll,
 } from "@/lib/display-stream"
@@ -56,6 +59,8 @@ function errorText(error: unknown) {
 export default function DisplayCameraPage() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const active = useRef<CameraSession | null>(null)
+  const [diagnosticPeer, setDiagnosticPeer] = useState<RTCPeerConnection | null>(null)
+  const [signaling, setSignaling] = useState<DisplaySignalHealth>("online")
   const [token, setToken] = useState<string | null>(null)
   const [linkReady, setLinkReady] = useState(false)
   const [phase, setPhase] = useState<"ready" | "connecting" | "live" | "ended">("ready")
@@ -74,6 +79,7 @@ export default function DisplayCameraPage() {
       setLinkReady(true)
       setPreview(false)
       setPhase("ready")
+      setDiagnosticPeer(null)
       setError("")
     }
     function stopOnExit() {
@@ -90,6 +96,7 @@ export default function DisplayCameraPage() {
       const closed = sessionClosedOnExit
       sessionClosedOnExit = false
       setPreview(false)
+      setDiagnosticPeer(null)
       setPhase(previous => closed ? "ended" : previous === "connecting" ? "ready" : previous)
     }
     readLink()
@@ -111,6 +118,7 @@ export default function DisplayCameraPage() {
     if (videoRef.current) videoRef.current.srcObject = null
     setPreview(false)
     setPhase(close ? "ended" : "ready")
+    setDiagnosticPeer(null)
   }
 
   async function startCamera() {
@@ -128,6 +136,7 @@ export default function DisplayCameraPage() {
     active.current = session
     const signal = session.abort.signal
     setPhase("connecting")
+    setSignaling("online")
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia(CAMERA_CONSTRAINTS)
@@ -138,7 +147,7 @@ export default function DisplayCameraPage() {
       session.stream = stream
       const track = stream.getVideoTracks()[0]
       if (!track) throw new Error("Камера не передала видео.")
-      track.contentHint = "detail"
+      track.contentHint = "motion"
       track.addEventListener("ended", () => {
         if (active.current !== session) return
         finish(session, session.published)
@@ -161,6 +170,7 @@ export default function DisplayCameraPage() {
 
       const peer = new RTCPeerConnection({ iceServers: [] })
       session.peer = peer
+      setDiagnosticPeer(peer)
       peer.addEventListener("connectionstatechange", () => {
         if (peer.connectionState === "failed" && active.current === session) {
           finish(session, session.published)
@@ -172,7 +182,7 @@ export default function DisplayCameraPage() {
       await peer.setLocalDescription(await peer.createAnswer())
       const parameters = sender.getParameters()
       if (parameters.encodings?.[0]) {
-        parameters.degradationPreference = "maintain-resolution"
+        parameters.degradationPreference = "maintain-framerate"
         parameters.encodings[0].maxFramerate = 32
         await sender.setParameters(parameters).catch(() => {
           // The camera constraints still apply when the browser rejects an encoder hint.
@@ -206,7 +216,8 @@ export default function DisplayCameraPage() {
           setPhase("connecting")
         }
         await waitForDisplayPoll(3000, signal)
-        await readDisplaySignal(token, signal)
+        const health = await pollActiveDisplaySignal(token, signal)
+        if (!signal.aborted) setSignaling(health)
       }
     } catch (cause) {
       if (active.current !== session) return
@@ -234,6 +245,7 @@ export default function DisplayCameraPage() {
               className="absolute inset-0 size-full object-contain"
             />
             {!preview ? <Video size={32} aria-hidden="true" className="relative" /> : null}
+            <DisplayDiagnostics peer={diagnosticPeer} videoRef={videoRef} track={active.current?.stream?.getVideoTracks()[0]} signaling={signaling} />
           </div>
           <p role="status" className="text-sm text-slate-700">
             {phase === "live" ? "Камера транслируется в Brick Studio."
