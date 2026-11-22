@@ -4,7 +4,8 @@ import * as React from 'react'
 import {CONTROL_INPUTS, CONTROL_MIN, DIRECTION_CONTROLS, isDirectionControl, isPlaceableControl, type ControlArea, type ControlInstance} from '@/lib/control-workspace'
 import type {WorkspaceBlock} from '@/lib/workspace'
 import {DEFAULT_DRIVE_SETTINGS} from '@/lib/controller-program'
-import {AlertTriangle} from 'lucide-react'
+import {SENSOR_PORTS} from '@/lib/block-registry'
+import {AlertTriangle, Waves} from 'lucide-react'
 import {DirectionButtons, DriveSettingsButton} from './direction-control'
 import {DisplayStreamView} from './display-stream-view'
 
@@ -17,6 +18,11 @@ type Props = {
   inputActive: boolean
   zoom: number
   errors?: Record<string,string>
+  isLiveRobot?: boolean
+  sensorPorts?: readonly string[]
+  sensorPortsKnown?: boolean
+  sensorDistances?: Record<string, number | null>
+  onSimulateDistance?: (port: string, cm: number | null) => void
   onAreaChange: (area: ControlArea) => void
   onControlChange: (control: ControlInstance) => void
   onDeleteControl?: (controlId: string) => void
@@ -26,7 +32,7 @@ type Props = {
 }
 
 /** Visual container only: controls emit input events and never send motor commands. */
-export function ControlAreaView({area,controls,attachedPanels,editing,inputActive,zoom,errors={},onAreaChange,onControlChange,onDeleteControl,onDeleteArea,onInput,onCancel}:Props) {
+export function ControlAreaView({area,controls,attachedPanels,editing,inputActive,zoom,errors={},isLiveRobot=false,sensorPorts=[],sensorPortsKnown=false,sensorDistances={},onSimulateDistance,onAreaChange,onControlChange,onDeleteControl,onDeleteArea,onInput,onCancel}:Props) {
   const errorDialog = React.useRef<HTMLDialogElement>(null)
   const [selectedError, setSelectedError] = React.useState('')
   const errorTitleId = React.useId()
@@ -96,11 +102,17 @@ export function ControlAreaView({area,controls,attachedPanels,editing,inputActiv
         const control=moving?.id===original.id?moving:original
         const directionKind = isDirectionControl(control.kind) ? control.kind : null
         const isDisplay = control.kind === 'display'
+        const isDistanceGauge = control.kind === 'distance-gauge'
+        const gaugePort = control.port || 'C'
+        const gaugeError = isDistanceGauge && isLiveRobot && sensorPortsKnown && !sensorPorts.includes(gaugePort)
+          ? `Подключите датчик ${gaugePort}`
+          : undefined
         const isPlaceable = isPlaceableControl(control.kind)
         const nearAreaResize = isPlaceable && control.x + control.width > area.width - 34
           && control.y + control.height > area.height - 44 - 34
         const directionErrors = directionKind ? Object.fromEntries(DIRECTION_CONTROLS[directionKind].inputs.map(input => [input, errors[`${control.id}:${input}`]])) : {}
         const directionError = directionKind ? DIRECTION_CONTROLS[directionKind].inputs.map(input => errors[`${control.id}:${input}`]).find(Boolean) : undefined
+        const cardError = directionError || gaugeError
         const moveByKey = (e: React.KeyboardEvent<HTMLElement>) => {
           const d = arrow(e.key)
           if (!editing || !d) return
@@ -110,19 +122,19 @@ export function ControlAreaView({area,controls,attachedPanels,editing,inputActiv
           if (fits(c)) onControlChange(c)
         }
         return <div key={control.id} role={isPlaceable ? "group" : undefined} aria-label={isPlaceable ? control.label : undefined}
-          style={{position:'absolute',left:control.x,top:control.y,width:control.width,height:control.height,border:directionError?'2px solid #dc2626':'2px solid #dfae87',borderRadius:12,background:directionError?'#fef2f2':'#fff',padding:6,overflow:isPlaceable?'hidden':'auto',display:isPlaceable?'flex':undefined,flexDirection:isPlaceable?'column':undefined}}>
-        {!directionKind && (!isPlaceable || editing) &&
+          style={{position:'absolute',left:control.x,top:control.y,width:control.width,height:control.height,border:cardError?'2px solid #dc2626':'2px solid #dfae87',borderRadius:12,background:cardError?'#fef2f2':'#fff',padding:6,overflow:isPlaceable?'hidden':'auto',display:isPlaceable?'flex':undefined,flexDirection:isPlaceable?'column':undefined}}>
+        {!directionKind && !isDistanceGauge && (!isPlaceable || editing) &&
         <div tabIndex={editing?0:-1} role="button" aria-label={`Переместить ${control.label}`} onKeyDown={moveByKey} onPointerDown={e=>dragControl(e,control)} style={{fontWeight:700,cursor:editing?'grab':'default',touchAction:'none',minHeight:isPlaceable?24:undefined,fontSize:isPlaceable?12:undefined}}>{rename?.id===control.id ? <input autoFocus aria-label={`Название ${control.label}`} value={rename.value} maxLength={40} onPointerDown={e=>e.stopPropagation()} onChange={e=>setRename({id:control.id,value:e.target.value})} onBlur={()=>{if(rename.value.trim())onControlChange({...control,label:rename.value.trim()});setRename(null)}} onKeyDown={e=>{e.stopPropagation();if(e.key==='Enter')e.currentTarget.blur()}}/> : control.label}{editing&&<span style={{float:'right'}}><button type="button" aria-label={`Переименовать ${control.label}`} onPointerDown={e=>e.stopPropagation()} onClick={()=>setRename({id:control.id,value:control.label})}>✎</button>{onDeleteControl&&<button type="button" aria-label={`Удалить ${control.label}`} onPointerDown={e=>e.stopPropagation()} onClick={()=>onDeleteControl(control.id)}>×</button>}</span>}</div>}
-        {directionKind && directionError && (
+        {(directionKind || isDistanceGauge) && cardError && (
           <button
             type="button"
-            title={directionError}
-            aria-label={`Показать причину ошибки: ${directionError}`}
+            title={cardError}
+            aria-label={`Показать причину ошибки: ${cardError}`}
             aria-haspopup="dialog"
             onPointerDown={event => event.stopPropagation()}
             onClick={event => {
               event.stopPropagation()
-              setSelectedError([...new Set(Object.values(directionErrors).filter(Boolean))].join('\n'))
+              setSelectedError(gaugeError || [...new Set(Object.values(directionErrors).filter(Boolean))].join('\n'))
               errorDialog.current?.showModal()
             }}
             className="absolute left-1 top-1 z-20 grid size-5 place-items-center rounded-full bg-[#dc2626] text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
@@ -130,7 +142,7 @@ export function ControlAreaView({area,controls,attachedPanels,editing,inputActiv
             <AlertTriangle size={12} strokeWidth={2.6} aria-hidden="true" />
           </button>
         )}
-        {directionKind && editing && onDeleteControl && (
+        {(directionKind || isDistanceGauge) && editing && onDeleteControl && (
           <button
             type="button"
             aria-label={`Удалить ${control.label}`}
@@ -142,7 +154,89 @@ export function ControlAreaView({area,controls,attachedPanels,editing,inputActiv
             ×
           </button>
         )}
-        {isDisplay ? (
+                {isDistanceGauge ? (
+          <div
+            tabIndex={editing ? 0 : -1}
+            role={editing ? "button" : undefined}
+            aria-label={editing ? `Переместить ${control.label}` : undefined}
+            onKeyDown={moveByKey}
+            onPointerDown={editing ? event => dragControl(event, control) : undefined}
+            className={`relative flex min-h-0 flex-1 flex-col justify-between gap-1.5 pt-1 ${
+              editing ? 'touch-none cursor-grab rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal-700' : ''
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className={`flex items-center gap-1 ${cardError ? 'pl-6' : ''}`}>
+                <Waves size={15} className="shrink-0 text-[#4f46e5]" aria-hidden="true" />
+                <select
+                  aria-label="Порт дальномера"
+                  value={gaugePort}
+                  disabled={!editing}
+                  onPointerDown={e => e.stopPropagation()}
+                  onChange={e => onControlChange({ ...control, port: e.target.value })}
+                  className="min-h-[36px] h-[36px] rounded-lg border border-[#c7d2fe] bg-white px-2 text-xs font-black text-[#18313b] cursor-pointer disabled:cursor-default disabled:opacity-90"
+                >
+                  {SENSOR_PORTS.map(p => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </div>
+              {(() => {
+                const rawDist = sensorDistances[gaugePort]
+                const trialVal = typeof rawDist === 'number' ? rawDist : 50
+                const shownText = editing
+                  ? '-- см'
+                  : isLiveRobot
+                    ? rawDist === undefined
+                      ? '--'
+                      : rawDist === null
+                        ? '>200 см'
+                        : `${rawDist} см`
+                    : `${trialVal} см`
+                return (
+                  <span className="text-lg font-black tabular-nums text-[#18313b] whitespace-nowrap">
+                    {shownText}
+                  </span>
+                )
+              })()}
+            </div>
+
+            {!editing && inputActive && !isLiveRobot ? (
+              <input
+                type="range"
+                min={0}
+                max={200}
+                step={1}
+                aria-label="Имитация расстояния"
+                value={typeof sensorDistances[gaugePort] === 'number' ? (sensorDistances[gaugePort] as number) : 50}
+                onPointerDown={e => e.stopPropagation()}
+                onChange={e => onSimulateDistance?.(gaugePort, Number(e.target.value))}
+                className="w-full min-h-[36px] accent-[#4f46e5] cursor-pointer"
+              />
+            ) : (
+              (() => {
+                const rawDist = sensorDistances[gaugePort]
+                const activeDist = !editing && isLiveRobot && typeof rawDist === 'number' ? rawDist : null
+                const pct = activeDist === null ? 0 : Math.max(4, Math.min(100, Math.round((activeDist / 200) * 100)))
+                const barColor = activeDist === null
+                  ? '#cbd5e1'
+                  : activeDist < 15
+                    ? '#dc2626'
+                    : activeDist <= 45
+                      ? '#eab308'
+                      : '#16a34a'
+                return (
+                  <div className="h-3 w-full overflow-hidden rounded-full bg-[#e2e8f0]" aria-hidden="true">
+                    <div
+                      className="h-full rounded-full transition-all duration-150"
+                      style={{ width: editing || activeDist === null ? '100%' : `${pct}%`, backgroundColor: barColor }}
+                    />
+                  </div>
+                )
+              })()
+            )}
+          </div>
+        ) : isDisplay ? (
           <div className="flex min-h-0 flex-1">
             <DisplayStreamView editing={editing} />
           </div>

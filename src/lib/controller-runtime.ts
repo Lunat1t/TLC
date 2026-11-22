@@ -1,4 +1,4 @@
-import {commandsFor, controllerHandler, controllerRuntimeErrors, describeAction, DRIVE_PORTS, type ControllerAction, type ControllerEvent, type ControllerHandler, type ControllerProgram} from './controller-program.ts'
+import {commandsFor, controllerHandler, controllerRuntimeErrors, describeAction, DRIVE_PORTS, type ControllerAction, type ControllerEvent, type ControllerHandler, type ControllerProgram, type SensorCheck, type SensorCondition} from './controller-program.ts'
 import {
   SERVICE,
   COMMAND_EVENT,
@@ -25,6 +25,15 @@ type Transport = {
   disconnect():Promise<void>
   uploadProgram?(blob:Uint8Array,onProgress:(percent:number)=>void,signal?:AbortSignal):Promise<void>
 }
+export type SensorTelemetry={
+  color?:string
+  reflection?:number
+  pressed?:boolean
+  force?:number
+  heading?:number
+  pitch?:number
+  roll?:number
+}
 type Status = 'disconnected'|'connecting'|'connected'|'uploading'|'starting-hub'|'ready'|'fault'
 export type SessionState={
   viewMode:'edit'|'check'
@@ -33,6 +42,11 @@ export type SessionState={
   message:string
   log:string[]
   ports:string[]
+  sensorPorts:string[]
+  sensorPortsKnown:boolean
+  sensorDistances:Record<string,number|null>
+  sensorTypes:Record<string,string>
+  sensorTelemetry:Record<string,SensorTelemetry>
   protocol:2|3|null
   uploadProgress:number|null
   hubName:string|null
@@ -111,6 +125,11 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
     message:'Не подключён',
     log:[],
     ports:[],
+    sensorPorts:[],
+    sensorPortsKnown:false,
+    sensorDistances:{},
+    sensorTypes:{},
+    sensorTelemetry:{},
     protocol:null,
     uploadProgress:null,
     hubName:null,
@@ -133,17 +152,59 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
   const activeHolds=new Map<string,ActiveHold>()
   const isStopHold = (hold: ActiveHold, port: string) =>
     hold.ports.includes(port) && hold.handler.actions.every(action => action.kind === 'stop' || action.kind === 'stopAll')
-  const collectDrivenPorts=(actions:ControllerAction[])=>{
-    const acc=new Set<string>()
+  const sensorWaiters=new Set<()=>void>()
+  const notifySensorWaiters=()=>{for(const wake of Array.from(sensorWaiters))wake()}
+  const evalCheck=(check:SensorCheck)=>{
+    const tel=state.sensorTelemetry[check.port]
+    if(!tel)return false
+    switch(check.kind){
+      case 'color':return tel.color===check.color
+      case 'reflection':return tel.reflection!==undefined&&(check.op==='lt'?tel.reflection<check.value:tel.reflection>check.value)
+      case 'pressed':return tel.pressed!==undefined&&tel.pressed===check.pressed
+      case 'force':return tel.force!==undefined&&(check.op==='lt'?tel.force<check.value:tel.force>check.value)
+      case 'heading':return tel.heading!==undefined&&(check.op==='lt'?tel.heading<check.value:tel.heading>check.value)
+      case 'tilt':{
+        const val=check.axis==='roll'?tel.roll:tel.pitch
+        return val!==undefined&&(check.op==='lt'?val<check.value:val>check.value)
+      }
+      default:return false
+    }
+  }
+  const evalCondition=(cond:SensorCondition|{port:string;op?:'lt'|'gt';cm?:number;checks?:SensorCheck[]})=>{
+    if('checks' in cond && Array.isArray(cond.checks) && cond.checks.length>0){
+      return cond.checks.every(evalCheck)
+    }
+    const port='port' in cond ? cond.port : 'C'
+    const op='op' in cond && cond.op==='gt' ? 'gt' : 'lt'
+    const cm='cm' in cond && typeof cond.cm==='number' ? cond.cm : 20
+    const dist=state.sensorDistances[port]
+    if(op==='lt')return dist!==undefined&&dist!==null&&dist<cm
+    if(dist===null)return true
+    return dist!==undefined&&dist>cm
+  }
+  const collectDrivenPorts=(actions:ControllerAction[],acc=new Set<string>()):string[]=>{
     for(const a of actions){
       if(a.kind==='stopAll') for(const port of stopAllPorts()) acc.add(port)
-      else if('port' in a && a.port) acc.add(a.port)
+      if((a.kind==='stop'||a.kind==='run'||a.kind==='dc'||a.kind==='angle'||a.kind==='time'||a.kind==='dcTime')&&a.port)acc.add(a.port)
+      if(a.kind==='branch'){collectDrivenPorts(a.thenActions,acc);collectDrivenPorts(a.elseActions,acc)}
     }
     return [...acc]
   }
+  const findContinuousForPort=(actions:ControllerAction[],port:string):Extract<ControllerAction,{kind:'run'|'dc'}>|undefined=>{
+    let found:Extract<ControllerAction,{kind:'run'|'dc'}>|undefined
+    for(const a of actions){
+      if((a.kind==='run'||a.kind==='dc')&&a.port===port)found=a
+      else if(a.kind==='branch'){
+        const chosen=evalCondition(a.condition)?a.thenActions:a.elseActions
+        const nested=findContinuousForPort(chosen,port)
+        if(nested)found=nested
+      }
+    }
+    return found
+  }
   const publish=(patch:Partial<SessionState>)=>{if(disposed)return;state={...state,...patch};for(const f of listeners)f(state)}
   const log=(line:string)=>publish({log:[...state.log,line].slice(-30)})
-  const clear=()=>{epoch++;for(const run of runners.values())run.abort();runners.clear();owners.clear();held.clear();activeHolds.clear();snapshot=null;if(heartbeat)clock.clearInterval(heartbeat);heartbeat=null}
+  const clear=()=>{epoch++;for(const run of runners.values())run.abort();runners.clear();owners.clear();held.clear();activeHolds.clear();snapshot=null;notifySensorWaiters();if(heartbeat)clock.clearInterval(heartbeat);heartbeat=null}
   const disconnectTransport=async()=>{
     connection++
     startAbort?.abort();startAbort=null
@@ -154,13 +215,66 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
   }
   const fault=async(message:string,extra?:Partial<SessionState>)=>{
     clear()
-    publish({transport:'fault',program:'stopped',uploadProgress:null,message,ports:[],protocol:null,...extra})
+    publish({transport:'fault',program:'stopped',uploadProgress:null,message,ports:[],sensorPorts:[],sensorPortsKnown:false,sensorDistances:{},sensorTypes:{},sensorTelemetry:{},protocol:null,...extra})
     await disconnectTransport()
   }
   const line=(text:string,serial:number)=>{
     if(disposed||serial!==connection)return
     if(text==='SOCER2_ACK'){lastAck=clock.now();return}
     if(text.startsWith('SOCER_VER|')){lastHubVersion=text.slice('SOCER_VER|'.length).trim();return}
+    if(text.startsWith('SOCER_SENSORS|')){
+      const sensorPorts:string[]=[]
+      const sensorTypes:Record<string,string>={}
+      for(const token of text.slice('SOCER_SENSORS|'.length).split(',').filter(Boolean)){
+        const sep=token.indexOf(':')
+        const port=(sep>0?token.slice(0,sep):token).trim()
+        const stype=(sep>0?token.slice(sep+1):'ultrasonic').trim()
+        if(!port)continue
+        sensorTypes[port]=stype
+        if(port!=='IMU')sensorPorts.push(port)
+      }
+      publish({sensorPorts,sensorTypes,sensorPortsKnown:true})
+      return
+    }
+    if(text.startsWith('SOCER_SNS|')){
+      const next={...state.sensorTelemetry}
+      for(const entry of text.slice('SOCER_SNS|'.length).split(',')){
+        const sep=entry.indexOf(':')
+        if(sep<=0)continue
+        const port=entry.slice(0,sep).trim()
+        const body=entry.slice(sep+1).trim()
+        if(!port||!body)continue
+        const tel:SensorTelemetry={...(next[port]||{})}
+        for(const kv of body.split('&')){
+          const eq=kv.indexOf('=')
+          if(eq<=0)continue
+          const k=kv.slice(0,eq),v=kv.slice(eq+1)
+          if(k==='c')tel.color=v
+          else if(k==='r'){const n=Number(v);if(Number.isFinite(n)){if(port==='IMU')tel.roll=n;else tel.reflection=n}}
+          else if(k==='p'){const n=Number(v);if(Number.isFinite(n)){if(port==='IMU')tel.pitch=n;else tel.pressed=n!==0}}
+          else if(k==='f'){const n=Number(v);if(Number.isFinite(n))tel.force=n/10}
+          else if(k==='h'){const n=Number(v);if(Number.isFinite(n))tel.heading=n}
+        }
+        next[port]=tel
+      }
+      publish({sensorTelemetry:next})
+      notifySensorWaiters()
+      return
+    }
+    if(text.startsWith('SOCER_DIST|')){
+      const next={...state.sensorDistances}
+      for(const pair of text.slice('SOCER_DIST|'.length).split(',')){
+        const sep=pair.indexOf(':')
+        if(sep<=0)continue
+        const port=pair.slice(0,sep).trim()
+        const mm=Number(pair.slice(sep+1).trim())
+        if(!port||!Number.isFinite(mm))continue
+        next[port]=mm>=2000?null:Math.max(0,Math.min(200,Math.round(mm/10)))
+      }
+      publish({sensorDistances:next})
+      notifySensorWaiters()
+      return
+    }
     if(text.startsWith('SOCER3_READY|')||text.startsWith('SOCER2_READY|')){
       if(transport.uploadProgram && expectedVersion && !uploadedThisConnect && lastHubVersion!==expectedVersion){
         const waiting=readyWait;readyWait=null
@@ -215,42 +329,80 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
   function stopAllPorts(){
     return state.ports.length?state.ports:(snapshot?.ports?.length?snapshot.ports:[...DRIVE_PORTS])
   }
-  function startActions(key:string,actions:ControllerAction[],generation:number):AbortController {
+  function startActions(key:string,actions:ControllerAction[],generation:number,sendWrites=true):AbortController {
     runners.get(key)?.abort()
     const runner=new AbortController();runners.set(key,runner)
-    for(const action of actions){
-      if(action.kind==='stopAll'){for(const port of stopAllPorts())owners.set(port,runner)}
-      else if('port' in action && action.port){
-        if(action.kind==='stop' || !Array.from(activeHolds.values()).some(hold => isStopHold(hold, action.port))){
-          owners.set(action.port,runner)
+    const claimMotorOwners=(list:ControllerAction[])=>{
+      for(const action of list){
+        if(action.kind==='stopAll'){for(const port of stopAllPorts())owners.set(port,runner)}
+        else if(['run','dc','angle','time','dcTime','stop'].includes(action.kind)&&'port' in action&&action.port){
+          if(action.kind === 'stop' || !Array.from(activeHolds.values()).some(hold => isStopHold(hold, action.port))) {
+            owners.set(action.port,runner)
+          }
+        }
+      }
+    }
+    claimMotorOwners(actions)
+    const runList=async(list:ControllerAction[])=>{
+      for(const action of list){
+        if(runner.signal.aborted||epoch!==generation)break
+        if(action.kind==='wait'){if(sendWrites)await sleep(action.ms,runner.signal,clock);continue}
+        if(action.kind==='waitSensor'){
+          while(!runner.signal.aborted&&epoch===generation&&!evalCondition(action)){
+            await new Promise<void>(resolve=>{
+              let done=false
+              let timer:ReturnType<typeof setTimeout>|undefined
+              const wake=()=>{
+                if(done)return
+                done=true
+                sensorWaiters.delete(wake)
+                runner.signal.removeEventListener('abort',wake)
+                if(timer)clock.clearTimeout(timer)
+                resolve()
+              }
+              sensorWaiters.add(wake)
+              runner.signal.addEventListener('abort',wake,{once:true})
+              timer=clock.setTimeout(wake,100)
+            })
+          }
+          continue
+        }
+        if(action.kind==='branch'){
+          const passed=evalCondition(action.condition)
+          const chosen=passed?action.thenActions:action.elseActions
+          const summary=chosen.map(describeAction).filter(Boolean).join(' · ')||'нет действий'
+          log(`${describeAction({kind:'branch',condition:action.condition,thenActions:[],elseActions:[]})} → ${passed?'да':'нет'} (${summary})`)
+          claimMotorOwners(chosen)
+          await runList(chosen)
+          continue
+        }
+        if(action.kind==='stopAll'){
+          if(!sendWrites)continue
+          for(const port of stopAllPorts()){
+            for(const command of commandsFor({kind:'stop',port},state.protocol||3)){
+              await write(command,()=>!runner.signal.aborted&&epoch===generation&&owners.get(port)===runner)
+            }
+          }
+          continue
+        }
+        if(!sendWrites)continue
+        const port='port' in action?action.port:null
+        const isMotorOwned=['run','dc','angle','time','dcTime','stop'].includes(action.kind)
+        for(const command of commandsFor(action,state.protocol||3)){
+          await write(command,()=>!runner.signal.aborted&&epoch===generation&&(!port||!isMotorOwned||owners.get(port)===runner))
         }
       }
     }
     void (async()=>{
       try {
-        for(const action of actions){
-          if(runner.signal.aborted||epoch!==generation)break
-          if(action.kind==='wait'){await sleep(action.ms,runner.signal,clock);continue}
-          if(action.kind==='stopAll'){
-            for(const port of stopAllPorts()){
-              for(const command of commandsFor({kind:'stop',port},state.protocol||3)){
-                await write(command,()=>!runner.signal.aborted&&epoch===generation&&owners.get(port)===runner)
-              }
-            }
-            continue
-          }
-          const port='port' in action?action.port:null
-          for(const command of commandsFor(action,state.protocol||3)){
-            await write(command,()=>!runner.signal.aborted&&epoch===generation&&(!port||owners.get(port)===runner))
-          }
-        }
+        await runList(actions)
       } catch(error){if(!runner.signal.aborted&&epoch===generation)await fault(`Ошибка связи: ${error instanceof Error?error.message:String(error)}`)}
       finally{if(runners.get(key)===runner)runners.delete(key)}
     })()
     return runner
   }
-  function runActions(key:string,actions:ControllerAction[],generation:number){
-    startActions(key,actions,generation)
+  function runActions(key:string,actions:ControllerAction[],generation:number,sendWrites=true){
+    startActions(key,actions,generation,sendWrites)
   }
   function beginHeartbeat() {
     if(heartbeat)clock.clearInterval(heartbeat)
@@ -267,7 +419,7 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
     async setViewMode(mode:'edit'|'check'){if(mode==='edit')await stop('Редактирование');publish({viewMode:mode})},
     async connect(){
       if(disposed||!['disconnected','fault'].includes(state.transport))return
-      publish({transport:'connecting',uploadProgress:null,needsManualHubProgram:false,message:'Подключение…'});writeFailed=false;lastHubVersion=null;uploadedThisConnect=false;const serial=++connection
+      publish({transport:'connecting',uploadProgress:null,needsManualHubProgram:false,sensorPorts:[],sensorPortsKnown:false,sensorDistances:{},sensorTypes:{},sensorTelemetry:{},message:'Подключение…'});writeFailed=false;lastHubVersion=null;uploadedThisConnect=false;const serial=++connection
       try{
         const info=await transport.connect(text=>line(text,serial),()=>{if(serial===connection)void fault('Связь потеряна. Остановка не подтверждена.')})
         if(serial===connection){
@@ -362,12 +514,13 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
       if(blocking){publish({message:blocking.message});return}
       const live=state.transport==='ready'
       if(live){
-        const errors=controllerRuntimeErrors({...program,handlers:[{button:'up',event:'pressed',sourceBlockId:'startup',actions:program.startup}]},state.protocol,new Set(state.ports))
+        const errors=controllerRuntimeErrors({...program,handlers:[{button:'up',event:'pressed',sourceBlockId:'startup',actions:program.startup}]},state.protocol,new Set(state.ports),state.sensorPortsKnown?new Set(state.sensorPorts):undefined,state.sensorPortsKnown?state.sensorTypes:undefined)
         if(errors.length){publish({message:errors[0].message});return}
       }
       clear();snapshot=structuredClone(program);const generation=epoch
       publish({program:live?'live-running':'trial-running',uploadProgress:null,message:live?'Программа запущена':'Пробный режим: команды роботу не отправляются'})
-      if(program.startup.length){log('Запуск → '+program.startup.map(describeAction).filter(Boolean).join(' · '));if(live)void runActions('startup',program.startup,generation)}
+      const hasSensorFlow=(list:ControllerAction[]):boolean=>list.some(a=>a.kind==='branch'||a.kind==='waitSensor')
+      if(program.startup.length){log('Запуск → '+program.startup.map(describeAction).filter(Boolean).join(' · '));if(live||hasSensorFlow(program.startup))void runActions('startup',program.startup,generation,live)}
       if(live)beginHeartbeat()
     },
     dispatch(target:Target,event:ControllerEvent){
@@ -392,8 +545,7 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
             }
             let resumed=false
             for(const other of remainingHolds){
-              const continuous=other.handler.actions.filter((a):a is Extract<ControllerAction,{kind:'run'|'dc'}> => (a.kind==='run'||a.kind==='dc')&&a.port===port)
-              const last=continuous[continuous.length-1]
+              const last=findContinuousForPort(other.handler.actions,port)
               if(last){resumeRuns.push({hold:other,action:last});resumed=true;break}
             }
             if(!resumed)stopActions.push({kind:'stop',port})
@@ -412,7 +564,7 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
           return
         }
       }
-      const errors=[...snapshot.errors,...(state.program==='live-running'?controllerRuntimeErrors(snapshot,state.protocol,new Set(state.ports)):[])]
+      const errors=[...snapshot.errors,...(state.program==='live-running'?controllerRuntimeErrors(snapshot,state.protocol,new Set(state.ports),state.sensorPortsKnown?new Set(state.sensorPorts):undefined,state.sensorPortsKnown?state.sensorTypes:undefined):[])]
       const error=errors.find(e=>e.severity!=='warning'&&e.target?.controlId===target.controlId&&e.target?.input===target.input)
       if(error){held.delete(key);log(`⚠ ${error.message}`);return}
       const handler = event==='pressed'
@@ -422,7 +574,8 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
       const runnerKey = handler?.driveAreaId ? `drive-area:${handler.driveAreaId}` : `input:${key}`
       log(`${target.input} ${event==='pressed'?'нажата':'отпущена'} → ${actions.map(describeAction).filter(Boolean).join(' · ')||'нет действий'}`)
       let startedRunner:AbortController|null=null
-      if(state.program==='live-running'&&actions.length)startedRunner=startActions(runnerKey,actions,epoch)
+      const hasSensorFlow=actions.some(a=>a.kind==='branch'||a.kind==='waitSensor')
+      if(actions.length&&(state.program==='live-running'||hasSensorFlow))startedRunner=startActions(runnerKey,actions,epoch,state.program==='live-running')
       if(event==='pressed' && handler?.event==='hold'){
         const drivenPorts=collectDrivenPorts(actions)
         const ownedRunners=new Set<AbortController>()
@@ -430,8 +583,19 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
         activeHolds.set(key,{key,handler,ports:drivenPorts,ownedRunners})
       }
     },
+    setSensorDistance(port:string,cm:number|null){
+      if(!port)return
+      const normalized=cm===null?null:Math.max(0,Math.min(200,Math.round(cm)))
+      publish({sensorDistances:{...state.sensorDistances,[port]:normalized}})
+      notifySensorWaiters()
+    },
+    setSensorTelemetry(port:string,patch:SensorTelemetry){
+      if(!port)return
+      publish({sensorTelemetry:{...state.sensorTelemetry,[port]:{...(state.sensorTelemetry[port]||{}),...patch}}})
+      notifySensorWaiters()
+    },
     stop,
-    async disconnect(){await stop();clear();await disconnectTransport();publish({transport:'disconnected',program:'stopped',uploadProgress:null,hubName:null,needsManualHubProgram:false,message:'Хаб отключён.',ports:[],protocol:null})},
+    async disconnect(){await stop();clear();await disconnectTransport();publish({transport:'disconnected',program:'stopped',uploadProgress:null,hubName:null,needsManualHubProgram:false,message:'Хаб отключён.',ports:[],sensorPorts:[],sensorPortsKnown:false,sensorDistances:{},sensorTypes:{},sensorTelemetry:{},protocol:null})},
     async dispose(){if(disposed)return;await stop();clear();await disconnectTransport();disposed=true;listeners.clear()},
     getState(){return state},
   }

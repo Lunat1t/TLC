@@ -18,9 +18,11 @@ import {
   PanelLeftOpen,
   Play,
   RectangleHorizontal,
+  RotateCw,
   Settings2,
   Square,
   Trash2,
+  Waves,
   Workflow,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -64,6 +66,7 @@ import {
   ChassisBlock,
   ControllerButtonBlock,
   ControllerStopBlock,
+  SensorBlock,
 } from "@/components/editor/controller-blocks"
 import {
   DEFAULT_DRIVE_SETTINGS,
@@ -73,9 +76,13 @@ import {
   type DriveSettings,
 } from "@/lib/controller-program"
 import { ControlAreaView } from "@/components/editor/control-area"
-import { DirectionPalettePreview, MotorButtonsPalettePreview } from "@/components/editor/direction-control"
+import { DirectionPalettePreview, DistanceGaugePalettePreview, MotorButtonsPalettePreview } from "@/components/editor/direction-control"
 import { useRobotSession } from "@/components/editor/robot-session"
-import { requestEditorLandscape } from "@/lib/editor-orientation"
+import {
+  enterEditorLandscape,
+  requestEditorLandscape,
+  shouldRequireEditorLandscape,
+} from "@/lib/editor-orientation"
 import { controllerRuntimeErrors } from "@/lib/controller-program"
 import {
   CONTROL_INPUTS,
@@ -100,6 +107,7 @@ const ALL_BLOCKS = {
 
 const DISPLAY_LABEL = "Дисплей"
 const DISPLAY_SIZE = [224, 160] as const
+const GAUGE_LABEL = "Дальномер"
 
 const BLOCK_CATEGORIES = [
   {
@@ -124,6 +132,15 @@ const BLOCK_CATEGORIES = [
     ],
   },
   {
+    id: "sensors",
+    label: "Датчики",
+    icon: Waves,
+    color: "#4f46e5",
+    blocks: [
+      { type: "sensor", label: "Датчик", icon: Waves },
+    ],
+  },
+  {
     id: "logic",
     label: "Логика",
     icon: Workflow,
@@ -143,6 +160,7 @@ const BLOCK_CATEGORIES = [
       { type: "drive-turn", label: DIRECTION_CONTROLS["drive-turn"].label, icon: ArrowRightLeft },
       { type: "drive-linear", label: DIRECTION_CONTROLS["drive-linear"].label, icon: ArrowDownUp },
       { type: "display", label: DISPLAY_LABEL, icon: Monitor },
+      { type: "distance-gauge", label: GAUGE_LABEL, icon: Waves },
     ],
   },
 ] as const
@@ -284,8 +302,43 @@ function EditorWorkspace() {
   const runButtonRef = React.useRef<HTMLButtonElement | null>(null)
   const wasRunPromptOpen = React.useRef(false)
   const {state: robotState, ref: sessionRef} = useRobotSession()
-  React.useEffect(() => requestEditorLandscape(window.screen?.orientation), [])
-
+  const editorRootRef = React.useRef<HTMLDivElement | null>(null)
+  const rotateButtonRef = React.useRef<HTMLButtonElement | null>(null)
+  const [landscapeBlocked, setLandscapeBlocked] = React.useState(false)
+  const [orientationManualHint, setOrientationManualHint] = React.useState(false)
+  React.useEffect(() => requestEditorLandscape(window.screen?.orientation, document), [])
+  React.useEffect(() => {
+    const pointerQuery = typeof window.matchMedia === "function" ? window.matchMedia("(pointer: coarse)") : null
+    const update = () => {
+      const blocked = shouldRequireEditorLandscape({
+        width: window.innerWidth,
+        height: window.innerHeight,
+        coarsePointer: Boolean(pointerQuery?.matches),
+      })
+      setLandscapeBlocked(blocked)
+      if (!blocked) setOrientationManualHint(false)
+    }
+    update()
+    window.addEventListener("resize", update)
+    window.addEventListener("orientationchange", update)
+    pointerQuery?.addEventListener?.("change", update)
+    window.screen?.orientation?.addEventListener?.("change", update)
+    return () => {
+      window.removeEventListener("resize", update)
+      window.removeEventListener("orientationchange", update)
+      pointerQuery?.removeEventListener?.("change", update)
+      window.screen?.orientation?.removeEventListener?.("change", update)
+    }
+  }, [])
+  React.useEffect(() => {
+    const el = editorRootRef.current
+    if (el) {
+      el.inert = landscapeBlocked
+    }
+    if (landscapeBlocked) {
+      rotateButtonRef.current?.focus()
+    }
+  }, [landscapeBlocked])
   React.useEffect(() => {
     const hasBluetooth = typeof navigator !== "undefined" && Boolean((navigator as Navigator & { bluetooth?: unknown }).bluetooth)
     const isSecure = typeof window !== "undefined" && window.isSecureContext
@@ -492,7 +545,7 @@ function EditorWorkspace() {
     return map
   },[controlLayout.areas,controlLayout.controls,currentSheet.id])
   const inputErrors = React.useMemo(() => {
-    const errors = controllerProgram ? [...controllerProgram.errors,...controllerRuntimeErrors(controllerProgram,robotState.protocol,new Set(robotState.ports))] : []
+    const errors = controllerProgram ? [...controllerProgram.errors,...controllerRuntimeErrors(controllerProgram,robotState.protocol,new Set(robotState.ports),robotState.sensorPortsKnown?new Set(robotState.sensorPorts):undefined,robotState.sensorPortsKnown?robotState.sensorTypes:undefined)] : []
     const mapped:Record<string,string> = {}
     for (const error of errors) if (error.severity !== "warning" && error.target?.controlId && error.target.input) mapped[`${error.target.controlId}:${error.target.input}`] = error.message
     for(const [key,targets] of Object.entries(keyTargets)) if(targets.length>1) for(const target of targets) mapped[`${target.controlId}:${target.input}`]=`Клавиша ${key} назначена нескольким кнопкам.`
@@ -522,6 +575,17 @@ function EditorWorkspace() {
     if (session.getState().transport === 'fault') {
       setStartError(session.getState().message)
       return
+    }
+    if (session.getState().transport !== 'ready') {
+      const sheetAreas = new Set(controlLayout.areas.filter(a => a.sheetId === currentSheet.id).map(a => a.id))
+      for (const control of controlLayout.controls) {
+        if (control.kind === 'distance-gauge' && sheetAreas.has(control.areaId)) {
+          const port = control.port || 'C'
+          if (session.getState().sensorDistances[port] === undefined) {
+            session.setSensorDistance(port, 50)
+          }
+        }
+      }
     }
     await session.startProgram(controllerProgram)
     if (!['trial-running','live-running'].includes(session.getState().program)) {
@@ -605,17 +669,18 @@ function EditorWorkspace() {
   }, [robotMenuOpen, moreMenuOpen])
 
   React.useEffect(() => {
-    if (!runPromptOpen && !chassisDialogOpen && !panelErrorModal) return
+    if (!runPromptOpen && !chassisDialogOpen && !panelErrorModal && !openMenuBlockId) return
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setRunPromptOpen(false)
         setChassisDialogOpen(false)
         setPanelErrorModal(null)
+        setOpenMenuBlockId(null)
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [runPromptOpen, chassisDialogOpen, panelErrorModal])
+  }, [runPromptOpen, chassisDialogOpen, panelErrorModal, openMenuBlockId])
 
   React.useEffect(() => () => {void sessionRef.current?.stop("Проект изменён. Запустите программу снова.")}, [projectId,sessionRef])
   React.useEffect(() => {
@@ -690,8 +755,8 @@ function EditorWorkspace() {
       setSaveMessage({ text: "Увеличьте область: свободного места нет.", isError: true })
       return false
     }
-    const label = kind === "display" ? DISPLAY_LABEL : DIRECTION_CONTROLS[kind].label
-    const control = { id: newId(), areaId: area.id, kind, label, ...spot, width, height }
+    const label = kind === "display" ? DISPLAY_LABEL : kind === "distance-gauge" ? GAUGE_LABEL : DIRECTION_CONTROLS[kind].label
+    const control = { id: newId(), areaId: area.id, kind, label, ...spot, width, height, ...(kind === "distance-gauge" ? { port: "C" } : {}) }
     const nextLayout = { ...controlLayout, controls: [...controlLayout.controls, control] }
     const existingInputControls = controllerControls.filter(c => sheetControlIds.has(c.id) && (c.inputs || CONTROL_INPUTS[c.kind]).length > 0)
     const newInputs = CONTROL_INPUTS[kind]
@@ -830,8 +895,8 @@ function EditorWorkspace() {
       if (!project) return
       const point = worldFromClient(clientX, clientY)
       try {
-        let x = point.x - 135
-        let y = point.y - 28
+        let x = point.x - (type === "sensor" ? 56 : 135)
+        let y = point.y - (type === "sensor" ? 20 : 28)
         if (type === "motor-buttons") {
           const width = initialOverrides?.width ?? 180
           const height = initialOverrides?.height ?? 132
@@ -916,8 +981,10 @@ function EditorWorkspace() {
         const target = snapTargetInfo(
           blocks,
           "__palette__",
-          pt.x - 135,
-          pt.y - 28
+          pt.x - (gesture.type === "sensor" ? 56 : 135),
+          pt.y - (gesture.type === "sensor" ? 20 : 28),
+          48,
+          gesture.type as BlockType
         )
         setSnapTargetSlot(target)
       } else {
@@ -1043,8 +1110,11 @@ function EditorWorkspace() {
   }
 
   return (
+    <>
     <div
-      className="tlc-editor flex flex-col h-dvh min-h-[360px] bg-[#f5f8fa] text-[#18313b] select-none overflow-hidden"
+      ref={editorRootRef}
+      aria-hidden={landscapeBlocked || undefined}
+      className="tlc-editor flex flex-col h-dvh bg-[#f5f8fa] text-[#18313b] select-none overflow-hidden"
       onPointerDown={(e) => {
         if (!(e.target as HTMLElement).closest("[data-module-picker]")) {
           setOpenMenuBlockId(null)
@@ -1319,6 +1389,24 @@ function EditorWorkspace() {
                           className="grid h-12 w-full touch-none cursor-grab place-items-center rounded-xl border-2 border-[#b9d0da] bg-[#f4f8fa] p-1 hover:border-[#087996] hover:bg-[#e7f3f8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal-700 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <MotorButtonsPalettePreview />
+                        </button>
+                      )
+                    }
+                    if (entry.type === "distance-gauge") {
+                      return (
+                        <button
+                          key="distance-gauge"
+                          type="button"
+                          disabled={!project}
+                          aria-label={entry.label}
+                          title={entry.label}
+                          onPointerDown={(event) => {
+                            if (!project || event.button !== 0) return
+                            dragControlFromPalette(event, "distance-gauge")
+                          }}
+                          className="grid h-12 w-full touch-none cursor-grab place-items-center rounded-xl border-2 border-[#c7d2fe] bg-[#eef2ff]/60 p-1 hover:border-[#4f46e5] hover:bg-[#eef2ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal-700 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <DistanceGaugePalettePreview />
                         </button>
                       )
                     }
@@ -1600,7 +1688,7 @@ function EditorWorkspace() {
             >
               {controlLayout.areas.filter(a=>a.sheetId===currentSheet.id).map(area=>{
                 const displayArea = projectChassis.configured ? {...area, drive: projectChassis.settings} : area
-                return <ControlAreaView key={area.id} area={displayArea} controls={controlLayout.controls.filter(c=>c.areaId===area.id)} attachedPanels={blocks.filter(b=>b.type==="motor-buttons"&&b.controlAreaId===area.id)} editing={!checking} inputActive={(robotState.program === "trial-running" || robotState.program === "live-running") && robotState.transport !== "fault"} zoom={zoom} errors={inputErrors} onAreaChange={changed=>{
+                return <ControlAreaView key={area.id} area={displayArea} controls={controlLayout.controls.filter(c=>c.areaId===area.id)} attachedPanels={blocks.filter(b=>b.type==="motor-buttons"&&b.controlAreaId===area.id)} editing={!checking} inputActive={(robotState.program === "trial-running" || robotState.program === "live-running") && robotState.transport !== "fault"} zoom={zoom} errors={inputErrors} isLiveRobot={robotState.transport === "ready"} sensorPorts={robotState.sensorPorts} sensorPortsKnown={robotState.sensorPortsKnown} sensorDistances={robotState.sensorDistances} onSimulateDistance={(port, cm) => sessionRef.current?.setSensorDistance(port, cm)} onAreaChange={changed=>{
                 const dx=changed.x-area.x,dy=changed.y-area.y
                 const nextBlocks=dx||dy?blocks.map(b=>b.type==="motor-buttons"&&b.controlAreaId===area.id?{...b,x:b.x+dx,y:b.y+dy}:b):blocks
                 const displayedDrive = projectChassis.configured ? projectChassis.settings : area.drive
@@ -1626,12 +1714,27 @@ function EditorWorkspace() {
                     (b) => b.id === snapTargetSlot.id
                   )
                   if (!targetBlock) return null
+                  const isCondBranch =
+                    snapTargetSlot.branch === "condition" &&
+                    targetBlock.type === "if"
                   const isBodyBranch =
                     snapTargetSlot.branch === "body" &&
                     targetBlock.type === "if"
                   const isElseBranch =
                     snapTargetSlot.branch === "else" &&
                     targetBlock.type === "if"
+                  if (isCondBranch) {
+                    return (
+                      <div
+                        aria-hidden="true"
+                        style={{
+                          left: `${targetBlock.x + 68}px`,
+                          top: `${targetBlock.y + 11}px`,
+                        }}
+                        className="absolute z-30 w-[132px] h-[36px] rounded-full border-2 border-dashed border-[#fbbf24] bg-[#fef3c7]/65 shadow-[0_0_20px_rgba(251,191,36,0.55)] pointer-events-none animate-lego-magnet"
+                      />
+                    )
+                  }
                   const socketX =
                     isBodyBranch || isElseBranch
                       ? targetBlock.x + IF_INDENT
@@ -1680,17 +1783,23 @@ function EditorWorkspace() {
                   if (targetBlock && draggedRoot) {
                     const rawRootX = draggedRoot.x + gesture.dx
                     const rawRootY = draggedRoot.y + gesture.dy
+                    const isCondBranch =
+                      snapTargetSlot.branch === "condition" &&
+                      targetBlock.type === "if"
                     const isBodyBranch =
                       snapTargetSlot.branch === "body" &&
                       targetBlock.type === "if"
                     const isElseBranch =
                       snapTargetSlot.branch === "else" &&
                       targetBlock.type === "if"
-                    const snapX =
-                      isBodyBranch || isElseBranch
+                    const snapX = isCondBranch
+                      ? targetBlock.x + 68
+                      : isBodyBranch || isElseBranch
                         ? targetBlock.x + IF_INDENT
                         : targetBlock.x
-                    const snapY = isBodyBranch
+                    const snapY = isCondBranch
+                      ? targetBlock.y + 11
+                      : isBodyBranch
                       ? targetBlock.y + IF_TOP_HEIGHT - 4
                       : isElseBranch
                         ? targetBlock.y +
@@ -1724,7 +1833,11 @@ function EditorWorkspace() {
                   ? Math.max(panelArea.y + 44, Math.min(panelArea.y + panelArea.height - panelHeight, rawDisplayY))
                   : rawDisplayY
                 const paired = isPairedBlock(block)
+                if (block.type === "sensor" && block.branch === "condition" && !isMoving) {
+                  return null
+                }
                 const isIfBlock = block.type === "if"
+                const isSensorBlock = block.type === "sensor"
                 const isChassisBlock = block.type === "chassis"
                 const motorBlock = block.type === "drive" || paired
                 const isButtonBlock = block.type === "button"
@@ -1754,7 +1867,7 @@ function EditorWorkspace() {
                     ? `rounded-t-[22px] ${
                         hasChild ? "rounded-b-[5px]" : "rounded-b-[14px]"
                       }`
-                    : motorBlock || isStopBlock || isChassisBlock
+                    : motorBlock || isStopBlock || isChassisBlock || isSensorBlock
                       ? `${isConnected ? "rounded-t-[5px]" : "rounded-t-[14px]"} ${
                           hasChild ? "rounded-b-[5px]" : "rounded-b-[14px]"
                         }`
@@ -1768,7 +1881,7 @@ function EditorWorkspace() {
                     data-canvas-block="true"
                     data-block-id={block.id}
                     tabIndex={0}
-                    role={motorBlock || isChassisBlock || isIfBlock || isStopBlock || isMotorButtons ? "group" : "button"}
+                    role={motorBlock || isChassisBlock || isIfBlock || isStopBlock || isSensorBlock || isMotorButtons ? "group" : "button"}
                     aria-label={
                       isIfBlock
                         ? "Блок условия Если Иначе. Перетащите за заголовок"
@@ -1776,6 +1889,8 @@ function EditorWorkspace() {
                           ? "Кнопка пульта. Перетащите за заголовок"
                         : isMotorButtons
                           ? checking ? "Панель цветных кнопок" : "Панель цветных кнопок. Перетащите за фон"
+                          : isSensorBlock
+                            ? "Блок датчика. Перетащите за заголовок"
                           : isStopBlock
                             ? "Стоп мотора. Перетащите за заголовок"
                             : isChassisBlock
@@ -1858,6 +1973,8 @@ function EditorWorkspace() {
                           ? `${buttonDrag?.blockId === block.id ? "overflow-visible" : "overflow-hidden"} rounded-[14px] border border-[#b9d0da] bg-[#f4f8fa] text-[#18313b] shadow-[inset_0_-4px_#d6e4e9,0_8px_18px_rgba(20,105,123,0.12)]`
                         : isButtonBlock
                           ? "w-max min-h-[58px] bg-[#e85d2a] text-white shadow-[inset_0_-4px_#c2410c,0_8px_18px_rgba(232,93,42,0.16)]"
+                          : isSensorBlock
+                            ? "w-max min-h-[64px] bg-[#4f46e5] text-white shadow-[inset_0_-4px_#3730a3,0_8px_18px_rgba(79,70,229,0.18)]"
                           : isStopBlock
                             ? "w-max min-h-[64px] bg-[#b1372c] text-white shadow-[inset_0_-4px_#8f2a21,0_8px_18px_rgba(177,55,44,0.16)]"
                             : isChassisBlock
@@ -1886,12 +2003,14 @@ function EditorWorkspace() {
                     }`}
                   >
                     {/* Top LEGO connector stud for motor, chassis, if, and stop blocks */}
-                    {(motorBlock || isChassisBlock || isIfBlock || isStopBlock) && (
+                    {(motorBlock || isChassisBlock || isIfBlock || isStopBlock || isSensorBlock) && (
                       <span
                         aria-hidden="true"
                         className={`absolute -top-[8px] left-[32px] w-[44px] h-[11px] rounded-t-[6px] pointer-events-auto ${
                           isIfBlock
                             ? "bg-[#7c3aed]"
+                            : isSensorBlock
+                              ? "bg-[#4f46e5]"
                             : isStopBlock
                               ? "bg-[#b1372c]"
                               : isChassisBlock
@@ -2123,10 +2242,26 @@ function EditorWorkspace() {
                         {!checking && <button type="button" aria-label="Изменить размер панели кнопок" onPointerDown={e=>resizeMotorPanel(e,block)} className="absolute bottom-0 right-0 z-20 grid h-6 w-6 cursor-nwse-resize place-items-center rounded-tl bg-white/80 text-sm text-[#31525f]">◢</button>}
                       </div>
                     ) : isIfBlock ? (
+                      (() => {
+                        const conditionBlock = blocks.find(
+                          (b) => b.parentId === block.id && b.branch === "condition"
+                        )
+                        const isDraggingCondition =
+                          conditionBlock &&
+                          gesture?.kind === "block" &&
+                          gesture.moved &&
+                          gesture.moving.includes(conditionBlock.id)
+                        const isConditionSnap =
+                          snapTargetSlot?.id === block.id &&
+                          snapTargetSlot.branch === "condition"
+                        const condError = conditionBlock
+                          ? controllerErrorsByBlockId.get(conditionBlock.id)
+                          : undefined
+                        return (
                       <div className="flex flex-col items-start">
                         {/* 1. Top Header Bar of E-shaped If/Else block */}
                         <div
-                          className={`pointer-events-auto relative flex flex-nowrap items-center h-[58px] w-[260px] px-5 gap-3 bg-[#7c3aed] shadow-[inset_0_-4px_#5b21b6,0_8px_18px_rgba(91,33,182,0.2)] ${
+                          className={`pointer-events-auto relative flex flex-nowrap items-center min-h-[58px] h-[58px] w-max min-w-[260px] px-5 gap-3 bg-[#7c3aed] shadow-[inset_0_-4px_#5b21b6,0_8px_18px_rgba(91,33,182,0.2)] ${
                             isConnected
                               ? "rounded-tl-[5px] rounded-tr-[14px]"
                               : "rounded-t-[14px]"
@@ -2135,7 +2270,9 @@ function EditorWorkspace() {
                               ? "ring-3 ring-[#087996]"
                               : isSnapTarget
                                 ? "ring-4 ring-[#fbbf24]"
-                                : ""
+                                : blockError || condError
+                                  ? "ring-2 ring-[#dc2626]"
+                                  : ""
                           }`}
                         >
                           {/* Inner top LEGO stud pointing down into the first C-mouth ("Если") */}
@@ -2147,11 +2284,63 @@ function EditorWorkspace() {
                           <span className="text-[16px] font-extrabold whitespace-nowrap tracking-tight">
                             Если
                           </span>
-                          {/* Empty condition slot */}
-                          <span
-                            aria-hidden="true"
-                            className="w-[88px] h-[32px] rounded-full bg-[#4c1d95]/55 border border-white/25 shadow-inner"
-                          />
+                          {conditionBlock && !isDraggingCondition ? (
+                            <div className="relative flex items-center shrink-0">
+                              <SensorBlock
+                                block={conditionBlock}
+                                slotted
+                                errorMessage={condError}
+                                onChange={(changes) => {
+                                  if (!project) return
+                                  saveBlocks(
+                                    updateDrive(blocks, conditionBlock.id, changes, project.hub)
+                                  )
+                                }}
+                                onStartDrag={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  e.currentTarget.setPointerCapture(e.pointerId)
+                                  setSelectedId(conditionBlock.id)
+                                  setGesture({
+                                    kind: "block",
+                                    id: conditionBlock.id,
+                                    startX: e.clientX,
+                                    startY: e.clientY,
+                                    originX: conditionBlock.x,
+                                    originY: conditionBlock.y,
+                                    moving: chainIds(blocks, conditionBlock.id),
+                                    moved: false,
+                                    dx: 0,
+                                    dy: 0,
+                                  })
+                                }}
+                              />
+                              {selectedId === conditionBlock.id && (
+                                <button
+                                  type="button"
+                                  aria-label="Удалить датчик из условия"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setSelectedId(null)
+                                    saveBlocks(removeBlock(blocks, conditionBlock.id))
+                                  }}
+                                  className="pointer-events-auto absolute -top-2 -right-2 z-30 w-[22px] h-[22px] rounded-full bg-white text-[#18313b] shadow-md text-sm leading-none font-bold grid place-items-center"
+                                >
+                                  ×
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <span
+                              role="region"
+                              aria-label="Слот для датчика"
+                              className={`w-[88px] h-[32px] shrink-0 rounded-full border shadow-inner transition-colors ${
+                                isConditionSnap
+                                  ? "border-2 border-dashed border-[#fbbf24] bg-[#fef3c7]/45"
+                                  : "bg-[#4c1d95]/55 border-white/25"
+                              }`}
+                            />
+                          )}
                           <span className="text-[16px] font-extrabold whitespace-nowrap tracking-tight">
                             то
                           </span>
@@ -2202,7 +2391,25 @@ function EditorWorkspace() {
                             className="absolute -top-[8px] left-[60px] w-[44px] h-[10px] rounded-t-[6px] bg-[#7c3aed]"
                           />
                         </div>
+                        {(blockError || condError) && (
+                          <div className="pointer-events-auto">
+                            <BlockErrorBar errorMessage={blockError || condError} />
+                          </div>
+                        )}
                       </div>
+                        )
+                      })()
+                    ) : isSensorBlock ? (
+                      <SensorBlock
+                        block={block}
+                        errorMessage={blockError}
+                        onChange={(changes) => {
+                          if (!project) return
+                          saveBlocks(
+                            updateDrive(blocks, block.id, changes, project.hub)
+                          )
+                        }}
+                      />
                     ) : isButtonBlock ? (
                       <ControllerButtonBlock
                         block={block}
@@ -2448,9 +2655,9 @@ function EditorWorkspace() {
                                     }
                                     className="h-[38px] rounded-full px-3.5 bg-white text-[#0d3b4c] font-extrabold text-[15px] shadow-xs cursor-pointer"
                                   >
-                                    <option value="rotations">оборотов</option>
-                                    <option value="degrees">градусов</option>
-                                    <option value="seconds">секунд</option>
+                                    <option value="rotations">об</option>
+                                    <option value="degrees">°</option>
+                                    <option value="seconds">с</option>
                                   </select>
                                 </>
                               ) : (
@@ -2614,6 +2821,8 @@ function EditorWorkspace() {
               ? "w-[240px] h-[52px] rounded-t-[20px] rounded-b-[12px] bg-[#f59e0b] shadow-[inset_0_-6px_#d97706]"
               : gesture.type === "if"
                 ? "w-[220px] h-[56px] rounded-[12px] bg-[#7c3aed] shadow-[inset_0_-6px_#5b21b6]"
+              : gesture.type === "sensor"
+                ? "w-[200px] h-[48px] rounded-full bg-[#4f46e5] shadow-[inset_0_-6px_#3730a3]"
                 : gesture.type === "pair"
                   ? "w-[220px] h-[56px] rounded-[12px] bg-[#107e79] shadow-[inset_0_-6px_#086560]"
                   : gesture.type === "button"
@@ -2631,6 +2840,8 @@ function EditorWorkspace() {
             ? "▶  Когда программа запускается"
             : gesture.type === "if"
               ? "Если … то (Что если)"
+            : gesture.type === "sensor"
+              ? "Датчик"
               : gesture.type === "pair"
                 ? "⇉  Связанные моторы"
                 : gesture.type === "button"
@@ -2841,6 +3052,57 @@ function EditorWorkspace() {
       {codeModal.open && <div role="dialog" aria-modal="true" aria-label={codeModal.title} className="fixed inset-0 z-50 bg-[#112a36]/50 grid place-items-center p-4"><div className="w-full max-w-[600px] rounded-[18px] bg-white p-6 shadow-2xl"><h2 className="text-xl font-black mb-3">{codeModal.title}</h2><p className="text-sm mb-3">Загрузите файл в Pybricks Code и запустите на хабе.</p><textarea readOnly aria-label="Код программы Pybricks" value={codeModal.code} className="w-full h-[210px] p-3 border rounded-lg font-mono text-sm"/><div className="flex justify-end gap-3 mt-4"><Button type="button" variant="outline" onClick={handleDownloadPy}>Скачать .py</Button><Button type="button" onClick={()=>setCodeModal(prev=>({...prev,open:false}))}>Закрыть</Button></div></div></div>}
 
     </div>
+    {landscapeBlocked && (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="editor-landscape-title"
+        className="fixed inset-0 z-[13000] grid place-items-center bg-[#0f2430]/92 p-6 text-white backdrop-blur-md"
+      >
+        <div className="w-full max-w-sm rounded-3xl border border-white/15 bg-[#163140] p-6 text-center shadow-2xl">
+          <div className="mx-auto mb-4 grid size-14 place-items-center rounded-2xl bg-[#087996]/25 text-[#5eead4]">
+            <RotateCw size={28} aria-hidden="true" />
+          </div>
+          <h2 id="editor-landscape-title" className="text-xl font-black tracking-tight">
+            Поверните экран горизонтально
+          </h2>
+          <p className="mt-2 text-sm text-[#c7dce4]">
+            Редактор работает только в альбомном режиме
+          </p>
+          {orientationManualHint && (
+            <p role="status" className="mt-3 rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold text-[#e0f2fe]">
+              Поверните устройство вручную
+            </p>
+          )}
+          <div className="mt-5 flex flex-col gap-2.5">
+            <button
+              ref={rotateButtonRef}
+              type="button"
+              onClick={async () => {
+                const outcome = await enterEditorLandscape({
+                  target: document.documentElement,
+                  doc: document,
+                  orientation: window.screen?.orientation,
+                })
+                if (outcome === "manual") {
+                  setOrientationManualHint(true)
+                }
+              }}
+              className="min-h-[44px] w-full rounded-xl bg-[#087996] px-4 py-2.5 text-sm font-extrabold text-white transition-colors hover:bg-[#06637a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5eead4]"
+            >
+              Перейти в горизонт
+            </button>
+            <Link
+              href="/dashboard"
+              className="grid min-h-[44px] w-full place-items-center rounded-xl border border-white/20 px-4 py-2.5 text-sm font-bold text-[#e2f1f6] transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5eead4]"
+            >
+              На главную
+            </Link>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }
 

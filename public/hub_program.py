@@ -3,42 +3,187 @@
 Install once with https://code.pybricks.com/ . Stop the program there and
 disconnect Pybricks Code before connecting from the TLC website.
 """
-from pybricks.pupdevices import Motor
+from pybricks.pupdevices import Motor, UltrasonicSensor
+try:
+    from pybricks.pupdevices import ColorSensor, ForceSensor
+except ImportError:
+    ColorSensor = None
+    ForceSensor = None
 from pybricks.parameters import Port, Stop
+try:
+    from pybricks.parameters import Color
+except ImportError:
+    Color = None
 from pybricks.tools import StopWatch, wait, read_input_byte
 
 MAX_SPEED = 1000
-PROGRAM_VERSION = "4"
+PROGRAM_VERSION = "6"
 LINK_TIMEOUT_MS = 2000
+SENSOR_POLL_MS = 150
+SENSOR_HEARTBEAT_MS = 500
 PORT_NAMES = ("A", "B", "C", "D", "E", "F")
 
-motors = {}
-for name in PORT_NAMES:
+COLOR_NAMES = ()
+if Color is not None:
+    COLOR_NAMES = (
+        (getattr(Color, "RED", None), "red"),
+        (getattr(Color, "YELLOW", None), "yellow"),
+        (getattr(Color, "GREEN", None), "green"),
+        (getattr(Color, "BLUE", None), "blue"),
+        (getattr(Color, "WHITE", None), "white"),
+        (getattr(Color, "BLACK", None), "black"),
+        (getattr(Color, "NONE", None), "none"),
+    )
+
+hub = None
+for _hub_name in ("PrimeHub", "TechnicHub"):
     try:
-        motors[name] = Motor(getattr(Port, name))
+        _hubs = __import__("pybricks.hubs", None, None, (_hub_name,))
+        _hub_cls = getattr(_hubs, _hub_name, None)
+        if _hub_cls is not None:
+            hub = _hub_cls()
+            break
+    except (ImportError, AttributeError, OSError):
+        pass
+imu = getattr(hub, "imu", None) if hub is not None else None
+
+motors = {}
+sensors = {}
+sensor_types = {}
+for name in PORT_NAMES:
+    port = getattr(Port, name, None)
+    if port is None:
+        continue
+    try:
+        motors[name] = Motor(port)
+        continue
     except (AttributeError, OSError):
         pass
+    for stype, scls in (
+        ("ultrasonic", UltrasonicSensor),
+        ("color", ColorSensor),
+        ("force", ForceSensor),
+    ):
+        if scls is None:
+            continue
+        try:
+            sensors[name] = scls(port)
+            sensor_types[name] = stype
+            break
+        except (AttributeError, OSError):
+            pass
 
 clock = StopWatch()
 buffer = ""
 last_command = clock.time()
 last_ack = clock.time()
+last_sensor_poll = clock.time() - SENSOR_POLL_MS
+last_sensor_emit = clock.time()
+last_sns_emit = clock.time()
 link_active = False
 speeds = {}
+last_distances = {}
+last_sns = {}
+
+
+def _color_name(val):
+    for c_obj, c_name in COLOR_NAMES:
+        if c_obj is not None and val == c_obj:
+            return c_name
+    return "none"
 
 
 def stop_all():
     global link_active
     link_active = False
+    last_distances.clear()
+    last_sns.clear()
     for name, motor in motors.items():
         if speeds.get(name, 0):
             motor.brake()
         speeds[name] = 0
+    for name, sensor in sensors.items():
+        if sensor_types.get(name) not in ("ultrasonic", "color"):
+            continue
+        try:
+            sensor.lights.off()
+        except (AttributeError, OSError):
+            pass
 
 
 def ready():
     print("SOCER_VER|" + PROGRAM_VERSION)
     print("SOCER3_READY|" + ",".join(motors))
+    entries = [name + ":" + sensor_types[name] for name in PORT_NAMES if name in sensors]
+    if imu is not None:
+        entries.append("IMU:imu")
+    print("SOCER_SENSORS|" + ",".join(entries))
+
+
+def poll_sensors(now):
+    global last_sensor_poll, last_sensor_emit, last_sns_emit
+    if (not sensors and imu is None) or now - last_sensor_poll < SENSOR_POLL_MS:
+        return
+    last_sensor_poll = now
+    dist_pairs = []
+    dist_changed = False
+    sns_pairs = []
+    sns_changed = False
+    for name in PORT_NAMES:
+        sensor = sensors.get(name)
+        stype = sensor_types.get(name)
+        if sensor is None:
+            continue
+        if stype == "ultrasonic":
+            try:
+                dist = int(sensor.distance())
+            except (AttributeError, OSError):
+                continue
+            if last_distances.get(name) != dist:
+                last_distances[name] = dist
+                dist_changed = True
+            dist_pairs.append(name + ":" + str(dist))
+        elif stype == "color":
+            try:
+                cname = _color_name(sensor.color())
+                refl = int(sensor.reflection())
+            except (AttributeError, OSError):
+                continue
+            payload = "c=" + cname + "&r=" + str(refl)
+            if last_sns.get(name) != payload:
+                last_sns[name] = payload
+                sns_changed = True
+            sns_pairs.append(name + ":" + payload)
+        elif stype == "force":
+            try:
+                pr = 1 if sensor.pressed() else 0
+                frc = int(round(sensor.force() * 10))
+            except (AttributeError, OSError):
+                continue
+            payload = "p=" + str(pr) + "&f=" + str(frc)
+            if last_sns.get(name) != payload:
+                last_sns[name] = payload
+                sns_changed = True
+            sns_pairs.append(name + ":" + payload)
+    if imu is not None:
+        try:
+            hdg = int(round(imu.heading()))
+            tlt = imu.tilt()
+            pitch = int(round(tlt[0]))
+            roll = int(round(tlt[1]))
+            payload = "h=" + str(hdg) + "&p=" + str(pitch) + "&r=" + str(roll)
+            if last_sns.get("IMU") != payload:
+                last_sns["IMU"] = payload
+                sns_changed = True
+            sns_pairs.append("IMU:" + payload)
+        except (AttributeError, OSError, IndexError, TypeError):
+            pass
+    if dist_pairs and (dist_changed or now - last_sensor_emit >= SENSOR_HEARTBEAT_MS):
+        print("SOCER_DIST|" + ",".join(dist_pairs))
+        last_sensor_emit = now
+    if sns_pairs and (sns_changed or now - last_sns_emit >= SENSOR_HEARTBEAT_MS):
+        print("SOCER_SNS|" + ",".join(sns_pairs))
+        last_sns_emit = now
 
 
 def process(line):
@@ -57,10 +202,45 @@ def process(line):
 
     parts = line.split(",")
     cmd = parts[0] if parts else ""
-    if len(parts) < 3 or parts[1] not in motors:
+    if len(parts) < 3:
         return
 
     port = parts[1]
+
+    if cmd == "g" and len(parts) == 3 and port == "IMU" and parts[2] == "r":
+        if imu is None:
+            return
+        try:
+            imu.reset_heading(0)
+            last_sns.pop("IMU", None)
+        except (AttributeError, OSError):
+            return
+        last_command = clock.time()
+        link_active = True
+        return
+
+    if cmd == "u" and len(parts) == 3 and port in sensors:
+        if sensor_types.get(port) not in ("ultrasonic", "color"):
+            return
+        try:
+            brightness = int(parts[2])
+        except ValueError:
+            return
+        if brightness < -1 or brightness > 100:
+            return
+        try:
+            if brightness == -1:
+                sensors[port].lights.off()
+            else:
+                sensors[port].lights.on(brightness)
+        except (AttributeError, OSError):
+            return
+        last_command = clock.time()
+        link_active = True
+        return
+
+    if port not in motors:
+        return
 
     if cmd == "m" and len(parts) == 3:
         try:
@@ -125,7 +305,7 @@ def process(line):
         return
 
 
-if not motors:
+if not motors and not sensors and imu is None:
     print("SOCER2_NO_MOTORS")
 ready()
 try:
@@ -150,6 +330,8 @@ try:
         if link_active and now - last_ack >= 250:
             print("SOCER2_ACK")
             last_ack = now
+        if link_active:
+            poll_sensors(now)
         wait(10)
 finally:
     stop_all()

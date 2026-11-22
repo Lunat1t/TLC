@@ -189,3 +189,22 @@ test('migration preserves chassis blocks and project chassis configuration', () 
   assert.ok(migrated.project.workspace.sheets[0].blocks.some(b => b.id === 'ch1'));
   assert.deepEqual(migrated.project.workspace.chassis, project.workspace.chassis);
 });
+
+
+test('distance-gauge widget and sensor blocks validate, clone, and survive migration', () => {
+  const project = panelProject();
+  project.workspace.sheets[0].blocks.push({
+    id: 'sen-1', type: 'sensor', x: 10, y: 80, sensorPort: 'D', sensorOp: 'lt', sensorDistance: 25, sensorModules: ['threshold'],
+  });
+  project.workspace.controlLayout.controls.push({
+    id: 'gauge-1', areaId: 'area', kind: 'distance-gauge', label: 'Дальномер', port: 'D', x: 200, y: 0, width: 160, height: 112,
+  });
+  const migrated = migrateControlWorkspace(project);
+  assert.equal(migrated.changed, false);
+  assert.ok(migrated.project.workspace.sheets[0].blocks.some(b => b.id === 'sen-1'));
+  assert.equal(migrated.project.workspace.controlLayout.controls.find(c => c.id === 'gauge-1').port, 'D');
+
+  const badPortLayout = JSON.parse(JSON.stringify(project.workspace.controlLayout));
+  badPortLayout.controls.find(c => c.id === 'gauge-1').port = 'A';
+  assert.throws(() => validateControlLayout(badPortLayout, ['sheet-main']), /Неверный порт дальномера/);
+});

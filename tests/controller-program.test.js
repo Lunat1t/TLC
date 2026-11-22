@@ -124,7 +124,7 @@ test('compileControllerProgram detects duplicate handlers and conflicts', () => 
         },
         {
           id: 'bad',
-          type: 'if',
+          type: 'start',
           parentId: 'b2',
           x: 200,
           y: 58,
@@ -197,7 +197,7 @@ test('startup compiles once and multiple startup headers block startup', () => {
 });
 
 test('unsupported startup structure prevents a partial startup program',()=>{
-  const project={id:'p',hub:'spike',workspace:{blocks:[{id:'s',type:'start'},{id:'conditional',type:'if',parentId:'s'}]}};
+  const project={id:'p',hub:'spike',workspace:{blocks:[{id:'s',type:'start'},{id:'nestedBtn',type:'button',parentId:'s'}]}};
   const compiled=compileControllerProgram(project);
   assert.ok(compiled.errors.some(e=>e.code==='unsupported-block'&&e.scope==='startup'));
 });
@@ -378,4 +378,135 @@ test('drive block with pair module compiles both motors and flags same-ports err
     },
   });
   assert.ok(dup.errors.some(e => e.code === 'same-ports' && e.blockId === 'd1'));
+});
+
+
+test('if/else compiles with slotted sensor, reports missing-sensor when empty, and expands standalone sensor', () => {
+  const emptyIf = compileControllerProgram({
+    id: 'p-empty-if',
+    hub: 'spike',
+    workspace: {
+      blocks: [
+        { id: 's', type: 'start' },
+        { id: 'if1', type: 'if', parentId: 's' },
+      ],
+    },
+  });
+  assert.ok(emptyIf.errors.some(e => e.code === 'missing-sensor' && e.blockId === 'if1' && e.message === 'Вставьте датчик'));
+
+  const valid = compileControllerProgram({
+    id: 'p-valid-if',
+    hub: 'spike',
+    workspace: {
+      blocks: [
+        { id: 'b1', type: 'button', button: 'a', event: 'hold' },
+        { id: 'if1', type: 'if', parentId: 'b1' },
+        { id: 'sen1', type: 'sensor', parentId: 'if1', branch: 'condition', sensorPort: 'D', sensorOp: 'lt', sensorDistance: 25, sensorModules: ['threshold', 'lights'], sensorLight: 80 },
+        { id: 'd1', type: 'drive', parentId: 'if1', branch: 'body', motor: 'A', modules: [] },
+        { id: 'd2', type: 'stop', parentId: 'if1', branch: 'else', motor: 'A' },
+        { id: 'sen2', type: 'sensor', parentId: 'if1', sensorPort: 'E', sensorOp: 'gt', sensorDistance: 40, sensorModules: ['threshold'] },
+      ],
+    },
+  });
+  assert.equal(valid.errors.length, 0);
+  assert.deepEqual(valid.ports, ['A']);
+  assert.deepEqual(valid.sensorPorts, ['D', 'E']);
+  assert.deepEqual(valid.handlers[0].actions, [
+    { kind: 'sensorLights', port: 'D', brightness: 80 },
+    {
+      kind: 'branch',
+      condition: { port: 'D', op: 'lt', cm: 25 },
+      thenActions: [{ kind: 'run', port: 'A', speed: 360 }],
+      elseActions: [{ kind: 'stop', port: 'A' }],
+    },
+    { kind: 'waitSensor', port: 'E', op: 'gt', cm: 40 },
+  ]);
+  assert.deepEqual(commandsFor({ kind: 'sensorLights', port: 'D', brightness: 80 }, 3), ['u,D,80\n']);
+  assert.deepEqual(commandsFor({ kind: 'sensorLights', port: 'D', brightness: -1 }, 3), ['u,D,-1\n']);
+  assert.equal(controllerRuntimeErrors(valid, 3, new Set(['A']), new Set(['D', 'E'])).length, 0);
+  const missingSensorErrs = controllerRuntimeErrors(valid, 3, new Set(['A']), new Set(['D']));
+  assert.ok(missingSensorErrs.some(e => e.code === 'missing-sensor-port' && e.message.includes('E')));
+});
+
+
+test('color, force, and imu sensors compile and validate module compatibility and reset-in-if', () => {
+  const res = compileControllerProgram({
+    id: 'p-4sensors',
+    hub: 'spike',
+    workspace: {
+      blocks: [
+        { id: 'b1', type: 'button', button: 'a', event: 'pressed' },
+        { id: 'if1', type: 'if', parentId: 'b1' },
+        { id: 'scol', type: 'sensor', parentId: 'if1', branch: 'condition', sensorType: 'color', sensorPort: 'D', sensorColor: 'blue', sensorOp: 'gt', sensorReflection: 40, sensorModules: ['color', 'reflection', 'lights'], sensorLight: 50 },
+        { id: 'm1', type: 'drive', parentId: 'if1', branch: 'body', motor: 'A', modules: [] },
+        { id: 'sfor', type: 'sensor', parentId: 'if1', sensorType: 'force', sensorPort: 'E', sensorPressed: true, sensorOp: 'gt', sensorForce: 4.5, sensorModules: ['pressed', 'force'] },
+        { id: 'simu', type: 'sensor', parentId: 'sfor', sensorType: 'imu', sensorModules: ['reset', 'heading', 'tilt'], sensorOp: 'gt', sensorAngle: 45, sensorAxis: 'roll', sensorTiltOp: 'lt', sensorTilt: 20 },
+      ],
+    },
+  });
+  assert.equal(res.errors.length, 0);
+  assert.deepEqual(res.sensorPorts, ['D', 'E']);
+  assert.deepEqual(commandsFor({ kind: 'imuReset' }, 3), ['g,IMU,r\n']);
+  assert.equal(res.handlers[0].actions[0].kind, 'sensorLights');
+  assert.equal(res.handlers[0].actions[1].kind, 'branch');
+  assert.equal(res.handlers[0].actions[2].kind, 'waitSensor');
+  assert.equal(res.handlers[0].actions[3].kind, 'imuReset');
+  assert.equal(res.handlers[0].actions[4].kind, 'waitSensor');
+
+  const bad = compileControllerProgram({
+    id: 'p-bad-sensors',
+    hub: 'spike',
+    workspace: {
+      blocks: [
+        { id: 'b1', type: 'button', button: 'a', event: 'pressed' },
+        { id: 'if1', type: 'if', parentId: 'b1' },
+        { id: 'bad-imu', type: 'sensor', parentId: 'if1', branch: 'condition', sensorType: 'imu', sensorModules: ['reset'] },
+        { id: 'bad-force', type: 'sensor', parentId: 'if1', sensorType: 'force', sensorPort: 'C', sensorModules: ['lights'] },
+      ],
+    },
+  });
+  assert.ok(bad.errors.some(e => e.code === 'reset-in-if' && e.blockId === 'bad-imu'));
+  assert.ok(bad.errors.some(e => e.code === 'incompatible-sensor-module' && e.blockId === 'bad-force'));
+});
+
+test('chassis travel module and drive travel boundary validation handle degrees, rotations, seconds, and invalid values', () => {
+  const ok = compileControllerProgram({
+    id: 'p-chassis-travel',
+    hub: 'spike',
+    workspace: {
+      chassis: { leftPort: 'A', rightPort: 'B', leftReversed: false, rightReversed: true, speed: 400 },
+      blocks: [
+        { id: 'b1', type: 'button', button: 'up', event: 'pressed' },
+        { id: 'ch-deg', type: 'chassis', parentId: 'b1', chassisDirection: 'forward', modules: ['travel'], value: 180, unit: 'degrees' },
+        { id: 'ch-sec', type: 'chassis', parentId: 'ch-deg', chassisDirection: 'left', modules: ['speed', 'travel'], speed: 500, value: 1.5, unit: 'seconds' },
+      ],
+    },
+  });
+  assert.equal(ok.errors.length, 0);
+  assert.equal(ok.protocol, 3);
+  assert.deepEqual(ok.handlers[0].actions, [
+    { kind: 'angle', port: 'A', speed: 400, degrees: 180 },
+    { kind: 'angle', port: 'B', speed: -400, degrees: 180 },
+    { kind: 'wait', ms: 600 },
+    { kind: 'time', port: 'A', speed: -500, ms: 1500 },
+    { kind: 'time', port: 'B', speed: -500, ms: 1500 },
+    { kind: 'wait', ms: 1500 },
+  ]);
+
+  for (const badVal of [0, -2, Infinity, NaN]) {
+    const bad = compileControllerProgram({
+      id: 'p-bad-val',
+      hub: 'spike',
+      workspace: {
+        chassis: { leftPort: 'A', rightPort: 'B', leftReversed: false, rightReversed: true, speed: 400 },
+        blocks: [
+          { id: 'b1', type: 'button', button: 'up', event: 'pressed' },
+          { id: 'ch', type: 'chassis', parentId: 'b1', modules: ['travel'], value: badVal, unit: 'rotations' },
+          { id: 'dr', type: 'drive', parentId: 'ch', motor: 'C', modules: ['travel'], value: badVal, unit: 'seconds' },
+        ],
+      },
+    });
+    assert.ok(bad.errors.some(e => e.code === 'invalid-travel-value' && e.blockId === 'ch'));
+    assert.ok(bad.errors.some(e => e.code === 'invalid-travel-value' && e.blockId === 'dr'));
+  }
 });

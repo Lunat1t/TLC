@@ -37,6 +37,18 @@ export function getStopPorts(block: unknown, hub: "spike" | "ev3" = "spike"): { 
   return RawControllerProgram.getStopPorts(block, hub)
 }
 
+export type SensorCheck =
+  | { kind: "color"; port: string; color: string }
+  | { kind: "reflection"; port: string; op: "lt" | "gt"; value: number }
+  | { kind: "pressed"; port: string; pressed: boolean }
+  | { kind: "force"; port: string; op: "lt" | "gt"; value: number }
+  | { kind: "heading"; port: string; op: "lt" | "gt"; value: number }
+  | { kind: "tilt"; port: string; axis: "pitch" | "roll"; op: "lt" | "gt"; value: number }
+
+export type SensorCondition =
+  | { port: string; op: "lt" | "gt"; cm: number }
+  | { sensorType: "color" | "force" | "imu"; port: string; checks: SensorCheck[] }
+
 export type ControllerAction =
   | { kind: "run"; port: string; speed: number }
   | { kind: "dc"; port: string; power: number }
@@ -46,6 +58,10 @@ export type ControllerAction =
   | { kind: "stop"; port: string }
   | { kind: "stopAll" }
   | { kind: "wait"; ms: number }
+  | { kind: "waitSensor"; port: string; op?: "lt" | "gt"; cm?: number; sensorType?: "color" | "force" | "imu"; checks?: SensorCheck[] }
+  | { kind: "sensorLights"; port: string; brightness: number }
+  | { kind: "imuReset" }
+  | { kind: "branch"; condition: SensorCondition; thenActions: ControllerAction[]; elseActions: ControllerAction[] }
 
 export interface ControllerHandler {
   target?: { controlId: string; input: string }
@@ -72,6 +88,7 @@ export interface ControllerProgram {
   hub: string
   protocol: 2 | 3
   ports: string[]
+  sensorPorts?: string[]
   handlers: ControllerHandler[]
   startup: ControllerAction[]
   errors: ProgramError[]
@@ -101,9 +118,11 @@ export function controllerHandler(
 export function controllerRuntimeErrors(
   program: ControllerProgram | null,
   protocol: 2 | 3 | null,
-  availablePorts: ReadonlySet<string>
+  availablePorts: ReadonlySet<string>,
+  availableSensors?: ReadonlySet<string> | null,
+  availableSensorTypes?: Readonly<Record<string, string>> | null
 ): ProgramError[] {
-  return RawControllerProgram.controllerRuntimeErrors(program, protocol, availablePorts) as ProgramError[]
+  return RawControllerProgram.controllerRuntimeErrors(program, protocol, availablePorts, availableSensors, availableSensorTypes) as ProgramError[]
 }
 
 export function describeAction(action: ControllerAction): string {

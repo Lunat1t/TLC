@@ -363,3 +363,124 @@ test('drive block supports pair module add/remove, motor2 selection, legacy conv
   assert.equal(isPairedBlock(legacy[0]), false);
   assert.equal(legacy[0].motor2, undefined);
 });
+
+
+test('ultrasonic sensor block snaps into if condition slot, moves with if, and generates Pybricks code', async () => {
+  const {
+    addBlock,
+    attachChain,
+    chainIds,
+    cleanLinks,
+    generatePybricks,
+    readBlocks,
+    snapTargetInfo,
+    updateDrive,
+  } = await import('../src/lib/workspace.ts');
+
+  let b = addBlock([], 'start-1', 0, 0, 'start');
+  b = addBlock(b, 'if-1', 0, 100, 'if');
+  b = addBlock(b, 'sen-1', 400, 100, 'sensor');
+  b = addBlock(b, 'body-drive', 100, 200, 'drive');
+  b = updateDrive(b, 'sen-1', { sensorPort: 'D', sensorOp: 'lt', sensorDistance: 15, sensorModules: ['threshold', 'lights'], sensorLight: 80 }, 'spike');
+  b = updateDrive(b, 'body-drive', { motor: 'A', modules: ['travel'], value: 1, unit: 'seconds' }, 'spike');
+
+  b = attachChain(b, 'if-1', 'start-1');
+  const if1 = b.find(x => x.id === 'if-1');
+  assert.deepEqual(snapTargetInfo(b, '__palette__', if1.x + 68, if1.y + 11, 48, 'sensor'), { id: 'if-1', branch: 'condition' });
+  b = attachChain(b, 'sen-1', 'if-1', 'condition');
+  b = attachChain(b, 'body-drive', 'if-1', 'body');
+
+  const slotted = b.find(x => x.id === 'sen-1');
+  assert.equal(slotted.branch, 'condition');
+  assert.equal(slotted.x, 68);
+  assert.equal(slotted.y, if1.y + 11);
+  assert.ok(chainIds(b, 'if-1').includes('sen-1'));
+
+  // Non-sensor blocks cannot occupy condition slot; children cannot attach under slotted sensor
+  const corrupted = readBlocks({
+    blocks: [
+      ...b,
+      { id: 'bad-child', type: 'drive', parentId: 'sen-1', x: 0, y: 0 },
+      { id: 'bad-cond', type: 'drive', parentId: 'if-1', branch: 'condition', x: 0, y: 0 },
+    ],
+  }, 'spike');
+  const cleaned = cleanLinks(corrupted);
+  assert.equal(cleaned.find(x => x.id === 'bad-child').parentId, undefined);
+  assert.equal(cleaned.find(x => x.id === 'bad-cond').parentId, undefined);
+
+  const code = generatePybricks(b, 'spike');
+  assert.match(code, /from pybricks\.pupdevices import Motor, UltrasonicSensor/);
+  assert.match(code, /sensor_d = UltrasonicSensor\(Port\.D\)/);
+  assert.match(code, /sensor_d\.lights\.on\(80\)/);
+  assert.match(code, /if sensor_d\.distance\(\) < 150:/);
+
+  // Standalone sensor waits on threshold
+  let standalone = addBlock([], 's2', 0, 0, 'sensor');
+  standalone = updateDrive(standalone, 's2', { sensorPort: 'C', sensorOp: 'gt', sensorDistance: 50, sensorModules: ['threshold', 'lights'], sensorLight: -1 }, 'spike');
+  const soloCode = generatePybricks(standalone, 'spike');
+  assert.match(soloCode, /from pybricks\.pupdevices import UltrasonicSensor/);
+  assert.match(soloCode, /sensor_c\.lights\.off\(\)/);
+  assert.match(soloCode, /while not \(sensor_c\.distance\(\) > 500\):\n    wait\(10\)/);
+});
+
+
+test('sensor type switching resets modules, imu strips reset in if slot, and Pybricks generates color/force/imu and chassis travel', async () => {
+  const {
+    addBlock,
+    attachChain,
+    generatePybricks,
+    updateDrive,
+  } = await import('../src/lib/workspace.ts');
+
+  let b = addBlock([], 's1', 0, 0, 'start');
+  b = addBlock(b, 'sen1', 100, 100, 'sensor');
+  b = updateDrive(b, 'sen1', { sensorModules: ['threshold', 'lights'], sensorLight: 50 }, 'spike');
+  assert.deepEqual(b.find(x => x.id === 'sen1').sensorModules, ['threshold', 'lights']);
+
+  // Switching to color resets modules to ['color']
+  b = updateDrive(b, 'sen1', { sensorType: 'color' }, 'spike');
+  assert.deepEqual(b.find(x => x.id === 'sen1').sensorModules, ['color']);
+  assert.equal(b.find(x => x.id === 'sen1').sensorPort, 'C');
+
+  // Switching to force resets modules to ['pressed']
+  b = updateDrive(b, 'sen1', { sensorType: 'force' }, 'spike');
+  assert.deepEqual(b.find(x => x.id === 'sen1').sensorModules, ['pressed']);
+
+  // Switching to imu resets modules to ['heading'] and sets port 'IMU'
+  b = updateDrive(b, 'sen1', { sensorType: 'imu' }, 'spike');
+  assert.deepEqual(b.find(x => x.id === 'sen1').sensorModules, ['heading']);
+  assert.equal(b.find(x => x.id === 'sen1').sensorPort, 'IMU');
+
+  // Snapping imu with only 'reset' into if condition slot strips 'reset' and falls back to ['heading']
+  b = addBlock(b, 'if1', 0, 60, 'if');
+  b = attachChain(b, 'if1', 's1');
+  b = updateDrive(b, 'sen1', { sensorModules: ['reset'] }, 'spike');
+  b = attachChain(b, 'sen1', 'if1', 'condition');
+  assert.deepEqual(b.find(x => x.id === 'sen1').sensorModules, ['heading']);
+
+  // Generate Pybricks for color, force, imu, and chassis travel
+  let prog = addBlock([], 'st', 0, 0, 'start');
+  prog = addBlock(prog, 'ch', 0, 60, 'chassis');
+  prog = updateDrive(prog, 'ch', { chassisDirection: 'forward', modules: ['travel'], value: 2, unit: 'rotations' }, 'spike');
+  prog = addBlock(prog, 'sc', 0, 120, 'sensor');
+  prog = updateDrive(prog, 'sc', { sensorType: 'color', sensorPort: 'D', sensorColor: 'green', sensorModules: ['color', 'lights'], sensorLight: 75 }, 'spike');
+  prog = addBlock(prog, 'sf', 0, 180, 'sensor');
+  prog = updateDrive(prog, 'sf', { sensorType: 'force', sensorPort: 'E', sensorModules: ['force'], sensorOp: 'gt', sensorForce: 2.5 }, 'spike');
+  prog = addBlock(prog, 'si', 0, 240, 'sensor');
+  prog = updateDrive(prog, 'si', { sensorType: 'imu', sensorModules: ['reset', 'tilt'], sensorAxis: 'roll', sensorTiltOp: 'lt', sensorTilt: 15 }, 'spike');
+  prog = attachChain(prog, 'ch', 'st');
+  prog = attachChain(prog, 'sc', 'ch');
+  prog = attachChain(prog, 'sf', 'sc');
+  prog = attachChain(prog, 'si', 'sf');
+
+  const py = generatePybricks(prog, 'spike');
+  assert.match(py, /from pybricks\.hubs import PrimeHub/);
+  assert.match(py, /from pybricks\.pupdevices import Motor, ColorSensor, ForceSensor/);
+  assert.match(py, /from pybricks\.parameters import Color, Port, Stop/);
+  assert.match(py, /motor_a\.run_angle\(360, 720, then=Stop\.BRAKE, wait=False\)/);
+  assert.match(py, /sensor_d\.lights\.on\(75\)/);
+  assert.match(py, /while not \(sensor_d\.color\(\) == Color\.GREEN\):/);
+  assert.match(py, /while not \(sensor_e\.force\(\) > 2\.5\):/);
+  assert.match(py, /hub\.imu\.reset_heading\(0\)/);
+  assert.match(py, /while not \(hub\.imu\.tilt\(\)\[1\] < 15\):/);
+});

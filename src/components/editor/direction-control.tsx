@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Settings2 } from "lucide-react"
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Settings2, Waves } from "lucide-react"
 
 import { DIRECTION_CONTROLS, type DirectionControlKind } from "@/lib/control-workspace"
 import { DRIVE_PORTS, type DrivePort, type DriveSettings } from "@/lib/controller-program"
@@ -162,6 +162,15 @@ const PALETTE_MOTOR_DOTS = [
   { face: "#32a66a", shade: "#21804e" },
   { face: "#edc13d", shade: "#c59b24" },
 ] as const
+
+export function DistanceGaugePalettePreview() {
+  return (
+    <span aria-hidden="true" className="flex items-center justify-center gap-1.5 text-[#312e81]">
+      <Waves size={16} strokeWidth={2.4} />
+      <span className="rounded-md bg-[#eef2ff] px-2 py-0.5 text-xs font-black tabular-nums">-- см</span>
+    </span>
+  )
+}
 
 export function MotorButtonsPalettePreview() {
   return (

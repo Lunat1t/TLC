@@ -4,6 +4,32 @@ export const HUB_PORTS = Object.freeze({
 });
 
 export const DRIVE_PORTS = HUB_PORTS.spike;
+export const SENSOR_PORTS = Object.freeze(['C', 'D', 'E', 'F']);
+export const SENSOR_TYPES = Object.freeze(['ultrasonic', 'color', 'force', 'imu']);
+export const SENSOR_MODULES = Object.freeze(['threshold', 'lights']);
+export const SENSOR_MODULES_BY_TYPE = Object.freeze({
+  ultrasonic: Object.freeze(['threshold', 'lights']),
+  color: Object.freeze(['color', 'reflection', 'lights']),
+  force: Object.freeze(['pressed', 'force']),
+  imu: Object.freeze(['heading', 'tilt', 'reset']),
+});
+export const DEFAULT_SENSOR_MODULE = Object.freeze({
+  ultrasonic: 'threshold',
+  color: 'color',
+  force: 'pressed',
+  imu: 'heading',
+});
+export const SENSOR_COLORS = Object.freeze(['red', 'yellow', 'green', 'blue', 'white', 'black', 'none']);
+export const IMU_AXES = Object.freeze(['pitch', 'roll']);
+export const TRAVEL_UNITS = Object.freeze(['rotations', 'degrees', 'seconds']);
+export const DEFAULT_SENSOR_DISTANCE = 20;
+export const DEFAULT_SENSOR_LIGHT = 100;
+export const DEFAULT_SENSOR_COLOR = 'red';
+export const DEFAULT_SENSOR_REFLECTION = 50;
+export const DEFAULT_SENSOR_FORCE = 3;
+export const DEFAULT_SENSOR_ANGLE = 90;
+export const DEFAULT_SENSOR_TILT = 30;
+export const DEFAULT_SENSOR_AXIS = 'pitch';
 export const DEFAULT_SPEED = 360;
 export const DEFAULT_POWER = 50;
 
@@ -24,6 +50,7 @@ export const BLOCK_TYPES = Object.freeze([
   'button',
   'stop',
   'motor-buttons',
+  'sensor',
 ]);
 
 export const ACTION_BLOCK_TYPES = Object.freeze([
@@ -31,6 +58,7 @@ export const ACTION_BLOCK_TYPES = Object.freeze([
   'pair',
   'chassis',
   'stop',
+  'sensor',
 ]);
 
 export const CONTROLLER_BUTTONS = Object.freeze([
@@ -112,6 +140,7 @@ export const CONTROL_KIND_INPUTS = Object.freeze({
   'legacy-buttons': CONTROLLER_BUTTONS,
   'motor-panel': COLOR_BUTTONS,
   display: Object.freeze([]),
+  'distance-gauge': Object.freeze([]),
 });
 
 export const WHEEL_DIRECTIONS = Object.freeze({
@@ -184,6 +213,152 @@ export function getStopPorts(block, hub = 'spike') {
   return { stopAll: false, ports: filtered.length ? filtered : ['A'] };
 }
 
+function clampInt(value, min, max, fallback) {
+  return Number.isFinite(Number(value)) ? Math.max(min, Math.min(max, Math.round(Number(value)))) : fallback;
+}
+
+export function compileSensorBlock(block, context = {}) {
+  const btn = context.button || 'up';
+  const inCondition = Boolean(context.inCondition);
+  const errors = [];
+  const preActions = [];
+  const usedSensorPorts = [];
+  const requiredSensorTypes = {};
+  let usesImu = false;
+
+  const rawType = String(block?.sensorType || 'ultrasonic');
+  const sensorType = SENSOR_TYPES.includes(rawType) ? rawType : 'ultrasonic';
+  if (block?.sensorType !== undefined && !SENSOR_TYPES.includes(rawType)) {
+    errors.push({
+      button: btn,
+      blockId: block?.id,
+      code: 'invalid-sensor-type',
+      message: 'Неизвестный тип датчика',
+    });
+  }
+
+  const isImu = sensorType === 'imu';
+  const port = isImu ? 'IMU' : String(block?.sensorPort || 'C');
+  if (isImu) {
+    usesImu = true;
+  } else if (!SENSOR_PORTS.includes(port)) {
+    errors.push({
+      button: btn,
+      blockId: block?.id,
+      code: 'invalid-sensor-port',
+      message: 'Выберите порт C–F',
+    });
+  } else {
+    usedSensorPorts.push(port);
+    requiredSensorTypes[port] = sensorType;
+  }
+
+  const allowed = SENSOR_MODULES_BY_TYPE[sensorType];
+  const modules = Array.isArray(block?.sensorModules)
+    ? block.sensorModules
+    : [DEFAULT_SENSOR_MODULE[sensorType]];
+
+  if (modules.length === 0) {
+    errors.push({
+      button: btn,
+      blockId: block?.id,
+      code: 'empty-sensor',
+      message: 'Добавьте условие или подсветку',
+    });
+  }
+
+  if (modules.some(m => !allowed.includes(m))) {
+    errors.push({
+      button: btn,
+      blockId: block?.id,
+      code: 'incompatible-sensor-module',
+      message: 'Модуль не подходит к выбранному датчику',
+    });
+  }
+
+  if (inCondition && modules.includes('reset')) {
+    errors.push({
+      button: btn,
+      blockId: block?.id,
+      code: 'reset-in-if',
+      message: 'Сброс 0° работает только в цепочке',
+    });
+  }
+
+  if (modules.includes('lights') && (sensorType === 'ultrasonic' || sensorType === 'color')) {
+    const rawLight = Number.isFinite(block?.sensorLight) ? Math.round(Number(block.sensorLight)) : DEFAULT_SENSOR_LIGHT;
+    const brightness = rawLight < 0 ? -1 : Math.max(0, Math.min(100, rawLight));
+    preActions.push({ kind: 'sensorLights', port, brightness });
+  }
+
+  if (!inCondition && isImu && modules.includes('reset')) {
+    preActions.push({ kind: 'imuReset' });
+  }
+
+  let condition = null;
+  let waitAction = null;
+
+  if (sensorType === 'ultrasonic') {
+    if (modules.includes('threshold')) {
+      const op = block?.sensorOp === 'gt' ? 'gt' : 'lt';
+      const cm = clampInt(block?.sensorDistance, 1, 200, DEFAULT_SENSOR_DISTANCE);
+      condition = { port, op, cm };
+      waitAction = { kind: 'waitSensor', port, op, cm };
+    }
+  } else {
+    const checks = [];
+    if (sensorType === 'color') {
+      if (modules.includes('color')) {
+        const color = SENSOR_COLORS.includes(block?.sensorColor) ? block.sensorColor : DEFAULT_SENSOR_COLOR;
+        checks.push({ kind: 'color', port, color });
+      }
+      if (modules.includes('reflection')) {
+        const op = block?.sensorOp === 'gt' ? 'gt' : 'lt';
+        const value = clampInt(block?.sensorReflection, 0, 100, DEFAULT_SENSOR_REFLECTION);
+        checks.push({ kind: 'reflection', port, op, value });
+      }
+    } else if (sensorType === 'force') {
+      if (modules.includes('pressed')) {
+        const pressed = typeof block?.sensorPressed === 'boolean' ? block.sensorPressed : true;
+        checks.push({ kind: 'pressed', port, pressed });
+      }
+      if (modules.includes('force')) {
+        const op = block?.sensorOp === 'gt' ? 'gt' : 'lt';
+        const rawForce = Number.isFinite(Number(block?.sensorForce)) ? Number(block.sensorForce) : DEFAULT_SENSOR_FORCE;
+        const value = Math.max(0, Math.min(10, Math.round(rawForce * 10) / 10));
+        checks.push({ kind: 'force', port, op, value });
+      }
+    } else if (sensorType === 'imu') {
+      if (modules.includes('heading')) {
+        const op = block?.sensorOp === 'gt' ? 'gt' : 'lt';
+        const value = clampInt(block?.sensorAngle, -360, 360, DEFAULT_SENSOR_ANGLE);
+        checks.push({ kind: 'heading', port: 'IMU', op, value });
+      }
+      if (modules.includes('tilt')) {
+        const axis = IMU_AXES.includes(block?.sensorAxis) ? block.sensorAxis : DEFAULT_SENSOR_AXIS;
+        const op = (block?.sensorTiltOp ?? block?.sensorOp) === 'gt' ? 'gt' : 'lt';
+        const value = clampInt(block?.sensorTilt ?? block?.sensorAngle, -90, 90, DEFAULT_SENSOR_TILT);
+        checks.push({ kind: 'tilt', port: 'IMU', axis, op, value });
+      }
+    }
+    if (checks.length > 0) {
+      condition = { sensorType, port, checks };
+      waitAction = { kind: 'waitSensor', sensorType, port, checks };
+    }
+  }
+
+  if (inCondition && !condition && !errors.some(e => e.code === 'empty-sensor' || e.code === 'incompatible-sensor-module' || e.code === 'reset-in-if')) {
+    errors.push({
+      button: btn,
+      blockId: block?.id,
+      code: 'missing-threshold',
+      message: sensorType === 'ultrasonic' ? 'Добавьте порог < / >' : 'Добавьте условие датчика',
+    });
+  }
+
+  return { preActions, condition, waitAction, errors, usedSensorPorts, requiredSensorTypes, usesImu };
+}
+
 export function expandActionBlock(child, context = {}) {
   const hub = context.hub === 'ev3' ? 'ev3' : 'spike';
   const validPorts = HUB_PORTS[hub] || HUB_PORTS.spike;
@@ -191,17 +366,27 @@ export function expandActionBlock(child, context = {}) {
   const errors = [];
   const actions = [];
   const usedPorts = [];
+  const usedSensorPorts = [];
   let maxProtocol = 2;
 
   if (!child || typeof child !== 'object') {
-    return { actions, errors, usedPorts, maxProtocol };
+    return { actions, errors, usedPorts, usedSensorPorts, maxProtocol };
+  }
+
+  if (child.type === 'sensor') {
+    const compiled = compileSensorBlock(child, { button: btn, inCondition: false });
+    errors.push(...compiled.errors);
+    actions.push(...compiled.preActions);
+    if (compiled.waitAction) actions.push(compiled.waitAction);
+    usedSensorPorts.push(...compiled.usedSensorPorts);
+    return { actions, errors, usedPorts, usedSensorPorts, maxProtocol };
   }
 
   if (child.type === 'stop') {
     const raw = getRawStopPorts(child);
     if (raw.stopAll) {
       actions.push({ kind: 'stopAll' });
-      return { actions, errors, usedPorts, maxProtocol };
+      return { actions, errors, usedPorts, usedSensorPorts, maxProtocol };
     }
     const invalid = raw.ports.filter(p => !validPorts.includes(p));
     if (invalid.length > 0) {
@@ -232,7 +417,7 @@ export function expandActionBlock(child, context = {}) {
         usedPorts.push(port);
       }
     }
-    return { actions, errors, usedPorts, maxProtocol };
+    return { actions, errors, usedPorts, usedSensorPorts, maxProtocol };
   }
 
   if (child.type === 'chassis') {
@@ -244,7 +429,7 @@ export function expandActionBlock(child, context = {}) {
         code: 'chassis-unconfigured',
         message: 'Настройте шасси (⚙)',
       });
-      return { actions, errors, usedPorts, maxProtocol };
+      return { actions, errors, usedPorts, usedSensorPorts, maxProtocol };
     }
     const settings = chassis.settings;
     const dir = CHASSIS_DIRECTIONS.includes(child.chassisDirection) ? child.chassisDirection : 'forward';
@@ -257,10 +442,50 @@ export function expandActionBlock(child, context = {}) {
 
     const leftSpeed = leftMul * clampedSpeed * (settings.leftReversed ? -1 : 1);
     const rightSpeed = rightMul * clampedSpeed * (settings.rightReversed ? -1 : 1);
-    actions.push({ kind: 'run', port: settings.leftPort, speed: leftSpeed });
-    actions.push({ kind: 'run', port: settings.rightPort, speed: rightSpeed });
     usedPorts.push(settings.leftPort, settings.rightPort);
-    return { actions, errors, usedPorts, maxProtocol };
+
+    const hasTravel = modules.includes('travel');
+    if (!hasTravel) {
+      actions.push({ kind: 'run', port: settings.leftPort, speed: leftSpeed });
+      actions.push({ kind: 'run', port: settings.rightPort, speed: rightSpeed });
+      return { actions, errors, usedPorts, usedSensorPorts, maxProtocol };
+    }
+
+    maxProtocol = 3;
+    const rawUnit = child.unit ?? 'rotations';
+    if (!TRAVEL_UNITS.includes(String(rawUnit))) {
+      errors.push({
+        button: btn,
+        blockId: child.id,
+        code: 'invalid-travel-unit',
+        message: 'Выберите °, об или с',
+      });
+    }
+    const unit = TRAVEL_UNITS.includes(String(rawUnit)) ? String(rawUnit) : 'rotations';
+    const rawValue = child.value;
+    if (rawValue !== undefined && (!Number.isFinite(Number(rawValue)) || Number(rawValue) <= 0 || Number(rawValue) > 10000)) {
+      errors.push({
+        button: btn,
+        blockId: child.id,
+        code: 'invalid-travel-value',
+        message: 'Задайте значение от 0.01 до 10000',
+      });
+    }
+    const value = Number.isFinite(Number(rawValue)) && Number(rawValue) > 0 && Number(rawValue) <= 10000 ? Number(rawValue) : 1;
+
+    if (unit === 'seconds') {
+      const ms = Math.max(10, Math.min(600000, Math.round(value * 1000)));
+      actions.push({ kind: 'time', port: settings.leftPort, speed: leftSpeed, ms });
+      actions.push({ kind: 'time', port: settings.rightPort, speed: rightSpeed, ms });
+      actions.push({ kind: 'wait', ms });
+    } else {
+      const degrees = Math.max(1, Math.round(value * (unit === 'rotations' ? 360 : 1)));
+      actions.push({ kind: 'angle', port: settings.leftPort, speed: leftSpeed, degrees });
+      actions.push({ kind: 'angle', port: settings.rightPort, speed: rightSpeed, degrees });
+      const waitMs = Math.round((degrees / clampedSpeed) * 1000) + 150;
+      actions.push({ kind: 'wait', ms: waitMs });
+    }
+    return { actions, errors, usedPorts, usedSensorPorts, maxProtocol };
   }
 
   if (child.type === 'drive' || child.type === 'pair') {
@@ -297,7 +522,24 @@ export function expandActionBlock(child, context = {}) {
 
     const powered = modules.includes('power');
     const hasTravel = modules.includes('travel');
-    const unit = child.unit || 'rotations';
+    const rawUnit = child.unit ?? 'rotations';
+    if (hasTravel && !TRAVEL_UNITS.includes(String(rawUnit))) {
+      errors.push({
+        button: btn,
+        blockId: child.id,
+        code: 'invalid-travel-unit',
+        message: 'Выберите °, об или с',
+      });
+    }
+    const unit = TRAVEL_UNITS.includes(String(rawUnit)) ? String(rawUnit) : 'rotations';
+    if (hasTravel && child.value !== undefined && (!Number.isFinite(Number(child.value)) || Number(child.value) <= 0 || Number(child.value) > 10000)) {
+      errors.push({
+        button: btn,
+        blockId: child.id,
+        code: 'invalid-travel-value',
+        message: 'Задайте значение от 0.01 до 10000',
+      });
+    }
 
     if (powered && hasTravel && unit !== 'seconds') {
       errors.push({
@@ -315,7 +557,7 @@ export function expandActionBlock(child, context = {}) {
     const rawPower = Number.isFinite(child.power) ? Number(child.power) : DEFAULT_POWER;
     const clampedPower = Math.max(1, Math.min(100, Math.round(rawPower)));
 
-    const value = Number.isFinite(child.value) && Number(child.value) > 0 ? Number(child.value) : 1;
+    const value = Number.isFinite(Number(child.value)) && Number(child.value) > 0 && Number(child.value) <= 10000 ? Number(child.value) : 1;
     const signA = child.direction === 'backward' ? -1 : 1;
     const signB = child.direction2 === 'backward' ? -1 : 1;
 
@@ -355,10 +597,10 @@ export function expandActionBlock(child, context = {}) {
         actions.push({ kind: 'wait', ms: waitMs });
       }
     }
-    return { actions, errors, usedPorts, maxProtocol };
+    return { actions, errors, usedPorts, usedSensorPorts, maxProtocol };
   }
 
-  return { actions, errors, usedPorts, maxProtocol };
+  return { actions, errors, usedPorts, usedSensorPorts, maxProtocol };
 }
 
 export function formatControlOptionLabel(control, indexInKind, countInKind) {

@@ -8,23 +8,25 @@ export const DIRECTION_CONTROLS = {
 export type DirectionControlKind = keyof typeof DIRECTION_CONTROLS
 export const isDirectionControl = (kind: unknown): kind is DirectionControlKind =>
   kind === 'drive-turn' || kind === 'drive-linear'
-export type PlaceableControlKind = DirectionControlKind | 'display'
+export type PlaceableControlKind = DirectionControlKind | 'display' | 'distance-gauge'
 export const isPlaceableControl = (kind: unknown): kind is PlaceableControlKind =>
-  kind === 'display' || isDirectionControl(kind)
+  kind === 'display' || kind === 'distance-gauge' || isDirectionControl(kind)
 export type ControlKind = 'drivetrain' | 'motor' | 'motor-group' | 'legacy-buttons' | 'motor-panel' | PlaceableControlKind
 export interface ControlArea { id: string; sheetId: string; title: string; x: number; y: number; width: number; height: number; drive?: DriveSettings }
-export interface ControlInstance { id: string; areaId: string; kind: ControlKind; label: string; x: number; y: number; width: number; height: number; keyBindings?: Record<string, string>; inputs?: readonly string[] }
+export interface ControlInstance { id: string; areaId: string; kind: ControlKind; label: string; x: number; y: number; width: number; height: number; keyBindings?: Record<string, string>; inputs?: readonly string[]; port?: string }
 export interface ControlLayout { version: 1; areas: ControlArea[]; controls: ControlInstance[]; migration?: {source: 'legacy-button-events'; version: 1} }
 export const CONTROL_INPUTS: Record<ControlKind, readonly string[]> = {
   drivetrain: ['up', 'down', 'left', 'right'], motor: ['forward', 'backward'],
   'drive-turn': DIRECTION_CONTROLS['drive-turn'].inputs, 'drive-linear': DIRECTION_CONTROLS['drive-linear'].inputs,
   'motor-group': ['forward', 'backward'], 'legacy-buttons': ['up','down','left','right','a','b','x','y','l','r'], 'motor-panel': ['blue','red','green','yellow'],
   display: [],
+  'distance-gauge': [],
 }
 export const CONTROL_MIN: Record<ControlKind, [number, number]> = {
   drivetrain: [160, 160], motor: [144, 96], 'motor-group': [144, 96], 'legacy-buttons': [300, 200], 'motor-panel': [144, 112],
   'drive-turn': [132, 96], 'drive-linear': [120, 144],
   display: [196, 144],
+  'distance-gauge': [160, 112],
 }
 export const EMPTY_LAYOUT: ControlLayout = {version: 1, areas: [], controls: []}
 const obj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v)
@@ -57,7 +59,12 @@ export function validateControlLayout(raw: unknown, sheetIds: readonly string[])
       if (!obj(c.keyBindings) || Object.entries(c.keyBindings).some(([k,v])=>!CONTROL_INPUTS[kind].includes(k) || typeof v !== 'string' || !v || v.length>40)) throw new Error('Неверная клавиша управления.')
       keyBindings=c.keyBindings as Record<string,string>
     }
-    return {id:c.id as string,areaId:c.areaId as string,kind,label:(c.label as string).trim(),x:c.x as number,y:c.y as number,width:c.width as number,height:c.height as number,...(keyBindings?{keyBindings}:{})}
+    let port: string | undefined
+    if (c.port !== undefined) {
+      if (!['C', 'D', 'E', 'F'].includes(String(c.port))) throw new Error('Неверный порт дальномера.')
+      port = String(c.port)
+    }
+    return {id:c.id as string,areaId:c.areaId as string,kind,label:(c.label as string).trim(),x:c.x as number,y:c.y as number,width:c.width as number,height:c.height as number,...(keyBindings?{keyBindings}:{}),...(port?{port}:{})}
   })
   for (let i=0;i<controls.length;i++) for(let j=i+1;j<controls.length;j++) {
     const a=controls[i],b=controls[j]
@@ -98,7 +105,7 @@ export function migrateControlWorkspace(project: RobotProject): {project: RobotP
   const stripUnlisted = (rawBlocks: unknown[]): unknown[] => {
     const removed = new Set<string>()
     for (const block of rawBlocks) {
-      if (obj(block) && typeof block.id === 'string' && (typeof block.type !== 'string' || !['start','drive','pair','chassis','if','button','stop','motor-buttons'].includes(block.type))) removed.add(block.id)
+      if (obj(block) && typeof block.id === 'string' && (typeof block.type !== 'string' || !['start','drive','pair','chassis','if','button','stop','motor-buttons','sensor'].includes(block.type))) removed.add(block.id)
     }
     return rawBlocks
       .filter(block => !(obj(block) && typeof block.id === 'string' && removed.has(block.id)))

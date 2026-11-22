@@ -5,13 +5,32 @@ import {
   BLOCK_TYPES,
   CHASSIS_DIRECTIONS,
   DEFAULT_DRIVE_SETTINGS,
+  DEFAULT_SENSOR_ANGLE,
+  DEFAULT_SENSOR_AXIS,
+  DEFAULT_SENSOR_COLOR,
+  DEFAULT_SENSOR_DISTANCE,
+  DEFAULT_SENSOR_FORCE,
+  DEFAULT_SENSOR_LIGHT,
+  DEFAULT_SENSOR_MODULE,
+  DEFAULT_SENSOR_REFLECTION,
+  DEFAULT_SENSOR_TILT,
   HUB_PORTS,
+  IMU_AXES,
+  SENSOR_COLORS,
+  SENSOR_MODULES_BY_TYPE,
+  SENSOR_PORTS,
+  SENSOR_TYPES,
   WHEEL_DIRECTIONS,
   getStopPorts,
   isDriveSettings,
   isPairedBlock,
   type ChassisDirection,
   type DriveSettings,
+  type ImuAxis,
+  type SensorColor,
+  type SensorModule,
+  type SensorOp,
+  type SensorType,
 } from "./block-registry.ts"
 
 export const MAX_BLOCKS = 200
@@ -35,16 +54,16 @@ export type ControllerButton =
   | "yellow"
 export type ControllerEvent = "hold" | "pressed" | "released"
 export { isPairedBlock }
-export type { ChassisDirection }
+export type { ChassisDirection, ImuAxis, SensorColor, SensorModule, SensorOp, SensorType }
 
-export type BlockType = "start" | "drive" | "pair" | "chassis" | "if" | "button" | "stop" | "motor-buttons"
+export type BlockType = "start" | "drive" | "pair" | "chassis" | "if" | "button" | "stop" | "motor-buttons" | "sensor"
 const LIBRARY_BLOCK_TYPES = new Set<BlockType>(BLOCK_TYPES as readonly BlockType[])
 export type MotorDirection = "forward" | "backward"
 export type TravelUnit = "rotations" | "degrees" | "seconds"
 export type MotorModule = "pair" | "speed" | "power" | "travel"
 export type MotorButtonModule = "red" | "green" | "yellow"
 export type MotorPanelButton = "blue" | MotorButtonModule
-export type BranchSlot = "body" | "else"
+export type BranchSlot = "body" | "else" | "condition"
 
 export const IF_TOP_HEIGHT = 58
 export const IF_MID_HEIGHT = 48
@@ -79,6 +98,20 @@ export interface WorkspaceBlock {
   button?: ControllerButton
   target?: { controlId: string; input: string }
   event?: ControllerEvent
+  sensorType?: SensorType
+  sensorPort?: string
+  sensorOp?: SensorOp
+  sensorDistance?: number
+  sensorLight?: number
+  sensorColor?: SensorColor
+  sensorReflection?: number
+  sensorPressed?: boolean
+  sensorForce?: number
+  sensorAngle?: number
+  sensorTiltOp?: SensorOp
+  sensorTilt?: number
+  sensorAxis?: ImuAxis
+  sensorModules?: SensorModule[]
 }
 
 export interface SheetView {
@@ -123,7 +156,7 @@ export function blockHeight(block: Pick<WorkspaceBlock, "type" | "height">): num
       IF_FOOT_HEIGHT
     )
   if (block.type === "button") return 58
-  if (block.type === "stop") return 64
+  if (block.type === "stop" || block.type === "sensor") return 64
   if (block.type === "motor-buttons") return block.height ?? 132
   return block.type === "pair" || block.type === "drive" || block.type === "chassis" ? 64 : 58
 }
@@ -181,6 +214,7 @@ export function cleanLinks(blocks: WorkspaceBlock[]): WorkspaceBlock[] {
       return next
     }
     const parent = next.parentId ? byId.get(next.parentId) : undefined
+    const invalidCondition = next.branch === "condition" && (parent?.type !== "if" || next.type !== "sensor")
     if (next.branch && parent?.type !== "if") {
       delete next.branch
     }
@@ -191,6 +225,7 @@ export function cleanLinks(blocks: WorkspaceBlock[]): WorkspaceBlock[] {
       !next.parentId ||
       !parent ||
       next.parentId === next.id ||
+      invalidCondition ||
       occupied.has(slotKey)
     ) {
       delete next.parentId
@@ -217,6 +252,12 @@ export function cleanLinks(blocks: WorkspaceBlock[]): WorkspaceBlock[] {
   }
 
   for (const block of clean) {
+    const parent = block.parentId ? map.get(block.parentId) : undefined
+    if (parent?.branch === "condition") {
+      delete block.parentId
+      delete block.branch
+      continue
+    }
     if (block.parentId && !ACTION_BLOCK_TYPES.includes(block.type)) {
       const root = findChainRoot(clean, block.id)
       if (root?.type === "button") {
@@ -262,6 +303,11 @@ export function chainIds(blocks: WorkspaceBlock[], id: string): string[] {
       .filter((b) => b.parentId && b.branch === "else")
       .map((b) => [b.parentId as string, b.id])
   )
+  const conditionChildren = new Map(
+    blocks
+      .filter((b) => b.parentId && b.branch === "condition")
+      .map((b) => [b.parentId as string, b.id])
+  )
   const result: string[] = []
   const seen = new Set<string>()
   function visit(currId: string | undefined) {
@@ -269,6 +315,8 @@ export function chainIds(blocks: WorkspaceBlock[], id: string): string[] {
     while (current && !seen.has(current)) {
       seen.add(current)
       result.push(current)
+      const conditionId = conditionChildren.get(current)
+      if (conditionId) visit(conditionId)
       const bodyId = bodyChildren.get(current)
       if (bodyId) visit(bodyId)
       const elseId = elseChildren.get(current)
@@ -300,7 +348,10 @@ export function layoutChains(blocks: WorkspaceBlock[]): WorkspaceBlock[] {
     const next = map.get(b.id)
     const parent = b.parentId ? map.get(b.parentId) : undefined
     if (next && parent) {
-      if (next.branch === "body" && parent.type === "if") {
+      if (next.branch === "condition" && parent.type === "if") {
+        next.x = parent.x + 68
+        next.y = parent.y + 11
+      } else if (next.branch === "body" && parent.type === "if") {
         next.x = parent.x + IF_INDENT
         next.y = parent.y + IF_TOP_HEIGHT - 4
       } else if (next.branch === "else" && parent.type === "if") {
@@ -345,7 +396,7 @@ export function readBlocks(
     .map((block): WorkspaceBlock => {
       const type = block.type as BlockType
       const branchVal =
-        block.branch === "body" || block.branch === "else"
+        block.branch === "body" || block.branch === "else" || block.branch === "condition"
           ? (block.branch as BranchSlot)
           : undefined
       const base: WorkspaceBlock = {
@@ -358,6 +409,74 @@ export function readBlocks(
         ...(branchVal ? { branch: branchVal } : {}),
       }
       if (type === "start" || type === "if") return base
+
+      if (type === "sensor") {
+        const sensorType: SensorType = (SENSOR_TYPES as readonly string[]).includes(String(block.sensorType))
+          ? (block.sensorType as SensorType)
+          : "ultrasonic"
+        const isImu = sensorType === "imu"
+        const sensorPort = isImu
+          ? "IMU"
+          : (SENSOR_PORTS as readonly string[]).includes(String(block.sensorPort))
+            ? String(block.sensorPort)
+            : "C"
+        const sensorOp: SensorOp = block.sensorOp === "gt" ? "gt" : "lt"
+        const sensorDistance = Number.isFinite(block.sensorDistance)
+          ? Math.max(1, Math.min(200, Math.round(Number(block.sensorDistance))))
+          : DEFAULT_SENSOR_DISTANCE
+        const sensorLight = Number.isFinite(block.sensorLight)
+          ? Number(block.sensorLight) < 0
+            ? -1
+            : Math.max(0, Math.min(100, Math.round(Number(block.sensorLight))))
+          : DEFAULT_SENSOR_LIGHT
+        const sensorColor: SensorColor = (SENSOR_COLORS as readonly string[]).includes(String(block.sensorColor))
+          ? (block.sensorColor as SensorColor)
+          : DEFAULT_SENSOR_COLOR
+        const sensorReflection = Number.isFinite(block.sensorReflection)
+          ? Math.max(0, Math.min(100, Math.round(Number(block.sensorReflection))))
+          : DEFAULT_SENSOR_REFLECTION
+        const sensorPressed = typeof block.sensorPressed === "boolean" ? block.sensorPressed : true
+        const sensorForce = Number.isFinite(block.sensorForce)
+          ? Math.max(0, Math.min(10, Math.round(Number(block.sensorForce) * 10) / 10))
+          : DEFAULT_SENSOR_FORCE
+        const sensorAngle = Number.isFinite(block.sensorAngle)
+          ? Math.max(-360, Math.min(360, Math.round(Number(block.sensorAngle))))
+          : DEFAULT_SENSOR_ANGLE
+        const sensorTiltOp: SensorOp = block.sensorTiltOp === "gt" ? "gt" : "lt"
+        const sensorTilt = Number.isFinite(block.sensorTilt)
+          ? Math.max(-90, Math.min(90, Math.round(Number(block.sensorTilt))))
+          : DEFAULT_SENSOR_TILT
+        const sensorAxis: ImuAxis = (IMU_AXES as readonly string[]).includes(String(block.sensorAxis))
+          ? (block.sensorAxis as ImuAxis)
+          : DEFAULT_SENSOR_AXIS
+        const allowedMods = SENSOR_MODULES_BY_TYPE[sensorType]
+        const rawMods = Array.isArray(block.sensorModules)
+          ? ([...new Set(block.sensorModules.filter((m): m is SensorModule => (allowedMods as readonly string[]).includes(String(m))))] as SensorModule[])
+          : ([DEFAULT_SENSOR_MODULE[sensorType]] as SensorModule[])
+        const filteredMods = base.branch === "condition" && isImu
+          ? rawMods.filter(m => m !== "reset")
+          : rawMods
+        const sensorModules: SensorModule[] = filteredMods.length > 0
+          ? filteredMods
+          : [DEFAULT_SENSOR_MODULE[sensorType]]
+        return {
+          ...base,
+          sensorType,
+          sensorPort,
+          sensorOp,
+          sensorDistance,
+          sensorLight,
+          sensorColor,
+          sensorReflection,
+          sensorPressed,
+          sensorForce,
+          sensorAngle,
+          sensorTiltOp,
+          sensorTilt,
+          sensorAxis,
+          sensorModules,
+        }
+      }
 
       if (type === "motor-buttons") {
         const allowed: MotorButtonModule[] = ["red", "green", "yellow"]
@@ -448,7 +567,7 @@ export function readBlocks(
           ? (block.chassisDirection as ChassisDirection)
           : "forward"
         const rawModules = Array.isArray(block.modules)
-          ? ([...new Set(block.modules.filter((m): m is MotorModule => String(m) === "speed"))] as MotorModule[])
+          ? ([...new Set(block.modules.filter((m): m is MotorModule => ["speed", "travel"].includes(String(m))))] as MotorModule[])
           : ([] as MotorModule[])
         return {
           ...base,
@@ -460,6 +579,15 @@ export function readBlocks(
             Number(block.speed) <= 1000
               ? Number(block.speed)
               : MOTOR_SPEED,
+          value:
+            Number.isFinite(block.value) &&
+            Number(block.value) > 0 &&
+            Number(block.value) <= 10000
+              ? Number(block.value)
+              : 1,
+          unit: UNITS.includes(block.unit as TravelUnit)
+            ? (block.unit as TravelUnit)
+            : "rotations",
         }
       }
 
@@ -557,10 +685,28 @@ export function addBlock(
     Object.assign(block, { motor: "A", motors: ["A"] })
   }
   if (type === "chassis") {
-    Object.assign(block, { chassisDirection: "forward", modules: [], speed: MOTOR_SPEED })
+    Object.assign(block, { chassisDirection: "forward", modules: [], speed: MOTOR_SPEED, value: 1, unit: "rotations" })
   }
   if (type === "motor-buttons") {
     Object.assign(block, { width: 180, height: 132, controlModules: [], hiddenControlButtons: [] })
+  }
+  if (type === "sensor") {
+    Object.assign(block, {
+      sensorType: "ultrasonic",
+      sensorPort: "C",
+      sensorOp: "lt",
+      sensorDistance: DEFAULT_SENSOR_DISTANCE,
+      sensorLight: DEFAULT_SENSOR_LIGHT,
+      sensorColor: DEFAULT_SENSOR_COLOR,
+      sensorReflection: DEFAULT_SENSOR_REFLECTION,
+      sensorPressed: true,
+      sensorForce: DEFAULT_SENSOR_FORCE,
+      sensorAngle: DEFAULT_SENSOR_ANGLE,
+      sensorTiltOp: "lt",
+      sensorTilt: DEFAULT_SENSOR_TILT,
+      sensorAxis: DEFAULT_SENSOR_AXIS,
+      sensorModules: ["threshold"],
+    })
   }
   return [...blocks, block]
 }
@@ -611,7 +757,7 @@ export function updateDrive(
   return readBlocks(
     {
       blocks: blocks.map((block) => {
-        if (block.id !== id || !["drive", "pair", "chassis", "if", "button", "stop"].includes(block.type)) return block
+        if (block.id !== id || !["drive", "pair", "chassis", "if", "button", "stop", "sensor"].includes(block.type)) return block
         const merged: WorkspaceBlock = { ...block, ...changes }
         if (block.type === "pair" && changes.type === "drive") {
           merged.type = "drive"
@@ -631,6 +777,22 @@ export function updateDrive(
           } else {
             delete merged.motor2
             delete merged.direction2
+          }
+        }
+        if (block.type === "sensor" && changes.sensorType !== undefined) {
+          const prevType = block.sensorType || "ultrasonic"
+          const nextType: SensorType = (SENSOR_TYPES as readonly string[]).includes(String(changes.sensorType))
+            ? (changes.sensorType as SensorType)
+            : "ultrasonic"
+          if (nextType !== prevType) {
+            if (changes.sensorModules === undefined) {
+              merged.sensorModules = [DEFAULT_SENSOR_MODULE[nextType]]
+            }
+            if (nextType === "imu") {
+              merged.sensorPort = "IMU"
+            } else if (prevType === "imu" || merged.sensorPort === "IMU") {
+              merged.sensorPort = "C"
+            }
           }
         }
         if (block.type === "stop") {
@@ -710,8 +872,10 @@ export function attachChain(
     }
   }
 
+  if (parent.branch === "condition") return blocks
   const effectiveBranch =
-    (branch === "body" || branch === "else") && parent.type === "if"
+    ((branch === "body" || branch === "else") && parent.type === "if") ||
+    (branch === "condition" && parent.type === "if" && movingBlock?.type === "sensor")
       ? branch
       : undefined
   const outerMoving = outerChainIds(blocks, id)
@@ -725,13 +889,30 @@ export function attachChain(
   return layoutChains(
     detached.map((b) => {
       if (b.id === id) {
-        return {
+        const nextBlock: WorkspaceBlock = {
           ...b,
           parentId,
           ...(effectiveBranch ? { branch: effectiveBranch } : {}),
         }
+        if (effectiveBranch === "condition" && nextBlock.type === "sensor" && nextBlock.sensorType === "imu") {
+          const nextMods = (nextBlock.sensorModules || []).filter(m => m !== "reset")
+          nextBlock.sensorModules = nextMods.length ? nextMods : ["heading"]
+        }
+        return nextBlock
+      }
+      if (effectiveBranch === "condition" && b.parentId === id && !b.branch) {
+        const nextChild: WorkspaceBlock = { ...b, x: parent.x, y: parent.y + blockTotalHeight(detached, parent.id) + 12 }
+        delete nextChild.parentId
+        delete nextChild.branch
+        return nextChild
       }
       if (previousChild && b.id === previousChild.id) {
+        if (effectiveBranch === "condition") {
+          const evicted: WorkspaceBlock = { ...b, x: parent.x + 280, y: parent.y }
+          delete evicted.parentId
+          delete evicted.branch
+          return evicted
+        }
         const reattached: WorkspaceBlock = { ...b, parentId: tail }
         delete reattached.branch
         return reattached
@@ -746,10 +927,12 @@ export function snapTargetInfo(
   id: string,
   x: number,
   y: number,
-  threshold = 48
+  threshold = 48,
+  movingType?: BlockType
 ): { id: string; branch?: BranchSlot } | null {
   const movingBlock = blocks.find((b) => b.id === id)
-  if (movingBlock?.type === "button" || movingBlock?.type === "motor-buttons") return null
+  const resolvedType = movingBlock?.type ?? movingType
+  if (resolvedType === "button" || resolvedType === "motor-buttons") return null
 
   const moving = new Set(chainIds(blocks, id))
   let best: { id: string; branch?: BranchSlot } | null = null
@@ -760,12 +943,25 @@ export function snapTargetInfo(
 
     const rootOfB = findChainRoot(blocks, b.id)
     if (rootOfB?.type === "button") {
-      if (movingBlock && !ACTION_BLOCK_TYPES.includes(movingBlock.type)) {
+      if (resolvedType && !ACTION_BLOCK_TYPES.includes(resolvedType)) {
         continue
       }
     }
 
     if (b.type === "if") {
+      if (resolvedType === "sensor") {
+        const condThreshold = Math.max(threshold, 56)
+        const condDx = Math.abs(b.x + 68 - x)
+        const condDy = Math.abs(b.y + 11 - y)
+        if (
+          condDx <= condThreshold &&
+          condDy <= condThreshold &&
+          condDx + condDy < distance
+        ) {
+          best = { id: b.id, branch: "condition" }
+          distance = condDx + condDy
+        }
+      }
       const innerDx = Math.abs(b.x + IF_INDENT - x)
       const bodyDy = Math.abs(b.y + IF_TOP_HEIGHT - 4 - y)
       if (
@@ -789,6 +985,7 @@ export function snapTargetInfo(
         distance = innerDx + elseDy
       }
     }
+    if (b.branch === "condition") continue
     const dx = Math.abs(b.x - x)
     const dy = Math.abs(b.y + blockTotalHeight(blocks, b.id) - 4 - y)
     if (dx <= threshold && dy <= threshold && dx + dy < distance) {
@@ -836,9 +1033,26 @@ export function generatePybricks(
 
   const resolvedChassis = isDriveSettings(chassis) ? chassis : DEFAULT_DRIVE_SETTINGS
   const explicitPorts = new Set<string>()
+  const explicitSensors = new Map<string, SensorType>()
+  let usesImu = false
+  let usesColorEnum = false
+  const recordSensor = (b: WorkspaceBlock) => {
+    const st: SensorType = b.sensorType || "ultrasonic"
+    if (st === "imu") {
+      usesImu = true
+      return
+    }
+    const p = b.sensorPort || "C"
+    explicitSensors.set(p, st)
+    if (st === "color" && (b.sensorModules || ["color"]).includes("color")) {
+      usesColorEnum = true
+    }
+  }
   let hasStopAll = false
   for (const block of driveBlocks) {
-    if (isPairedBlock(block)) {
+    if (block.type === "sensor") {
+      recordSensor(block)
+    } else if (isPairedBlock(block)) {
       explicitPorts.add(block.motor || "A")
       explicitPorts.add(block.motor2 || "B")
     } else if (block.type === "chassis") {
@@ -851,22 +1065,42 @@ export function generatePybricks(
       explicitPorts.add(block.motor || "A")
     }
   }
+  for (const cond of clean.filter(b => b.type === "sensor" && b.branch === "condition")) {
+    recordSensor(cond)
+  }
   if (hasStopAll && explicitPorts.size === 0) {
     explicitPorts.add(resolvedChassis.leftPort)
     explicitPorts.add(resolvedChassis.rightPort)
   }
   const used = [...explicitPorts].sort()
+  const usedSensors = [...explicitSensors.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+  const sensorClassMap: Record<Exclude<SensorType, "imu">, string> = {
+    ultrasonic: "UltrasonicSensor",
+    color: "ColorSensor",
+    force: "ForceSensor",
+  }
+  const sensorImports = [...new Set(usedSensors.map(([, st]) => st === "imu" ? "" : sensorClassMap[st]).filter(Boolean))]
+  const imports = [
+    ...(used.length > 0 ? ["Motor"] : []),
+    ...sensorImports,
+  ]
+  const paramImports = [...(usesColorEnum ? ["Color"] : []), "Port", "Stop"]
 
   const lines = [
     "# Brick Studio: команды выполняются сверху вниз",
+    ...(usesImu ? ["from pybricks.hubs import PrimeHub"] : []),
     `from pybricks.${
       hub === "spike" ? "pupdevices" : "ev3devices"
-    } import Motor`,
-    "from pybricks.parameters import Port, Stop",
+    } import ${imports.join(", ") || "Motor"}`,
+    `from pybricks.parameters import ${paramImports.join(", ")}`,
     "from pybricks.tools import wait",
     "",
+    ...(usesImu ? ["hub = PrimeHub()"] : []),
     ...used.map(
       (port) => `motor_${port.toLowerCase()} = Motor(Port.${port})`
+    ),
+    ...usedSensors.map(
+      ([port, st]) => `sensor_${port.toLowerCase()} = ${st === "imu" ? "UltrasonicSensor" : sensorClassMap[st]}(Port.${port})`
     ),
     "",
   ]
@@ -882,6 +1116,50 @@ export function generatePybricks(
       }
       return
     }
+    const sensorExprs = (s: WorkspaceBlock): string[] => {
+      const st: SensorType = s.sensorType || "ultrasonic"
+      const p = (s.sensorPort || "C").toLowerCase()
+      const mods = s.sensorModules || [DEFAULT_SENSOR_MODULE[st]]
+      const exprs: string[] = []
+      if (st === "ultrasonic" && mods.includes("threshold")) {
+        const op = s.sensorOp === "gt" ? ">" : "<"
+        const mm = (s.sensorDistance ?? DEFAULT_SENSOR_DISTANCE) * 10
+        exprs.push(`sensor_${p}.distance() ${op} ${mm}`)
+      } else if (st === "color") {
+        if (mods.includes("color")) {
+          const col = (s.sensorColor || DEFAULT_SENSOR_COLOR).toUpperCase()
+          exprs.push(`sensor_${p}.color() == Color.${col}`)
+        }
+        if (mods.includes("reflection")) {
+          const op = s.sensorOp === "gt" ? ">" : "<"
+          const refl = s.sensorReflection ?? DEFAULT_SENSOR_REFLECTION
+          exprs.push(`sensor_${p}.reflection() ${op} ${refl}`)
+        }
+      } else if (st === "force") {
+        if (mods.includes("pressed")) {
+          exprs.push(s.sensorPressed === false ? `not sensor_${p}.pressed()` : `sensor_${p}.pressed()`)
+        }
+        if (mods.includes("force")) {
+          const op = s.sensorOp === "gt" ? ">" : "<"
+          const f = s.sensorForce ?? DEFAULT_SENSOR_FORCE
+          exprs.push(`sensor_${p}.force() ${op} ${f}`)
+        }
+      } else if (st === "imu") {
+        if (mods.includes("heading")) {
+          const op = s.sensorOp === "gt" ? ">" : "<"
+          const deg = s.sensorAngle ?? DEFAULT_SENSOR_ANGLE
+          exprs.push(`hub.imu.heading() ${op} ${deg}`)
+        }
+        if (mods.includes("tilt")) {
+          const idx = s.sensorAxis === "roll" ? 1 : 0
+          const op = (s.sensorTiltOp ?? s.sensorOp) === "gt" ? ">" : "<"
+          const deg = s.sensorTilt ?? DEFAULT_SENSOR_TILT
+          exprs.push(`hub.imu.tilt()[${idx}] ${op} ${deg}`)
+        }
+      }
+      return exprs
+    }
+
     if (block.type === "chassis") {
       const dir = block.chassisDirection || "forward"
       const [lMul, rMul] = WHEEL_DIRECTIONS[dir] || WHEEL_DIRECTIONS.forward
@@ -890,14 +1168,68 @@ export function generatePybricks(
         : resolvedChassis.speed || MOTOR_SPEED
       const leftSpeed = lMul * spd * (resolvedChassis.leftReversed ? -1 : 1)
       const rightSpeed = rMul * spd * (resolvedChassis.rightReversed ? -1 : 1)
-      lines.push(
-        `${indent}motor_${resolvedChassis.leftPort.toLowerCase()}.run(${leftSpeed})`,
-        `${indent}motor_${resolvedChassis.rightPort.toLowerCase()}.run(${rightSpeed})`
-      )
+      const lp = resolvedChassis.leftPort.toLowerCase()
+      const rp = resolvedChassis.rightPort.toLowerCase()
+      if (!block.modules?.includes("travel")) {
+        lines.push(
+          `${indent}motor_${lp}.run(${leftSpeed})`,
+          `${indent}motor_${rp}.run(${rightSpeed})`
+        )
+      } else if (block.unit === "seconds") {
+        const ms = Math.max(10, Math.min(600000, Math.round((block.value ?? 1) * 1000)))
+        lines.push(
+          `${indent}motor_${lp}.run_time(${leftSpeed}, ${ms}, then=Stop.BRAKE, wait=False)`,
+          `${indent}motor_${rp}.run_time(${rightSpeed}, ${ms}, then=Stop.BRAKE, wait=False)`,
+          `${indent}wait(${ms})`
+        )
+      } else {
+        const deg = Math.max(1, Math.round((block.value ?? 1) * (block.unit === "rotations" ? 360 : 1)))
+        const waitMs = Math.round((deg / Math.max(1, spd)) * 1000) + 150
+        lines.push(
+          `${indent}motor_${lp}.run_angle(${leftSpeed}, ${deg}, then=Stop.BRAKE, wait=False)`,
+          `${indent}motor_${rp}.run_angle(${rightSpeed}, ${deg}, then=Stop.BRAKE, wait=False)`,
+          `${indent}wait(${waitMs})`
+        )
+      }
+      return
+    }
+    if (block.type === "sensor") {
+      const st: SensorType = block.sensorType || "ultrasonic"
+      const p = (block.sensorPort || "C").toLowerCase()
+      const mods = block.sensorModules || [DEFAULT_SENSOR_MODULE[st]]
+      if ((st === "ultrasonic" || st === "color") && mods.includes("lights")) {
+        const light = block.sensorLight ?? DEFAULT_SENSOR_LIGHT
+        lines.push(`${indent}sensor_${p}.lights.${light < 0 ? "off()" : `on(${light})`}`)
+      }
+      if (st === "imu" && mods.includes("reset")) {
+        lines.push(`${indent}hub.imu.reset_heading(0)`)
+      }
+      const exprs = sensorExprs(block)
+      if (exprs.length > 0) {
+        lines.push(
+          `${indent}while not (${exprs.join(" and ")}):`,
+          `${indent}    wait(10)`
+        )
+      }
       return
     }
     if (block.type === "if") {
-      lines.push(`${indent}if True:`)
+      const cond = clean.find(
+        (b) => b.parentId === block.id && b.branch === "condition"
+      )
+      const condExprs = cond && cond.type === "sensor" ? sensorExprs(cond) : []
+      if (cond && cond.type === "sensor" && condExprs.length > 0) {
+        const st: SensorType = cond.sensorType || "ultrasonic"
+        const p = (cond.sensorPort || "C").toLowerCase()
+        const condMods = cond.sensorModules || [DEFAULT_SENSOR_MODULE[st]]
+        if ((st === "ultrasonic" || st === "color") && condMods.includes("lights")) {
+          const light = cond.sensorLight ?? DEFAULT_SENSOR_LIGHT
+          lines.push(`${indent}sensor_${p}.lights.${light < 0 ? "off()" : `on(${light})`}`)
+        }
+        lines.push(`${indent}if ${condExprs.join(" and ")}:`)
+      } else {
+        lines.push(`${indent}if True:`)
+      }
       const firstBody = clean.find(
         (b) => b.parentId === block.id && b.branch === "body"
       )

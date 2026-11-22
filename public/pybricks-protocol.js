@@ -4,7 +4,7 @@ export const HUB_CAPABILITIES = 'c5f50003-8280-46da-89f4-6d8051e4aeef';
 export const DEVICE_INFO = 0x180a;
 export const SOFTWARE_REVISION = 0x2a28;
 export const FEATURE_MULTI_MPY_V6 = 1 << 1;
-export const HUB_PROGRAM_VERSION = '4';
+export const HUB_PROGRAM_VERSION = '6';
 export const encoder = new TextEncoder();
 export const decoder = new TextDecoder();
 

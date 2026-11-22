@@ -4,6 +4,9 @@ import {
   BUTTON_KEYS,
   DEFAULT_SPEED,
   DRIVE_PORTS,
+  SENSOR_PORTS,
+  DEFAULT_SENSOR_DISTANCE,
+  DEFAULT_SENSOR_LIGHT,
   DEFAULT_DRIVE_SETTINGS,
   DIRECTION_INPUTS,
   CONTROL_KIND_INPUTS,
@@ -13,6 +16,7 @@ import {
   normalizeChassisSettings,
   resolveProjectChassis,
   getStopPorts,
+  compileSensorBlock,
   expandActionBlock,
 } from './block-registry.js';
 
@@ -79,6 +83,21 @@ function compileDriveControls(layout, result, usedPorts, projectChassis, directW
   return maxProtocol;
 }
 
+function describeChecks(checks) {
+  return checks.map(c => {
+    const op = c.op === 'gt' ? '>' : '<';
+    switch (c.kind) {
+      case 'color': return `цвет=${c.color}`;
+      case 'reflection': return `отраж. ${op} ${c.value}%`;
+      case 'pressed': return c.pressed ? 'нажат' : 'отпущен';
+      case 'force': return `сила ${op} ${c.value} Н`;
+      case 'heading': return `курс ${op} ${c.value}°`;
+      case 'tilt': return `${c.axis === 'roll' ? 'крен' : 'тангаж'} ${op} ${c.value}°`;
+      default: return '';
+    }
+  }).filter(Boolean).join(' и ');
+}
+
 export function describeAction(action) {
   if (!action || typeof action !== 'object') return '';
   switch (action.kind) {
@@ -111,6 +130,25 @@ export function describeAction(action) {
     case 'wait': {
       return `Пауза ${action.ms} мс`;
     }
+    case 'waitSensor': {
+      if (Array.isArray(action.checks) && action.checks.length > 0) {
+        return `Датчик ${action.port}: ждать (${describeChecks(action.checks)})`;
+      }
+      return `Датчик ${action.port}: ждать ${action.op === 'gt' ? '>' : '<'} ${action.cm} см`;
+    }
+    case 'sensorLights': {
+      return `Подсветка ${action.port}: ${action.brightness < 0 ? 'выкл' : `${action.brightness}%`}`;
+    }
+    case 'imuReset': {
+      return 'Сброс гироскопа 0°';
+    }
+    case 'branch': {
+      const c = action.condition || {};
+      if (Array.isArray(c.checks) && c.checks.length > 0) {
+        return `Если ${c.port || 'IMU'}: ${describeChecks(c.checks)}`;
+      }
+      return `Если ${c.port || 'C'} ${c.op === 'gt' ? '>' : '<'} ${c.cm ?? 20} см`;
+    }
     default:
       return '';
   }
@@ -137,6 +175,12 @@ export function commandsFor(action, protocol = 3) {
     case 'dcTime':
       if (protocol < 3) throw new Error('Мощность по времени требует прошивку протокола v3');
       return [`d,${action.port},${action.power}\n`];
+    case 'sensorLights':
+      return [`u,${action.port},${action.brightness}\n`];
+    case 'imuReset':
+      return ['g,IMU,r\n'];
+    case 'waitSensor':
+    case 'branch':
     case 'wait':
       return [];
     default:
@@ -148,21 +192,101 @@ export function controllerHandler(program, button, event) {
   return program?.handlers?.find(handler => (typeof button === 'object' ? handler.target?.controlId === button.controlId && handler.target?.input === button.input : handler.button === button) && handler.event === event) || null;
 }
 
-export function controllerRuntimeErrors(program, protocol, availablePorts) {
+function walkActions(actions, visit) {
+  if (!Array.isArray(actions)) return;
+  for (const action of actions) {
+    if (!action || typeof action !== 'object') continue;
+    visit(action);
+    if (action.kind === 'branch') {
+      walkActions(action.thenActions, visit);
+      walkActions(action.elseActions, visit);
+    }
+  }
+}
+
+function countActions(actions) {
+  let total = 0;
+  walkActions(actions, () => { total += 1; });
+  return total;
+}
+
+export function controllerRuntimeErrors(program, protocol, availablePorts, availableSensors, availableSensorTypes) {
   if (!program || !protocol) return [];
   const ports = availablePorts instanceof Set ? availablePorts : new Set(availablePorts || []);
+  const hasKnownSensors = availableSensors !== undefined && availableSensors !== null;
+  const sensors = availableSensors instanceof Set ? availableSensors : new Set(availableSensors || []);
+  const sensorTypesMap = availableSensorTypes && typeof availableSensorTypes === 'object' ? availableSensorTypes : null;
   const errors = [];
   for (const handler of program.handlers || []) {
-    const missing = [...new Set(handler.actions.map(action => action.port).filter(port => port && !ports.has(port)))];
+    const motorPorts = new Set();
+    const sensorPorts = new Set();
+    const requiredTypes = new Map();
+    let usesImu = false;
+    let needsV3 = false;
+    walkActions(handler.actions, action => {
+      if (['run', 'dc', 'angle', 'time', 'dcTime', 'stop'].includes(action.kind) && action.port) {
+        motorPorts.add(action.port);
+      }
+      if (action.kind === 'imuReset') {
+        usesImu = true;
+      }
+      if (action.kind === 'waitSensor' || action.kind === 'sensorLights') {
+        if (action.port === 'IMU' || action.sensorType === 'imu') {
+          usesImu = true;
+        } else if (action.port) {
+          sensorPorts.add(action.port);
+          if (action.sensorType) requiredTypes.set(action.port, action.sensorType);
+        }
+      }
+      if (action.kind === 'branch' && action.condition) {
+        if (action.condition.port === 'IMU' || action.condition.sensorType === 'imu') {
+          usesImu = true;
+        } else if (action.condition.port) {
+          sensorPorts.add(action.condition.port);
+          if (action.condition.sensorType) requiredTypes.set(action.condition.port, action.condition.sensorType);
+        }
+      }
+      if (
+        ['dc', 'angle', 'time', 'dcTime'].includes(action.kind) ||
+        (action.kind === 'run' && Math.abs(action.speed) > 600)
+      ) {
+        needsV3 = true;
+      }
+    });
+    const missing = [...motorPorts].filter(port => !ports.has(port));
     if (missing.length) {
       errors.push({
         button: handler.button, target: handler.target, scope: 'handler', severity: 'error', blockId: handler.sourceBlockId,
         code: 'missing-port', message: `Подключите мотор ${missing.join(', ')}`,
       });
     }
-    if (protocol < 3 && handler.actions.some(action =>
-      ['dc', 'angle', 'time', 'dcTime'].includes(action.kind) ||
-      (action.kind === 'run' && Math.abs(action.speed) > 600))) {
+    if (hasKnownSensors) {
+      const missingSensors = [...sensorPorts].filter(port => !sensors.has(port));
+      if (missingSensors.length) {
+        errors.push({
+          button: handler.button, target: handler.target, scope: 'handler', severity: 'error', blockId: handler.sourceBlockId,
+          code: 'missing-sensor-port', message: `Подключите датчик ${missingSensors.join(', ')}`,
+        });
+      }
+      if (sensorTypesMap) {
+        for (const [port, expectedType] of requiredTypes.entries()) {
+          const actualType = sensorTypesMap[port];
+          if (actualType && actualType !== expectedType) {
+            errors.push({
+              button: handler.button, target: handler.target, scope: 'handler', severity: 'error', blockId: handler.sourceBlockId,
+              code: 'wrong-sensor-type', message: `Порт ${port}: подключён другой датчик`,
+            });
+          }
+        }
+        if (usesImu && !sensorTypesMap.IMU) {
+          errors.push({
+            button: handler.button, target: handler.target, scope: 'handler', severity: 'error', blockId: handler.sourceBlockId,
+            code: 'missing-imu', message: 'Гироскоп хаба недоступен',
+          });
+        }
+      }
+    }
+    if (protocol < 3 && needsV3) {
       errors.push({
         button: handler.button, target: handler.target, scope: 'handler', severity: 'error', blockId: handler.sourceBlockId,
         code: 'protocol-upgrade', message: 'Переподключите робота для обновления хаба',
@@ -223,6 +347,7 @@ export function compileControllerProgram(project) {
     hub: 'spike',
     protocol: 2,
     ports: [],
+    sensorPorts: [],
     handlers: [],
     startup: [],
     errors: [],
@@ -254,6 +379,7 @@ export function compileControllerProgram(project) {
 
   const seenHandlers = new Map();
   const allUsedPorts = new Set();
+  const allUsedSensorPorts = new Set();
   let maxProtocol = 2;
 
   for (const root of [...buttonRoots, ...(startRoots.length === 1 ? startRoots : [])]) {
@@ -300,39 +426,75 @@ export function compileControllerProgram(project) {
       seenHandlers.set(inputKey, [...previous, { event: ev, blockId: root.id }]);
     }
 
-    const actions = [];
-    let curr = root;
     const visited = new Set([root.id]);
+    const compileChain = (startParentId, startBranch, depth = 0) => {
+      const out = [];
+      if (depth > 16) return out;
+      let currId = startParentId;
+      let nextBranch = startBranch;
+      while (true) {
+        const child = blocks.find(b => b.parentId === currId && (nextBranch ? b.branch === nextBranch : !b.branch));
+        nextBranch = undefined;
+        if (!child || visited.has(child.id)) break;
+        visited.add(child.id);
+        currId = child.id;
 
-    while (true) {
-      const child = blocks.find(b => b.parentId === curr.id && !b.branch);
-      if (!child || visited.has(child.id)) break;
-      visited.add(child.id);
-      curr = child;
+        if (['start', 'button'].includes(child.type)) {
+          result.errors.push({
+            button: btn,
+            blockId: child.id,
+            code: isStart ? 'unsupported-block' : 'bad-child',
+            message: 'Блок здесь не работает',
+          });
+          continue;
+        }
 
-      if (['if', 'start', 'button'].includes(child.type)) {
-        result.errors.push({
-          button: btn,
-          blockId: child.id,
-          code: isStart ? 'unsupported-block' : 'bad-child',
-          message: 'Блок здесь не работает',
-        });
-        continue;
+        if (child.type === 'if') {
+          const condBlock = blocks.find(b => b.parentId === child.id && b.branch === 'condition');
+          let condition = null;
+          if (!condBlock || condBlock.type !== 'sensor') {
+            result.errors.push({
+              button: btn,
+              blockId: child.id,
+              code: 'missing-sensor',
+              message: 'Вставьте датчик',
+            });
+          } else {
+            visited.add(condBlock.id);
+            const compiled = compileSensorBlock(condBlock, { button: btn, inCondition: true });
+            result.errors.push(...compiled.errors);
+            for (const port of compiled.usedSensorPorts) allUsedSensorPorts.add(port);
+            if (compiled.condition) {
+              out.push(...compiled.preActions);
+              condition = compiled.condition;
+            }
+          }
+          const thenActions = compileChain(child.id, 'body', depth + 1);
+          const elseActions = compileChain(child.id, 'else', depth + 1);
+          if (condition) {
+            out.push({ kind: 'branch', condition, thenActions, elseActions });
+          }
+          continue;
+        }
+
+        if (['stop', 'drive', 'pair', 'chassis', 'sensor'].includes(child.type)) {
+          const expanded = expandActionBlock(child, { hub, button: btn, chassis });
+          result.errors.push(...expanded.errors);
+          out.push(...expanded.actions);
+          for (const port of expanded.usedPorts) allUsedPorts.add(port);
+          for (const port of expanded.usedSensorPorts || []) allUsedSensorPorts.add(port);
+          if (expanded.maxProtocol > maxProtocol) maxProtocol = expanded.maxProtocol;
+          continue;
+        }
+
+        result.errors.push({ button: btn, blockId: child.id, code: 'unsupported-block', message: 'Блок не поддерживается' });
       }
+      return out;
+    };
 
-      if (['stop', 'drive', 'pair', 'chassis'].includes(child.type)) {
-        const expanded = expandActionBlock(child, { hub, button: btn, chassis });
-        result.errors.push(...expanded.errors);
-        actions.push(...expanded.actions);
-        for (const port of expanded.usedPorts) allUsedPorts.add(port);
-        if (expanded.maxProtocol > maxProtocol) maxProtocol = expanded.maxProtocol;
-        continue;
-      }
+    const actions = compileChain(root.id, undefined, 0);
 
-      result.errors.push({ button: btn, blockId: child.id, code: 'unsupported-block', message: 'Блок не поддерживается' });
-    }
-
-    if (actions.length > 50) {
+    if (countActions(actions) > 50) {
       result.errors.push({
         button: btn,
         blockId: root.id,
@@ -364,5 +526,6 @@ export function compileControllerProgram(project) {
   if (driveProtocol > maxProtocol) maxProtocol = driveProtocol;
   result.protocol = maxProtocol;
   result.ports = Array.from(allUsedPorts).sort();
+  result.sensorPorts = Array.from(allUsedSensorPorts).sort();
   return result;
 }

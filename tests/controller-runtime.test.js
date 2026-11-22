@@ -412,7 +412,7 @@ test('createBluetoothTransport auto-uploads when clean hub rejects 0x01 start pr
 test('offline compileBundledHubProgram has embedded source ready', async () => {
   assert.equal(typeof compileBundledHubProgram, 'function');
   const {HUB_PROGRAM_SOURCE} = await import('../src/lib/hub-program-source.ts');
-  assert.match(HUB_PROGRAM_SOURCE, /PROGRAM_VERSION = "4"/);
+  assert.match(HUB_PROGRAM_SOURCE, /PROGRAM_VERSION = "6"/);
   assert.match(HUB_PROGRAM_SOURCE, /LINK_TIMEOUT_MS = 2000/);
 });
 
@@ -481,6 +481,181 @@ test('stopAll action stops connected ports', async () => {
   session.dispatch({ controlId: 'p1', input: 'blue' }, 'pressed'); await tick();
   assert.ok(t.writes.includes('m,A,0\n'));
   assert.ok(t.writes.includes('m,B,0\n'));
+  await session.dispose();
+});
+
+
+test('sensor telemetry SOCER_SENSORS and SOCER_DIST drive branch evaluation, 2000mm safety, waitSensor, and trial slider', async () => {
+  let onLine;
+  const writes = [];
+  const t = {
+    connect: async (fn) => { onLine = fn; },
+    startHub: async () => {},
+    write: async (line) => {
+      writes.push(line);
+      if (line === 'h\n') {
+        onLine('SOCER_VER|5');
+        onLine('SOCER3_READY|A');
+        onLine('SOCER_SENSORS|C');
+      }
+      if (line === 'x\n') onLine('SOCER2_STOP');
+    },
+    disconnect: async () => {},
+  };
+
+  // Trial mode: slider simulation drives branch logs without transport writes
+  const trialSession = createControllerSession(t);
+  const program = {
+    projectId: 'p-sen', projectName: 'Sensor', hub: 'spike', protocol: 3, ports: ['A'], sensorPorts: ['C'],
+    startup: [], errors: [],
+    handlers: [
+      {
+        target: { controlId: 'c1', input: 'blue' }, button: 'blue', event: 'hold', sourceBlockId: 'b1',
+        actions: [{
+          kind: 'branch',
+          condition: { port: 'C', op: 'lt', cm: 20 },
+          thenActions: [{ kind: 'run', port: 'A', speed: 360 }],
+          elseActions: [{ kind: 'stop', port: 'A' }],
+        }],
+      },
+      {
+        target: { controlId: 'c1', input: 'red' }, button: 'red', event: 'pressed', sourceBlockId: 'b2',
+        actions: [
+          { kind: 'waitSensor', port: 'C', op: 'gt', cm: 30 },
+          { kind: 'run', port: 'A', speed: -300 },
+        ],
+      },
+    ],
+  };
+
+  await trialSession.setViewMode('check');
+  await trialSession.startProgram(program);
+  trialSession.setSensorDistance('C', 15);
+  trialSession.dispatch({ controlId: 'c1', input: 'blue' }, 'pressed');
+  await tick();
+  assert.ok(trialSession.getState().log.some(l => l.includes('Если C < 20 см → да')));
+  assert.equal(writes.length, 0);
+  trialSession.dispatch({ controlId: 'c1', input: 'blue' }, 'released');
+  await tick();
+  trialSession.setSensorDistance('C', 45);
+  trialSession.dispatch({ controlId: 'c1', input: 'blue' }, 'pressed');
+  await tick();
+  assert.ok(trialSession.getState().log.some(l => l.includes('Если C < 20 см → нет')));
+  await trialSession.dispose();
+
+  // Live mode: SOCER_DIST parsing including 2000mm -> null, branch + hold release, waitSensor
+  writes.length = 0;
+  const liveSession = createControllerSession(t);
+  await liveSession.connect();
+  await liveSession.startHub();
+  assert.deepEqual(liveSession.getState().sensorPorts, ['C']);
+  assert.equal(liveSession.getState().sensorPortsKnown, true);
+
+  await liveSession.setViewMode('check');
+  await liveSession.startProgram(program);
+
+  // 2000mm -> null (>200 cm): `< 20` must NOT false-trigger!
+  onLine('SOCER_DIST|C:2000');
+  assert.equal(liveSession.getState().sensorDistances.C, null);
+  liveSession.dispatch({ controlId: 'c1', input: 'blue' }, 'pressed');
+  await tick();
+  assert.ok(writes.includes('m,A,0\n'));
+  assert.equal(writes.includes('m,A,360\n'), false);
+  liveSession.dispatch({ controlId: 'c1', input: 'blue' }, 'released');
+  await tick();
+
+  // 180mm -> 18 cm: `< 20` triggers `then`, and releasing `hold` stops motor A
+  writes.length = 0;
+  onLine('SOCER_DIST|C:180');
+  assert.equal(liveSession.getState().sensorDistances.C, 18);
+  liveSession.dispatch({ controlId: 'c1', input: 'blue' }, 'pressed');
+  await tick();
+  assert.ok(writes.includes('m,A,360\n'));
+  writes.length = 0;
+  liveSession.dispatch({ controlId: 'c1', input: 'blue' }, 'released');
+  await tick();
+  assert.ok(writes.includes('m,A,0\n'));
+
+  // waitSensor waits until distance > 30 (null / 2000mm satisfies > 30)
+  writes.length = 0;
+  liveSession.dispatch({ controlId: 'c1', input: 'red' }, 'pressed');
+  await tick();
+  assert.equal(writes.includes('m,A,-300\n'), false);
+  onLine('SOCER_DIST|C:2000');
+  await tick();
+  assert.ok(writes.includes('m,A,-300\n'));
+  await liveSession.dispose();
+});
+
+
+test('typed SOCER_SENSORS, SOCER_SNS telemetry, color/force/imu evaluation, and g,IMU,r reset work cleanly', async () => {
+  const { compileControllerProgram, controllerRuntimeErrors } = await import('../public/controller-program.js');
+  const { createControllerSession } = await import('../src/lib/controller-runtime.ts');
+
+  const program = compileControllerProgram({
+    id: 'p-multi-sns',
+    hub: 'spike',
+    workspace: {
+      controlLayout: { version: 1, areas: [], controls: [{ id: 'c1', kind: 'motor-panel', inputs: ['blue', 'red'] }] },
+      blocks: [
+        { id: 'b1', type: 'button', target: { controlId: 'c1', input: 'blue' }, event: 'pressed' },
+        { id: 'if-col', type: 'if', parentId: 'b1' },
+        { id: 'sen-col', type: 'sensor', parentId: 'if-col', branch: 'condition', sensorType: 'color', sensorPort: 'D', sensorColor: 'red', sensorModules: ['color', 'lights'], sensorLight: 60 },
+        { id: 'm1', type: 'drive', parentId: 'if-col', branch: 'body', motor: 'A', modules: [] },
+        { id: 'b2', type: 'button', target: { controlId: 'c1', input: 'red' }, event: 'pressed' },
+        { id: 'sen-imu', type: 'sensor', parentId: 'b2', sensorType: 'imu', sensorModules: ['reset', 'tilt'], sensorAxis: 'roll', sensorTiltOp: 'gt', sensorTilt: 15 },
+        { id: 'm2', type: 'drive', parentId: 'sen-imu', motor: 'A', direction: 'backward', modules: ['speed'], speed: 250 },
+      ],
+    },
+  });
+  assert.equal(program.errors.length, 0);
+
+  // Runtime checks catch sensor type mismatch and missing IMU
+  const typeMismatch = controllerRuntimeErrors(program, 3, new Set(['A']), new Set(['D']), { D: 'force', IMU: 'imu' });
+  assert.ok(typeMismatch.some(e => e.code === 'wrong-sensor-type'));
+  const missingImu = controllerRuntimeErrors(program, 3, new Set(['A']), new Set(['D']), { D: 'color' });
+  assert.ok(missingImu.some(e => e.code === 'missing-imu'));
+
+  const writes = [];
+  let onLine = () => {};
+  const t = {
+    connect: async fn => { onLine = fn; },
+    startHub: async () => {},
+    write: async line => {
+      writes.push(line);
+      if (line === 'h\n') {
+        onLine('SOCER_VER|6');
+        onLine('SOCER_SENSORS|D:color,F:force,IMU:imu');
+        onLine('SOCER3_READY|A');
+      }
+      if (line === 'x\n') onLine('SOCER2_STOP');
+    },
+    disconnect: async () => {},
+  };
+  const session = createControllerSession(t);
+  await session.connect();
+  await session.startHub();
+  assert.deepEqual(session.getState().sensorPorts, ['D', 'F']);
+  assert.deepEqual(session.getState().sensorTypes, { D: 'color', F: 'force', IMU: 'imu' });
+
+  await session.setViewMode('check');
+  await session.startProgram(program);
+
+  onLine('SOCER_SNS|D:c=red&r=45,F:p=1&f=35,IMU:h=12&p=2&r=10');
+  session.dispatch({ controlId: 'c1', input: 'blue' }, 'pressed');
+  await new Promise(r => setTimeout(r, 10));
+  assert.ok(writes.includes('u,D,60\n'));
+  assert.ok(writes.includes('m,A,360\n'));
+  session.dispatch({ controlId: 'c1', input: 'blue' }, 'released');
+
+  writes.length = 0;
+  session.dispatch({ controlId: 'c1', input: 'red' }, 'pressed');
+  await new Promise(r => setTimeout(r, 10));
+  assert.ok(writes.includes('g,IMU,r\n'));
+  assert.equal(writes.includes('m,A,-250\n'), false);
+  onLine('SOCER_SNS|IMU:h=0&p=2&r=22');
+  await new Promise(r => setTimeout(r, 10));
+  assert.ok(writes.includes('m,A,-250\n'));
   await session.dispose();
 });
 
