@@ -114,6 +114,9 @@ export interface WorkspaceBlock {
   sensorModules?: SensorModule[]
 }
 
+export type SheetEditorMode = "blocks" | "pybricks"
+export const MAX_PYTHON_CODE_CHARS = 20_000
+
 export interface SheetView {
   panX: number
   panY: number
@@ -125,6 +128,9 @@ export interface WorkspaceSheet {
   name: string
   blocks: WorkspaceBlock[]
   view?: SheetView
+  editorMode?: SheetEditorMode
+  pythonCode?: string
+  pythonDirty?: boolean
 }
 
 export interface SheetState {
@@ -1009,7 +1015,8 @@ export function snapTarget(
 export function generatePybricks(
   blocks: WorkspaceBlock[],
   hub: HubType,
-  chassis?: DriveSettings
+  chassis?: DriveSettings,
+  options?: { comments?: boolean }
 ): string {
   if (!PORTS[hub]) throw new Error("Неизвестный тип робота.")
   const clean = readBlocks({ blocks }, hub)
@@ -1111,6 +1118,9 @@ export function generatePybricks(
       const stopPorts = block.stopAll
         ? used
         : [...new Set(getStopPorts(block, hub).ports)]
+      if (options?.comments && stopPorts.length > 0) {
+        lines.push(`${indent}# Остановить ${block.stopAll ? "все моторы" : "мотор " + stopPorts.join(", ")}`)
+      }
       for (const port of stopPorts) {
         lines.push(`${indent}motor_${port.toLowerCase()}.brake()`)
       }
@@ -1162,6 +1172,10 @@ export function generatePybricks(
 
     if (block.type === "chassis") {
       const dir = block.chassisDirection || "forward"
+      if (options?.comments) {
+        const dirText = dir === "backward" ? "назад" : dir === "left" ? "налево" : dir === "right" ? "направо" : "вперёд"
+        lines.push(`${indent}# Шасси: ехать ${dirText}`)
+      }
       const [lMul, rMul] = WHEEL_DIRECTIONS[dir] || WHEEL_DIRECTIONS.forward
       const spd = block.modules?.includes("speed")
         ? block.speed || MOTOR_SPEED
@@ -1195,6 +1209,7 @@ export function generatePybricks(
     }
     if (block.type === "sensor") {
       const st: SensorType = block.sensorType || "ultrasonic"
+      if (options?.comments) lines.push(`${indent}# Датчик: ждём срабатывания`)
       const p = (block.sensorPort || "C").toLowerCase()
       const mods = block.sensorModules || [DEFAULT_SENSOR_MODULE[st]]
       if ((st === "ultrasonic" || st === "color") && mods.includes("lights")) {
@@ -1218,6 +1233,7 @@ export function generatePybricks(
         (b) => b.parentId === block.id && b.branch === "condition"
       )
       const condExprs = cond && cond.type === "sensor" ? sensorExprs(cond) : []
+      if (options?.comments) lines.push(`${indent}# Проверка условия датчика`)
       if (cond && cond.type === "sensor" && condExprs.length > 0) {
         const st: SensorType = cond.sensorType || "ultrasonic"
         const p = (cond.sensorPort || "C").toLowerCase()
@@ -1330,6 +1346,7 @@ export function generatePybricks(
       return
     }
 
+    if (options?.comments) lines.push(`${indent}# Мотор ${block.motor || "A"}: ${sign < 0 ? "назад" : "вперёд"}`)
     if (powered) {
       lines.push(
         `${indent}${motor}.dc(${sign * power})`,
@@ -1403,6 +1420,13 @@ export function readSheets(
               zoom: Math.max(0.5, Math.min(2, Number(view.zoom))),
             }
           : undefined
+      const editorMode: SheetEditorMode | undefined =
+        s.editorMode === "pybricks" ? "pybricks" : undefined
+      const pythonCode =
+        typeof s.pythonCode === "string" && s.pythonCode.length > 0
+          ? s.pythonCode.slice(0, MAX_PYTHON_CODE_CHARS)
+          : undefined
+      const pythonDirty = s.pythonDirty === true ? true : undefined
       return {
         id: String(s.id),
         name:
@@ -1411,6 +1435,9 @@ export function readSheets(
             .slice(0, 40) || `Лист ${i + 1}`,
         blocks: readBlocks(s, hub),
         ...(validView ? { view: validView } : {}),
+        ...(editorMode ? { editorMode } : {}),
+        ...(pythonCode !== undefined ? { pythonCode } : {}),
+        ...(pythonDirty ? { pythonDirty } : {}),
       }
     })
   if (!sheets.length) return readSheets(null, hub)

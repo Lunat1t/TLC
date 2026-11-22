@@ -15,7 +15,6 @@ import {
   Gamepad2,
   Gauge,
   Link2,
-  MoreHorizontal,
   LayoutGrid,
   Monitor,
   Navigation,
@@ -28,6 +27,7 @@ import {
   Settings2,
   Square,
   Trash2,
+  Volume2,
   Waves,
   Workflow,
   Zap,
@@ -64,6 +64,8 @@ import {
   type MotorDirection,
   type MotorModule,
   type MotorPanelButton,
+  MAX_PYTHON_CODE_CHARS,
+  type SheetEditorMode,
   type SheetState,
   type TravelUnit,
   type WorkspaceBlock,
@@ -76,8 +78,10 @@ import {
   SensorBlock,
 } from "@/components/editor/controller-blocks"
 import {
+  DRIVE_MODULE_INFO,
   TRAVEL_UNIT_ARIA_LABELS,
   computePopoverPlacement,
+  describeBlockForKid,
   TRAVEL_UNIT_LABELS,
   nextTravelUnit,
 } from "@/lib/controller-block-ui"
@@ -89,6 +93,7 @@ import {
   type DriveSettings,
 } from "@/lib/controller-program"
 import { ControlAreaView } from "@/components/editor/control-area"
+import { PybricksWorkspace } from "@/components/editor/pybricks-workspace"
 import { DirectionPalettePreview, DistanceGaugePalettePreview, MotorButtonsPalettePreview } from "@/components/editor/direction-control"
 import { useRobotSession } from "@/components/editor/robot-session"
 import {
@@ -267,6 +272,15 @@ function EditorWorkspace() {
   )
   const [openMenuAlignLeft, setOpenMenuAlignLeft] = React.useState(false)
   const [openMenuOpenUp, setOpenMenuOpenUp] = React.useState(false)
+  const [openDriveModule, setOpenDriveModule] = React.useState<{
+    blockId: string
+    module: "pair" | "speed" | "power" | "travel"
+  } | null>(null)
+  const [driveModAlignLeft, setDriveModAlignLeft] = React.useState(false)
+  const [driveModOpenUp, setDriveModOpenUp] = React.useState(false)
+  const [pybricksError, setPybricksError] = React.useState("")
+  const [pendingPybricksRun, setPendingPybricksRun] = React.useState(false)
+  const pySaveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const [compactPalette, setCompactPalette] = React.useState(false)
   const [paletteExpanded, setPaletteExpanded] = React.useState<boolean | null>(null)
   const [blockCategory, setBlockCategory] = React.useState<(typeof PALETTE_FILTERS)[number]["id"]>("all")
@@ -408,6 +422,11 @@ function EditorWorkspace() {
   const [chassisDraft, setChassisDraft] = React.useState<DriveSettings>({ ...DEFAULT_DRIVE_SETTINGS })
   const [panelErrorModal, setPanelErrorModal] = React.useState<string | null>(null)
 
+  const latestSheetsRef = React.useRef<SheetState>(sheetState)
+  React.useEffect(() => {
+    latestSheetsRef.current = sheetState
+  }, [sheetState])
+
   const currentSheet = React.useMemo(
     () =>
       sheetState.sheets.find((s) => s.id === sheetState.activeSheetId) ||
@@ -416,6 +435,9 @@ function EditorWorkspace() {
   )
 
   const blocks = currentSheet?.blocks || []
+  const editorMode: SheetEditorMode = currentSheet?.editorMode === "pybricks" ? "pybricks" : "blocks"
+  const sheetPythonCode = currentSheet?.pythonCode ?? ""
+  const sheetPythonDirty = Boolean(currentSheet?.pythonDirty)
 
   React.useEffect(() => {
     let cancelled = false
@@ -625,9 +647,44 @@ function EditorWorkspace() {
     enterCheckView()
   }
 
+  async function runCustomPybricksOnHub(session: NonNullable<typeof sessionRef.current>) {
+    if (!project) return
+    if (pySaveTimerRef.current) {
+      clearTimeout(pySaveTimerRef.current)
+      pySaveTimerRef.current = null
+    }
+    const latestSheet =
+      latestSheetsRef.current.sheets.find((s) => s.id === latestSheetsRef.current.activeSheetId) ||
+      latestSheetsRef.current.sheets[0]
+    if (latestSheet?.pythonDirty) {
+      await persistSheets(latestSheetsRef.current)
+    }
+    setPybricksError("")
+    const res = await session.runCustomProgram(latestSheet?.pythonCode ?? sheetPythonCode)
+    if (!res.ok && res.error) {
+      setPybricksError(res.error)
+    }
+  }
+
   async function startProgram() {
     const session = sessionRef.current
-    if (!session || !controllerProgram || starting || checking) return
+    if (!session || starting || checking) return
+    if (editorMode === "pybricks") {
+      if (!project) return
+      if (project.hub === "ev3") {
+        setPybricksError("Прямой запуск по Bluetooth доступен только для SPIKE Prime. Для EV3 нажмите «Скачать .py».")
+        return
+      }
+      setStarting(true)
+      setPybricksError("")
+      try {
+        await runCustomPybricksOnHub(session)
+      } finally {
+        setStarting(false)
+      }
+      return
+    }
+    if (!controllerProgram) return
     setStarting(true)
     setStartError("")
     try {
@@ -637,18 +694,29 @@ function EditorWorkspace() {
 
   async function connectAndStart() {
     const session = sessionRef.current
-    if (!session || !controllerProgram || starting) return
+    if (!session || starting) return
+    const runPybricks = pendingPybricksRun || editorMode === "pybricks"
+    if (!runPybricks && !controllerProgram) return
     setRunPromptOpen(false)
+    setPendingPybricksRun(false)
     setRobotMenuOpen(false)
     setStarting(true)
     setStartError("")
+    setPybricksError("")
     try {
       await session.connect()
       if (session.getState().transport !== 'connected') {
-        if (session.getState().transport === 'fault') setStartError(session.getState().message)
+        if (session.getState().transport === 'fault') {
+          if (runPybricks) setPybricksError(session.getState().message)
+          else setStartError(session.getState().message)
+        }
         return
       }
-      await runSessionProgram(session)
+      if (runPybricks) {
+        await runCustomPybricksOnHub(session)
+      } else {
+        await runSessionProgram(session)
+      }
     } finally { setStarting(false) }
   }
 
@@ -657,7 +725,22 @@ function EditorWorkspace() {
     if (['connecting', 'uploading', 'starting-hub'].includes(robotState.transport)) return
     setRobotMenuOpen(false)
     setMoreMenuOpen(false)
+    if (editorMode === "pybricks") {
+      if (project.hub === "ev3") {
+        setPybricksError("Прямой запуск по Bluetooth доступен только для SPIKE Prime. Для EV3 нажмите «Скачать .py».")
+        return
+      }
+      if (robotState.transport === "disconnected" || robotState.transport === "fault") {
+        setPybricksError("")
+        setPendingPybricksRun(true)
+        setRunPromptOpen(true)
+        return
+      }
+      void startProgram()
+      return
+    }
     if (project.hub === 'spike' && (robotState.transport === 'disconnected' || robotState.transport === 'fault')) {
+      setPendingPybricksRun(false)
       setStartError("")
       setRunPromptOpen(true)
       return
@@ -668,6 +751,11 @@ function EditorWorkspace() {
   async function stopProgram() {
     const session = sessionRef.current
     if (!session) return
+    if (session.getState().program === "custom-running" || editorMode === "pybricks") {
+      await session.stopCustomProgram()
+      setStarting(false)
+      return
+    }
     if (['uploading', 'starting-hub'].includes(session.getState().transport) || starting) {
       session.cancelStart()
       setStarting(false)
@@ -698,18 +786,35 @@ function EditorWorkspace() {
   }, [robotMenuOpen, moreMenuOpen])
 
   React.useEffect(() => {
-    if (!runPromptOpen && !chassisDialogOpen && !panelErrorModal && !openMenuBlockId) return
+    if (!runPromptOpen && !chassisDialogOpen && !panelErrorModal && !openMenuBlockId && !openDriveModule) return
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setRunPromptOpen(false)
+        setPendingPybricksRun(false)
         setChassisDialogOpen(false)
         setPanelErrorModal(null)
         setOpenMenuBlockId(null)
+        setOpenDriveModule(null)
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [runPromptOpen, chassisDialogOpen, panelErrorModal, openMenuBlockId])
+  }, [runPromptOpen, chassisDialogOpen, panelErrorModal, openMenuBlockId, openDriveModule])
+
+  React.useEffect(() => {
+    return () => {
+      if (pySaveTimerRef.current) clearTimeout(pySaveTimerRef.current)
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        try { window.speechSynthesis.cancel() } catch {}
+      }
+    }
+  }, [])
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      try { window.speechSynthesis.cancel() } catch {}
+    }
+  }, [selectedId, checking, editorMode])
 
   React.useEffect(() => () => {void sessionRef.current?.stop("Проект изменён. Запустите программу снова.")}, [projectId,sessionRef])
   React.useEffect(() => {
@@ -1062,28 +1167,151 @@ function EditorWorkspace() {
     setPanY(board ? Math.round(board.clientHeight / 2) : 240)
   }
 
-  function handleExportCode() {
-    if (!project) return
+  function generateSheetPybricksCode(): { ok: true; code: string } | { ok: false; error: string } {
+    if (!project) return { ok: false, error: "Проект ещё не загружен." }
     try {
-      const code = `# Лист: ${currentSheet.name.replace(/[\r\n]/g, " ")}\n${generatePybricks(blocks, project.hub, projectChassis.configured ? projectChassis.settings : undefined)}`
-      setCodeModal({
-        open: true,
-        title: `Программа Pybricks — ${currentSheet.name}`,
-        code,
-      })
+      const body = generatePybricks(
+        blocks,
+        project.hub,
+        projectChassis.configured ? projectChassis.settings : undefined,
+        { comments: true }
+      )
+      const code = `# Лист: ${currentSheet.name.replace(/[\r\n]/g, " ")}\n${body}`.slice(0, MAX_PYTHON_CODE_CHARS)
+      return { ok: true, code }
     } catch (err) {
-      setSaveMessage({
-        text:
-          err instanceof Error
-            ? err.message
-            : "Не удалось сформировать программу",
-        isError: true,
-      })
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : "Не удалось сформировать программу",
+      }
     }
   }
 
-  function handleDownloadPy() {
-    const blob = new Blob([codeModal.code], {
+  async function switchEditorMode(nextMode: SheetEditorMode) {
+    if (!project || checking || starting || robotState.program === "custom-running") return
+    if (nextMode === editorMode) return
+    if (pySaveTimerRef.current) {
+      clearTimeout(pySaveTimerRef.current)
+      pySaveTimerRef.current = null
+    }
+    setOpenMenuBlockId(null)
+    setOpenDriveModule(null)
+    setSelectedId(null)
+
+    const base = snapshotSheets()
+    if (nextMode === "pybricks") {
+      let nextCode = currentSheet.pythonCode ?? ""
+      let nextDirty = currentSheet.pythonDirty
+      let genError = ""
+      if (!currentSheet.pythonDirty || !nextCode) {
+        const res = generateSheetPybricksCode()
+        if (res.ok) {
+          nextCode = res.code
+          nextDirty = undefined
+        } else {
+          genError = res.error
+          if (!nextCode) {
+            nextCode = `# Лист: ${currentSheet.name.replace(/[\r\n]/g, " ")}\n# Исправьте блоки или напишите код на Python\n`
+          }
+        }
+      }
+      setPybricksError(genError)
+      const nextState: SheetState = {
+        ...base,
+        sheets: base.sheets.map((s) =>
+          s.id === base.activeSheetId
+            ? {
+                ...s,
+                editorMode: "pybricks",
+                pythonCode: nextCode,
+                ...(nextDirty ? { pythonDirty: true } : { pythonDirty: undefined }),
+              }
+            : s
+        ),
+      }
+      await persistSheets(nextState)
+    } else {
+      setPybricksError("")
+      const nextState: SheetState = {
+        ...base,
+        sheets: base.sheets.map((s) =>
+          s.id === base.activeSheetId
+            ? { ...s, editorMode: undefined }
+            : s
+        ),
+      }
+      await persistSheets(nextState)
+    }
+  }
+
+  function schedulePybricksPersist() {
+    if (pySaveTimerRef.current) clearTimeout(pySaveTimerRef.current)
+    pySaveTimerRef.current = setTimeout(() => {
+      pySaveTimerRef.current = null
+      if (saveBusyRef.current) {
+        schedulePybricksPersist()
+        return
+      }
+      void persistSheets(latestSheetsRef.current)
+    }, 450)
+  }
+
+  function handlePybricksCodeChange(nextCode: string) {
+    const clipped = nextCode.slice(0, MAX_PYTHON_CODE_CHARS)
+    setPybricksError("")
+    const nextState: SheetState = {
+      ...latestSheetsRef.current,
+      sheets: latestSheetsRef.current.sheets.map((s) =>
+        s.id === latestSheetsRef.current.activeSheetId
+          ? {
+              ...s,
+              editorMode: "pybricks",
+              pythonCode: clipped,
+              pythonDirty: true,
+            }
+          : s
+      ),
+    }
+    latestSheetsRef.current = nextState
+    setSheetState(nextState)
+    setSaveMessage({ text: "Не сохранено…", isError: false })
+    schedulePybricksPersist()
+  }
+
+  async function handleSyncPybricksFromBlocks() {
+    if (pySaveTimerRef.current) {
+      clearTimeout(pySaveTimerRef.current)
+      pySaveTimerRef.current = null
+    }
+    const res = generateSheetPybricksCode()
+    if (!res.ok) {
+      setPybricksError(res.error)
+      return
+    }
+    setPybricksError("")
+    const base = snapshotSheets()
+    const nextState: SheetState = {
+      ...base,
+      sheets: base.sheets.map((s) =>
+        s.id === base.activeSheetId
+          ? {
+              ...s,
+              editorMode: "pybricks",
+              pythonCode: res.code,
+              pythonDirty: undefined,
+            }
+          : s
+      ),
+    }
+    await persistSheets(nextState)
+  }
+
+  function handleExportCode() {
+    void switchEditorMode("pybricks")
+  }
+
+  function handleDownloadPy(codeText?: string) {
+    const source = codeText ?? (editorMode === "pybricks" ? sheetPythonCode : codeModal.code)
+    const blob = new Blob([source], {
       type: "text/x-python;charset=utf-8",
     })
     const url = URL.createObjectURL(blob)
@@ -1147,6 +1375,7 @@ function EditorWorkspace() {
       onPointerDown={(e) => {
         if (!(e.target as HTMLElement).closest("[data-module-picker]")) {
           setOpenMenuBlockId(null)
+          setOpenDriveModule(null)
         }
       }}
     >
@@ -1188,39 +1417,37 @@ function EditorWorkspace() {
           {saveMessage.text}
         </span>
 
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={!project || checking}
-          onClick={handleExportCode}
-          className="hidden md:inline-flex rounded-[11px] min-h-[40px] px-3.5 font-extrabold border-[#c6dce2] text-[#086985]"
+        <div
+          role="group"
+          aria-label="Режим редактора"
+          className="flex items-center rounded-[11px] border border-[#c6dce2] bg-[#f4f8fa] p-0.5 shrink-0"
         >
-          Код Pybricks
-        </Button>
-
-        <div ref={moreMenuRef} className="relative md:hidden">
           <button
             type="button"
-            aria-label="Дополнительные действия"
-            aria-expanded={moreMenuOpen}
-            disabled={!project || checking}
-            onClick={() => { setRobotMenuOpen(false); setMoreMenuOpen((prev) => !prev) }}
-            className="grid size-10 place-items-center rounded-[11px] border border-[#c6dce2] bg-white text-[#086985] hover:bg-[#f4f8fa] disabled:opacity-40"
+            disabled={!project || checking || starting || robotState.program === "custom-running"}
+            aria-pressed={editorMode === "blocks"}
+            onClick={() => void switchEditorMode("blocks")}
+            className={`min-h-[34px] h-[34px] px-2.5 sm:px-3 rounded-[9px] text-xs font-extrabold transition-colors whitespace-nowrap cursor-pointer disabled:opacity-50 ${
+              editorMode === "blocks"
+                ? "bg-[#087996] text-white shadow-xs"
+                : "text-[#31525f] hover:text-[#18313b]"
+            }`}
           >
-            <MoreHorizontal size={18} aria-hidden="true" />
+            Блоки
           </button>
-          {moreMenuOpen && (
-            <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-52 rounded-xl border border-[#dce8ec] bg-white p-1.5 shadow-xl">
-              <button
-                type="button"
-                onClick={() => { setMoreMenuOpen(false); handleExportCode() }}
-                className="w-full rounded-lg px-3 py-2 text-left text-sm font-bold text-[#18313b] hover:bg-[#eff8fb]"
-              >
-                Код Pybricks (.py)
-              </button>
-            </div>
-          )}
+          <button
+            type="button"
+            disabled={!project || checking || starting || robotState.program === "custom-running"}
+            aria-pressed={editorMode === "pybricks"}
+            onClick={() => void switchEditorMode("pybricks")}
+            className={`min-h-[34px] h-[34px] px-2.5 sm:px-3 rounded-[9px] text-xs font-extrabold transition-colors whitespace-nowrap cursor-pointer disabled:opacity-50 ${
+              editorMode === "pybricks"
+                ? "bg-[#087996] text-white shadow-xs"
+                : "text-[#31525f] hover:text-[#18313b]"
+            }`}
+          >
+            Pybricks
+          </button>
         </div>
 
         <div ref={robotMenuRef} className="relative">
@@ -1321,7 +1548,7 @@ function EditorWorkspace() {
           )}
         </div>
 
-        {checking || starting || robotState.transport === "uploading" || robotState.transport === "starting-hub" ? (
+        {checking || starting || robotState.transport === "uploading" || robotState.transport === "starting-hub" || robotState.program === "custom-running" ? (
           <Button
             type="button"
             onClick={() => void stopProgram()}
@@ -1343,6 +1570,29 @@ function EditorWorkspace() {
       </header>
 
       {/* Main Editor Body */}
+      {editorMode === "pybricks" && project ? (
+        <PybricksWorkspace
+          hub={project.hub}
+          sheetName={currentSheet.name}
+          code={sheetPythonCode}
+          dirty={sheetPythonDirty}
+          errorMessage={pybricksError || (robotState.transport === "fault" ? robotState.message : "")}
+          statusMessage={
+            robotState.transport === "uploading" ||
+            robotState.transport === "starting-hub" ||
+            robotState.program === "custom-running"
+              ? robotState.message
+              : undefined
+          }
+          isRunning={robotState.program === "custom-running"}
+          isBusy={starting || robotState.transport === "uploading" || robotState.transport === "starting-hub"}
+          onChangeCode={handlePybricksCodeChange}
+          onSyncFromBlocks={() => void handleSyncPybricksFromBlocks()}
+          onDownload={() => handleDownloadPy(sheetPythonCode)}
+          onRun={handleRunClick}
+          onStop={() => void stopProgram()}
+        />
+      ) : (
       <div className="flex flex-1 min-h-0 relative">
         <aside
           ref={paletteRef}
@@ -2038,7 +2288,7 @@ function EditorWorkspace() {
                           ? "z-40 transition-[left,top,box-shadow] duration-200 ease-out"
                           : "z-10 transition-[left,top,box-shadow] duration-200 ease-out"
                     } has-[[aria-expanded="true"]]:z-40 ${
-                      openMenuBlockId === block.id ? "z-40" : ""
+                      openMenuBlockId === block.id || openDriveModule?.blockId === block.id ? "z-40" : ""
                     } ${radiusClass} ${
                       isIfBlock
                         ? "pointer-events-none text-white"
@@ -2553,8 +2803,60 @@ function EditorWorkspace() {
                           </button>
 
                           {paired && (
-                            <div className="shrink-0 flex flex-nowrap items-center gap-1.5 rounded-[12px] bg-white/10 px-2 py-1 min-h-[36px]">
-                              <Link2 size={15} aria-hidden="true" className="shrink-0 text-white/90" />
+                            <div className="shrink-0 flex flex-nowrap items-center gap-1.5 rounded-[12px] bg-black/20 px-1.5 py-1 min-h-[36px]">
+                              <div data-module-picker="true" className="relative shrink-0">
+                                <button
+                                  type="button"
+                                  aria-label={`Модуль мотора: ${DRIVE_MODULE_INFO.pair.title}`}
+                                  aria-expanded={openDriveModule?.blockId === block.id && openDriveModule.module === "pair"}
+                                  title={DRIVE_MODULE_INFO.pair.title}
+                                  onClick={(e) => {
+                                    setOpenMenuBlockId(null)
+                                    if (openDriveModule?.blockId === block.id && openDriveModule.module === "pair") {
+                                      setOpenDriveModule(null)
+                                      return
+                                    }
+                                    const rect = e.currentTarget.getBoundingClientRect()
+                                    const placement = computePopoverPlacement(rect, { width: window.innerWidth, height: window.innerHeight })
+                                    setDriveModAlignLeft(placement.alignLeft)
+                                    setDriveModOpenUp(placement.openUp)
+                                    setOpenDriveModule({ blockId: block.id, module: "pair" })
+                                  }}
+                                  className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-white/15 hover:bg-white/25 text-white/95 flex items-center justify-center shrink-0 cursor-pointer"
+                                >
+                                  <Link2 size={16} aria-hidden="true" />
+                                </button>
+                                {openDriveModule?.blockId === block.id && openDriveModule.module === "pair" && (
+                                  <div className={`absolute ${driveModOpenUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${driveModAlignLeft ? "left-0" : "right-0"} z-50 w-[216px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-2.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-2`}>
+                                    <div>
+                                      <p className="text-xs font-black text-[#18313b] leading-snug">{DRIVE_MODULE_INFO.pair.title}</p>
+                                      <p className="mt-0.5 text-[11px] font-semibold text-[#57717d] leading-snug">{DRIVE_MODULE_INFO.pair.description}</p>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (!project) return
+                                        setOpenDriveModule(null)
+                                        saveBlocks(
+                                          updateDrive(
+                                            blocks,
+                                            block.id,
+                                            {
+                                              ...(block.type === "pair" ? { type: "drive" as BlockType } : {}),
+                                              modules: modules.filter((m) => m !== "pair"),
+                                            },
+                                            project.hub
+                                          )
+                                        )
+                                      }}
+                                      className="min-h-[36px] w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#fef2f2] hover:bg-[#fee2e2] text-xs font-extrabold text-[#991b1b] cursor-pointer"
+                                    >
+                                      <Trash2 size={14} aria-hidden="true" className="shrink-0" />
+                                      <span>Убрать</span>
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                               <span className="text-[16px] font-extrabold opacity-95 whitespace-nowrap">
                                 и
                               </span>
@@ -2613,15 +2915,64 @@ function EditorWorkspace() {
                           .map((mod) => (
                             <div
                               key={mod}
-                              className="shrink-0 flex items-center gap-2 rounded-[12px] bg-white/10 px-2.5 py-1"
+                              className="shrink-0 flex items-center gap-2 rounded-[12px] bg-black/20 px-2 py-1"
                             >
-                              {mod === "travel" ? (
-                                <RotateCw size={16} aria-hidden="true" className="shrink-0 text-white/90" />
-                              ) : mod === "speed" ? (
-                                <Gauge size={16} aria-hidden="true" className="shrink-0 text-white/90" />
-                              ) : (
-                                <Zap size={16} aria-hidden="true" className="shrink-0 text-white/90" />
-                              )}
+                              <div data-module-picker="true" className="relative shrink-0">
+                                <button
+                                  type="button"
+                                  aria-label={`Модуль мотора: ${DRIVE_MODULE_INFO[mod].title}`}
+                                  aria-expanded={openDriveModule?.blockId === block.id && openDriveModule.module === mod}
+                                  title={DRIVE_MODULE_INFO[mod].title}
+                                  onClick={(e) => {
+                                    setOpenMenuBlockId(null)
+                                    if (openDriveModule?.blockId === block.id && openDriveModule.module === mod) {
+                                      setOpenDriveModule(null)
+                                      return
+                                    }
+                                    const rect = e.currentTarget.getBoundingClientRect()
+                                    const placement = computePopoverPlacement(rect, { width: window.innerWidth, height: window.innerHeight })
+                                    setDriveModAlignLeft(placement.alignLeft)
+                                    setDriveModOpenUp(placement.openUp)
+                                    setOpenDriveModule({ blockId: block.id, module: mod })
+                                  }}
+                                  className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-white/15 hover:bg-white/25 text-white/95 flex items-center justify-center shrink-0 cursor-pointer"
+                                >
+                                  {mod === "travel" ? (
+                                    <RotateCw size={16} aria-hidden="true" />
+                                  ) : mod === "speed" ? (
+                                    <Gauge size={16} aria-hidden="true" />
+                                  ) : (
+                                    <Zap size={16} aria-hidden="true" />
+                                  )}
+                                </button>
+                                {openDriveModule?.blockId === block.id && openDriveModule.module === mod && (
+                                  <div className={`absolute ${driveModOpenUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${driveModAlignLeft ? "left-0" : "right-0"} z-50 w-[216px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-2.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-2`}>
+                                    <div>
+                                      <p className="text-xs font-black text-[#18313b] leading-snug">{DRIVE_MODULE_INFO[mod].title}</p>
+                                      <p className="mt-0.5 text-[11px] font-semibold text-[#57717d] leading-snug">{DRIVE_MODULE_INFO[mod].description}</p>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (!project) return
+                                        setOpenDriveModule(null)
+                                        saveBlocks(
+                                          updateDrive(
+                                            blocks,
+                                            block.id,
+                                            { modules: modules.filter((m) => m !== mod) },
+                                            project.hub
+                                          )
+                                        )
+                                      }}
+                                      className="min-h-[36px] w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#fef2f2] hover:bg-[#fee2e2] text-xs font-extrabold text-[#991b1b] cursor-pointer"
+                                    >
+                                      <Trash2 size={14} aria-hidden="true" className="shrink-0" />
+                                      <span>Убрать</span>
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                               <span className="whitespace-nowrap text-[16px] font-extrabold tracking-tight">
                                 {mod === "travel"
                                   ? "на"
@@ -2837,11 +3188,53 @@ function EditorWorkspace() {
               </div>
             </div>
 
+            {!checking && selectedId && (() => {
+              const selectedBlock = blocks.find((b) => b.id === selectedId)
+              const sentence = describeBlockForKid(
+                selectedBlock,
+                blocks,
+                projectChassis.configured ? projectChassis.settings : undefined
+              )
+              if (!selectedBlock || !sentence) return null
+              return (
+                <div
+                  data-kid-translation="true"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="pointer-events-none absolute inset-x-3 bottom-3 z-30 flex justify-center"
+                >
+                  <div className="pointer-events-auto max-w-[680px] rounded-2xl border border-[#c6dce2] bg-white/95 backdrop-blur-xs px-3 py-1.5 shadow-lg flex items-center gap-2.5">
+                    <span className="text-xs sm:text-[13px] font-bold text-[#18313b] leading-snug">
+                      {sentence}
+                    </span>
+                    <button
+                      type="button"
+                      aria-label="Озвучить блок"
+                      title="Озвучить блок"
+                      onClick={() => {
+                        if (typeof window === "undefined" || !("speechSynthesis" in window)) return
+                        try {
+                          window.speechSynthesis.cancel()
+                          const utterance = new SpeechSynthesisUtterance(sentence)
+                          utterance.lang = "ru-RU"
+                          utterance.rate = 0.95
+                          window.speechSynthesis.speak(utterance)
+                        } catch {}
+                      }}
+                      className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-[#eff8fb] hover:bg-[#dff1f7] text-[#086985] grid place-items-center shrink-0 cursor-pointer"
+                    >
+                      <Volume2 size={17} aria-hidden="true" />
+                    </button>
+                  </div>
+                </div>
+              )
+            })()}
+
             {loadError && !project && <div className="absolute inset-0 z-30 overflow-y-auto bg-white p-6"><h2 className="text-lg font-bold">{loadError}</h2><div className="flex flex-col gap-2 mt-4">{projects.map(p=><Link key={p.id} className="rounded-lg border p-3 text-[#086985]" href={`/editor?id=${encodeURIComponent(p.id)}`}>{p.name}</Link>)}{projects.length===0&&<Link href="/dashboard" className="text-[#086985] underline">К списку проектов</Link>}</div></div>}
           </div>
 
         </main>
       </div>
+      )}
 
       {/* Drag Ghost from Palette */}
       {gesture?.kind === "palette" && (
@@ -2908,10 +3301,14 @@ function EditorWorkspace() {
             </h2>
             <p className="mt-1.5 text-sm text-[#475569]">
               {bleSupport.checked && !bleSupport.available
-                ? `${bleSupport.reason} Можно проверить управление в пробном режиме или скачать код Pybricks.`
+                ? pendingPybricksRun
+                  ? `${bleSupport.reason} Вы можете скачать файл .py и запустить его в Pybricks Code.`
+                  : `${bleSupport.reason} Можно проверить управление в пробном режиме или открыть код Pybricks.`
                 : robotState.transport === "fault"
                   ? "Переподключите хаб по Bluetooth, и программа сразу запустится."
-                  : "IDE сама подготовит хаб по Bluetooth и сразу запустит ваше управление."}
+                  : pendingPybricksRun
+                    ? "Подключите хаб по Bluetooth — код скомпилируется и сразу запустится на SPIKE Prime."
+                    : "IDE сама подготовит хаб по Bluetooth и сразу запустит ваше управление."}
             </p>
             <div className="mt-4 flex flex-col gap-2">
               {(!bleSupport.checked || bleSupport.available) && (
@@ -2923,26 +3320,32 @@ function EditorWorkspace() {
                   {robotState.transport === "fault" ? "Переподключить и запустить" : "Подключить и запустить"}
                 </Button>
               )}
-              <Button
-                type="button"
-                variant={bleSupport.checked && !bleSupport.available ? "default" : "outline"}
-                onClick={() => { setRunPromptOpen(false); void startProgram() }}
-                className={`min-h-[44px] w-full rounded-xl text-sm font-bold ${
-                  bleSupport.checked && !bleSupport.available
-                    ? "bg-[#087996] hover:bg-[#06637a] text-white font-extrabold"
-                    : "border-[#c6dce2] text-[#18313b]"
-                }`}
-              >
-                Пробный режим (без робота)
-              </Button>
+              {!pendingPybricksRun && (
+                <Button
+                  type="button"
+                  variant={bleSupport.checked && !bleSupport.available ? "default" : "outline"}
+                  onClick={() => { setRunPromptOpen(false); void startProgram() }}
+                  className={`min-h-[44px] w-full rounded-xl text-sm font-bold ${
+                    bleSupport.checked && !bleSupport.available
+                      ? "bg-[#087996] hover:bg-[#06637a] text-white font-extrabold"
+                      : "border-[#c6dce2] text-[#18313b]"
+                  }`}
+                >
+                  Пробный режим (без робота)
+                </Button>
+              )}
               {bleSupport.checked && !bleSupport.available && (
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => { setRunPromptOpen(false); handleExportCode() }}
+                  onClick={() => {
+                    setRunPromptOpen(false)
+                    if (pendingPybricksRun) handleDownloadPy(sheetPythonCode)
+                    else handleExportCode()
+                  }}
                   className="min-h-[44px] w-full rounded-xl border-[#c6dce2] text-sm font-bold text-[#086985]"
                 >
-                  Код Pybricks (.py)
+                  {pendingPybricksRun ? "Скачать .py" : "Код Pybricks (.py)"}
                 </Button>
               )}
               <button
@@ -3083,7 +3486,7 @@ function EditorWorkspace() {
         </div>
       )}
 
-      {codeModal.open && <div role="dialog" aria-modal="true" aria-label={codeModal.title} className="fixed inset-0 z-50 bg-[#112a36]/50 grid place-items-center p-4"><div className="w-full max-w-[600px] rounded-[18px] bg-white p-6 shadow-2xl"><h2 className="text-xl font-black mb-3">{codeModal.title}</h2><p className="text-sm mb-3">Загрузите файл в Pybricks Code и запустите на хабе.</p><textarea readOnly aria-label="Код программы Pybricks" value={codeModal.code} className="w-full h-[210px] p-3 border rounded-lg font-mono text-sm"/><div className="flex justify-end gap-3 mt-4"><Button type="button" variant="outline" onClick={handleDownloadPy}>Скачать .py</Button><Button type="button" onClick={()=>setCodeModal(prev=>({...prev,open:false}))}>Закрыть</Button></div></div></div>}
+      {codeModal.open && <div role="dialog" aria-modal="true" aria-label={codeModal.title} className="fixed inset-0 z-50 bg-[#112a36]/50 grid place-items-center p-4"><div className="w-full max-w-[600px] rounded-[18px] bg-white p-6 shadow-2xl"><h2 className="text-xl font-black mb-3">{codeModal.title}</h2><p className="text-sm mb-3">Загрузите файл в Pybricks Code и запустите на хабе.</p><textarea readOnly aria-label="Код программы Pybricks" value={codeModal.code} className="w-full h-[210px] p-3 border rounded-lg font-mono text-sm"/><div className="flex justify-end gap-3 mt-4"><Button type="button" variant="outline" onClick={() => handleDownloadPy()}>Скачать .py</Button><Button type="button" onClick={()=>setCodeModal(prev=>({...prev,open:false}))}>Закрыть</Button></div></div></div>}
 
     </div>
     {landscapeBlocked && (

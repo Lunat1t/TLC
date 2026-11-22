@@ -746,3 +746,86 @@ test('held red stop takes priority over blue motion on A and D until released', 
     }
   } finally { await session.dispose(); }
 });
+
+
+test('mpy compiler validates empty/oversized source and keeps cache bounded for user edits', async () => {
+  const { compilePythonToMultiMpy6, getCompilerCacheSize, MAX_PYTHON_SOURCE_CHARS } = await import('../src/lib/mpy-compiler.ts');
+  const wasmB64 = readFileSync(new URL('../public/vendor/mpy-cross-v6.wasm', import.meta.url)).toString('base64');
+  const wasmPath = 'data:application/wasm;base64,' + wasmB64;
+
+  await assert.rejects(() => compilePythonToMultiMpy6('   \n', { wasmPath }), /пуст/);
+  await assert.rejects(() => compilePythonToMultiMpy6('a'.repeat(MAX_PYTHON_SOURCE_CHARS + 1), { wasmPath }), /длинный/);
+  await assert.rejects(() => compilePythonToMultiMpy6('def broken(:', { wasmPath }), /Ошибка в коде Python/);
+
+  const before = getCompilerCacheSize();
+  const b1 = await compilePythonToMultiMpy6('x = 1\n', { wasmPath });
+  const b2 = await compilePythonToMultiMpy6('x = 2\n', { wasmPath });
+  assert.ok(b1.byteLength > 0 && b2.byteLength > 0);
+  assert.equal(getCompilerCacheSize(), before);
+});
+
+test('custom Pybricks run resets hub tracking cleanly, avoids false link-lost fault, and restores Blocks auto-upload', async () => {
+  let notify;
+  let hubMode = 'controller';
+  let uploads = 0;
+  let disconnected = false;
+  const t = {
+    connect: async (fn) => { notify = fn; },
+    startHub: async ({ probe } = {}) => {
+      if (!probe && hubMode === 'custom') {
+        setTimeout(() => notify('SOCER2_LINK_LOST'), 15);
+      }
+    },
+    write: async (line) => {
+      if (line === 'h\n') {
+        if (hubMode === 'controller') {
+          notify(`SOCER_VER|${HUB_PROGRAM_VERSION}`);
+          notify('SOCER3_READY|A');
+        } else {
+          notify('SOCER2_LINK_LOST');
+        }
+      }
+      if (line === 'x\n') notify('SOCER2_STOP');
+    },
+    uploadProgram: async (blob, onProgress) => {
+      uploads++;
+      onProgress(100);
+      hubMode = blob[0] === 99 ? 'custom' : 'controller';
+    },
+    stopProgram: async () => {
+      hubMode = 'custom';
+    },
+    disconnect: async () => { disconnected = true; },
+  };
+  const session = createControllerSession(t, undefined, {
+    compileHubProgram: async () => new Uint8Array([1, 2, 3]),
+    compileCustomProgram: async (src) => {
+      if (src.includes('SYNTAX_ERR')) throw new Error('Ошибка в коде Python: SyntaxError');
+      return new Uint8Array([99, 1]);
+    },
+    probeTimeoutMs: 50,
+  });
+
+  await session.connect();
+  await session.startHub();
+  assert.equal(session.getState().transport, 'ready');
+
+  const bad = await session.runCustomProgram('SYNTAX_ERR');
+  assert.equal(bad.ok, false);
+  assert.equal(session.getState().transport, 'ready');
+  assert.equal(disconnected, false);
+
+  const good = await session.runCustomProgram('print("hi")');
+  assert.equal(good.ok, true);
+  assert.equal(session.getState().transport, 'connected');
+  await new Promise((r) => setTimeout(r, 40));
+  assert.equal(session.getState().transport, 'connected');
+  assert.equal(session.getState().program, 'stopped');
+  assert.equal(disconnected, false);
+
+  const uploadsBefore = uploads;
+  await session.startHub();
+  assert.equal(uploads, uploadsBefore + 1);
+  assert.equal(session.getState().transport, 'ready');
+  await session.dispose();
+});

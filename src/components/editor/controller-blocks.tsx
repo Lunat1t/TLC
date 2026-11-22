@@ -1,5 +1,5 @@
 import React from "react"
-import { Activity, AlertTriangle, Check, ChevronDown, CircleDot, Compass, Gauge, Lightbulb, Palette, RotateCcw, RotateCw, Ruler, Settings2, SlidersHorizontal, Sun, Trash2, Waves } from "lucide-react"
+import { Activity, AlertTriangle, Check, ChevronDown, Compass, Gauge, Hourglass, Lightbulb, RotateCcw, RotateCw, Settings2, Trash2 } from "lucide-react"
 import type { WorkspaceBlock, ControllerButton, ControllerEvent, ChassisDirection, ImuAxis, MotorModule, SensorColor, SensorModule, SensorOp, SensorType, TravelUnit } from "@/lib/workspace"
 import { CONTROLLER_BUTTONS, BUTTON_LABELS } from "@/lib/controller-program"
 import {
@@ -22,17 +22,29 @@ import {
 import { CONTROL_INPUTS, type ControlInstance } from "@/lib/control-workspace"
 import type { SensorTelemetry } from "@/lib/controller-runtime"
 import {
+  CHASSIS_MODULE_INFO,
   COLOR_SWATCH_STYLES,
   CONTROLLER_EVENT_LABELS,
+  SENSOR_MODULE_INFO,
   TRAVEL_UNIT_ARIA_LABELS,
   TRAVEL_UNIT_LABELS,
-  formatSensorLightLabel,
   computePopoverPlacement,
+  formatSensorLightLabel,
   formatSensorLiveBadge,
+  getSensorComparisonWord,
   nextControllerEvent,
   nextSensorLight,
   nextTravelUnit,
 } from "@/lib/controller-block-ui"
+import {
+  ColorBeamScene,
+  DistanceCompareScene,
+  ForceButtonScene,
+  ImuTiltScene,
+  LightsGlowScene,
+  ReflectionScene,
+  UltrasonicEyesScene,
+} from "@/components/editor/block-scenes"
 
 interface ControllerBlockProps {
   block: WorkspaceBlock
@@ -378,6 +390,80 @@ function usePopoverDismiss(open: boolean, ref: React.RefObject<HTMLDivElement | 
   return placement
 }
 
+function ModuleCapsuleIconPopover({
+  title,
+  description,
+  icon,
+  iconClassName = "text-white/95",
+  canRemove,
+  mandatoryLabel = "Обязательный модуль",
+  ariaLabel,
+  onRemove,
+  onWillOpen,
+}: {
+  title: string
+  description: string
+  icon: React.ReactNode
+  iconClassName?: string
+  canRemove: boolean
+  mandatoryLabel?: string
+  ariaLabel: string
+  onRemove: () => void
+  onWillOpen?: () => void
+}) {
+  const [open, setOpen] = React.useState(false)
+  const ref = React.useRef<HTMLDivElement>(null)
+  const close = React.useCallback(() => setOpen(false), [])
+  const { alignLeft, openUp } = usePopoverDismiss(open, ref, close)
+
+  return (
+    <div ref={ref} data-module-picker="true" className="relative shrink-0">
+      <button
+        type="button"
+        aria-label={ariaLabel}
+        aria-expanded={open}
+        title={title}
+        onClick={() => {
+          if (!open) onWillOpen?.()
+          setOpen((prev) => !prev)
+        }}
+        className={`min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-white/15 hover:bg-white/25 flex items-center justify-center shrink-0 cursor-pointer transition-colors ${iconClassName}`}
+      >
+        {icon}
+      </button>
+      {open && (
+        <div
+          className={`absolute ${openUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${
+            alignLeft ? "left-0" : "right-0"
+          } z-50 w-[216px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-2.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-2`}
+        >
+          <div>
+            <p className="text-xs font-black text-[#18313b] leading-snug">{title}</p>
+            <p className="mt-0.5 text-[11px] font-semibold text-[#57717d] leading-snug">{description}</p>
+          </div>
+          {canRemove ? (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false)
+                onRemove()
+              }}
+              className="min-h-[36px] w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#fef2f2] hover:bg-[#fee2e2] text-xs font-extrabold text-[#991b1b] cursor-pointer"
+            >
+              <Trash2 size={14} aria-hidden="true" className="shrink-0" />
+              <span>Убрать</span>
+            </button>
+          ) : (
+            <div className="rounded-lg bg-[#f4f8fa] px-2.5 py-1.5 text-[11px] font-bold text-[#475569] text-center">
+              {mandatoryLabel}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function ChassisBlock({
   block,
   chassisConfigured,
@@ -444,8 +530,16 @@ export function ChassisBlock({
         </div>
 
         {hasSpeed && (
-          <div className="flex flex-nowrap items-center gap-1.5 rounded-[12px] bg-white/10 px-2 py-1 shrink-0">
-            <Gauge size={15} aria-hidden="true" className="shrink-0 text-white/90" />
+          <div className="flex flex-nowrap items-center gap-1.5 rounded-[12px] bg-black/20 px-1.5 py-1 shrink-0">
+            <ModuleCapsuleIconPopover
+              title={CHASSIS_MODULE_INFO.speed.title}
+              description={CHASSIS_MODULE_INFO.speed.description}
+              ariaLabel="Модуль скорости шасси"
+              icon={<Gauge size={16} aria-hidden="true" />}
+              canRemove
+              onWillOpen={() => setMenuOpen(false)}
+              onRemove={() => onChange({ modules: modules.filter((m) => m !== "speed") })}
+            />
             <input
               type="number"
               min="1"
@@ -464,8 +558,16 @@ export function ChassisBlock({
         )}
 
         {hasTravel && (
-          <div className="flex flex-nowrap items-center gap-1.5 rounded-[12px] bg-white/10 px-2 py-1 shrink-0">
-            <RotateCw size={15} aria-hidden="true" className="shrink-0 text-white/90" />
+          <div className="flex flex-nowrap items-center gap-1.5 rounded-[12px] bg-black/20 px-1.5 py-1 shrink-0">
+            <ModuleCapsuleIconPopover
+              title={CHASSIS_MODULE_INFO.travel.title}
+              description={CHASSIS_MODULE_INFO.travel.description}
+              ariaLabel="Модуль длительности шасси"
+              icon={<RotateCw size={16} aria-hidden="true" />}
+              canRemove
+              onWillOpen={() => setMenuOpen(false)}
+              onRemove={() => onChange({ modules: modules.filter((m) => m !== "travel") })}
+            />
             <input
               type="number"
               min="0.01"
@@ -504,7 +606,7 @@ export function ChassisBlock({
             +
           </button>
           {menuOpen && (
-            <div className={`absolute ${openUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${alignLeft ? "left-0" : "right-0"} z-50 w-[160px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-1.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-1`}>
+            <div className={`absolute ${openUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${alignLeft ? "left-0" : "right-0"} z-50 w-[164px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-1.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-1`}>
               <button
                 type="button"
                 aria-pressed={hasSpeed}
@@ -560,27 +662,27 @@ export function ChassisBlock({
 const SENSOR_TYPE_OPTIONS: readonly {
   value: SensorType
   label: string
-  Icon: React.ComponentType<{ size?: number; "aria-hidden"?: boolean }>
+  renderIcon: (size?: number) => React.ReactNode
 }[] = [
-  { value: "ultrasonic", label: "Ультразвук", Icon: Waves },
-  { value: "color", label: "Цвет", Icon: Palette },
-  { value: "force", label: "Сила / нажатие", Icon: CircleDot },
-  { value: "imu", label: "Гироскоп (IMU)", Icon: Compass },
+  { value: "ultrasonic", label: "Ультразвук", renderIcon: (size = 17) => <UltrasonicEyesScene size={size} /> },
+  { value: "color", label: "Цвет", renderIcon: (size = 17) => <ColorBeamScene size={size} /> },
+  { value: "force", label: "Сила / нажатие", renderIcon: (size = 17) => <ForceButtonScene size={size} /> },
+  { value: "imu", label: "Гироскоп (IMU)", renderIcon: (size = 17) => <ImuTiltScene size={size} /> },
 ]
 
 const SENSOR_MODULE_MENU_ITEMS: Record<
   SensorModule,
-  { label: string; Icon: React.ComponentType<{ size?: number; "aria-hidden"?: boolean; className?: string }> }
+  { label: string; renderIcon: (size?: number) => React.ReactNode }
 > = {
-  threshold: { label: "Порог см", Icon: Ruler },
-  lights: { label: "Подсветка", Icon: Lightbulb },
-  color: { label: "Цвет", Icon: Palette },
-  reflection: { label: "Свет %", Icon: Sun },
-  pressed: { label: "Нажат", Icon: CircleDot },
-  force: { label: "Сила Н", Icon: Activity },
-  heading: { label: "Курс °", Icon: Compass },
-  tilt: { label: "Наклон °", Icon: SlidersHorizontal },
-  reset: { label: "Сброс 0°", Icon: RotateCcw },
+  threshold: { label: "Порог см", renderIcon: (size = 16) => <UltrasonicEyesScene size={size} /> },
+  lights: { label: "Подсветка", renderIcon: (size = 16) => <LightsGlowScene size={size} /> },
+  color: { label: "Цвет", renderIcon: (size = 16) => <ColorBeamScene size={size} /> },
+  reflection: { label: "Свет %", renderIcon: (size = 16) => <ReflectionScene size={size} /> },
+  pressed: { label: "Нажат", renderIcon: (size = 16) => <ForceButtonScene size={size} /> },
+  force: { label: "Сила Н", renderIcon: (size = 16) => <Activity size={size} aria-hidden="true" /> },
+  heading: { label: "Курс °", renderIcon: (size = 16) => <Compass size={size} aria-hidden="true" /> },
+  tilt: { label: "Наклон °", renderIcon: (size = 16) => <ImuTiltScene size={size} /> },
+  reset: { label: "Сброс 0°", renderIcon: (size = 16) => <RotateCcw size={size} aria-hidden="true" /> },
 }
 
 export function SensorBlock({
@@ -643,7 +745,34 @@ export function SensorBlock({
   const menuModules = allowedForType.filter((m) => !(slotted && m === "reset"))
   const setModules = (next: SensorModule[]) => onChange({ sensorModules: next })
   const activeSensorOption = SENSOR_TYPE_OPTIONS.find((opt) => opt.value === sensorType) || SENSOR_TYPE_OPTIONS[0]
-  const ActiveSensorIcon = activeSensorOption.Icon
+
+  const isOnlyLights = effectiveModules.length === 1 && effectiveModules[0] === "lights"
+  const isOnlyReset = effectiveModules.length === 1 && effectiveModules[0] === "reset"
+
+  const renderModulePopoverButton = (mod: SensorModule, customIcon?: React.ReactNode, iconClassName?: string) => {
+    const info = SENSOR_MODULE_INFO[mod]
+    const canRemove = effectiveModules.length > 1
+    return (
+      <ModuleCapsuleIconPopover
+        title={info.title}
+        description={info.description}
+        ariaLabel={`Модуль датчика: ${info.title}`}
+        icon={customIcon || SENSOR_MODULE_MENU_ITEMS[mod].renderIcon(17)}
+        iconClassName={iconClassName}
+        canRemove={canRemove}
+        mandatoryLabel="Обязательный модуль"
+        onWillOpen={() => {
+          setMenuOpen(false)
+          setColorOpen(false)
+          setTypeOpen(false)
+        }}
+        onRemove={() => {
+          if (!canRemove) return
+          setModules(effectiveModules.filter((m) => m !== mod))
+        }}
+      />
+    )
+  }
 
   const renderLiveBadge = (mod: SensorModule) => {
     if (!liveReady) return null
@@ -690,6 +819,31 @@ export function SensorBlock({
             : "min-h-[64px] px-3.5 gap-2"
         }`}
       >
+        {/* Explicit action badge only on standalone SensorBlock (!slotted) */}
+        {!slotted && (
+          <span
+            data-sensor-action-badge={isOnlyLights ? "lights" : isOnlyReset ? "reset" : "wait"}
+            className="min-h-[36px] h-[36px] px-2.5 rounded-[9px] bg-black/25 text-white font-extrabold text-xs flex items-center gap-1.5 whitespace-nowrap shrink-0"
+          >
+            {isOnlyLights ? (
+              <>
+                <Lightbulb size={14} aria-hidden="true" className="text-amber-200 shrink-0" />
+                <span>Свет</span>
+              </>
+            ) : isOnlyReset ? (
+              <>
+                <RotateCcw size={14} aria-hidden="true" className="shrink-0" />
+                <span>0°</span>
+              </>
+            ) : (
+              <>
+                <Hourglass size={14} aria-hidden="true" className="shrink-0 text-indigo-100" />
+                <span>Ждать</span>
+              </>
+            )}
+          </span>
+        )}
+
         {/* Single active sensor-type button with popover */}
         <div ref={typeRef} data-module-picker="true" className="relative shrink-0">
           <button
@@ -704,12 +858,12 @@ export function SensorBlock({
             }}
             className="min-h-[36px] min-w-[36px] h-[36px] px-2 rounded-[9px] bg-white text-[#312e81] flex items-center justify-center gap-0.5 shadow-xs hover:bg-[#eef2ff] cursor-pointer"
           >
-            <ActiveSensorIcon size={slotted ? 15 : 16} aria-hidden={true} />
-            <ChevronDown size={11} aria-hidden={true} className="shrink-0 opacity-75" />
+            {activeSensorOption.renderIcon(slotted ? 15 : 17)}
+            <ChevronDown size={11} aria-hidden="true" className="shrink-0 opacity-75" />
           </button>
           {typeOpen && (
-            <div className={`absolute ${typeOpenUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${typeAlignLeft ? "left-0" : "right-0"} z-50 w-[184px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-1.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-1`}>
-              {SENSOR_TYPE_OPTIONS.map(({ value, label, Icon }) => {
+            <div className={`absolute ${typeOpenUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${typeAlignLeft ? "left-0" : "right-0"} z-50 w-[190px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-1.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-1`}>
+              {SENSOR_TYPE_OPTIONS.map(({ value, label, renderIcon }) => {
                 const active = sensorType === value
                 return (
                   <button
@@ -731,7 +885,7 @@ export function SensorBlock({
                     }`}
                   >
                     <Check size={14} aria-hidden="true" className={active ? "opacity-100 shrink-0" : "opacity-0 shrink-0"} />
-                    <Icon size={15} aria-hidden={true} />
+                    {renderIcon(16)}
                     <span>{label}</span>
                   </button>
                 )
@@ -759,17 +913,18 @@ export function SensorBlock({
 
         {/* Ultrasonic: threshold */}
         {sensorType === "ultrasonic" && effectiveModules.includes("threshold") && (
-          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-white/10 px-1.5 py-0.5 shrink-0">
-            <Ruler size={14} aria-hidden="true" className="shrink-0 text-white/90" />
+          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 px-1 py-0.5 shrink-0">
+            {renderModulePopoverButton("threshold")}
             {renderLiveBadge("threshold")}
             <button
               type="button"
               aria-label="Условие сравнения расстояния"
               title={op === "lt" ? "Ближе (<)" : "Дальше (>)"}
               onClick={() => onChange({ sensorOp: op === "lt" ? "gt" : "lt" })}
-              className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-white text-[#312e81] font-black text-base grid place-items-center shadow-xs hover:bg-[#eef2ff]"
+              className="min-h-[36px] h-[36px] px-2 rounded-[9px] bg-white text-[#312e81] font-extrabold text-xs flex items-center gap-1 shadow-xs hover:bg-[#eef2ff] whitespace-nowrap"
             >
-              {op === "lt" ? "<" : ">"}
+              <DistanceCompareScene mode={op} size={14} />
+              <span>{getSensorComparisonWord("threshold", op)}</span>
             </button>
             <input
               type="number"
@@ -782,16 +937,16 @@ export function SensorBlock({
                 if (!Number.isFinite(val)) return
                 onChange({ sensorDistance: val })
               }}
-              className="w-[54px] min-h-[36px] h-[36px] rounded-full px-1.5 text-center bg-white text-[#18313b] font-extrabold text-sm shadow-xs"
+              className="w-[52px] min-h-[36px] h-[36px] rounded-full px-1.5 text-center bg-white text-[#18313b] font-extrabold text-sm shadow-xs"
             />
-            <span className="text-xs font-extrabold whitespace-nowrap">см</span>
+            <span className="text-xs font-extrabold whitespace-nowrap pr-1">см</span>
           </div>
         )}
 
         {/* Color: color swatch picker */}
         {sensorType === "color" && effectiveModules.includes("color") && (
-          <div ref={colorRef} data-module-picker="true" className="relative flex flex-nowrap items-center gap-1 rounded-[12px] bg-white/10 px-1.5 py-0.5 shrink-0">
-            <Palette size={14} aria-hidden="true" className="shrink-0 text-white/90" />
+          <div ref={colorRef} data-module-picker="true" className="relative flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 px-1 py-0.5 shrink-0">
+            {renderModulePopoverButton("color")}
             {renderLiveBadge("color")}
             <button
               type="button"
@@ -850,17 +1005,17 @@ export function SensorBlock({
 
         {/* Color: reflection */}
         {sensorType === "color" && effectiveModules.includes("reflection") && (
-          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-white/10 px-1.5 py-0.5 shrink-0">
-            <Sun size={14} aria-hidden="true" className="shrink-0 text-white/90" />
+          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 px-1 py-0.5 shrink-0">
+            {renderModulePopoverButton("reflection")}
             {renderLiveBadge("reflection")}
             <button
               type="button"
               aria-label="Условие сравнения отражения"
               title={op === "lt" ? "Темнее (<)" : "Светлее (>)"}
               onClick={() => onChange({ sensorOp: op === "lt" ? "gt" : "lt" })}
-              className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-white text-[#312e81] font-black text-base grid place-items-center shadow-xs hover:bg-[#eef2ff]"
+              className="min-h-[36px] h-[36px] px-2 rounded-[9px] bg-white text-[#312e81] font-extrabold text-xs flex items-center justify-center shadow-xs hover:bg-[#eef2ff] whitespace-nowrap"
             >
-              {op === "lt" ? "<" : ">"}
+              {getSensorComparisonWord("reflection", op)}
             </button>
             <input
               type="number"
@@ -873,16 +1028,16 @@ export function SensorBlock({
                 if (!Number.isFinite(val)) return
                 onChange({ sensorReflection: val })
               }}
-              className="w-[52px] min-h-[36px] h-[36px] rounded-full px-1.5 text-center bg-white text-[#18313b] font-extrabold text-sm shadow-xs"
+              className="w-[50px] min-h-[36px] h-[36px] rounded-full px-1.5 text-center bg-white text-[#18313b] font-extrabold text-sm shadow-xs"
             />
-            <span className="text-xs font-extrabold whitespace-nowrap">%</span>
+            <span className="text-xs font-extrabold whitespace-nowrap pr-1">%</span>
           </div>
         )}
 
         {/* Force: pressed */}
         {sensorType === "force" && effectiveModules.includes("pressed") && (
-          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-white/10 px-1.5 py-0.5 shrink-0">
-            <CircleDot size={14} aria-hidden="true" className="shrink-0 text-white/90" />
+          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 px-1 py-0.5 shrink-0">
+            {renderModulePopoverButton("pressed")}
             {renderLiveBadge("pressed")}
             <button
               type="button"
@@ -890,7 +1045,7 @@ export function SensorBlock({
               aria-pressed={pressed}
               title={pressed ? "Нажат" : "Отпущен"}
               onClick={() => onChange({ sensorPressed: !pressed })}
-              className="min-h-[36px] min-w-[36px] h-[36px] px-2.5 rounded-[9px] bg-white text-[#312e81] font-black text-xs flex items-center gap-1 shadow-xs hover:bg-[#eef2ff]"
+              className="min-h-[36px] min-w-[36px] h-[36px] px-2.5 rounded-[9px] bg-white text-[#312e81] font-black text-xs flex items-center gap-1 shadow-xs hover:bg-[#eef2ff] whitespace-nowrap"
             >
               <span aria-hidden="true">{pressed ? "●" : "○"}</span>
               <span>{pressed ? "Нажат" : "Отпущен"}</span>
@@ -900,17 +1055,17 @@ export function SensorBlock({
 
         {/* Force: force (N) */}
         {sensorType === "force" && effectiveModules.includes("force") && (
-          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-white/10 px-1.5 py-0.5 shrink-0">
-            <Activity size={14} aria-hidden="true" className="shrink-0 text-white/90" />
+          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 px-1 py-0.5 shrink-0">
+            {renderModulePopoverButton("force")}
             {renderLiveBadge("force")}
             <button
               type="button"
               aria-label="Условие сравнения силы"
-              title={op === "lt" ? "Меньше (<)" : "Больше (>)"}
+              title={op === "lt" ? "Слабее (<)" : "Сильнее (>)"}
               onClick={() => onChange({ sensorOp: op === "lt" ? "gt" : "lt" })}
-              className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-white text-[#312e81] font-black text-base grid place-items-center shadow-xs hover:bg-[#eef2ff]"
+              className="min-h-[36px] h-[36px] px-2 rounded-[9px] bg-white text-[#312e81] font-extrabold text-xs flex items-center justify-center shadow-xs hover:bg-[#eef2ff] whitespace-nowrap"
             >
-              {op === "lt" ? "<" : ">"}
+              {getSensorComparisonWord("force", op)}
             </button>
             <input
               type="number"
@@ -924,25 +1079,25 @@ export function SensorBlock({
                 if (!Number.isFinite(val)) return
                 onChange({ sensorForce: val })
               }}
-              className="w-[52px] min-h-[36px] h-[36px] rounded-full px-1.5 text-center bg-white text-[#18313b] font-extrabold text-sm shadow-xs"
+              className="w-[50px] min-h-[36px] h-[36px] rounded-full px-1.5 text-center bg-white text-[#18313b] font-extrabold text-sm shadow-xs"
             />
-            <span className="text-xs font-extrabold whitespace-nowrap">Н</span>
+            <span className="text-xs font-extrabold whitespace-nowrap pr-1">Н</span>
           </div>
         )}
 
         {/* IMU: heading */}
         {sensorType === "imu" && effectiveModules.includes("heading") && (
-          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-white/10 px-1.5 py-0.5 shrink-0">
-            <Compass size={14} aria-hidden="true" className="shrink-0 text-white/90" />
+          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 px-1 py-0.5 shrink-0">
+            {renderModulePopoverButton("heading")}
             {renderLiveBadge("heading")}
             <button
               type="button"
               aria-label="Условие сравнения курса"
               title={op === "lt" ? "Меньше (<)" : "Больше (>)"}
               onClick={() => onChange({ sensorOp: op === "lt" ? "gt" : "lt" })}
-              className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-white text-[#312e81] font-black text-base grid place-items-center shadow-xs hover:bg-[#eef2ff]"
+              className="min-h-[36px] h-[36px] px-2 rounded-[9px] bg-white text-[#312e81] font-extrabold text-xs flex items-center justify-center shadow-xs hover:bg-[#eef2ff] whitespace-nowrap"
             >
-              {op === "lt" ? "<" : ">"}
+              {getSensorComparisonWord("heading", op)}
             </button>
             <input
               type="number"
@@ -955,16 +1110,16 @@ export function SensorBlock({
                 if (!Number.isFinite(val)) return
                 onChange({ sensorAngle: val })
               }}
-              className="w-[56px] min-h-[36px] h-[36px] rounded-full px-1.5 text-center bg-white text-[#18313b] font-extrabold text-sm shadow-xs"
+              className="w-[54px] min-h-[36px] h-[36px] rounded-full px-1.5 text-center bg-white text-[#18313b] font-extrabold text-sm shadow-xs"
             />
-            <span className="text-xs font-extrabold whitespace-nowrap">°</span>
+            <span className="text-xs font-extrabold whitespace-nowrap pr-1">°</span>
           </div>
         )}
 
         {/* IMU: tilt */}
         {sensorType === "imu" && effectiveModules.includes("tilt") && (
-          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-white/10 px-1.5 py-0.5 shrink-0">
-            <SlidersHorizontal size={14} aria-hidden="true" className="shrink-0 text-white/90" />
+          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 px-1 py-0.5 shrink-0">
+            {renderModulePopoverButton("tilt")}
             {renderLiveBadge("tilt")}
             <button
               type="button"
@@ -980,9 +1135,9 @@ export function SensorBlock({
               aria-label="Условие сравнения наклона"
               title={tiltOp === "lt" ? "Меньше (<)" : "Больше (>)"}
               onClick={() => onChange({ sensorTiltOp: tiltOp === "lt" ? "gt" : "lt" })}
-              className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-white text-[#312e81] font-black text-base grid place-items-center shadow-xs hover:bg-[#eef2ff]"
+              className="min-h-[36px] h-[36px] px-2 rounded-[9px] bg-white text-[#312e81] font-extrabold text-xs flex items-center justify-center shadow-xs hover:bg-[#eef2ff] whitespace-nowrap"
             >
-              {tiltOp === "lt" ? "<" : ">"}
+              {getSensorComparisonWord("tilt", tiltOp)}
             </button>
             <input
               type="number"
@@ -995,17 +1150,17 @@ export function SensorBlock({
                 if (!Number.isFinite(val)) return
                 onChange({ sensorTilt: val })
               }}
-              className="w-[54px] min-h-[36px] h-[36px] rounded-full px-1.5 text-center bg-white text-[#18313b] font-extrabold text-sm shadow-xs"
+              className="w-[52px] min-h-[36px] h-[36px] rounded-full px-1.5 text-center bg-white text-[#18313b] font-extrabold text-sm shadow-xs"
             />
-            <span className="text-xs font-extrabold whitespace-nowrap">°</span>
+            <span className="text-xs font-extrabold whitespace-nowrap pr-1">°</span>
           </div>
         )}
 
         {/* IMU: reset (chain only) */}
         {sensorType === "imu" && !slotted && effectiveModules.includes("reset") && (
-          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-white/10 px-1.5 py-0.5 shrink-0">
-            <span className="min-h-[36px] h-[36px] px-2 rounded-[9px] bg-white/15 text-xs font-extrabold flex items-center gap-1 whitespace-nowrap">
-              <RotateCcw size={13} aria-hidden="true" />
+          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 px-1 py-0.5 shrink-0">
+            {renderModulePopoverButton("reset")}
+            <span className="min-h-[36px] h-[36px] px-2 rounded-[9px] bg-white/15 text-xs font-extrabold flex items-center whitespace-nowrap">
               0°
             </span>
           </div>
@@ -1013,12 +1168,15 @@ export function SensorBlock({
 
         {/* Lights (ultrasonic & color) */}
         {(sensorType === "ultrasonic" || sensorType === "color") && effectiveModules.includes("lights") && (
-          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-white/10 px-1.5 py-0.5 shrink-0">
-            <Lightbulb
-              size={15}
-              aria-hidden="true"
-              className={`shrink-0 ${light === -1 ? "text-white/55" : "text-amber-200"}`}
-            />
+          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 px-1 py-0.5 shrink-0">
+            {renderModulePopoverButton(
+              "lights",
+              <Lightbulb
+                size={16}
+                aria-hidden="true"
+                className={`shrink-0 ${light === -1 ? "text-white/55" : "text-amber-200"}`}
+              />
+            )}
             <button
               type="button"
               aria-label={`Подсветка датчика: ${formatSensorLightLabel(light)}`}
@@ -1048,7 +1206,7 @@ export function SensorBlock({
           {menuOpen && (
             <div className={`absolute ${menuOpenUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${menuAlignLeft ? "left-0" : "right-0"} z-50 w-[184px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-1.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-1`}>
               {menuModules.map((mod) => {
-                const { label, Icon } = SENSOR_MODULE_MENU_ITEMS[mod]
+                const { label, renderIcon } = SENSOR_MODULE_MENU_ITEMS[mod]
                 const active = effectiveModules.includes(mod)
                 const isOnlyRemaining = active && effectiveModules.length <= 1
                 return (
@@ -1077,7 +1235,7 @@ export function SensorBlock({
                     }`}
                   >
                     <Check size={14} aria-hidden="true" className={active ? "opacity-100 shrink-0" : "opacity-0 shrink-0"} />
-                    <Icon size={15} aria-hidden={true} className="shrink-0" />
+                    {renderIcon(15)}
                     <span>{label}</span>
                   </button>
                 )
@@ -1091,7 +1249,7 @@ export function SensorBlock({
                   }}
                   className="mt-1 border-t border-[#e2e8f0] pt-1.5 min-h-[36px] flex items-center gap-2 text-left px-3 py-1.5 rounded-lg bg-[#fef2f2] hover:bg-[#fee2e2] text-xs font-extrabold text-[#991b1b]"
                 >
-                  <Trash2 size={14} aria-hidden={true} className="shrink-0" />
+                  <Trash2 size={14} aria-hidden="true" className="shrink-0" />
                   <span>Убрать из условия</span>
                 </button>
               )}

@@ -244,3 +244,228 @@ export function computePopoverPlacement(
   const openUp = spaceBelow < 190 && rect.top > spaceBelow
   return { alignLeft, openUp }
 }
+
+import type { DriveSettings } from "./block-registry"
+import {
+  DEFAULT_SENSOR_ANGLE,
+  DEFAULT_SENSOR_AXIS,
+  DEFAULT_SENSOR_COLOR,
+  DEFAULT_SENSOR_DISTANCE,
+  DEFAULT_SENSOR_FORCE,
+  DEFAULT_SENSOR_LIGHT,
+  DEFAULT_SENSOR_MODULE,
+  DEFAULT_SENSOR_REFLECTION,
+  DEFAULT_SENSOR_TILT,
+  SENSOR_MODULES_BY_TYPE,
+  getStopPorts,
+  isPairedBlock,
+} from "./block-registry.ts"
+import type { ChassisDirection, SensorOp, WorkspaceBlock } from "./workspace"
+
+export interface ModuleDescription {
+  title: string
+  description: string
+}
+
+export const SENSOR_MODULE_INFO: Record<SensorModule, ModuleDescription> = {
+  threshold: { title: "Расстояние до стены", description: "Проверяет, как далеко стена в сантиметрах." },
+  lights: { title: "Подсветка датчика", description: "Включает или выключает огонёк на датчике." },
+  color: { title: "Цвет", description: "Определяет цвет предмета под датчиком." },
+  reflection: { title: "Яркость света", description: "Измеряет, сколько света отражается от пола." },
+  pressed: { title: "Нажатие кнопки", description: "Проверяет, нажата кнопка датчика или отпущена." },
+  force: { title: "Сила нажатия", description: "Измеряет, насколько сильно нажали на датчик." },
+  heading: { title: "Поворот (курс)", description: "Показывает, на сколько градусов повернулся хаб." },
+  tilt: { title: "Наклон хаба", description: "Проверяет наклон хаба вперёд-назад или вбок." },
+  reset: { title: "Сброс курса в 0°", description: "Запоминает текущее направление как 0 градусов." },
+}
+
+export const DRIVE_MODULE_INFO: Record<"pair" | "speed" | "power" | "travel", ModuleDescription> = {
+  pair: { title: "Второй мотор", description: "Крутит два мотора вместе в одном шаге." },
+  speed: { title: "Скорость (°/с)", description: "Задаёт скорость вращения мотора." },
+  power: { title: "Мощность (%)", description: "Задаёт силу мотора в процентах." },
+  travel: { title: "Сколько ехать", description: "Через сколько оборотов, градусов или секунд остановиться." },
+}
+
+export const CHASSIS_MODULE_INFO: Record<"speed" | "travel", ModuleDescription> = {
+  speed: { title: "Скорость шасси", description: "Меняет скорость обоих колёс только для этого блока." },
+  travel: { title: "Сколько ехать", description: "Через сколько оборотов, градусов или секунд остановиться." },
+}
+
+export function getSensorComparisonWord(
+  kind: "threshold" | "reflection" | "force" | "heading" | "tilt",
+  op: SensorOp
+): string {
+  switch (kind) {
+    case "threshold":
+      return op === "lt" ? "ближе" : "дальше"
+    case "reflection":
+      return op === "lt" ? "темнее" : "светлее"
+    case "force":
+      return op === "lt" ? "слабее" : "сильнее"
+    case "heading":
+    case "tilt":
+      return op === "lt" ? "меньше" : "больше"
+  }
+}
+
+const TRAVEL_WORD: Record<TravelUnit, string> = {
+  rotations: "об",
+  degrees: "°",
+  seconds: "с",
+}
+
+const CHASSIS_DIR_WORDS: Record<ChassisDirection, string> = {
+  forward: "вперёд",
+  backward: "назад",
+  left: "налево",
+  right: "направо",
+}
+
+const BUTTON_WORDS: Record<string, string> = {
+  up: "Вверх",
+  down: "Вниз",
+  left: "Влево",
+  right: "Вправо",
+  a: "A",
+  b: "B",
+  x: "X",
+  y: "Y",
+  l: "L",
+  r: "R",
+  blue: "Синяя",
+  red: "Красная",
+  green: "Зелёная",
+  yellow: "Жёлтая",
+}
+
+function describeSensorPhrase(block: WorkspaceBlock): string {
+  const sensorType: SensorType = block.sensorType || "ultrasonic"
+  const port = block.sensorPort || "C"
+  const allowed = SENSOR_MODULES_BY_TYPE[sensorType]
+  const rawMods = Array.isArray(block.sensorModules)
+    ? block.sensorModules.filter((m) => allowed.includes(m))
+    : [DEFAULT_SENSOR_MODULE[sensorType]]
+  const slotted = block.branch === "condition"
+  const filteredMods = slotted && sensorType === "imu" ? rawMods.filter((m) => m !== "reset") : rawMods
+  const mods = filteredMods.length > 0 ? filteredMods : [DEFAULT_SENSOR_MODULE[sensorType]]
+  const op: SensorOp = block.sensorOp === "gt" ? "gt" : "lt"
+
+  const parts: string[] = []
+  if ((sensorType === "ultrasonic" || sensorType === "color") && mods.includes("lights")) {
+    const light = block.sensorLight ?? DEFAULT_SENSOR_LIGHT
+    parts.push(light < 0 ? `выключить подсветку на ${port}` : `подсветка на ${port}: ${light}%`)
+  }
+  if (sensorType === "imu" && mods.includes("reset")) {
+    parts.push("сбросить курс на 0°")
+  }
+  if (sensorType === "ultrasonic" && mods.includes("threshold")) {
+    const cm = block.sensorDistance ?? DEFAULT_SENSOR_DISTANCE
+    parts.push(`датчик на ${port} видит стену ${getSensorComparisonWord("threshold", op)} ${cm} см`)
+  }
+  if (sensorType === "color" && mods.includes("color")) {
+    const color = block.sensorColor || DEFAULT_SENSOR_COLOR
+    const colorName = COLOR_SWATCH_STYLES[color]?.label?.toLowerCase() || color
+    parts.push(color === "none" ? `датчик цвета на ${port} не видит цвет` : `датчик цвета на ${port} видит ${colorName}`)
+  }
+  if (sensorType === "color" && mods.includes("reflection")) {
+    const refl = block.sensorReflection ?? DEFAULT_SENSOR_REFLECTION
+    parts.push(`свет на ${port} ${getSensorComparisonWord("reflection", op)} ${refl}%`)
+  }
+  if (sensorType === "force" && mods.includes("pressed")) {
+    const pressed = block.sensorPressed !== false
+    parts.push(`кнопка на ${port} ${pressed ? "нажата" : "отпущена"}`)
+  }
+  if (sensorType === "force" && mods.includes("force")) {
+    const force = block.sensorForce ?? DEFAULT_SENSOR_FORCE
+    parts.push(`сила на ${port} ${getSensorComparisonWord("force", op)} ${force} Н`)
+  }
+  if (sensorType === "imu" && mods.includes("heading")) {
+    const deg = block.sensorAngle ?? DEFAULT_SENSOR_ANGLE
+    parts.push(`поворот хаба ${getSensorComparisonWord("heading", op)} ${deg}°`)
+  }
+  if (sensorType === "imu" && mods.includes("tilt")) {
+    const axis = block.sensorAxis === "roll" ? "вбок" : "вперёд-назад"
+    const tiltOp: SensorOp = (block.sensorTiltOp ?? block.sensorOp) === "gt" ? "gt" : "lt"
+    const deg = block.sensorTilt ?? DEFAULT_SENSOR_TILT
+    parts.push(`наклон хаба ${axis} ${getSensorComparisonWord("tilt", tiltOp)} ${deg}°`)
+  }
+
+  return parts.join(" и ") || `датчик на ${port}`
+}
+
+export function describeBlockForKid(
+  block: WorkspaceBlock | undefined,
+  allBlocks: WorkspaceBlock[],
+  chassis?: DriveSettings
+): string {
+  if (!block) return ""
+  switch (block.type) {
+    case "start":
+      return "Когда нажмёшь «Запуск» — блоки под ним выполняются по очереди сверху вниз."
+    case "button": {
+      const btnKey = block.target?.input || block.button || "up"
+      const btnName = BUTTON_WORDS[btnKey] || btnKey.toUpperCase()
+      const ev = block.event === "hold" ? "Пока держишь" : block.event === "released" ? "Когда отпустишь" : "Когда нажмёшь"
+      return `${ev} кнопку «${btnName}» — сработают блоки снизу.`
+    }
+    case "motor-buttons":
+      return "Пульт с цветными кнопками: жми на них при запуске, чтобы управлять роботом."
+    case "stop": {
+      const stopInfo = getStopPorts(block)
+      return stopInfo.stopAll
+        ? "Остановить сразу все моторы."
+        : `Остановить ${stopInfo.ports.length > 1 ? "моторы" : "мотор"} ${stopInfo.ports.join(" и ")}.`
+    }
+    case "chassis": {
+      const dir = CHASSIS_DIR_WORDS[block.chassisDirection || "forward"]
+      const mods = block.modules || []
+      const parts = [`Робот едет ${dir}`]
+      if (mods.includes("speed")) parts.push(`со скоростью ${block.speed ?? chassis?.speed ?? 360}°/с`)
+      if (mods.includes("travel")) {
+        const unit = TRAVEL_WORD[block.unit || "rotations"]
+        parts.push(`на ${block.value ?? 1} ${unit}`)
+      }
+      return parts.join(" ") + "."
+    }
+    case "drive":
+    case "pair": {
+      const p1 = block.motor || "A"
+      const d1 = block.direction === "backward" ? "назад" : "вперёд"
+      const paired = isPairedBlock(block)
+      const mods = block.modules || []
+      const parts = [
+        paired
+          ? `Мотор ${p1} ${d1} и мотор ${block.motor2 || "B"} ${block.direction2 === "backward" ? "назад" : "вперёд"}`
+          : `Мотор ${p1} крутится ${d1}`,
+      ]
+      if (mods.includes("speed")) parts.push(`со скоростью ${block.speed ?? 360}°/с`)
+      else if (mods.includes("power")) parts.push(`с мощностью ${block.power ?? 50}%`)
+      if (mods.includes("travel")) parts.push(`на ${block.value ?? 1} ${TRAVEL_WORD[block.unit || "rotations"]}`)
+      return parts.join(" ") + "."
+    }
+    case "sensor": {
+      const phrase = describeSensorPhrase(block)
+      if (block.branch === "condition") {
+        return `Условие: ${phrase}.`
+      }
+      const sensorType: SensorType = block.sensorType || "ultrasonic"
+      const allowed = SENSOR_MODULES_BY_TYPE[sensorType]
+      const rawMods = Array.isArray(block.sensorModules)
+        ? block.sensorModules.filter((m) => allowed.includes(m))
+        : [DEFAULT_SENSOR_MODULE[sensorType]]
+      const mods = rawMods.length > 0 ? rawMods : [DEFAULT_SENSOR_MODULE[sensorType]]
+      if (mods.length === 1 && mods[0] === "lights") return `${phrase[0].toUpperCase() + phrase.slice(1)}.`
+      if (mods.length === 1 && mods[0] === "reset") return "Сбросить курс хаба на 0°."
+      return `Ждать: ${phrase}.`
+    }
+    case "if": {
+      const cond = allBlocks.find((b) => b.parentId === block.id && b.branch === "condition")
+      if (cond && cond.type === "sensor") {
+        return `Если ${describeSensorPhrase(cond)} — сделать верхние блоки, иначе — нижние.`
+      }
+      return "Если условие в овале верно — сделать верхние блоки, иначе — нижние."
+    }
+    default:
+      return ""
+  }
+}

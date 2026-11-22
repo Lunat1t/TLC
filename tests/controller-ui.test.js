@@ -85,8 +85,10 @@ import {
   TRAVEL_UNIT_ARIA_LABELS,
   TRAVEL_UNIT_LABELS,
   computePopoverPlacement,
+  describeBlockForKid,
   formatSensorLightLabel,
   formatSensorLiveBadge,
+  getSensorComparisonWord,
   nextControllerEvent,
   nextSensorLight,
   nextTravelUnit,
@@ -301,14 +303,31 @@ test('controller-blocks and editor use tap-chips, icon pickers, and live telemet
   assert.ok(editorSource.includes('outline outline-[3px] outline-[#087996] outline-offset-2'));
   assert.equal(editorSource.includes('ring-3 ring-[#087996]'), false);
 
-  // Sensor type switcher is a single active-icon button with ChevronDown cue & popover, no dark double borders
+  // Sensor type switcher is a single active-icon button with ChevronDown cue & popover, dark bg-black/20 capsules without double borders
   assert.ok(blocksSource.includes('aria-label={`Тип датчика: ${activeSensorOption.label}`}'));
   assert.ok(blocksSource.includes('<ChevronDown size={11}'));
   assert.equal(blocksSource.includes('bg-black/20 border border-white/25'), false);
   assert.equal(editorSource.includes('bg-black/20 border border-white/25'), false);
-  assert.ok(blocksSource.includes('bg-white/10'));
-  assert.ok(editorSource.includes('bg-white/10'));
+  assert.ok(blocksSource.includes('bg-black/20'));
+  assert.ok(editorSource.includes('bg-black/20'));
   assert.equal(blocksSource.includes('border border-white/35 shadow-[inset_0_-2px_#3730a3]'), false);
+
+  // 2-tap module deletion popovers on 36x36 module icon buttons + standalone SensorBlock action badge + SVG scenes
+  assert.ok(blocksSource.includes('ModuleCapsuleIconPopover'));
+  assert.ok(blocksSource.includes('Обязательный модуль'));
+  assert.ok(blocksSource.includes('data-sensor-action-badge'));
+  assert.ok(blocksSource.includes('UltrasonicEyesScene'));
+  assert.ok(editorSource.includes('openDriveModule'));
+  assert.ok(editorSource.includes('data-kid-translation="true"'));
+  assert.ok(editorSource.includes('aria-label="Озвучить блок"'));
+
+  // Mode toggle in topbar and ? Гайд ONLY inside PybricksWorkspace
+  assert.ok(editorSource.includes('aria-label="Режим редактора"'));
+  assert.equal(editorSource.includes('? Гайд'), false);
+  const pybricksSource = readFileSync(new URL('../src/components/editor/pybricks-workspace.tsx', import.meta.url), 'utf8');
+  assert.ok(pybricksSource.includes('? Гайд'));
+  assert.ok(pybricksSource.includes('Из блоков'));
+  assert.ok(pybricksSource.includes('Вставить'));
 
   // Preserved light-off dimmed styling and viewport-clamped popovers
   assert.ok(blocksSource.includes('light === -1 ? "text-white/55" : "text-amber-200"'));
@@ -337,3 +356,33 @@ test('computePopoverPlacement flips upward near bottom edge and respects horizon
   );
 });
 
+
+
+test('kid comparison words and block sentence translator produce clear Russian phrases', () => {
+  assert.equal(getSensorComparisonWord('threshold', 'lt'), 'ближе');
+  assert.equal(getSensorComparisonWord('threshold', 'gt'), 'дальше');
+  assert.equal(getSensorComparisonWord('reflection', 'lt'), 'темнее');
+  assert.equal(getSensorComparisonWord('reflection', 'gt'), 'светлее');
+  assert.equal(getSensorComparisonWord('force', 'lt'), 'слабее');
+  assert.equal(getSensorComparisonWord('force', 'gt'), 'сильнее');
+  assert.equal(getSensorComparisonWord('heading', 'lt'), 'меньше');
+  assert.equal(getSensorComparisonWord('tilt', 'gt'), 'больше');
+
+  const soloSensor = {
+    id: 's1',
+    type: 'sensor',
+    x: 0,
+    y: 0,
+    sensorType: 'ultrasonic',
+    sensorPort: 'C',
+    sensorOp: 'lt',
+    sensorDistance: 15,
+    sensorModules: ['threshold'],
+  };
+  assert.match(describeBlockForKid(soloSensor, [soloSensor]), /^Ждать:.*ближе 15 см/);
+
+  const ifBlock = { id: 'if1', type: 'if', x: 0, y: 0 };
+  const slottedSensor = { ...soloSensor, id: 's2', parentId: 'if1', branch: 'condition' };
+  assert.match(describeBlockForKid(slottedSensor, [ifBlock, slottedSensor]), /^Условие:/);
+  assert.match(describeBlockForKid(ifBlock, [ifBlock, slottedSensor]), /^Если .*ближе 15 см.*сделать верхние блоки/);
+});

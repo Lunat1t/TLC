@@ -484,3 +484,52 @@ test('sensor type switching resets modules, imu strips reset in if slot, and Pyb
   assert.match(py, /hub\.imu\.reset_heading\(0\)/);
   assert.match(py, /while not \(hub\.imu\.tilt\(\)\[1\] < 15\):/);
 });
+
+
+test('readSheets preserves pybricks mode, dirty flag, and enforces pythonCode size cap', async () => {
+  const { readSheets, MAX_PYTHON_CODE_CHARS } = await import('../src/lib/workspace.ts');
+  const longCode = 'x'.repeat(MAX_PYTHON_CODE_CHARS + 500);
+  const restored = readSheets({
+    activeSheetId: 's1',
+    sheets: [
+      { id: 's1', name: 'Py', blocks: [], editorMode: 'pybricks', pythonCode: longCode, pythonDirty: true },
+      { id: 's2', name: 'Blk', blocks: [], editorMode: 'blocks', pythonDirty: false },
+    ],
+  });
+  assert.equal(restored.sheets[0].editorMode, 'pybricks');
+  assert.equal(restored.sheets[0].pythonDirty, true);
+  assert.equal(restored.sheets[0].pythonCode.length, MAX_PYTHON_CODE_CHARS);
+  assert.equal(restored.sheets[1].editorMode, undefined);
+  assert.equal(restored.sheets[1].pythonDirty, undefined);
+});
+
+test('generatePybricks emits step comments only when options.comments is true', async () => {
+  const { addBlock, attachChain, updateDrive, generatePybricks } = await import('../src/lib/workspace.ts');
+  let b = addBlock([], 'st', 0, 0, 'start');
+  b = addBlock(b, 'd1', 0, 60, 'drive');
+  b = updateDrive(b, 'd1', { motor: 'A', modules: ['speed', 'travel'], value: 1, unit: 'rotations' }, 'spike');
+  b = addBlock(b, 'ch', 0, 120, 'chassis');
+  b = updateDrive(b, 'ch', { chassisDirection: 'forward', modules: ['travel'], value: 1, unit: 'seconds' }, 'spike');
+  b = addBlock(b, 's1', 0, 180, 'sensor');
+  b = addBlock(b, 'if1', 0, 240, 'if');
+  b = addBlock(b, 'sp', 0, 300, 'stop');
+  b = attachChain(b, 'd1', 'st');
+  b = attachChain(b, 'ch', 'd1');
+  b = attachChain(b, 's1', 'ch');
+  b = attachChain(b, 'if1', 's1');
+  b = attachChain(b, 'sp', 'if1');
+
+  const plain = generatePybricks(b, 'spike');
+  assert.doesNotMatch(plain, /# Мотор /);
+  assert.doesNotMatch(plain, /# Шасси:/);
+  assert.doesNotMatch(plain, /# Датчик:/);
+  assert.doesNotMatch(plain, /# Проверка условия датчика/);
+  assert.doesNotMatch(plain, /# Остановить /);
+
+  const commented = generatePybricks(b, 'spike', undefined, { comments: true });
+  assert.match(commented, /# Мотор A: вперёд/);
+  assert.match(commented, /# Шасси: ехать вперёд/);
+  assert.match(commented, /# Датчик: ждём срабатывания/);
+  assert.match(commented, /# Проверка условия датчика/);
+  assert.match(commented, /# Остановить /);
+});

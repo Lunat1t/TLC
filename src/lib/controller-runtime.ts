@@ -24,6 +24,7 @@ type Transport = {
   write(line:string):Promise<void>
   disconnect():Promise<void>
   uploadProgram?(blob:Uint8Array,onProgress:(percent:number)=>void,signal?:AbortSignal):Promise<void>
+  stopProgram?():Promise<void>
 }
 export type SensorTelemetry={
   color?:string
@@ -38,7 +39,7 @@ type Status = 'disconnected'|'connecting'|'connected'|'uploading'|'starting-hub'
 export type SessionState={
   viewMode:'edit'|'check'
   transport:Status
-  program:'idle'|'trial-running'|'live-running'|'stopped'
+  program:'idle'|'trial-running'|'live-running'|'custom-running'|'stopped'
   message:string
   log:string[]
   ports:string[]
@@ -54,6 +55,7 @@ export type SessionState={
 }
 type SessionOptions={
   compileHubProgram?:()=>Promise<Uint8Array>
+  compileCustomProgram?:(source:string)=>Promise<Uint8Array>
   expectedVersion?:string
   probeTimeoutMs?:number
   heartbeatTimeoutMs?:number
@@ -146,6 +148,7 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
   let startAbort:AbortController|null=null
   let lastHubVersion:string|null=null
   let uploadedThisConnect=false
+  let customProgramActive=false
   let snapshot:ControllerProgram|null=null
   const runners=new Map<string,AbortController>();const owners=new Map<string,AbortController>();const held=new Set<string>()
   type ActiveHold={key:string;handler:ControllerHandler;ports:string[];ownedRunners:Set<AbortController>}
@@ -210,7 +213,7 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
     startAbort?.abort();startAbort=null
     readyWait?.reject(new Error('Соединение закрыто'));readyWait=null
     stopWait?.reject(new Error('Соединение закрыто'));stopWait=null
-    lastHubVersion=null;uploadedThisConnect=false
+    lastHubVersion=null;uploadedThisConnect=false;customProgramActive=false
     await transport.disconnect().catch(()=>{})
   }
   const fault=async(message:string,extra?:Partial<SessionState>)=>{
@@ -287,6 +290,15 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
     if(text==='SOCER2_STOP' && stopWait){const waiting=stopWait;stopWait=null;waiting.resolve();return}
     if(text==='SOCER2_LINK_LOST'||(text==='SOCER2_STOP'&&state.program==='live-running')){
       if(state.transport==='uploading' && transport.uploadProgram) return
+      if(state.transport==='starting-hub' && customProgramActive){
+        customProgramActive=false
+        return
+      }
+      if(state.transport==='connected' && customProgramActive){
+        customProgramActive=false
+        publish({program:'stopped',uploadProgress:null,message:'Программа Pybricks завершена.'})
+        return
+      }
       if(state.transport==='starting-hub' && transport.uploadProgram && !uploadedThisConnect && readyWait){
         const waiting=readyWait;readyWait=null
         waiting.reject(new ProbeNeedsUploadError('Программа на хабе завершилась до запуска контроллера.'))
@@ -441,7 +453,7 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
       const serial=connection
       const abortController=new AbortController()
       startAbort=abortController
-      writeFailed=false;lastHubVersion=null;lastWriteAt=0
+      writeFailed=false;lastHubVersion=null;lastWriteAt=0;customProgramActive=false
       publish({transport:'starting-hub',uploadProgress:null,needsManualHubProgram:false,message:transport.uploadProgram?'Проверка программы хаба…':'Ожидание программы хаба…'})
       const waitForReady=(timeoutMs:number,timeoutMessage:string,probe:boolean)=>{
         const ready=new Promise<void>((resolve,reject)=>{readyWait={resolve,reject}})
@@ -505,6 +517,83 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
       startAbort?.abort()
       if(readyWait){const waiting=readyWait;readyWait=null;waiting.reject(abortError('Запуск отменён.'))}
       if(state.viewMode!=='edit')publish({viewMode:'edit'})
+    },
+    async runCustomProgram(source:string):Promise<{ok:boolean;error?:string}>{
+      if(disposed)return {ok:false,error:'Сессия закрыта.'}
+      if(!['connected','ready'].includes(state.transport)){
+        return {ok:false,error:'Сначала подключите SPIKE Prime по Bluetooth.'}
+      }
+      if(!transport.uploadProgram){
+        return {ok:false,error:'Прямой запуск кода доступен только для SPIKE Prime с прошивкой Pybricks.'}
+      }
+      if(state.program==='trial-running'||state.program==='live-running'){
+        await stop('Запуск кода Pybricks')
+      }
+      if((state as SessionState).transport==='fault'){
+        return {ok:false,error:state.message}
+      }
+      let blob:Uint8Array
+      try {
+        const compile=options?.compileCustomProgram ?? ((code:string)=>import('./mpy-compiler.ts').then(m=>m.compilePythonToMultiMpy6(code,{cache:false})))
+        blob=await compile(source)
+      } catch(compileError){
+        const msg=compileError instanceof Error?compileError.message:'Не удалось скомпилировать программу.'
+        publish({message:msg})
+        return {ok:false,error:msg}
+      }
+      const serial=connection
+      const abortController=new AbortController()
+      startAbort=abortController
+      writeFailed=false;lastHubVersion=null;uploadedThisConnect=false;customProgramActive=false
+      clear()
+      publish({transport:'uploading',program:'stopped',uploadProgress:0,protocol:null,ports:[],sensorPorts:[],sensorPortsKnown:false,sensorDistances:{},sensorTypes:{},sensorTelemetry:{},needsManualHubProgram:false,message:'Загрузка программы Pybricks… 0%'})
+      try {
+        await transport.uploadProgram(
+          blob,
+          pct=>{if(!disposed&&serial===connection&&!abortController.signal.aborted)publish({uploadProgress:pct,message:`Загрузка программы Pybricks… ${pct}%`})},
+          abortController.signal
+        )
+        if(abortController.signal.aborted||disposed||serial!==connection)throw abortError('Загрузка отменена.')
+        publish({transport:'starting-hub',uploadProgress:100,message:'Запуск программы на хабе…'})
+        customProgramActive=true
+        await transport.startHub({signal:abortController.signal,probe:false})
+        if(abortController.signal.aborted||disposed||serial!==connection)throw abortError('Запуск отменён.')
+        publish({
+          transport:'connected',
+          program:customProgramActive?'custom-running':'stopped',
+          uploadProgress:null,
+          message:customProgramActive?'Программа Pybricks запущена на хабе.':'Программа Pybricks завершена.',
+        })
+        return {ok:true}
+      } catch(uploadError){
+        customProgramActive=false
+        if(disposed||serial!==connection)return {ok:false,error:'Соединение закрыто.'}
+        if(abortController.signal.aborted||isUserCancelError(uploadError)){
+          writeFailed=false
+          publish({transport:'connected',program:'stopped',uploadProgress:null,message:'Запуск отменён.'})
+          return {ok:false,error:'Запуск отменён.'}
+        }
+        const msg=uploadError instanceof Error?uploadError.message:'Ошибка загрузки на хаб.'
+        const needsManual=uploadError instanceof UnsupportedFirmwareError || (uploadError instanceof Error && 'code' in uploadError && (uploadError as {code?:string}).code==='UNSUPPORTED_FIRMWARE')
+        if(needsManual){
+          await fault(msg,{needsManualHubProgram:true})
+        } else {
+          publish({transport:'connected',program:'stopped',uploadProgress:null,message:msg})
+        }
+        return {ok:false,error:msg}
+      } finally {
+        if(startAbort===abortController)startAbort=null
+      }
+    },
+    async stopCustomProgram(){
+      startAbort?.abort()
+      customProgramActive=false
+      if(transport.stopProgram && state.transport==='connected'){
+        await transport.stopProgram().catch(()=>{})
+      }
+      if(!disposed){
+        publish({program:'stopped',uploadProgress:null,message:'Программа Pybricks остановлена.'})
+      }
     },
     async startProgram(program:ControllerProgram){
       if(disposed||stopPromise||state.transport==='fault'||state.viewMode!=='check')return
@@ -715,6 +804,20 @@ export function createBluetoothTransport():Transport {
         if(signal?.aborted)throw abortError('Загрузка отменена.')
         await gattWrite(writeProgramMetaBytes(blob.byteLength))
         onProgress(100)
+      })
+    },
+    async stopProgram(){
+      await enqueueGatt(async()=>{
+        if(!characteristic||!programRunning)return
+        suppressStopEvent=true
+        try {
+          const stopped=new Promise<void>(resolve=>{stopStatusWait=resolve})
+          await gattWrite(stopProgramBytes())
+          await Promise.race([stopped,sleep(500).catch(()=>{})])
+        } finally {
+          stopStatusWait=null
+          suppressStopEvent=false
+        }
       })
     },
     async write(line){
