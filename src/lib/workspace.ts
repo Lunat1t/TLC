@@ -1,3 +1,4 @@
+import { HUB_PROGRAM_SOURCE } from "./hub-program-source.ts"
 import type { HubType } from "./projects"
 import {
   ACTION_BLOCK_TYPES,
@@ -822,8 +823,16 @@ export function generatePybricks(
   const driveBlocks = ordered.filter((block) =>
     ACTION_BLOCK_TYPES.includes(block.type)
   )
-  if (!driveBlocks.length)
+  if (!driveBlocks.length) {
+    const hasButtonActions = clean.some(block =>
+      ACTION_BLOCK_TYPES.includes(block.type) && findChainRoot(clean, block.id)?.type === "button"
+    )
+    if (hasButtonActions) {
+      if (hub !== "spike") throw new Error("Экранный пульт через Bluetooth доступен для SPIKE Prime.")
+      return "# Экранный пульт TLC. После загрузки отключите Pybricks Code, откройте этот проект в редакторе и запустите пульт через Bluetooth.\n" + HUB_PROGRAM_SOURCE
+    }
     throw new Error("Добавьте на доску блок движения.")
+  }
 
   const resolvedChassis = isDriveSettings(chassis) ? chassis : DEFAULT_DRIVE_SETTINGS
   const explicitPorts = new Set<string>()

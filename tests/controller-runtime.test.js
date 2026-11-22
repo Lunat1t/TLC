@@ -483,3 +483,91 @@ test('stopAll action stops connected ports', async () => {
   assert.ok(t.writes.includes('m,B,0\n'));
   await session.dispose();
 });
+
+test('two held panel buttons drive A and D independently through the live compiler', async () => {
+  const { compileControllerProgram } = await import('../public/controller-program.js');
+  const { generatePybricks } = await import('../src/lib/workspace.ts');
+  const blue = { controlId: 'panel', input: 'blue' };
+  const red = { controlId: 'panel', input: 'red' };
+  const blocks = [
+    { id: 'panel', type: 'motor-buttons', controlAreaId: 'area', controlModules: ['red'], x: 0, y: 44 },
+    ...[[blue, 'A'], [red, 'D']].flatMap(([target, motor], index) => [
+      { id: target.input, type: 'button', target, event: 'hold', x: index * 200, y: 200 },
+      { id: motor, type: 'drive', parentId: target.input, motor, modules: ['speed'], speed: 300, x: index * 200, y: 260 },
+    ]),
+  ];
+  const compiled = compileControllerProgram({ id: 'ad', hub: 'spike', workspace: {
+    controlLayout: {version: 1, areas: [{id: 'area', sheetId: 'main'}], controls: []},
+    sheets: [{id: 'main', blocks}],
+  }});
+  assert.deepEqual(compiled.errors, []);
+  const { HUB_PROGRAM_SOURCE } = await import('../src/lib/hub-program-source.ts');
+  assert.ok(generatePybricks(blocks, 'spike').endsWith(HUB_PROGRAM_SOURCE));
+  assert.throws(() => generatePybricks(blocks, 'ev3'), /Экранный пульт/);
+  const transport = fakePorts('A,D');
+  const session = createControllerSession(transport);
+  try {
+    await session.connect();
+    await session.startHub();
+    await session.setViewMode('check');
+    await session.startProgram(compiled);
+    for (const [first, second, firstPort, secondPort] of [[blue, red, 'A', 'D'], [red, blue, 'D', 'A']]) {
+      transport.writes.length = 0;
+      session.dispatch(first, 'pressed');
+      session.dispatch(second, 'pressed');
+      await tick();
+      session.dispatch(first, 'released');
+      await tick();
+      assert.deepEqual(transport.writes.filter(line => line.startsWith('m,')), [
+        `m,${firstPort},300\n`, `m,${secondPort},300\n`, `m,${firstPort},0\n`,
+      ]);
+      session.dispatch(second, 'released');
+      await tick();
+      assert.ok(transport.writes.includes(`m,${secondPort},0\n`));
+    }
+  } finally {
+    await session.dispose();
+  }
+});
+
+test('held red stop takes priority over blue motion on A and D until released', async () => {
+  const {compileControllerProgram} = await import('../public/controller-program.js');
+  const blue = {controlId: 'panel', input: 'blue'};
+  const red = {controlId: 'panel', input: 'red'};
+  const blocks = [
+    {id:'panel', type:'motor-buttons', controlAreaId:'area', controlModules:['red'], x:0, y:44},
+    {id:'go', type:'button', target:blue, event:'hold', x:0, y:200},
+    {id:'motors', type:'drive', parentId:'go', modules:['pair','speed'], motor:'A', motor2:'D', speed:300, direction:'forward', direction2:'forward', x:0, y:260},
+    {id:'brake', type:'button', target:red, event:'hold', x:220, y:200},
+    {id:'stops', type:'stop', parentId:'brake', motors:['A','D'], x:220, y:260},
+  ];
+  const compiled = compileControllerProgram({id:'ad', hub:'spike', workspace:{
+    controlLayout:{version:1, areas:[{id:'area',sheetId:'main'}], controls:[]},
+    sheets:[{id:'main',blocks}],
+  }});
+  assert.deepEqual(compiled.errors, []);
+  const transport = fakePorts('A,D');
+  const session = createControllerSession(transport);
+  try {
+    await session.connect(); await session.startHub();
+    await session.setViewMode('check'); await session.startProgram(compiled);
+    for (const press of [[blue,red],[red,blue]]) {
+      for (const release of [[blue,red],[red,blue]]) {
+        const held = new Set();
+        const speeds = {A:0,D:0};
+        for (const [target,event] of [...press.map(t=>[t,'pressed']), ...release.map(t=>[t,'released'])]) {
+          if (event === 'pressed') held.add(target); else held.delete(target);
+          transport.writes.length = 0;
+          session.dispatch(target,event);
+          await tick();
+          for (const line of transport.writes) {
+            const [,port,speed] = /^m,([AD]),(-?\d+)\n$/.exec(line) || [];
+            if (port) speeds[port] = Number(speed);
+          }
+          const expected = held.has(blue) && !held.has(red) ? 300 : 0;
+          assert.deepEqual(speeds,{A:expected,D:expected},target.input+' '+event);
+        }
+      }
+    }
+  } finally { await session.dispose(); }
+});

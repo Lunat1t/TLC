@@ -75,6 +75,7 @@ import {
 import { ControlAreaView } from "@/components/editor/control-area"
 import { DirectionPalettePreview, MotorButtonsPalettePreview } from "@/components/editor/direction-control"
 import { useRobotSession } from "@/components/editor/robot-session"
+import { requestEditorLandscape } from "@/lib/editor-orientation"
 import { controllerRuntimeErrors } from "@/lib/controller-program"
 import {
   CONTROL_INPUTS,
@@ -283,6 +284,7 @@ function EditorWorkspace() {
   const runButtonRef = React.useRef<HTMLButtonElement | null>(null)
   const wasRunPromptOpen = React.useRef(false)
   const {state: robotState, ref: sessionRef} = useRobotSession()
+  React.useEffect(() => requestEditorLandscape(window.screen?.orientation), [])
 
   React.useEffect(() => {
     const hasBluetooth = typeof navigator !== "undefined" && Boolean((navigator as Navigator & { bluetooth?: unknown }).bluetooth)

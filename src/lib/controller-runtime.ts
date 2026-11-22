@@ -131,6 +131,16 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
   const runners=new Map<string,AbortController>();const owners=new Map<string,AbortController>();const held=new Set<string>()
   type ActiveHold={key:string;handler:ControllerHandler;ports:string[];ownedRunners:Set<AbortController>}
   const activeHolds=new Map<string,ActiveHold>()
+  const isStopHold = (hold: ActiveHold, port: string) =>
+    hold.ports.includes(port) && hold.handler.actions.every(action => action.kind === 'stop' || action.kind === 'stopAll')
+  const collectDrivenPorts=(actions:ControllerAction[])=>{
+    const acc=new Set<string>()
+    for(const a of actions){
+      if(a.kind==='stopAll') for(const port of stopAllPorts()) acc.add(port)
+      else if('port' in a && a.port) acc.add(a.port)
+    }
+    return [...acc]
+  }
   const publish=(patch:Partial<SessionState>)=>{if(disposed)return;state={...state,...patch};for(const f of listeners)f(state)}
   const log=(line:string)=>publish({log:[...state.log,line].slice(-30)})
   const clear=()=>{epoch++;for(const run of runners.values())run.abort();runners.clear();owners.clear();held.clear();activeHolds.clear();snapshot=null;if(heartbeat)clock.clearInterval(heartbeat);heartbeat=null}
@@ -210,7 +220,11 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
     const runner=new AbortController();runners.set(key,runner)
     for(const action of actions){
       if(action.kind==='stopAll'){for(const port of stopAllPorts())owners.set(port,runner)}
-      else if('port' in action)owners.set(action.port,runner)
+      else if('port' in action && action.port){
+        if(action.kind==='stop' || !Array.from(activeHolds.values()).some(hold => isStopHold(hold, action.port))){
+          owners.set(action.port,runner)
+        }
+      }
     }
     void (async()=>{
       try {
@@ -371,6 +385,11 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
           for(const port of holdEntry.ports){
             const currentOwner=owners.get(port)
             if(state.program==='live-running' && currentOwner && !holdEntry.ownedRunners.has(currentOwner))continue
+            const otherStop = remainingHolds.find(hold => isStopHold(hold, port))
+            if (otherStop) {
+              resumeRuns.push({hold: otherStop, action: {kind:'stop', port}})
+              continue
+            }
             let resumed=false
             for(const other of remainingHolds){
               const continuous=other.handler.actions.filter((a):a is Extract<ControllerAction,{kind:'run'|'dc'}> => (a.kind==='run'||a.kind==='dc')&&a.port===port)
@@ -405,7 +424,7 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
       let startedRunner:AbortController|null=null
       if(state.program==='live-running'&&actions.length)startedRunner=startActions(runnerKey,actions,epoch)
       if(event==='pressed' && handler?.event==='hold'){
-        const drivenPorts=[...new Set(actions.filter((a):a is Exclude<ControllerAction,{kind:'wait'}|{kind:'stop'}|{kind:'stopAll'}> => a.kind!=='wait'&&a.kind!=='stop'&&a.kind!=='stopAll'&&'port' in a).map(a=>a.port))]
+        const drivenPorts=collectDrivenPorts(actions)
         const ownedRunners=new Set<AbortController>()
         if(startedRunner)ownedRunners.add(startedRunner)
         activeHolds.set(key,{key,handler,ports:drivenPorts,ownedRunners})
