@@ -71,9 +71,6 @@ export default function LoginPage() {
           className="text-[19px] font-black tracking-wide text-[#002c39] inline-flex items-center gap-2.5"
         >
           Brick Studio
-          <span className="text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-[#002c39]/10 text-[#002c39]">
-            LEGO robotics studio
-          </span>
         </Link>
         <Link
           href="/dashboard"
@@ -157,9 +154,6 @@ export default function LoginPage() {
                 <strong className="block text-sm font-extrabold text-[#10303b]">
                   Ещё нет аккаунта?
                 </strong>
-                <small className="text-xs text-[#587580]">
-                  Создайте аккаунт ученика
-                </small>
               </div>
               <Link
                 id="registerRedirect"

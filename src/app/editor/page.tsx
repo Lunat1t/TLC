@@ -9,11 +9,16 @@ import {
   ArrowRight,
   ArrowRightLeft,
   Bluetooth,
+  CircleDot,
+  Compass,
   Gamepad2,
+  Gauge,
+  Link2,
   MoreHorizontal,
   LayoutGrid,
   Monitor,
   Navigation,
+  Palette,
   PanelLeftClose,
   PanelLeftOpen,
   Play,
@@ -24,6 +29,7 @@ import {
   Trash2,
   Waves,
   Workflow,
+  Zap,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -68,6 +74,12 @@ import {
   ControllerStopBlock,
   SensorBlock,
 } from "@/components/editor/controller-blocks"
+import {
+  TRAVEL_UNIT_ARIA_LABELS,
+  computePopoverPlacement,
+  TRAVEL_UNIT_LABELS,
+  nextTravelUnit,
+} from "@/lib/controller-block-ui"
 import {
   DEFAULT_DRIVE_SETTINGS,
   compileControllerProgram,
@@ -244,6 +256,8 @@ function EditorWorkspace() {
   const [openMenuBlockId, setOpenMenuBlockId] = React.useState<string | null>(
     null
   )
+  const [openMenuAlignLeft, setOpenMenuAlignLeft] = React.useState(false)
+  const [openMenuOpenUp, setOpenMenuOpenUp] = React.useState(false)
   const [compactPalette, setCompactPalette] = React.useState(false)
   const [paletteExpanded, setPaletteExpanded] = React.useState<boolean | null>(null)
   const [blockCategory, setBlockCategory] = React.useState<(typeof PALETTE_FILTERS)[number]["id"]>("all")
@@ -1464,7 +1478,16 @@ function EditorWorkspace() {
                         className="flex min-h-10 w-full touch-none cursor-grab items-center gap-2 rounded-lg bg-[#f4f8fa] px-2 py-1.5 text-left text-xs font-bold leading-tight hover:bg-[#eaf2f6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-current active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <span className="grid size-6 shrink-0 place-items-center rounded-md text-white" style={{ backgroundColor: color }}>
-                          <Icon size={14} aria-hidden="true" />
+                          {type === "sensor" ? (
+                            <span className="grid grid-cols-2 gap-[1px] place-items-center" aria-hidden="true">
+                              <Waves size={9} />
+                              <Palette size={9} />
+                              <CircleDot size={9} />
+                              <Compass size={9} />
+                            </span>
+                          ) : (
+                            <Icon size={14} aria-hidden="true" />
+                          )}
                         </span>
                         {label}
                       </button>
@@ -2290,6 +2313,9 @@ function EditorWorkspace() {
                               <SensorBlock
                                 block={conditionBlock}
                                 slotted
+                                liveReady={robotState.transport === "ready"}
+                                sensorDistances={robotState.sensorDistances}
+                                sensorTelemetry={robotState.sensorTelemetry}
                                 errorMessage={condError}
                                 onChange={(changes) => {
                                   if (!project) return
@@ -2403,6 +2429,9 @@ function EditorWorkspace() {
                     ) : isSensorBlock ? (
                       <SensorBlock
                         block={block}
+                        liveReady={robotState.transport === "ready"}
+                        sensorDistances={robotState.sensorDistances}
+                        sensorTelemetry={robotState.sensorTelemetry}
                         errorMessage={blockError}
                         onChange={(changes) => {
                           if (!project) return
@@ -2520,7 +2549,8 @@ function EditorWorkspace() {
                           </button>
 
                           {paired && (
-                            <div className="shrink-0 flex flex-nowrap items-center gap-2 min-h-[36px]">
+                            <div className="shrink-0 flex flex-nowrap items-center gap-1.5 rounded-[12px] bg-black/20 border border-white/25 px-2 py-1 min-h-[36px]">
+                              <Link2 size={15} aria-hidden="true" className="shrink-0 text-white/90" />
                               <span className="text-[16px] font-extrabold opacity-95 whitespace-nowrap">
                                 и
                               </span>
@@ -2600,8 +2630,15 @@ function EditorWorkspace() {
                           .map((mod) => (
                             <div
                               key={mod}
-                              className="shrink-0 flex items-center gap-2.5 pl-3.5 border-l border-white/30"
+                              className="shrink-0 flex items-center gap-2 rounded-[12px] bg-black/20 border border-white/25 px-2.5 py-1"
                             >
+                              {mod === "travel" ? (
+                                <RotateCw size={16} aria-hidden="true" className="shrink-0 text-white/90" />
+                              ) : mod === "speed" ? (
+                                <Gauge size={16} aria-hidden="true" className="shrink-0 text-white/90" />
+                              ) : (
+                                <Zap size={16} aria-hidden="true" className="shrink-0 text-white/90" />
+                              )}
                               <span className="whitespace-nowrap text-[16px] font-extrabold tracking-tight">
                                 {mod === "travel"
                                   ? "на"
@@ -2638,28 +2675,27 @@ function EditorWorkspace() {
                                     }}
                                     className="w-[78px] h-[38px] rounded-full px-3 text-center bg-white text-[#0d3b4c] font-extrabold text-[15px] shadow-xs"
                                   />
-                                  <select
-                                    aria-label="Единица измерения"
-                                    value={block.unit || "rotations"}
-                                    onChange={(e) =>
+                                  <button
+                                    type="button"
+                                    aria-label={`Единица измерения: ${TRAVEL_UNIT_ARIA_LABELS[block.unit || "rotations"]}`}
+                                    title={`Единица: ${TRAVEL_UNIT_ARIA_LABELS[block.unit || "rotations"]}`}
+                                    onClick={() =>
                                       project &&
                                       saveBlocks(
                                         updateDrive(
                                           blocks,
                                           block.id,
                                           {
-                                            unit: e.target.value as TravelUnit,
+                                            unit: nextTravelUnit(block.unit || "rotations"),
                                           },
                                           project.hub
                                         )
                                       )
                                     }
-                                    className="h-[38px] rounded-full px-3.5 bg-white text-[#0d3b4c] font-extrabold text-[15px] shadow-xs cursor-pointer"
+                                    className="min-h-[36px] min-w-[36px] h-[38px] rounded-full px-3 bg-white text-[#0d3b4c] hover:bg-[#e7f4f8] font-extrabold text-[15px] shadow-xs cursor-pointer flex items-center justify-center shrink-0"
                                   >
-                                    <option value="rotations">об</option>
-                                    <option value="degrees">°</option>
-                                    <option value="seconds">с</option>
-                                  </select>
+                                    {TRAVEL_UNIT_LABELS[block.unit || "rotations"]}
+                                  </button>
                                 </>
                               ) : (
                                 <>
@@ -2715,7 +2751,7 @@ function EditorWorkspace() {
                                     )
                                   )
                                 }
-                                className="w-[22px] h-[22px] rounded-full bg-white/20 hover:bg-white/40 text-white text-sm leading-none grid place-items-center"
+                                className="min-w-[36px] min-h-[36px] w-[36px] h-[36px] rounded-full bg-white/20 hover:bg-white/40 text-white text-base leading-none grid place-items-center shrink-0"
                               >
                                 ×
                               </button>
@@ -2731,26 +2767,35 @@ function EditorWorkspace() {
                             type="button"
                             aria-label="Добавить модуль мотора"
                             aria-expanded={openMenuBlockId === block.id}
-                            onClick={() =>
-                              setOpenMenuBlockId((prev) =>
-                                prev === block.id ? null : block.id
-                              )
-                            }
-                            className="w-[36px] h-[36px] rounded-full border border-white/55 bg-white/15 hover:bg-white/30 text-white text-xl leading-none font-black grid place-items-center"
+                            onClick={(e) => {
+                              if (openMenuBlockId === block.id) {
+                                setOpenMenuBlockId(null)
+                                return
+                              }
+                              const rect = e.currentTarget.getBoundingClientRect()
+                              const placement = computePopoverPlacement(rect, {
+                                width: window.innerWidth,
+                                height: window.innerHeight,
+                              })
+                              setOpenMenuAlignLeft(placement.alignLeft)
+                              setOpenMenuOpenUp(placement.openUp)
+                              setOpenMenuBlockId(block.id)
+                            }}
+                            className="min-h-[36px] min-w-[36px] w-[36px] h-[36px] rounded-full border border-white/55 bg-white/15 hover:bg-white/30 text-white text-xl leading-none font-black grid place-items-center"
                           >
                             +
                           </button>
 
                           {openMenuBlockId === block.id && (
-                            <div className="absolute top-[calc(100%+8px)] right-0 z-50 w-[240px] p-2.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-1.5">
+                            <div className={`absolute ${openMenuOpenUp ? "bottom-[calc(100%+8px)]" : "top-[calc(100%+8px)]"} ${openMenuAlignLeft ? "left-0" : "right-0"} z-50 w-[176px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-1.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-1`}>
                               {(
                                 [
-                                  ["pair", "второй мотор (связь)"],
-                                  ["speed", "со скоростью"],
-                                  ["power", "с мощностью"],
-                                  ["travel", "на [значение] [ед. изм.]"],
+                                  ["pair", "Мотор 2", Link2],
+                                  ["speed", "°/с", Gauge],
+                                  ["power", "% мощн.", Zap],
+                                  ["travel", "Ход", RotateCw],
                                 ] as const
-                              ).map(([modName, label]) => (
+                              ).map(([modName, label, Icon]) => (
                                 <button
                                   key={modName}
                                   type="button"
@@ -2786,9 +2831,10 @@ function EditorWorkspace() {
                                     )
                                     setOpenMenuBlockId(null)
                                   }}
-                                  className="text-left px-3.5 py-2.5 rounded-lg bg-[#eff8fb] hover:bg-[#dff2f8] text-sm font-extrabold text-[#18313b] disabled:opacity-45"
+                                  className="min-h-[36px] flex items-center gap-2 text-left px-3 py-1.5 rounded-lg bg-[#eff8fb] hover:bg-[#dff2f8] text-xs font-extrabold text-[#18313b] disabled:opacity-45"
                                 >
-                                  {label}
+                                  <Icon size={15} aria-hidden={true} className="shrink-0" />
+                                  <span>{label}</span>
                                 </button>
                               ))}
                             </div>
