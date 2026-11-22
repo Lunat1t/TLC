@@ -11,9 +11,11 @@ import {
   Bluetooth,
   Check,
   CircleDot,
+  Cog,
   Compass,
   Gamepad2,
   Gauge,
+  GitBranch,
   Link2,
   LayoutGrid,
   Monitor,
@@ -2572,8 +2574,9 @@ function EditorWorkspace() {
                             className="absolute -bottom-[7px] left-[60px] w-[44px] h-[10px] rounded-b-[6px] bg-[#7c3aed] z-20"
                           />
 
-                          <span className="text-[16px] font-extrabold whitespace-nowrap tracking-tight">
-                            Если
+                          <span className="inline-flex items-center gap-1.5 text-[16px] font-extrabold whitespace-nowrap tracking-tight">
+                            <GitBranch size={16} aria-hidden="true" className="shrink-0 opacity-95" />
+                            <span>Если</span>
                           </span>
                           {conditionBlock && !isDraggingCondition ? (
                             <div className="relative flex items-center shrink-0">
@@ -2746,10 +2749,11 @@ function EditorWorkspace() {
                     ) : (
                       <div className="flex flex-col">
                       <div className="group flex flex-nowrap items-center min-h-[64px] px-5 gap-3">
-                        {/* Base inline action: Начать движение [порт] [вперёд] */}
+                        {/* Base inline action: Мотор [порт] [вперёд] */}
                         <div className="shrink-0 flex items-center gap-2.5">
-                          <span className="text-[16px] font-extrabold whitespace-nowrap tracking-tight">
-                            Начать движение
+                          <span className="inline-flex items-center gap-1.5 text-[16px] font-extrabold whitespace-nowrap tracking-tight">
+                            <Cog size={17} aria-hidden="true" className="shrink-0 opacity-95" />
+                            <span>Мотор</span>
                           </span>
                           <select
                             aria-label={

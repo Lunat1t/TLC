@@ -1,5 +1,5 @@
 import React from "react"
-import { Activity, AlertTriangle, Check, ChevronDown, Compass, Gauge, Hourglass, Lightbulb, RotateCcw, RotateCw, Settings2, Trash2 } from "lucide-react"
+import { Activity, AlertTriangle, Check, ChevronDown, Compass, Gamepad2, Gauge, Hourglass, Lightbulb, RotateCcw, RotateCw, Settings2, Trash2 } from "lucide-react"
 import type { WorkspaceBlock, ControllerButton, ControllerEvent, ChassisDirection, ImuAxis, MotorModule, SensorColor, SensorModule, SensorOp, SensorType, TravelUnit } from "@/lib/workspace"
 import { CONTROLLER_BUTTONS, BUTTON_LABELS } from "@/lib/controller-program"
 import {
@@ -140,7 +140,11 @@ export function ControllerButtonBlock({
 
   return (
     <div className="flex flex-col">
-      <div className="flex flex-nowrap items-center min-h-[58px] px-3 gap-1.5 text-white">
+      <div className="flex flex-nowrap items-center min-h-[58px] px-3.5 gap-2 text-white">
+        <span className="inline-flex items-center gap-1.5 text-[15px] font-extrabold whitespace-nowrap tracking-tight shrink-0">
+          <Gamepad2 size={16} aria-hidden="true" className="shrink-0 opacity-95" />
+          <span>Кнопка</span>
+        </span>
         {buttonControls ? (
           <>
             {!hideControlSelect && (
@@ -496,13 +500,14 @@ export function ChassisBlock({
           onClick={onOpenChassis}
           aria-label={chassisConfigured ? "Настроить шасси" : "Шасси не настроено: открыть настройки"}
           title={chassisConfigured ? "Настройки шасси" : "Настройте шасси"}
-          className={`relative shrink-0 min-h-[36px] min-w-[36px] h-[36px] px-2 rounded-[9px] flex items-center justify-center gap-1 font-black text-xs transition-colors ${
+          className={`relative shrink-0 min-h-[36px] h-[36px] px-2.5 rounded-[9px] flex items-center justify-center gap-1.5 font-black text-xs whitespace-nowrap transition-colors ${
             chassisConfigured
               ? "bg-white/20 hover:bg-white/30 text-white border border-white/35"
               : "bg-[#fef3c7] hover:bg-[#fde68a] text-[#92400e] border-2 border-[#f59e0b]"
           }`}
         >
-          <Settings2 size={16} aria-hidden="true" />
+          <Settings2 size={15} aria-hidden="true" className="shrink-0" />
+          <span className="whitespace-nowrap">Шасси</span>
           {!chassisConfigured && <span aria-hidden="true">⚠</span>}
         </button>
 
@@ -664,10 +669,10 @@ const SENSOR_TYPE_OPTIONS: readonly {
   label: string
   renderIcon: (size?: number) => React.ReactNode
 }[] = [
-  { value: "ultrasonic", label: "Ультразвук", renderIcon: (size = 17) => <UltrasonicEyesScene size={size} /> },
+  { value: "ultrasonic", label: "Расстояние", renderIcon: (size = 17) => <UltrasonicEyesScene size={size} /> },
   { value: "color", label: "Цвет", renderIcon: (size = 17) => <ColorBeamScene size={size} /> },
-  { value: "force", label: "Сила / нажатие", renderIcon: (size = 17) => <ForceButtonScene size={size} /> },
-  { value: "imu", label: "Гироскоп (IMU)", renderIcon: (size = 17) => <ImuTiltScene size={size} /> },
+  { value: "force", label: "Нажатие", renderIcon: (size = 17) => <ForceButtonScene size={size} /> },
+  { value: "imu", label: "Наклон", renderIcon: (size = 17) => <ImuTiltScene size={size} /> },
 ]
 
 const SENSOR_MODULE_MENU_ITEMS: Record<
@@ -856,9 +861,14 @@ export function SensorBlock({
               setColorOpen(false)
               setTypeOpen((prev) => !prev)
             }}
-            className="min-h-[36px] min-w-[36px] h-[36px] px-2 rounded-[9px] bg-white text-[#312e81] flex items-center justify-center gap-0.5 shadow-xs hover:bg-[#eef2ff] cursor-pointer"
+            className={`min-h-[36px] h-[36px] ${
+              slotted ? "px-2 gap-1" : "px-2.5 gap-1.5"
+            } rounded-[9px] bg-white text-[#312e81] flex items-center justify-center shadow-xs hover:bg-[#eef2ff] cursor-pointer whitespace-nowrap`}
           >
             {activeSensorOption.renderIcon(slotted ? 15 : 17)}
+            <span className="text-xs font-extrabold whitespace-nowrap">
+              {slotted ? activeSensorOption.label : `Датчик · ${activeSensorOption.label}`}
+            </span>
             <ChevronDown size={11} aria-hidden="true" className="shrink-0 opacity-75" />
           </button>
           {typeOpen && (

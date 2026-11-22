@@ -305,6 +305,12 @@ test('controller-blocks and editor use tap-chips, icon pickers, and live telemet
 
   // Sensor type switcher is a single active-icon button with ChevronDown cue & popover, dark bg-black/20 capsules without double borders
   assert.ok(blocksSource.includes('aria-label={`Тип датчика: ${activeSensorOption.label}`}'));
+  assert.ok(blocksSource.includes('`Датчик · ${activeSensorOption.label}`'));
+  assert.ok(blocksSource.includes('label: "Расстояние"') && blocksSource.includes('label: "Нажатие"') && blocksSource.includes('label: "Наклон"'));
+  assert.ok(blocksSource.includes('<Gamepad2 ') && blocksSource.includes('>Кнопка<'));
+  assert.ok(blocksSource.includes('>Шасси<'));
+  assert.ok(editorSource.includes('<Cog ') && editorSource.includes('>Мотор<'));
+  assert.ok(editorSource.includes('<GitBranch ') && editorSource.includes('>Если<'));
   assert.ok(blocksSource.includes('<ChevronDown size={11}'));
   assert.equal(blocksSource.includes('bg-black/20 border border-white/25'), false);
   assert.equal(editorSource.includes('bg-black/20 border border-white/25'), false);
