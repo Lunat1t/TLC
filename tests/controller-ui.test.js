@@ -278,9 +278,39 @@ test('controller-blocks and editor use tap-chips, icon pickers, and live telemet
   assert.equal((editorSource.match(/sensorTelemetry=\{robotState\.sensorTelemetry\}/g) || []).length, 2);
   assert.ok(blocksSource.includes('data-live-badge={mod}'));
 
-  // Drive module remove button >=36px and dimmed light-off styling
-  assert.equal(editorSource.includes('w-[22px] h-[22px] rounded-full bg-white/20 hover:bg-white/40'), false);
-  assert.ok(editorSource.includes('min-w-[36px] min-h-[36px] w-[36px] h-[36px] rounded-full bg-white/20 hover:bg-white/40'));
+  // Zero × buttons on blocks/modules; deletion via toolbar, palette drop zone, and + popovers
+  assert.equal(blocksSource.includes('×'), false);
+  assert.equal(editorSource.includes('aria-label="Удалить блок"'), false);
+  assert.equal(editorSource.includes('aria-label="Удалить кнопки моторов"'), false);
+  assert.equal(editorSource.includes('aria-label="Удалить датчик из условия"'), false);
+  assert.equal(editorSource.includes('aria-label="Удалить второй мотор"'), false);
+  assert.equal(editorSource.includes('aria-label={`Удалить модуль ${mod}`}'), false);
+  assert.ok(editorSource.includes('aria-label="Удалить выбранный блок"'));
+  assert.ok(editorSource.includes('isOverPaletteDropZone'));
+  assert.ok(editorSource.includes('onRemoveFromCondition'));
+  assert.ok(blocksSource.includes('Убрать из условия'));
+
+  // + menus use Check toggles and guard mandatory last items
+  assert.ok(blocksSource.includes('<Check '));
+  assert.ok(editorSource.includes('<Check '));
+  assert.ok(blocksSource.includes('disabled={isLastPort}'));
+  assert.ok(blocksSource.includes('disabled={isOnlyRemaining}'));
+
+  // Block wrapper lifts z-index on any expanded popover; If/blocks use valid Tailwind v3 outline
+  assert.ok(editorSource.includes('has-[[aria-expanded="true"]]:z-40'));
+  assert.ok(editorSource.includes('outline outline-[3px] outline-[#087996] outline-offset-2'));
+  assert.equal(editorSource.includes('ring-3 ring-[#087996]'), false);
+
+  // Sensor type switcher is a single active-icon button with ChevronDown cue & popover, no dark double borders
+  assert.ok(blocksSource.includes('aria-label={`Тип датчика: ${activeSensorOption.label}`}'));
+  assert.ok(blocksSource.includes('<ChevronDown size={11}'));
+  assert.equal(blocksSource.includes('bg-black/20 border border-white/25'), false);
+  assert.equal(editorSource.includes('bg-black/20 border border-white/25'), false);
+  assert.ok(blocksSource.includes('bg-white/10'));
+  assert.ok(editorSource.includes('bg-white/10'));
+  assert.equal(blocksSource.includes('border border-white/35 shadow-[inset_0_-2px_#3730a3]'), false);
+
+  // Preserved light-off dimmed styling and viewport-clamped popovers
   assert.ok(blocksSource.includes('light === -1 ? "text-white/55" : "text-amber-200"'));
   assert.ok(blocksSource.includes('bg-white/25 text-white border border-white/35'));
   assert.ok(blocksSource.includes('bottom-[calc(100%+6px)]'));

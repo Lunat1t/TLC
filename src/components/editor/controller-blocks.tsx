@@ -1,5 +1,5 @@
 import React from "react"
-import { Activity, CircleDot, Compass, Gauge, Lightbulb, Palette, RotateCcw, RotateCw, Ruler, Settings2, SlidersHorizontal, Sun, Waves, AlertTriangle } from "lucide-react"
+import { Activity, AlertTriangle, Check, ChevronDown, CircleDot, Compass, Gauge, Lightbulb, Palette, RotateCcw, RotateCw, Ruler, Settings2, SlidersHorizontal, Sun, Trash2, Waves } from "lucide-react"
 import type { WorkspaceBlock, ControllerButton, ControllerEvent, ChassisDirection, ImuAxis, MotorModule, SensorColor, SensorModule, SensorOp, SensorType, TravelUnit } from "@/lib/workspace"
 import { CONTROLLER_BUTTONS, BUTTON_LABELS } from "@/lib/controller-program"
 import {
@@ -145,7 +145,7 @@ export function ControllerButtonBlock({
                     },
                   })
                 }}
-                className="min-h-[36px] h-[36px] max-w-[96px] shrink-0 px-2 rounded-[9px] bg-white text-[#18313b] font-black text-xs border-2 border-[#c2410c] cursor-pointer"
+                className="min-h-[36px] h-[36px] max-w-[96px] shrink-0 px-2 rounded-[9px] bg-white text-[#18313b] font-black text-xs shadow-xs cursor-pointer"
               >
                 <option value="">Пульт</option>
                 {block.target?.controlId && !selectedControl && (
@@ -167,7 +167,7 @@ export function ControllerButtonBlock({
               aria-label="Выбрать кнопку пульта"
               title="Кнопка"
               onChange={e => onChange({ target: { controlId: activeControlId, input: e.target.value } })}
-              className="min-h-[36px] h-[36px] min-w-[52px] shrink-0 px-2 rounded-[9px] bg-white text-[#18313b] font-black text-sm border-2 border-[#c2410c] cursor-pointer"
+              className="min-h-[36px] h-[36px] min-w-[52px] shrink-0 px-2 rounded-[9px] bg-white text-[#18313b] font-black text-sm shadow-xs cursor-pointer"
             >
               <option value="">•</option>
               {selectedControl
@@ -184,7 +184,7 @@ export function ControllerButtonBlock({
             value={currentButton}
             aria-label="Выбрать кнопку пульта"
             onChange={(e) => onChange({ button: e.target.value as ControllerButton })}
-            className="min-h-[36px] h-[36px] shrink-0 px-2 rounded-[9px] bg-white text-[#18313b] font-black text-sm border-2 border-[#c2410c] shadow-sm cursor-pointer"
+            className="min-h-[36px] h-[36px] shrink-0 px-2 rounded-[9px] bg-white text-[#18313b] font-black text-sm shadow-xs cursor-pointer"
           >
             {CONTROLLER_BUTTONS.map((btn) => (
               <option key={btn} value={btn} aria-label={BUTTON_ARIA_LABELS[btn]}>
@@ -199,7 +199,7 @@ export function ControllerButtonBlock({
           aria-label={`Режим срабатывания кнопки: ${CONTROLLER_EVENT_LABELS[currentEvent]}`}
           title={`Режим кнопки: ${CONTROLLER_EVENT_LABELS[currentEvent]}`}
           onClick={() => onChange({ event: nextControllerEvent(currentEvent) })}
-          className="min-h-[36px] min-w-[36px] h-[36px] shrink-0 px-2.5 rounded-[9px] bg-white text-[#18313b] font-black text-xs border-2 border-[#c2410c] shadow-sm cursor-pointer hover:bg-[#fff7ed] transition-colors flex items-center justify-center whitespace-nowrap"
+          className="min-h-[36px] min-w-[36px] h-[36px] shrink-0 px-2.5 rounded-[9px] bg-white text-[#18313b] font-black text-xs shadow-xs cursor-pointer hover:bg-[#fff7ed] transition-colors flex items-center justify-center whitespace-nowrap"
         >
           {CONTROLLER_EVENT_LABELS[currentEvent]}
         </button>
@@ -218,19 +218,11 @@ export function ControllerStopBlock({
 }: ControllerBlockProps) {
   const [menuOpen, setMenuOpen] = React.useState(false)
   const menuRef = React.useRef<HTMLDivElement>(null)
+  const closeMenu = React.useCallback(() => setMenuOpen(false), [])
+  const { alignLeft, openUp } = usePopoverDismiss(menuOpen, menuRef, closeMenu)
   const stopInfo = getStopPorts(block)
   const isStopAll = stopInfo.stopAll
   const activePorts = isStopAll ? [] : stopInfo.ports
-  const unusedPorts = ports.filter((p) => !activePorts.includes(p))
-
-  React.useEffect(() => {
-    if (!menuOpen) return
-    const close = (e: PointerEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
-    }
-    window.addEventListener("pointerdown", close)
-    return () => window.removeEventListener("pointerdown", close)
-  }, [menuOpen])
 
   return (
     <div className="flex flex-col">
@@ -246,94 +238,101 @@ export function ControllerStopBlock({
         </span>
 
         {isStopAll ? (
-          <div className="flex flex-nowrap items-center gap-1 min-h-[36px] h-[36px] px-2.5 rounded-[9px] bg-white text-[#18313b] font-black text-xs border-2 border-[#8f2a21] shrink-0">
+          <div className="flex flex-nowrap items-center min-h-[36px] h-[36px] px-2.5 rounded-[9px] bg-white text-[#18313b] font-black text-xs shadow-xs shrink-0">
             <span className="whitespace-nowrap">Все моторы</span>
-            <button
-              type="button"
-              aria-label="Отменить остановку всех моторов"
-              onClick={() => onChange({ stopAll: false, motors: [ports[0] || "A"], motor: ports[0] || "A" })}
-              className="ml-1 w-[20px] h-[20px] rounded-full bg-[#fee2e2] hover:bg-[#fecaca] text-[#991b1b] text-xs leading-none grid place-items-center"
-            >
-              ×
-            </button>
           </div>
         ) : (
           <div className="flex flex-nowrap items-center gap-1.5 shrink-0">
             {activePorts.map((port, idx) => (
-              <div key={`${idx}:${port}`} className="flex flex-nowrap items-center gap-1 shrink-0">
-                <select
-                  value={port}
-                  aria-label={`Порт мотора ${idx + 1} для остановки`}
-                  onChange={(e) => {
-                    const next = [...activePorts]
-                    next[idx] = e.target.value
-                    onChange({ stopAll: false, motors: next, motor: next[0], motor2: next[1] })
-                  }}
-                  className="min-h-[36px] h-[36px] px-2.5 rounded-[9px] bg-white text-[#18313b] font-black text-sm border-2 border-[#8f2a21] shadow-xs cursor-pointer hover:bg-[#fef2f2] focus:outline-none"
-                >
-                  {ports.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-                {activePorts.length > 1 && (
-                  <button
-                    type="button"
-                    aria-label={`Удалить порт ${port}`}
-                    onClick={() => {
-                      const next = activePorts.filter((_, i) => i !== idx)
-                      onChange({ stopAll: false, motors: next, motor: next[0] || "A", motor2: next[1] })
-                    }}
-                    className="w-[24px] h-[24px] rounded-full bg-white/20 hover:bg-white/35 text-white text-sm leading-none font-bold grid place-items-center shrink-0"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            ))}
-
-            <div ref={menuRef} data-module-picker="true" className="relative shrink-0">
-              <button
-                type="button"
-                aria-label="Добавить порт для остановки"
-                aria-expanded={menuOpen}
-                onClick={() => setMenuOpen((prev) => !prev)}
-                className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-full border border-white/55 bg-white/15 hover:bg-white/30 text-white text-lg leading-none font-black grid place-items-center"
+              <select
+                key={`${idx}:${port}`}
+                value={port}
+                aria-label={`Порт мотора ${idx + 1} для остановки`}
+                onChange={(e) => {
+                  const next = [...activePorts]
+                  next[idx] = e.target.value
+                  onChange({ stopAll: false, motors: next, motor: next[0], motor2: next[1] })
+                }}
+                className="min-h-[36px] h-[36px] px-2.5 rounded-[9px] bg-white text-[#18313b] font-black text-sm shadow-xs cursor-pointer hover:bg-[#fef2f2] focus:outline-none"
               >
-                +
-              </button>
-              {menuOpen && (
-                <div className="absolute top-[calc(100%+6px)] right-0 z-50 w-[160px] p-1.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuOpen(false)
-                      onChange({ stopAll: true, motors: undefined, motor2: undefined })
-                    }}
-                    className="min-h-[36px] text-left px-3 py-1.5 rounded-lg bg-[#fef2f2] hover:bg-[#fee2e2] text-xs font-extrabold text-[#991b1b]"
-                  >
-                    Все моторы
-                  </button>
-                  {unusedPorts.map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => {
-                        setMenuOpen(false)
-                        const next = [...activePorts, p]
-                        onChange({ stopAll: false, motors: next, motor: next[0], motor2: next[1] })
-                      }}
-                      className="min-h-[36px] text-left px-3 py-1.5 rounded-lg bg-[#f4f8fa] hover:bg-[#e5f2f7] text-xs font-extrabold text-[#18313b]"
-                    >
-                      + Порт {p}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+                {ports.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            ))}
           </div>
         )}
+
+        <div ref={menuRef} data-module-picker="true" className="relative shrink-0">
+          <button
+            type="button"
+            aria-label="Добавить порт для остановки"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((prev) => !prev)}
+            className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-full border border-white/55 bg-white/15 hover:bg-white/30 text-white text-lg leading-none font-black grid place-items-center"
+          >
+            +
+          </button>
+          {menuOpen && (
+            <div className={`absolute ${openUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${alignLeft ? "left-0" : "right-0"} z-50 w-[168px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-1.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-1`}>
+              <button
+                type="button"
+                aria-pressed={isStopAll}
+                onClick={() => {
+                  setMenuOpen(false)
+                  if (isStopAll) {
+                    onChange({ stopAll: false, motors: [ports[0] || "A"], motor: ports[0] || "A" })
+                  } else {
+                    onChange({ stopAll: true, motors: undefined, motor2: undefined })
+                  }
+                }}
+                className={`min-h-[36px] flex items-center gap-2 text-left px-3 py-1.5 rounded-lg text-xs font-extrabold ${
+                  isStopAll
+                    ? "bg-[#fee2e2] hover:bg-[#fecaca] text-[#991b1b]"
+                    : "bg-[#fef2f2] hover:bg-[#fee2e2] text-[#991b1b]"
+                }`}
+              >
+                <Check size={14} aria-hidden="true" className={isStopAll ? "opacity-100 shrink-0" : "opacity-0 shrink-0"} />
+                <span>Все моторы</span>
+              </button>
+              {ports.map((p) => {
+                const isPortActive = !isStopAll && activePorts.includes(p)
+                const isLastPort = isPortActive && activePorts.length === 1
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    aria-pressed={isPortActive}
+                    disabled={isLastPort}
+                    onClick={() => {
+                      if (isLastPort) return
+                      setMenuOpen(false)
+                      if (isStopAll) {
+                        onChange({ stopAll: false, motors: [p], motor: p, motor2: undefined })
+                      } else if (isPortActive) {
+                        const next = activePorts.filter((item) => item !== p)
+                        onChange({ stopAll: false, motors: next, motor: next[0] || "A", motor2: next[1] })
+                      } else {
+                        const next = [...activePorts, p]
+                        onChange({ stopAll: false, motors: next, motor: next[0], motor2: next[1] })
+                      }
+                    }}
+                    className={`min-h-[36px] flex items-center gap-2 text-left px-3 py-1.5 rounded-lg text-xs font-extrabold disabled:opacity-60 ${
+                      isPortActive
+                        ? "bg-[#e5f2f7] hover:bg-[#d7ebf3] text-[#086985]"
+                        : "bg-[#f4f8fa] hover:bg-[#e5f2f7] text-[#18313b]"
+                    }`}
+                  >
+                    <Check size={14} aria-hidden="true" className={isPortActive ? "opacity-100 shrink-0" : "opacity-0 shrink-0"} />
+                    <span>Порт {p}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       <BlockErrorBar errorMessage={errorMessage} />
@@ -402,7 +401,6 @@ export function ChassisBlock({
   const hasSpeed = modules.includes("speed")
   const hasTravel = modules.includes("travel")
   const unit: TravelUnit = block.unit || "rotations"
-  const availableAddons = (["speed", "travel"] as const).filter((m) => !modules.includes(m))
 
   return (
     <div className="flex flex-col">
@@ -446,7 +444,7 @@ export function ChassisBlock({
         </div>
 
         {hasSpeed && (
-          <div className="flex flex-nowrap items-center gap-1.5 rounded-[12px] bg-black/20 border border-white/25 px-2 py-1 shrink-0">
+          <div className="flex flex-nowrap items-center gap-1.5 rounded-[12px] bg-white/10 px-2 py-1 shrink-0">
             <Gauge size={15} aria-hidden="true" className="shrink-0 text-white/90" />
             <input
               type="number"
@@ -462,19 +460,11 @@ export function ChassisBlock({
               className="w-[70px] min-h-[36px] h-[36px] rounded-full px-2 text-center bg-white text-[#0d3b4c] font-extrabold text-sm shadow-xs"
             />
             <span className="text-xs font-extrabold whitespace-nowrap">°/с</span>
-            <button
-              type="button"
-              aria-label="Удалить скорость"
-              onClick={() => onChange({ modules: modules.filter((m) => m !== "speed") })}
-              className="min-w-[36px] min-h-[36px] w-[36px] h-[36px] rounded-full bg-white/20 hover:bg-white/35 text-white text-base leading-none grid place-items-center"
-            >
-              ×
-            </button>
           </div>
         )}
 
         {hasTravel && (
-          <div className="flex flex-nowrap items-center gap-1.5 rounded-[12px] bg-black/20 border border-white/25 px-2 py-1 shrink-0">
+          <div className="flex flex-nowrap items-center gap-1.5 rounded-[12px] bg-white/10 px-2 py-1 shrink-0">
             <RotateCw size={15} aria-hidden="true" className="shrink-0 text-white/90" />
             <input
               type="number"
@@ -499,61 +489,67 @@ export function ChassisBlock({
             >
               {TRAVEL_UNIT_LABELS[unit]}
             </button>
-            <button
-              type="button"
-              aria-label="Удалить величину движения"
-              onClick={() => onChange({ modules: modules.filter((m) => m !== "travel") })}
-              className="min-w-[36px] min-h-[36px] w-[36px] h-[36px] rounded-full bg-white/20 hover:bg-white/35 text-white text-base leading-none grid place-items-center"
-            >
-              ×
-            </button>
           </div>
         )}
 
-        {availableAddons.length > 0 && (
-          <div ref={menuRef} data-module-picker="true" className="relative shrink-0">
-            <button
-              type="button"
-              aria-label="Добавить модуль шасси"
-              aria-expanded={menuOpen}
-              title="Добавить модуль"
-              onClick={() => setMenuOpen((prev) => !prev)}
-              className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-full border border-white/55 bg-white/15 hover:bg-white/30 text-white text-lg leading-none font-black grid place-items-center"
-            >
-              +
-            </button>
-            {menuOpen && (
-              <div className={`absolute ${openUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${alignLeft ? "left-0" : "right-0"} z-50 w-[152px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-1.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-1`}>
-                {availableAddons.includes("speed") && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuOpen(false)
-                      onChange({ modules: [...modules, "speed"] })
-                    }}
-                    className="min-h-[36px] flex items-center gap-2 text-left px-3 py-1.5 rounded-lg bg-[#eff8fb] hover:bg-[#dff2f8] text-xs font-extrabold text-[#0d3b4c]"
-                  >
-                    <Gauge size={15} aria-hidden="true" className="shrink-0" />
-                    <span>°/с</span>
-                  </button>
-                )}
-                {availableAddons.includes("travel") && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuOpen(false)
-                      onChange({ modules: [...modules, "travel"] })
-                    }}
-                    className="min-h-[36px] flex items-center gap-2 text-left px-3 py-1.5 rounded-lg bg-[#eff8fb] hover:bg-[#dff2f8] text-xs font-extrabold text-[#0d3b4c]"
-                  >
-                    <RotateCw size={15} aria-hidden="true" className="shrink-0" />
-                    <span>Ход</span>
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+        <div ref={menuRef} data-module-picker="true" className="relative shrink-0">
+          <button
+            type="button"
+            aria-label="Добавить модуль шасси"
+            aria-expanded={menuOpen}
+            title="Настроить модули"
+            onClick={() => setMenuOpen((prev) => !prev)}
+            className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-full border border-white/55 bg-white/15 hover:bg-white/30 text-white text-lg leading-none font-black grid place-items-center"
+          >
+            +
+          </button>
+          {menuOpen && (
+            <div className={`absolute ${openUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${alignLeft ? "left-0" : "right-0"} z-50 w-[160px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-1.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-1`}>
+              <button
+                type="button"
+                aria-pressed={hasSpeed}
+                onClick={() => {
+                  setMenuOpen(false)
+                  onChange({
+                    modules: hasSpeed
+                      ? modules.filter((m) => m !== "speed")
+                      : [...modules, "speed"],
+                  })
+                }}
+                className={`min-h-[36px] flex items-center gap-2 text-left px-3 py-1.5 rounded-lg text-xs font-extrabold ${
+                  hasSpeed
+                    ? "bg-[#d6f0f8] hover:bg-[#c3e8f4] text-[#086985]"
+                    : "bg-[#eff8fb] hover:bg-[#dff2f8] text-[#0d3b4c]"
+                }`}
+              >
+                <Check size={14} aria-hidden="true" className={hasSpeed ? "opacity-100 shrink-0" : "opacity-0 shrink-0"} />
+                <Gauge size={15} aria-hidden="true" className="shrink-0" />
+                <span>°/с</span>
+              </button>
+              <button
+                type="button"
+                aria-pressed={hasTravel}
+                onClick={() => {
+                  setMenuOpen(false)
+                  onChange({
+                    modules: hasTravel
+                      ? modules.filter((m) => m !== "travel")
+                      : [...modules, "travel"],
+                  })
+                }}
+                className={`min-h-[36px] flex items-center gap-2 text-left px-3 py-1.5 rounded-lg text-xs font-extrabold ${
+                  hasTravel
+                    ? "bg-[#d6f0f8] hover:bg-[#c3e8f4] text-[#086985]"
+                    : "bg-[#eff8fb] hover:bg-[#dff2f8] text-[#0d3b4c]"
+                }`}
+              >
+                <Check size={14} aria-hidden="true" className={hasTravel ? "opacity-100 shrink-0" : "opacity-0 shrink-0"} />
+                <RotateCw size={15} aria-hidden="true" className="shrink-0" />
+                <span>Ход</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <BlockErrorBar errorMessage={errorMessage} />
@@ -596,6 +592,7 @@ export function SensorBlock({
   errorMessage,
   onChange,
   onStartDrag,
+  onRemoveFromCondition,
 }: {
   block: WorkspaceBlock
   slotted?: boolean
@@ -605,16 +602,21 @@ export function SensorBlock({
   errorMessage?: string
   onChange: (changes: Partial<WorkspaceBlock>) => void
   onStartDrag?: (e: React.PointerEvent<HTMLDivElement>) => void
+  onRemoveFromCondition?: () => void
 }) {
   const [menuOpen, setMenuOpen] = React.useState(false)
   const [colorOpen, setColorOpen] = React.useState(false)
+  const [typeOpen, setTypeOpen] = React.useState(false)
   const menuRef = React.useRef<HTMLDivElement>(null)
   const colorRef = React.useRef<HTMLDivElement>(null)
+  const typeRef = React.useRef<HTMLDivElement>(null)
 
   const closeMenu = React.useCallback(() => setMenuOpen(false), [])
   const closeColor = React.useCallback(() => setColorOpen(false), [])
+  const closeType = React.useCallback(() => setTypeOpen(false), [])
   const { alignLeft: menuAlignLeft, openUp: menuOpenUp } = usePopoverDismiss(menuOpen, menuRef, closeMenu)
   const { alignLeft: colorAlignLeft, openUp: colorOpenUp } = usePopoverDismiss(colorOpen, colorRef, closeColor)
+  const { alignLeft: typeAlignLeft, openUp: typeOpenUp } = usePopoverDismiss(typeOpen, typeRef, closeType)
 
   const sensorType: SensorType = block.sensorType || "ultrasonic"
   const isImu = sensorType === "imu"
@@ -638,23 +640,10 @@ export function SensorBlock({
   const modules: SensorModule[] = (slotted && isImu ? rawModules.filter((m) => m !== "reset") : rawModules)
   const effectiveModules: SensorModule[] = modules.length > 0 ? modules : [DEFAULT_SENSOR_MODULE[sensorType]]
 
-  const availableAddons = allowedForType.filter(
-    (m) => !effectiveModules.includes(m) && !(slotted && m === "reset")
-  )
-  const canRemove = effectiveModules.length > 1
+  const menuModules = allowedForType.filter((m) => !(slotted && m === "reset"))
   const setModules = (next: SensorModule[]) => onChange({ sensorModules: next })
-
-  const removeButton = (mod: SensorModule, label: string) =>
-    canRemove ? (
-      <button
-        type="button"
-        aria-label={label}
-        onClick={() => setModules(effectiveModules.filter((m) => m !== mod))}
-        className="min-w-[36px] min-h-[36px] w-[36px] h-[36px] rounded-full bg-white/20 hover:bg-white/35 text-white text-base leading-none grid place-items-center shrink-0"
-      >
-        ×
-      </button>
-    ) : null
+  const activeSensorOption = SENSOR_TYPE_OPTIONS.find((opt) => opt.value === sensorType) || SENSOR_TYPE_OPTIONS[0]
+  const ActiveSensorIcon = activeSensorOption.Icon
 
   const renderLiveBadge = (mod: SensorModule) => {
     if (!liveReady) return null
@@ -697,42 +686,58 @@ export function SensorBlock({
         }}
         className={`flex flex-nowrap items-center text-white ${
           slotted
-            ? "min-h-[42px] h-[42px] px-2 gap-1.5 rounded-full bg-[#4f46e5] border border-white/35 shadow-[inset_0_-2px_#3730a3] cursor-grab active:cursor-grabbing pointer-events-auto"
+            ? "min-h-[42px] h-[42px] px-2 gap-1.5 rounded-full bg-[#4f46e5] cursor-grab active:cursor-grabbing pointer-events-auto"
             : "min-h-[64px] px-3.5 gap-2"
         }`}
       >
-        {/* 4-sensor visual type switcher */}
-        <div
-          role="group"
-          aria-label="Тип датчика"
-          className="flex flex-nowrap items-center gap-0.5 rounded-[10px] bg-[#3730a3]/85 p-0.5 shrink-0"
-        >
-          {SENSOR_TYPE_OPTIONS.map(({ value, label, Icon }) => {
-            const active = sensorType === value
-            return (
-              <button
-                key={value}
-                type="button"
-                aria-label={label}
-                aria-pressed={active}
-                title={label}
-                onClick={() => {
-                  setMenuOpen(false)
-                  setColorOpen(false)
-                  if (value !== sensorType) {
-                    onChange({ sensorType: value })
-                  }
-                }}
-                className={`min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[8px] grid place-items-center transition-colors ${
-                  active
-                    ? "bg-white text-[#312e81] shadow-xs"
-                    : "text-white/80 hover:bg-white/15 hover:text-white"
-                }`}
-              >
-                <Icon size={slotted ? 15 : 16} aria-hidden={true} />
-              </button>
-            )
-          })}
+        {/* Single active sensor-type button with popover */}
+        <div ref={typeRef} data-module-picker="true" className="relative shrink-0">
+          <button
+            type="button"
+            aria-label={`Тип датчика: ${activeSensorOption.label}`}
+            aria-expanded={typeOpen}
+            title={`Тип датчика: ${activeSensorOption.label}`}
+            onClick={() => {
+              setMenuOpen(false)
+              setColorOpen(false)
+              setTypeOpen((prev) => !prev)
+            }}
+            className="min-h-[36px] min-w-[36px] h-[36px] px-2 rounded-[9px] bg-white text-[#312e81] flex items-center justify-center gap-0.5 shadow-xs hover:bg-[#eef2ff] cursor-pointer"
+          >
+            <ActiveSensorIcon size={slotted ? 15 : 16} aria-hidden={true} />
+            <ChevronDown size={11} aria-hidden={true} className="shrink-0 opacity-75" />
+          </button>
+          {typeOpen && (
+            <div className={`absolute ${typeOpenUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${typeAlignLeft ? "left-0" : "right-0"} z-50 w-[184px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-1.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-1`}>
+              {SENSOR_TYPE_OPTIONS.map(({ value, label, Icon }) => {
+                const active = sensorType === value
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => {
+                      setTypeOpen(false)
+                      setMenuOpen(false)
+                      setColorOpen(false)
+                      if (value !== sensorType) {
+                        onChange({ sensorType: value })
+                      }
+                    }}
+                    className={`min-h-[36px] flex items-center gap-2 text-left px-3 py-1.5 rounded-lg text-xs font-extrabold ${
+                      active
+                        ? "bg-[#e0e7ff] hover:bg-[#c7d2fe] text-[#312e81]"
+                        : "bg-[#f8fafc] hover:bg-[#eef2ff] text-[#312e81]"
+                    }`}
+                  >
+                    <Check size={14} aria-hidden="true" className={active ? "opacity-100 shrink-0" : "opacity-0 shrink-0"} />
+                    <Icon size={15} aria-hidden={true} />
+                    <span>{label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {/* Port selector (hidden for built-in IMU) */}
@@ -742,7 +747,7 @@ export function SensorBlock({
             aria-label="Порт датчика"
             title="Порт датчика (C–F)"
             onChange={(e) => onChange({ sensorPort: e.target.value })}
-            className="min-h-[36px] h-[36px] shrink-0 px-2 rounded-[9px] bg-white text-[#18313b] font-black text-sm border-2 border-[#3730a3] cursor-pointer"
+            className="min-h-[36px] h-[36px] shrink-0 px-2 rounded-[9px] bg-white text-[#18313b] font-black text-sm shadow-xs cursor-pointer"
           >
             {SENSOR_PORTS.map((p) => (
               <option key={p} value={p}>
@@ -754,7 +759,7 @@ export function SensorBlock({
 
         {/* Ultrasonic: threshold */}
         {sensorType === "ultrasonic" && effectiveModules.includes("threshold") && (
-          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 border border-white/25 px-1.5 py-0.5 shrink-0">
+          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-white/10 px-1.5 py-0.5 shrink-0">
             <Ruler size={14} aria-hidden="true" className="shrink-0 text-white/90" />
             {renderLiveBadge("threshold")}
             <button
@@ -762,7 +767,7 @@ export function SensorBlock({
               aria-label="Условие сравнения расстояния"
               title={op === "lt" ? "Ближе (<)" : "Дальше (>)"}
               onClick={() => onChange({ sensorOp: op === "lt" ? "gt" : "lt" })}
-              className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-white text-[#312e81] font-black text-base grid place-items-center border-2 border-[#3730a3] hover:bg-[#eef2ff]"
+              className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-white text-[#312e81] font-black text-base grid place-items-center shadow-xs hover:bg-[#eef2ff]"
             >
               {op === "lt" ? "<" : ">"}
             </button>
@@ -780,13 +785,12 @@ export function SensorBlock({
               className="w-[54px] min-h-[36px] h-[36px] rounded-full px-1.5 text-center bg-white text-[#18313b] font-extrabold text-sm shadow-xs"
             />
             <span className="text-xs font-extrabold whitespace-nowrap">см</span>
-            {removeButton("threshold", "Удалить порог расстояния")}
           </div>
         )}
 
         {/* Color: color swatch picker */}
         {sensorType === "color" && effectiveModules.includes("color") && (
-          <div ref={colorRef} data-module-picker="true" className="relative flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 border border-white/25 px-1.5 py-0.5 shrink-0">
+          <div ref={colorRef} data-module-picker="true" className="relative flex flex-nowrap items-center gap-1 rounded-[12px] bg-white/10 px-1.5 py-0.5 shrink-0">
             <Palette size={14} aria-hidden="true" className="shrink-0 text-white/90" />
             {renderLiveBadge("color")}
             <button
@@ -795,7 +799,7 @@ export function SensorBlock({
               aria-expanded={colorOpen}
               title={COLOR_SWATCH_STYLES[color].label}
               onClick={() => setColorOpen((prev) => !prev)}
-              className="min-h-[36px] min-w-[36px] h-[36px] px-2 rounded-[9px] bg-white text-[#18313b] border-2 border-[#3730a3] flex items-center justify-center gap-1 cursor-pointer"
+              className="min-h-[36px] min-w-[36px] h-[36px] px-2 rounded-[9px] bg-white text-[#18313b] shadow-xs flex items-center justify-center gap-1 cursor-pointer"
             >
               {color === "none" ? (
                 <span className="text-sm font-black text-[#475569]">⊘</span>
@@ -841,13 +845,12 @@ export function SensorBlock({
                 })}
               </div>
             )}
-            {removeButton("color", "Удалить модуль цвета")}
           </div>
         )}
 
         {/* Color: reflection */}
         {sensorType === "color" && effectiveModules.includes("reflection") && (
-          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 border border-white/25 px-1.5 py-0.5 shrink-0">
+          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-white/10 px-1.5 py-0.5 shrink-0">
             <Sun size={14} aria-hidden="true" className="shrink-0 text-white/90" />
             {renderLiveBadge("reflection")}
             <button
@@ -855,7 +858,7 @@ export function SensorBlock({
               aria-label="Условие сравнения отражения"
               title={op === "lt" ? "Темнее (<)" : "Светлее (>)"}
               onClick={() => onChange({ sensorOp: op === "lt" ? "gt" : "lt" })}
-              className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-white text-[#312e81] font-black text-base grid place-items-center border-2 border-[#3730a3] hover:bg-[#eef2ff]"
+              className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-white text-[#312e81] font-black text-base grid place-items-center shadow-xs hover:bg-[#eef2ff]"
             >
               {op === "lt" ? "<" : ">"}
             </button>
@@ -873,13 +876,12 @@ export function SensorBlock({
               className="w-[52px] min-h-[36px] h-[36px] rounded-full px-1.5 text-center bg-white text-[#18313b] font-extrabold text-sm shadow-xs"
             />
             <span className="text-xs font-extrabold whitespace-nowrap">%</span>
-            {removeButton("reflection", "Удалить отражение")}
           </div>
         )}
 
         {/* Force: pressed */}
         {sensorType === "force" && effectiveModules.includes("pressed") && (
-          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 border border-white/25 px-1.5 py-0.5 shrink-0">
+          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-white/10 px-1.5 py-0.5 shrink-0">
             <CircleDot size={14} aria-hidden="true" className="shrink-0 text-white/90" />
             {renderLiveBadge("pressed")}
             <button
@@ -888,18 +890,17 @@ export function SensorBlock({
               aria-pressed={pressed}
               title={pressed ? "Нажат" : "Отпущен"}
               onClick={() => onChange({ sensorPressed: !pressed })}
-              className="min-h-[36px] min-w-[36px] h-[36px] px-2.5 rounded-[9px] bg-white text-[#312e81] font-black text-xs flex items-center gap-1 border-2 border-[#3730a3] hover:bg-[#eef2ff]"
+              className="min-h-[36px] min-w-[36px] h-[36px] px-2.5 rounded-[9px] bg-white text-[#312e81] font-black text-xs flex items-center gap-1 shadow-xs hover:bg-[#eef2ff]"
             >
               <span aria-hidden="true">{pressed ? "●" : "○"}</span>
               <span>{pressed ? "Нажат" : "Отпущен"}</span>
             </button>
-            {removeButton("pressed", "Удалить проверку нажатия")}
           </div>
         )}
 
         {/* Force: force (N) */}
         {sensorType === "force" && effectiveModules.includes("force") && (
-          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 border border-white/25 px-1.5 py-0.5 shrink-0">
+          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-white/10 px-1.5 py-0.5 shrink-0">
             <Activity size={14} aria-hidden="true" className="shrink-0 text-white/90" />
             {renderLiveBadge("force")}
             <button
@@ -907,7 +908,7 @@ export function SensorBlock({
               aria-label="Условие сравнения силы"
               title={op === "lt" ? "Меньше (<)" : "Больше (>)"}
               onClick={() => onChange({ sensorOp: op === "lt" ? "gt" : "lt" })}
-              className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-white text-[#312e81] font-black text-base grid place-items-center border-2 border-[#3730a3] hover:bg-[#eef2ff]"
+              className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-white text-[#312e81] font-black text-base grid place-items-center shadow-xs hover:bg-[#eef2ff]"
             >
               {op === "lt" ? "<" : ">"}
             </button>
@@ -926,13 +927,12 @@ export function SensorBlock({
               className="w-[52px] min-h-[36px] h-[36px] rounded-full px-1.5 text-center bg-white text-[#18313b] font-extrabold text-sm shadow-xs"
             />
             <span className="text-xs font-extrabold whitespace-nowrap">Н</span>
-            {removeButton("force", "Удалить порог силы")}
           </div>
         )}
 
         {/* IMU: heading */}
         {sensorType === "imu" && effectiveModules.includes("heading") && (
-          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 border border-white/25 px-1.5 py-0.5 shrink-0">
+          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-white/10 px-1.5 py-0.5 shrink-0">
             <Compass size={14} aria-hidden="true" className="shrink-0 text-white/90" />
             {renderLiveBadge("heading")}
             <button
@@ -940,7 +940,7 @@ export function SensorBlock({
               aria-label="Условие сравнения курса"
               title={op === "lt" ? "Меньше (<)" : "Больше (>)"}
               onClick={() => onChange({ sensorOp: op === "lt" ? "gt" : "lt" })}
-              className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-white text-[#312e81] font-black text-base grid place-items-center border-2 border-[#3730a3] hover:bg-[#eef2ff]"
+              className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-white text-[#312e81] font-black text-base grid place-items-center shadow-xs hover:bg-[#eef2ff]"
             >
               {op === "lt" ? "<" : ">"}
             </button>
@@ -958,13 +958,12 @@ export function SensorBlock({
               className="w-[56px] min-h-[36px] h-[36px] rounded-full px-1.5 text-center bg-white text-[#18313b] font-extrabold text-sm shadow-xs"
             />
             <span className="text-xs font-extrabold whitespace-nowrap">°</span>
-            {removeButton("heading", "Удалить курс")}
           </div>
         )}
 
         {/* IMU: tilt */}
         {sensorType === "imu" && effectiveModules.includes("tilt") && (
-          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 border border-white/25 px-1.5 py-0.5 shrink-0">
+          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-white/10 px-1.5 py-0.5 shrink-0">
             <SlidersHorizontal size={14} aria-hidden="true" className="shrink-0 text-white/90" />
             {renderLiveBadge("tilt")}
             <button
@@ -972,7 +971,7 @@ export function SensorBlock({
               aria-label={tiltAxis === "pitch" ? "Ось наклона: тангаж" : "Ось наклона: крен"}
               title={tiltAxis === "pitch" ? "Тангаж (↕)" : "Крен (↔)"}
               onClick={() => onChange({ sensorAxis: tiltAxis === "pitch" ? "roll" : "pitch" })}
-              className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-white text-[#312e81] font-black text-sm grid place-items-center border-2 border-[#3730a3] hover:bg-[#eef2ff]"
+              className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-white text-[#312e81] font-black text-sm grid place-items-center shadow-xs hover:bg-[#eef2ff]"
             >
               {tiltAxis === "pitch" ? "↕" : "↔"}
             </button>
@@ -981,7 +980,7 @@ export function SensorBlock({
               aria-label="Условие сравнения наклона"
               title={tiltOp === "lt" ? "Меньше (<)" : "Больше (>)"}
               onClick={() => onChange({ sensorTiltOp: tiltOp === "lt" ? "gt" : "lt" })}
-              className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-white text-[#312e81] font-black text-base grid place-items-center border-2 border-[#3730a3] hover:bg-[#eef2ff]"
+              className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-white text-[#312e81] font-black text-base grid place-items-center shadow-xs hover:bg-[#eef2ff]"
             >
               {tiltOp === "lt" ? "<" : ">"}
             </button>
@@ -999,24 +998,22 @@ export function SensorBlock({
               className="w-[54px] min-h-[36px] h-[36px] rounded-full px-1.5 text-center bg-white text-[#18313b] font-extrabold text-sm shadow-xs"
             />
             <span className="text-xs font-extrabold whitespace-nowrap">°</span>
-            {removeButton("tilt", "Удалить наклон")}
           </div>
         )}
 
         {/* IMU: reset (chain only) */}
         {sensorType === "imu" && !slotted && effectiveModules.includes("reset") && (
-          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 border border-white/25 px-1.5 py-0.5 shrink-0">
-            <span className="min-h-[36px] h-[36px] px-2 rounded-[9px] bg-white/15 border border-white/30 text-xs font-extrabold flex items-center gap-1 whitespace-nowrap">
+          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-white/10 px-1.5 py-0.5 shrink-0">
+            <span className="min-h-[36px] h-[36px] px-2 rounded-[9px] bg-white/15 text-xs font-extrabold flex items-center gap-1 whitespace-nowrap">
               <RotateCcw size={13} aria-hidden="true" />
               0°
             </span>
-            {removeButton("reset", "Удалить сброс 0°")}
           </div>
         )}
 
         {/* Lights (ultrasonic & color) */}
         {(sensorType === "ultrasonic" || sensorType === "color") && effectiveModules.includes("lights") && (
-          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 border border-white/25 px-1.5 py-0.5 shrink-0">
+          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-white/10 px-1.5 py-0.5 shrink-0">
             <Lightbulb
               size={15}
               aria-hidden="true"
@@ -1030,53 +1027,77 @@ export function SensorBlock({
               className={`min-h-[36px] min-w-[36px] h-[36px] px-2.5 rounded-[9px] font-black text-xs cursor-pointer flex items-center justify-center shrink-0 ${
                 light === -1
                   ? "bg-white/25 text-white border border-white/35 hover:bg-white/35"
-                  : "bg-white text-[#18313b] border-2 border-[#3730a3] hover:bg-[#fefce8]"
+                  : "bg-white text-[#18313b] shadow-xs hover:bg-[#fefce8]"
               }`}
             >
               {formatSensorLightLabel(light)}
             </button>
-            {removeButton("lights", "Удалить подсветку датчика")}
           </div>
         )}
 
-        {availableAddons.length > 0 && (
-          <div ref={menuRef} data-module-picker="true" className="relative shrink-0">
-            <button
-              type="button"
-              aria-label="Добавить модуль датчика"
-              aria-expanded={menuOpen}
-              onClick={() => setMenuOpen((prev) => !prev)}
-              className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-full border border-white/55 bg-white/15 hover:bg-white/30 text-white text-lg leading-none font-black grid place-items-center"
-            >
-              +
-            </button>
-            {menuOpen && (
-              <div className={`absolute ${menuOpenUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${menuAlignLeft ? "left-0" : "right-0"} z-50 w-[172px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-1.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-1`}>
-                {availableAddons.map((mod) => {
-                  const { label, Icon } = SENSOR_MODULE_MENU_ITEMS[mod]
-                  return (
-                    <button
-                      key={mod}
-                      type="button"
-                      onClick={() => {
-                        setMenuOpen(false)
-                        setModules([...effectiveModules, mod])
-                      }}
-                      className={`min-h-[36px] flex items-center gap-2 text-left px-3 py-1.5 rounded-lg text-xs font-extrabold ${
-                        mod === "lights"
-                          ? "bg-[#fefce8] hover:bg-[#fef08a] text-[#854d0e]"
+        <div ref={menuRef} data-module-picker="true" className="relative shrink-0">
+          <button
+            type="button"
+            aria-label="Добавить модуль датчика"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((prev) => !prev)}
+            className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-full border border-white/55 bg-white/15 hover:bg-white/30 text-white text-lg leading-none font-black grid place-items-center"
+          >
+            +
+          </button>
+          {menuOpen && (
+            <div className={`absolute ${menuOpenUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${menuAlignLeft ? "left-0" : "right-0"} z-50 w-[184px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-1.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-1`}>
+              {menuModules.map((mod) => {
+                const { label, Icon } = SENSOR_MODULE_MENU_ITEMS[mod]
+                const active = effectiveModules.includes(mod)
+                const isOnlyRemaining = active && effectiveModules.length <= 1
+                return (
+                  <button
+                    key={mod}
+                    type="button"
+                    aria-pressed={active}
+                    disabled={isOnlyRemaining}
+                    onClick={() => {
+                      if (isOnlyRemaining) return
+                      setMenuOpen(false)
+                      setModules(
+                        active
+                          ? effectiveModules.filter((m) => m !== mod)
+                          : [...effectiveModules, mod]
+                      )
+                    }}
+                    className={`min-h-[36px] flex items-center gap-2 text-left px-3 py-1.5 rounded-lg text-xs font-extrabold disabled:opacity-60 ${
+                      mod === "lights"
+                        ? active
+                          ? "bg-[#fef08a] hover:bg-[#fde047] text-[#854d0e]"
+                          : "bg-[#fefce8] hover:bg-[#fef08a] text-[#854d0e]"
+                        : active
+                          ? "bg-[#e0e7ff] hover:bg-[#c7d2fe] text-[#312e81]"
                           : "bg-[#eef2ff] hover:bg-[#e0e7ff] text-[#312e81]"
-                      }`}
-                    >
-                      <Icon size={15} aria-hidden={true} className="shrink-0" />
-                      <span>{label}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        )}
+                    }`}
+                  >
+                    <Check size={14} aria-hidden="true" className={active ? "opacity-100 shrink-0" : "opacity-0 shrink-0"} />
+                    <Icon size={15} aria-hidden={true} className="shrink-0" />
+                    <span>{label}</span>
+                  </button>
+                )
+              })}
+              {slotted && onRemoveFromCondition && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    onRemoveFromCondition()
+                  }}
+                  className="mt-1 border-t border-[#e2e8f0] pt-1.5 min-h-[36px] flex items-center gap-2 text-left px-3 py-1.5 rounded-lg bg-[#fef2f2] hover:bg-[#fee2e2] text-xs font-extrabold text-[#991b1b]"
+                >
+                  <Trash2 size={14} aria-hidden={true} className="shrink-0" />
+                  <span>Убрать из условия</span>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {!slotted && <BlockErrorBar errorMessage={errorMessage} />}

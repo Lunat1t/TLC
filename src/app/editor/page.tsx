@@ -9,6 +9,7 @@ import {
   ArrowRight,
   ArrowRightLeft,
   Bluetooth,
+  Check,
   CircleDot,
   Compass,
   Gamepad2,
@@ -184,6 +185,13 @@ function pointerOver(element: HTMLElement | null, x: number, y: number) {
   return element?.contains(document.elementFromPoint(x, y)) ?? false
 }
 
+function pointerInRect(element: HTMLElement | null, x: number, y: number) {
+  if (!element) return false
+  const rect = element.getBoundingClientRect()
+  if (rect.width === 0 || rect.height === 0) return false
+  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
+}
+
 function panelOverlapsControls(
   area: ControlArea,
   controls: readonly ControlInstance[],
@@ -239,6 +247,7 @@ function EditorWorkspace() {
 
   const boardRef = React.useRef<HTMLDivElement | null>(null)
   const paletteRef = React.useRef<HTMLElement | null>(null)
+  const paletteDrawerRef = React.useRef<HTMLDivElement | null>(null)
   const storageRawRef = React.useRef<string | null>(null)
   const saveBusyRef = React.useRef(false)
   const [renaming,setRenaming]=React.useState(false),[nameDraft,setNameDraft]=React.useState("")
@@ -263,6 +272,12 @@ function EditorWorkspace() {
   const [blockCategory, setBlockCategory] = React.useState<(typeof PALETTE_FILTERS)[number]["id"]>("all")
   const paletteOpen = paletteExpanded ?? !compactPalette
   const [libraryDropTarget, setLibraryDropTarget] = React.useState(false)
+  const isOverPaletteDropZone = React.useCallback(
+    (x: number, y: number) =>
+      pointerInRect(paletteRef.current, x, y) ||
+      (paletteOpen && pointerInRect(paletteDrawerRef.current, x, y)),
+    [paletteOpen]
+  )
 
   React.useEffect(() => {
     const media = window.matchMedia(COMPACT_PALETTE_QUERY)
@@ -1335,7 +1350,13 @@ function EditorWorkspace() {
           inert={checking || undefined}
           className={`relative z-20 flex shrink-0 ${checking ? "opacity-50 max-md:invisible" : ""}`}
         >
-          <div className={`flex w-12 shrink-0 flex-col items-center gap-1 overflow-y-auto border-r border-[#dce8ec] py-2 ${libraryDropTarget ? "bg-red-100" : "bg-[#f4f8fa]"}`}>
+          <div className={`flex w-12 shrink-0 flex-col items-center gap-1 overflow-y-auto border-r border-[#dce8ec] py-2 transition-colors ${
+            libraryDropTarget
+              ? "bg-red-100 ring-2 ring-inset ring-red-400"
+              : gesture?.kind === "block" && gesture.moved
+                ? "bg-red-50/75"
+                : "bg-[#f4f8fa]"
+          }`}>
             <div className="flex flex-col items-center gap-1" role="group" aria-label="Категории блоков">
               {PALETTE_FILTERS.map(({ id, label, icon: Icon, color }) => (
                 <button
@@ -1367,16 +1388,28 @@ function EditorWorkspace() {
             >
               {paletteOpen ? <PanelLeftClose size={18} aria-hidden="true" /> : <PanelLeftOpen size={18} aria-hidden="true" />}
             </button>
-            {libraryDropTarget && (
-              <Trash2 size={18} className="my-2 shrink-0 text-red-700" aria-label="Отпустите, чтобы удалить блок" />
+            {(libraryDropTarget || (gesture?.kind === "block" && gesture.moved)) && (
+              <Trash2
+                size={libraryDropTarget ? 20 : 18}
+                className={`my-2 shrink-0 ${libraryDropTarget ? "text-red-700" : "text-red-500/75"}`}
+                aria-label={libraryDropTarget ? "Отпустите, чтобы удалить блок" : undefined}
+                aria-hidden={!libraryDropTarget || undefined}
+              />
             )}
           </div>
 
           <div
+            ref={paletteDrawerRef}
             id="editor-block-palette"
             hidden={!paletteOpen}
-            className={`w-44 shrink-0 overflow-y-auto overscroll-contain border-r border-[#dce8ec] px-2.5 py-2 max-md:absolute max-md:inset-y-0 max-md:left-full max-md:shadow-md ${libraryDropTarget ? "bg-red-50 ring-2 ring-inset ring-red-300" : "bg-white"}`}
+            className={`w-44 shrink-0 overflow-y-auto overscroll-contain border-r border-[#dce8ec] px-2.5 py-2 max-md:absolute max-md:inset-y-0 max-md:left-full max-md:shadow-md transition-colors ${libraryDropTarget ? "bg-red-50 ring-2 ring-inset ring-red-400" : "bg-white"}`}
           >
+            {libraryDropTarget && (
+              <div className="mb-2 flex items-center gap-2 rounded-xl border border-red-300 bg-red-100 px-2.5 py-2 text-xs font-extrabold text-red-800 shadow-xs">
+                <Trash2 size={15} aria-hidden="true" className="shrink-0" />
+                <span>Отпустите для удаления</span>
+              </div>
+            )}
             {BLOCK_CATEGORIES.filter(({ id }) => blockCategory === "all" || id === blockCategory).map(({ id, label, color, blocks: entries }) => (
               <section key={id} aria-label={label} className="mb-3">
                 <h2 className="mb-1 px-1 text-xs font-extrabold" style={{ color }}>{label}</h2>
@@ -1524,6 +1557,22 @@ function EditorWorkspace() {
                 <AlertTriangle size={14} className="text-amber-600" aria-hidden="true" />
               )}
             </button>
+            {!checking && selectedId && blocks.some((b) => b.id === selectedId) && (
+              <button
+                type="button"
+                onClick={() => {
+                  const idToRemove = selectedId
+                  setSelectedId(null)
+                  if (idToRemove) saveBlocks(removeBlock(blocks, idToRemove))
+                }}
+                aria-label="Удалить выбранный блок"
+                title="Удалить выбранный блок (Delete)"
+                className="min-h-[38px] min-w-[38px] h-[38px] px-2.5 rounded-[10px] border border-[#fecaca] bg-[#fef2f2] hover:bg-[#fee2e2] text-[#b91c1c] text-xs font-extrabold flex items-center gap-1.5 transition-colors"
+              >
+                <Trash2 size={16} aria-hidden="true" />
+                <span className="hidden sm:inline">Удалить</span>
+              </button>
+            )}
             <span className="flex-1" />
             <button
               type="button"
@@ -1671,7 +1720,7 @@ function EditorWorkspace() {
                   gesture.originY + dy
                 )
                 setSnapTargetSlot(target)
-                setLibraryDropTarget(pointerOver(paletteRef.current, e.clientX, e.clientY))
+                setLibraryDropTarget(isOverPaletteDropZone(e.clientX, e.clientY))
               }
             }}
             onPointerUp={(e) => {
@@ -1682,7 +1731,7 @@ function EditorWorkspace() {
                 setSnapTargetSlot(null)
                 setLibraryDropTarget(false)
                 if (moved) {
-                  const droppedInLibrary = pointerOver(paletteRef.current, e.clientX, e.clientY)
+                  const droppedInLibrary = isOverPaletteDropZone(e.clientX, e.clientY)
                   if (droppedInLibrary) {
                     setSelectedId(null)
                     saveBlocks(removeBlock(blocks, id))
@@ -1988,7 +2037,7 @@ function EditorWorkspace() {
                         : checking && isMotorButtons
                           ? "z-40 transition-[left,top,box-shadow] duration-200 ease-out"
                           : "z-10 transition-[left,top,box-shadow] duration-200 ease-out"
-                    } ${
+                    } has-[[aria-expanded="true"]]:z-40 ${
                       openMenuBlockId === block.id ? "z-40" : ""
                     } ${radiusClass} ${
                       isIfBlock
@@ -2018,7 +2067,7 @@ function EditorWorkspace() {
                         : ""
                     } ${
                       !isIfBlock && isSelected
-                        ? "outline-3 outline-[#087996] outline-offset-2"
+                        ? "outline outline-[3px] outline-[#087996] outline-offset-2"
                         : ""
                     } ${
                       !isIfBlock && isSnapTarget
@@ -2054,41 +2103,9 @@ function EditorWorkspace() {
                       />
                     )}
 
-                    {/* Delete button */}
-                    {isSelected && !isMotorButtons && (
-                      <button
-                        type="button"
-                        aria-label="Удалить блок"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setSelectedId(null)
-                          saveBlocks(removeBlock(blocks, block.id))
-                        }}
-                        className="pointer-events-auto absolute -top-[13px] -right-[12px] z-30 w-[26px] h-[26px] rounded-full bg-white text-[#18313b] shadow-md text-lg leading-none font-bold grid place-items-center"
-                      >
-                        ×
-                      </button>
-                    )}
-
                     {/* Block Content */}
                     {isMotorButtons ? (
                       <div data-button-panel="true" data-panel-drag={!checking ? "true" : undefined} className="relative flex h-full w-full flex-col">
-                        {!checking && (
-                          <button
-                            type="button"
-                            aria-label="Удалить кнопки моторов"
-                            title="Удалить"
-                            onPointerDown={e => e.stopPropagation()}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setSelectedId(null)
-                              saveBlocks(removeBlock(blocks, block.id))
-                            }}
-                            className="pointer-events-auto absolute right-1 top-1 z-20 grid size-[22px] place-items-center rounded-full border border-[#b9d0da] bg-white/95 text-xs font-extrabold leading-none text-[#31525f] shadow-sm hover:bg-[#fee2e2] hover:text-[#991b1b]"
-                          >
-                            ×
-                          </button>
-                        )}
                         {(() => {
                           const hiddenButtons = block.hiddenControlButtons || []
                           const colors = (["blue", ...(block.controlModules || [])] as MotorPanelButton[])
@@ -2285,13 +2302,13 @@ function EditorWorkspace() {
                       <div className="flex flex-col items-start">
                         {/* 1. Top Header Bar of E-shaped If/Else block */}
                         <div
-                          className={`pointer-events-auto relative flex flex-nowrap items-center min-h-[58px] h-[58px] w-max min-w-[260px] px-5 gap-3 bg-[#7c3aed] shadow-[inset_0_-4px_#5b21b6,0_8px_18px_rgba(91,33,182,0.2)] ${
+                          className={`pointer-events-auto relative flex flex-nowrap items-center min-h-[58px] h-[58px] w-max min-w-[220px] px-5 gap-3 bg-[#7c3aed] shadow-[inset_0_-4px_#5b21b6,0_8px_18px_rgba(91,33,182,0.2)] ${
                             isConnected
                               ? "rounded-tl-[5px] rounded-tr-[14px]"
                               : "rounded-t-[14px]"
                           } rounded-br-[14px] ${
                             isSelected
-                              ? "ring-3 ring-[#087996]"
+                              ? "outline outline-[3px] outline-[#087996] outline-offset-2"
                               : isSnapTarget
                                 ? "ring-4 ring-[#fbbf24]"
                                 : blockError || condError
@@ -2323,6 +2340,10 @@ function EditorWorkspace() {
                                     updateDrive(blocks, conditionBlock.id, changes, project.hub)
                                   )
                                 }}
+                                onRemoveFromCondition={() => {
+                                  setSelectedId(null)
+                                  saveBlocks(removeBlock(blocks, conditionBlock.id))
+                                }}
                                 onStartDrag={(e) => {
                                   e.preventDefault()
                                   e.stopPropagation()
@@ -2342,20 +2363,6 @@ function EditorWorkspace() {
                                   })
                                 }}
                               />
-                              {selectedId === conditionBlock.id && (
-                                <button
-                                  type="button"
-                                  aria-label="Удалить датчик из условия"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    setSelectedId(null)
-                                    saveBlocks(removeBlock(blocks, conditionBlock.id))
-                                  }}
-                                  className="pointer-events-auto absolute -top-2 -right-2 z-30 w-[22px] h-[22px] rounded-full bg-white text-[#18313b] shadow-md text-sm leading-none font-bold grid place-items-center"
-                                >
-                                  ×
-                                </button>
-                              )}
                             </div>
                           ) : (
                             <span
@@ -2368,9 +2375,6 @@ function EditorWorkspace() {
                               }`}
                             />
                           )}
-                          <span className="text-[16px] font-extrabold whitespace-nowrap tracking-tight">
-                            то
-                          </span>
                         </div>
 
                         {/* 2. First Left Vertical Spine ("Если" branch mouth) */}
@@ -2549,7 +2553,7 @@ function EditorWorkspace() {
                           </button>
 
                           {paired && (
-                            <div className="shrink-0 flex flex-nowrap items-center gap-1.5 rounded-[12px] bg-black/20 border border-white/25 px-2 py-1 min-h-[36px]">
+                            <div className="shrink-0 flex flex-nowrap items-center gap-1.5 rounded-[12px] bg-white/10 px-2 py-1 min-h-[36px]">
                               <Link2 size={15} aria-hidden="true" className="shrink-0 text-white/90" />
                               <span className="text-[16px] font-extrabold opacity-95 whitespace-nowrap">
                                 и
@@ -2598,28 +2602,7 @@ function EditorWorkspace() {
                               >
                                 {block.direction2 === "backward" ? "↺" : "↻"}
                               </button>
-                              <button
-                                type="button"
-                                aria-label="Удалить второй мотор"
-                                title="Удалить второй мотор"
-                                onClick={() =>
-                                  project &&
-                                  saveBlocks(
-                                    updateDrive(
-                                      blocks,
-                                      block.id,
-                                      {
-                                        ...(block.type === "pair" ? { type: "drive" as BlockType } : {}),
-                                        modules: modules.filter((m) => m !== "pair"),
-                                      },
-                                      project.hub
-                                    )
-                                  )
-                                }
-                                className="min-h-[36px] min-w-[36px] rounded-full bg-white/20 hover:bg-white/40 text-white text-base leading-none font-black grid place-items-center cursor-pointer shrink-0"
-                              >
-                                ×
-                              </button>
+
                             </div>
                           )}
                         </div>
@@ -2630,7 +2613,7 @@ function EditorWorkspace() {
                           .map((mod) => (
                             <div
                               key={mod}
-                              className="shrink-0 flex items-center gap-2 rounded-[12px] bg-black/20 border border-white/25 px-2.5 py-1"
+                              className="shrink-0 flex items-center gap-2 rounded-[12px] bg-white/10 px-2.5 py-1"
                             >
                               {mod === "travel" ? (
                                 <RotateCw size={16} aria-hidden="true" className="shrink-0 text-white/90" />
@@ -2733,28 +2716,7 @@ function EditorWorkspace() {
                                   </span>
                                 </>
                               )}
-                              <button
-                                type="button"
-                                aria-label={`Удалить модуль ${mod}`}
-                                onClick={() =>
-                                  project &&
-                                  saveBlocks(
-                                    updateDrive(
-                                      blocks,
-                                      block.id,
-                                      {
-                                        modules: modules.filter(
-                                          (m) => m !== mod
-                                        ),
-                                      },
-                                      project.hub
-                                    )
-                                  )
-                                }
-                                className="min-w-[36px] min-h-[36px] w-[36px] h-[36px] rounded-full bg-white/20 hover:bg-white/40 text-white text-base leading-none grid place-items-center shrink-0"
-                              >
-                                ×
-                              </button>
+
                             </div>
                           ))}
 
@@ -2795,48 +2757,73 @@ function EditorWorkspace() {
                                   ["power", "% мощн.", Zap],
                                   ["travel", "Ход", RotateCw],
                                 ] as const
-                              ).map(([modName, label, Icon]) => (
-                                <button
-                                  key={modName}
-                                  type="button"
-                                  disabled={modName === "pair" ? paired : modules.includes(modName)}
-                                  onClick={() => {
-                                    if (!project) return
-                                    const filtered = modules.filter(
-                                      (m) =>
-                                        !(modName === "speed" && m === "power") &&
-                                        !(modName === "power" && m === "speed")
-                                    )
-                                    saveBlocks(
-                                      updateDrive(
-                                        blocks,
-                                        block.id,
-                                        {
-                                          modules: [
-                                            ...filtered,
-                                            modName as MotorModule,
-                                          ],
-                                          ...(modName === "pair"
-                                            ? {
-                                                motor2: (block.motor || "A") === "B" ? "A" : "B",
-                                                direction2: "backward",
-                                              }
-                                            : {}),
-                                          ...(modName === "power"
-                                            ? { unit: "seconds" }
-                                            : {}),
-                                        },
-                                        project.hub
+                              ).map(([modName, label, Icon]) => {
+                                const isActive = modName === "pair" ? paired : modules.includes(modName)
+                                return (
+                                  <button
+                                    key={modName}
+                                    type="button"
+                                    aria-pressed={isActive}
+                                    onClick={() => {
+                                      if (!project) return
+                                      if (isActive) {
+                                        saveBlocks(
+                                          updateDrive(
+                                            blocks,
+                                            block.id,
+                                            {
+                                              ...(modName === "pair" && block.type === "pair"
+                                                ? { type: "drive" as BlockType }
+                                                : {}),
+                                              modules: modules.filter((m) => m !== modName),
+                                            },
+                                            project.hub
+                                          )
+                                        )
+                                        setOpenMenuBlockId(null)
+                                        return
+                                      }
+                                      const filtered = modules.filter(
+                                        (m) =>
+                                          !(modName === "speed" && m === "power") &&
+                                          !(modName === "power" && m === "speed")
                                       )
-                                    )
-                                    setOpenMenuBlockId(null)
-                                  }}
-                                  className="min-h-[36px] flex items-center gap-2 text-left px-3 py-1.5 rounded-lg bg-[#eff8fb] hover:bg-[#dff2f8] text-xs font-extrabold text-[#18313b] disabled:opacity-45"
-                                >
-                                  <Icon size={15} aria-hidden={true} className="shrink-0" />
-                                  <span>{label}</span>
-                                </button>
-                              ))}
+                                      saveBlocks(
+                                        updateDrive(
+                                          blocks,
+                                          block.id,
+                                          {
+                                            modules: [
+                                              ...filtered,
+                                              modName as MotorModule,
+                                            ],
+                                            ...(modName === "pair"
+                                              ? {
+                                                  motor2: (block.motor || "A") === "B" ? "A" : "B",
+                                                  direction2: "backward",
+                                                }
+                                              : {}),
+                                            ...(modName === "power"
+                                              ? { unit: "seconds" }
+                                              : {}),
+                                          },
+                                          project.hub
+                                        )
+                                      )
+                                      setOpenMenuBlockId(null)
+                                    }}
+                                    className={`min-h-[36px] flex items-center gap-2 text-left px-3 py-1.5 rounded-lg text-xs font-extrabold ${
+                                      isActive
+                                        ? "bg-[#d6f0f8] hover:bg-[#c3e8f4] text-[#086985]"
+                                        : "bg-[#eff8fb] hover:bg-[#dff2f8] text-[#18313b]"
+                                    }`}
+                                  >
+                                    <Check size={14} aria-hidden={true} className={isActive ? "opacity-100 shrink-0" : "opacity-0 shrink-0"} />
+                                    <Icon size={15} aria-hidden={true} className="shrink-0" />
+                                    <span>{label}</span>
+                                  </button>
+                                )
+                              })}
                             </div>
                           )}
                         </div>
