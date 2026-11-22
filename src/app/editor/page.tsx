@@ -1764,7 +1764,7 @@ function EditorWorkspace() {
                   )
                 })()}
 
-              <div inert={checking || undefined}>
+              <div>
               {blocks.map((block) => {
                 const isMoving =
                   gesture?.kind === "block" &&
@@ -1880,7 +1880,8 @@ function EditorWorkspace() {
                     key={block.id}
                     data-canvas-block="true"
                     data-block-id={block.id}
-                    tabIndex={0}
+                    inert={checking && !isMotorButtons ? true : undefined}
+                    tabIndex={checking && isMotorButtons ? -1 : 0}
                     role={motorBlock || isChassisBlock || isIfBlock || isStopBlock || isSensorBlock || isMotorButtons ? "group" : "button"}
                     aria-label={
                       isIfBlock
@@ -2106,7 +2107,7 @@ function EditorWorkspace() {
                               if (!['trial-running','live-running'].includes(robotState.program)) return
                               const key = `${block.id}:${color}`
                               if (inputErrors[key]) return
-                              e.currentTarget.setPointerCapture(e.pointerId)
+                              try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* Ignore synthetic or unsupported pointer capture */ }
                               setPressedPanelButtons(previous => previous.includes(key) ? previous : [...previous,key])
                               dispatchControl({controlId:block.id,input:color},'pressed')
                               return
