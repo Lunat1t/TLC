@@ -27,6 +27,9 @@ type Props = {
 
 /** Visual container only: controls emit input events and never send motor commands. */
 export function ControlAreaView({area,controls,attachedPanels,editing,inputActive,zoom,errors={},onAreaChange,onControlChange,onDeleteControl,onDeleteArea,onInput,onCancel}:Props) {
+  const errorDialog = React.useRef<HTMLDialogElement>(null)
+  const [selectedError, setSelectedError] = React.useState('')
+  const errorTitleId = React.useId()
   const [preview,setPreview]=React.useState<ControlArea|null>(null)
   const [rename,setRename]=React.useState<{id:string,value:string}|null>(null)
   const [moving,setMoving]=React.useState<ControlInstance|null>(null)
@@ -111,14 +114,21 @@ export function ControlAreaView({area,controls,attachedPanels,editing,inputActiv
         {!directionKind && (!isPlaceable || editing) &&
         <div tabIndex={editing?0:-1} role="button" aria-label={`Переместить ${control.label}`} onKeyDown={moveByKey} onPointerDown={e=>dragControl(e,control)} style={{fontWeight:700,cursor:editing?'grab':'default',touchAction:'none',minHeight:isPlaceable?24:undefined,fontSize:isPlaceable?12:undefined}}>{rename?.id===control.id ? <input autoFocus aria-label={`Название ${control.label}`} value={rename.value} maxLength={40} onPointerDown={e=>e.stopPropagation()} onChange={e=>setRename({id:control.id,value:e.target.value})} onBlur={()=>{if(rename.value.trim())onControlChange({...control,label:rename.value.trim()});setRename(null)}} onKeyDown={e=>{e.stopPropagation();if(e.key==='Enter')e.currentTarget.blur()}}/> : control.label}{editing&&<span style={{float:'right'}}><button type="button" aria-label={`Переименовать ${control.label}`} onPointerDown={e=>e.stopPropagation()} onClick={()=>setRename({id:control.id,value:control.label})}>✎</button>{onDeleteControl&&<button type="button" aria-label={`Удалить ${control.label}`} onPointerDown={e=>e.stopPropagation()} onClick={()=>onDeleteControl(control.id)}>×</button>}</span>}</div>}
         {directionKind && directionError && (
-          <span
-            role="alert"
+          <button
+            type="button"
             title={directionError}
-            aria-label={directionError}
-            className="absolute left-1 top-1 z-20 grid size-5 place-items-center rounded-full bg-[#dc2626] text-white shadow-sm"
+            aria-label={`Показать причину ошибки: ${directionError}`}
+            aria-haspopup="dialog"
+            onPointerDown={event => event.stopPropagation()}
+            onClick={event => {
+              event.stopPropagation()
+              setSelectedError([...new Set(Object.values(directionErrors).filter(Boolean))].join('\n'))
+              errorDialog.current?.showModal()
+            }}
+            className="absolute left-1 top-1 z-20 grid size-5 place-items-center rounded-full bg-[#dc2626] text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
           >
             <AlertTriangle size={12} strokeWidth={2.6} aria-hidden="true" />
-          </span>
+          </button>
         )}
         {directionKind && editing && onDeleteControl && (
           <button
@@ -157,5 +167,14 @@ export function ControlAreaView({area,controls,attachedPanels,editing,inputActiv
       </div>})}
     </div>
     {editing&&<button type="button" aria-label="Изменить размер области" onPointerDown={e=>dragArea(e,true)} style={{position:'absolute',right:0,bottom:0,width:32,height:32,touchAction:'none',cursor:'nwse-resize'}}>◢</button>}
+    <dialog ref={errorDialog} role="dialog" aria-labelledby={errorTitleId}
+      onPointerDown={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()}
+      className="fixed inset-0 m-auto w-[calc(100%_-_32px)] max-w-sm rounded-2xl border border-[#dfae87] bg-white p-5 text-[#18313b] shadow-xl backdrop:bg-black/30">
+      <h2 id={errorTitleId} className="mb-3 text-lg font-extrabold">Кнопка недоступна</h2>
+      <p className="whitespace-pre-line text-sm">{selectedError}</p>
+      <form method="dialog" className="mt-4 flex justify-end">
+        <button type="submit" className="rounded-full bg-[#0e7668] px-4 py-2 font-bold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700">Понятно</button>
+      </form>
+    </dialog>
   </section>
 }

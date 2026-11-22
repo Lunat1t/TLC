@@ -2,12 +2,16 @@
 
 import { useEffect, useRef, useState } from "react"
 import { QrCode, X } from "lucide-react"
+import { DisplayDiagnostics } from "./display-diagnostics"
+import { requestLowDelay } from "@/lib/display-diagnostics"
 
 import {
   closeDisplaySignal,
   createDisplaySignal,
   publishDisplaySignal,
   readDisplaySignal,
+  pollActiveDisplaySignal,
+  type DisplaySignalHealth,
   waitForDisplayIce,
   waitForDisplayPoll,
 } from "@/lib/display-stream"
@@ -28,6 +32,9 @@ export function DisplayStreamView({ editing }: { editing: boolean }) {
   const current = useRef<DisplaySession | null>(null)
   const video = useRef<HTMLVideoElement>(null)
   const dialog = useRef<HTMLDialogElement>(null)
+  const [diagnosticPeer, setDiagnosticPeer] = useState<RTCPeerConnection | null>(null)
+  const [signaling, setSignaling] = useState<DisplaySignalHealth>("online")
+  const [lowDelayRequested, setLowDelayRequested] = useState(false)
   const [qr, setQr] = useState("")
   const [status, setStatus] = useState<"idle" | "starting" | "waiting" | "connecting" | "live">("idle")
   const [error, setError] = useState("")
@@ -43,6 +50,7 @@ export function DisplayStreamView({ editing }: { editing: boolean }) {
       if (video.current) video.current.srcObject = null
       dialog.current?.close()
       setStatus("idle")
+      setDiagnosticPeer(null)
       setQr("")
     }
     window.addEventListener("pagehide", pageExit)
@@ -61,6 +69,7 @@ export function DisplayStreamView({ editing }: { editing: boolean }) {
     setQr("")
     setError(message)
     setStatus("idle")
+    setDiagnosticPeer(null)
   }
 
   async function start() {
@@ -80,6 +89,8 @@ export function DisplayStreamView({ editing }: { editing: boolean }) {
 
     const session: DisplaySession = { abort: new AbortController(), peer }
     current.current = session
+    setDiagnosticPeer(peer)
+    setSignaling("online")
     const { signal } = session.abort
     setError("")
     setStatus("starting")
@@ -102,9 +113,13 @@ export function DisplayStreamView({ editing }: { editing: boolean }) {
           stop("Телефон недоступен. Проверьте, что оба устройства подключены к одной сети Wi‑Fi.")
         } else if (peer.connectionState === "connected") {
           clearTimeout(connectionTimer)
+        } else if (peer.connectionState === "disconnected") {
+          clearTimeout(connectionTimer)
+          connectionTimer = setTimeout(() => stop("Связь с телефоном не восстановилась. Откройте новый QR-код."), 10000)
         }
       }
-      peer.addTransceiver("video", { direction: "recvonly" })
+      const transceiver = peer.addTransceiver("video", { direction: "recvonly" })
+      setLowDelayRequested(requestLowDelay(transceiver.receiver))
       await peer.setLocalDescription(await peer.createOffer())
       await publishDisplaySignal(offerToken, await waitForDisplayIce(peer, signal), signal)
 
@@ -129,7 +144,8 @@ export function DisplayStreamView({ editing }: { editing: boolean }) {
       await peer.setRemoteDescription(answer)
       while (!signal.aborted) {
         await waitForDisplayPoll(4000, signal)
-        await readDisplaySignal(offerToken, signal)
+        const health = await pollActiveDisplaySignal(offerToken, signal)
+        if (!signal.aborted) setSignaling(health)
       }
     } catch (cause) {
       if (!signal.aborted) stop(cause instanceof Error ? cause.message : "Не удалось открыть трансляцию.")
@@ -180,6 +196,7 @@ export function DisplayStreamView({ editing }: { editing: boolean }) {
           <X size={16} aria-hidden="true" />
         </button>
       )}
+      <DisplayDiagnostics peer={diagnosticPeer} videoRef={video} signaling={signaling} lowDelayRequested={lowDelayRequested} />
       <dialog ref={dialog} aria-label="Подключение камеры телефона" className="m-auto max-w-[calc(100vw-24px)] rounded-xl bg-white p-4 text-center text-slate-900 backdrop:bg-slate-950/60">
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-bold">Откройте QR-код камерой телефона</p>

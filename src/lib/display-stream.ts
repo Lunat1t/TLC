@@ -1,6 +1,7 @@
 export type DisplayDescription = { type: "offer" | "answer"; sdp: string }
 
 class DisplaySignalError extends Error {
+  readonly status: number
   constructor(status: number) {
     const messages: Record<number, string> = {
       401: "Войдите в Brick Studio, чтобы получить QR-код.",
@@ -9,6 +10,7 @@ class DisplaySignalError extends Error {
       429: "Слишком много подключений. Закройте лишние дисплеи и повторите.",
     }
     super(messages[status] ?? "Сервер трансляции недоступен. Проверьте подключение к Wi‑Fi.")
+    this.status = status
   }
 }
 
@@ -102,4 +104,21 @@ export function waitForDisplayPoll(ms: number, signal: AbortSignal) {
     }
     signal.addEventListener("abort", abort, { once: true })
   })
+}
+
+export type DisplaySignalHealth = "online" | "retrying" | "expired"
+
+/** Only after SDP exchange: signaling availability is independent of media health.
+ * Keep retrying to renew leases, but an expired lease must not close a live peer.
+ * Before SDP exchange callers still use strict readDisplaySignal.
+ */
+export async function pollActiveDisplaySignal(token: string, signal: AbortSignal): Promise<DisplaySignalHealth> {
+  try {
+    await readDisplaySignal(token, signal)
+    signal.throwIfAborted()
+    return "online"
+  } catch (error) {
+    signal.throwIfAborted()
+    return error instanceof DisplaySignalError && [401, 403, 404, 410].includes(error.status) ? "expired" : "retrying"
+  }
 }
