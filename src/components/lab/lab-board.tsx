@@ -8,7 +8,6 @@ import "./lab-board.css"
 import "./desktop.css"
 import { DesktopCanvas, DesktopItem } from "./desktop-canvas"
 import { useAccountWorkspace } from "./account-workspace"
-import { WorkStudyWidgets } from "./work-study-widgets"
 import { CameraGame } from "./camera-game"
 import { TicTacToe } from "./tic-tac-toe"
 import type { RobotProject } from "@/lib/projects"
@@ -52,7 +51,6 @@ function InlineNote({text,focus,onSave}:{text:string;focus:boolean;onSave:(value
  return <textarea autoFocus={focus} aria-label="Текст заметки" placeholder="Напиши что-нибудь…" maxLength={300} className="inline-note" value={draft} onChange={e=>{draftRef.current=e.target.value;setDraft(e.target.value)}} onBlur={persist}/>
 }
 export function PersonalBoard({ userId, projects = [], onProjects, onNewProject, onProjectMenu, onDeleteProject }: { userId: string } & BoardProps) {
-  const { role } = useAccess()
   const [focusNote,setFocusNote]=useState<string|null>(null)
   const [pictureOpen,setPictureOpen]=useState(false),[pictureUrl,setPictureUrl]=useState("")
   const pictureDialog=useRef<HTMLDialogElement>(null)
@@ -108,7 +106,6 @@ export function PersonalBoard({ userId, projects = [], onProjects, onNewProject,
 
   return <>
   <div className="desktop-board-surface">
-    <WorkStudyWidgets student={role === "student"} />
     <DesktopCanvas userId={userId}>
     {projects.map((project,index)=><DesktopItem key={project.id} id={`project:${project.id}`} label={project.name} onEdit={()=>onProjectMenu?.(project.id)} onDelete={()=>onDeleteProject?.(project.id)} initial={[.5+(index%3)*.17, .48+index/(projects.length+1)*.46]} mobileInitial={[(index%3)*.5,.36+Math.floor(index/3)/(Math.ceil(projects.length/3)+1)*.2]} className="desktop-shortcut"><Link className="desktop-launch" href={`/editor?id=${encodeURIComponent(project.id)}`}><span className={`desktop-app-icon is-project is-project-${project.hub}`} title={project.hub === "ev3" ? "LEGO EV3" : "SPIKE Prime"}><FileCode2 aria-label={project.hub === "ev3" ? "Программа EV3" : "Программа SPIKE"}/></span><strong>{project.name}</strong></Link><button className="desktop-project-menu" onClick={()=>onProjectMenu?.(project.id)} aria-label={`Действия с проектом ${project.name}`}>•••</button></DesktopItem>)}
     {items.map((item,index)=><DesktopItem id={`pin:${item.id}`} key={item.id} label={item.kind==="shortcut" || item.kind==="tic-tac-toe" || item.kind==="camera-rps" ? item.text : "Карточка"} initial={[.08+(index%4)*.22, .23+Math.floor(index/4)*.15]} mobileInitial={[(index%2)*.98,.58+index/(items.length+1)*.4]} onEdit={item.kind==="shortcut"?()=>{setEditing(item.id);setKind(item.kind);setText(item.text);setUrl(item.url||"");setColor(item.color);setDialog(true)}:undefined} onDelete={()=>{if(window.confirm(`Удалить «${item.text||"карточку"}»?`))save(items.filter(p=>p.id!==item.id))}} className={item.kind==="shortcut"?"desktop-shortcut":"desktop-note"}>
