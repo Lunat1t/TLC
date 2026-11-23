@@ -1,5 +1,5 @@
 export function isApplicationPath(path: string) {
-  return ["/map", "/dashboard", "/avatar", "/profile", "/instructions", "/editor", "/teacher", "/admin", "/link-student"]
+  return ["/map", "/battle-pass", "/dashboard", "/avatar", "/profile", "/instructions", "/editor", "/teacher", "/admin", "/link-student"]
     .some(base => path === base || path.startsWith(`${base}/`))
 }
 

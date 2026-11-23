@@ -1,48 +1,333 @@
 "use client"
 
-import { type ReactNode } from "react"
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react"
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { Map, Home, BookOpen, UserRound, Settings, FilePlus2, Trophy } from "lucide-react"
+import { usePathname, useRouter } from "next/navigation"
+import {
+  ChevronDown,
+  Home,
+  LogIn,
+  LogOut,
+  Map,
+  Settings,
+  Sparkles,
+  UserRound,
+  Users,
+  type LucideIcon,
+} from "lucide-react"
 import { useAccess } from "@/components/auth/access-provider"
 import { useRouteWarmup } from "@/components/auth/app-startup"
-import { AppLauncher } from "./app-launcher"
-import "./studio-bar.css"
-import "./student-navigation.css"
-import "./desktop-shell.css"
-import "./viewport-layout.css"
 import { useWorkspaceSettings } from "@/components/lab/workspace-settings"
+import { signOutFromSupabase } from "@/lib/auth"
+import {
+  MAIN_NAV_TABS,
+  getExtraNavPages,
+  getRoleLabel,
+  isNavPathActive,
+  isNavigableAppPath,
+  type NavIconKey,
+} from "@/lib/navigation-shell"
+import { AppLauncher } from "./app-launcher"
+import { NavigationTransitionContext } from "./navigation-transition"
+import "./navigation-shell.css"
 
-export function StudentNavigation({children}: {children: ReactNode}) {
-  const path=usePathname(), access=useAccess(), warm=useRouteWarmup()
-  const {settings}=useWorkspaceSettings()
-  const home=path==="/dashboard", preferences=path==="/settings"
-  const appPage=path==="/map" || path==="/settings" || home || path.startsWith("/instructions") || path==="/avatar" || path==="/profile" || path.startsWith("/teacher/") || path.startsWith("/admin/") || path==="/link-student"
-  const pages = [
-    { path: "/dashboard", label: "Рабочий стол", icon: Home, color: "blue" },
-    ...(access.role === "student" || access.role === "teacher" ? [
-      { path: "/map", label: "Карта", icon: Map, color: "blue" },
-      { path: "/instructions", label: "Инструкции", icon: BookOpen, color: "yellow" },
-      { path: "/avatar", label: "Персонажи", icon: UserRound, color: "red" },
-    ] : []),
-    ...(access.canPublish ? [{ path: "/admin/instructions/drive", label: "Добавить инструкцию", icon: FilePlus2, color: "purple" }] : []),
-  ]
-  const teacherPages = access.role === "teacher" || access.isAdmin
-    ? [{ path: "/teacher/achievements", label: access.isAdmin ? "Прогресс учеников" : "Достижения учеников", icon: Trophy, color: "purple" }]
-    : []
-  return <div data-wallpaper={settings.background==="wallpaper"&&!!settings.wallpaper?"true":undefined} data-theme={settings.theme} data-background={settings.background} data-bar={settings.bar} style={{"--workspace-background":settings.color,...(settings.background==="wallpaper"&&settings.wallpaper?{backgroundImage:`url("${settings.wallpaper}")`,backgroundSize:settings.wallpaperFit||"cover",backgroundPosition:"center top",backgroundRepeat:"no-repeat",backgroundAttachment:"fixed"}:{})} as React.CSSProperties} className={`tlc-os${home?" is-desktop":""}${preferences?" is-preferences":""}${appPage?" is-app":" is-public"}`}>
-    <div className="os-content">{appPage&&!home&&!preferences?<div className={`workshop-section${path==="/avatar"?" workshop-avatar":""}`}><div className="workshop-section-body">{children}</div></div>:children}</div>
-    <nav className="studio-bar" aria-label="Разделы Brick Studio">
-      <div className="studio-tabs">
-        {[{ path: "/dashboard", label: "Рабочий стол", icon: Home }, ...pages.filter(page => page.path === "/map"), { path: "/profile", label: "Профиль", icon: UserRound }].map(page =>
-          <Link key={page.path} href={page.path} aria-label={page.label} title={page.label}
-            aria-current={path === page.path ? "page" : undefined} onPointerEnter={() => warm(page.path)} onFocus={() => warm(page.path)}>
-            <page.icon size={21} aria-hidden="true" />
-          </Link>
+const MAIN_ICONS: Partial<Record<NavIconKey, LucideIcon>> = {
+  home: Home,
+  map: Map,
+  "battle-pass": Sparkles,
+  settings: Settings,
+}
+
+export function StudentNavigation({ children }: { children: ReactNode }) {
+  const path = usePathname()
+  const router = useRouter()
+  const access = useAccess()
+  const warm = useRouteWarmup()
+  const { settings } = useWorkspaceSettings()
+  const reduced = useReducedMotion()
+
+  const lastCommittedPathRef = useRef<string | null>(null)
+  const getPrevPath = useCallback(() => lastCommittedPathRef.current, [])
+  useEffect(() => {
+    lastCommittedPathRef.current = path
+  }, [path])
+
+  const [accountOpen, setAccountOpen] = useState(false)
+  const accountRoot = useRef<HTMLDivElement>(null)
+  const accountTrigger = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    setAccountOpen(false)
+  }, [path])
+
+  useEffect(() => {
+    if (!accountOpen) return
+    function dismiss(event: PointerEvent) {
+      if (event.target instanceof Node && !accountRoot.current?.contains(event.target)) {
+        setAccountOpen(false)
+      }
+    }
+    function escape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault()
+        setAccountOpen(false)
+        accountTrigger.current?.focus()
+      }
+    }
+    document.addEventListener("pointerdown", dismiss)
+    document.addEventListener("keydown", escape)
+    return () => {
+      document.removeEventListener("pointerdown", dismiss)
+      document.removeEventListener("keydown", escape)
+    }
+  }, [accountOpen])
+
+  const home = path === "/dashboard"
+  const preferences = path === "/settings"
+  const appPage = isNavigableAppPath(path)
+
+  const extraPages = getExtraNavPages({
+    role: access.role,
+    canPublish: access.canPublish,
+    isAdmin: access.isAdmin,
+  })
+
+  const nickname = access.profile?.nickname || "Аккаунт"
+  const roleLabel = getRoleLabel(access.role, access.isAdmin)
+  const avatarBg = access.profile?.avatar?.bodyColor || "#34bdf2"
+  const avatarInitial = nickname.trim().slice(0, 1).toUpperCase() || "B"
+  const showCharacters = access.role === "student" || access.role === "teacher"
+
+  async function handleSignOut() {
+    setAccountOpen(false)
+    await signOutFromSupabase(localStorage)
+    router.replace("/login")
+    router.refresh()
+  }
+
+  const rootStyle: CSSProperties = {
+    "--workspace-background": settings.color,
+    ...(settings.background === "wallpaper" && settings.wallpaper
+      ? {
+          backgroundImage: `url("${settings.wallpaper}")`,
+          backgroundSize: settings.wallpaperFit || "cover",
+          backgroundPosition: "center top",
+          backgroundRepeat: "no-repeat",
+          backgroundAttachment: "fixed",
+        }
+      : {}),
+  } as CSSProperties
+
+  return (
+    <NavigationTransitionContext.Provider
+      value={{ getPrevPath, currentPath: path, appPage }}
+    >
+      <div
+        data-wallpaper={settings.background === "wallpaper" && !!settings.wallpaper ? "true" : undefined}
+        data-theme={settings.theme}
+        data-background={settings.background}
+        style={rootStyle}
+        className={`tlc-os${home ? " is-desktop" : ""}${preferences ? " is-preferences" : ""}${
+          appPage ? " is-app" : " is-public"
+        }`}
+      >
+        {appPage && (
+          <header className="studio-topbar">
+            <Link
+              href="/dashboard"
+              className="studio-brand"
+              aria-label="Brick Studio — Рабочий стол"
+              onPointerEnter={() => warm("/dashboard")}
+              onFocus={() => warm("/dashboard")}
+            >
+              <span className="studio-brand-mark" aria-hidden="true">
+                BS
+              </span>
+              <span className="studio-brand-text">Brick Studio</span>
+            </Link>
+
+            <nav className="studio-nav-center" aria-label="Разделы Brick Studio">
+              <div className="studio-tabs">
+                {MAIN_NAV_TABS.map((tab) => {
+                  const Icon = MAIN_ICONS[tab.iconKey] ?? Home
+                  const active = isNavPathActive(path, tab.path)
+                  return (
+                    <Link
+                      key={tab.path}
+                      href={tab.path}
+                      className="studio-tab"
+                      data-active={active ? "true" : "false"}
+                      aria-label={tab.label}
+                      title={tab.label}
+                      aria-current={active ? "page" : undefined}
+                      onPointerEnter={() => warm(tab.path)}
+                      onFocus={() => warm(tab.path)}
+                    >
+                      <Icon size={18} aria-hidden="true" />
+                      <AnimatePresence initial={false}>
+                        {active && (
+                          <motion.span
+                            key="label"
+                            className="studio-tab-label"
+                            initial={reduced ? false : { opacity: 0, width: 0 }}
+                            animate={{ opacity: 1, width: "auto" }}
+                            exit={reduced ? { opacity: 0 } : { opacity: 0, width: 0 }}
+                            transition={reduced ? { duration: 0 } : { duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                          >
+                            {tab.label}
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                      {active && (
+                        <motion.span
+                          layoutId={reduced ? undefined : "studio-tab-notch"}
+                          className="studio-tab-notch"
+                          aria-hidden="true"
+                          transition={
+                            reduced
+                              ? { duration: 0 }
+                              : { type: "spring", stiffness: 460, damping: 34 }
+                          }
+                        >
+                          <svg width="34" height="8" viewBox="0 0 34 8" fill="none">
+                            <path
+                              d="M0 0C8 0 12.5 8 17 8C21.5 8 26 0 34 0H0Z"
+                              fill="currentColor"
+                            />
+                          </svg>
+                        </motion.span>
+                      )}
+                    </Link>
+                  )
+                })}
+              </div>
+
+              <AppLauncher apps={extraPages} />
+            </nav>
+
+            <div ref={accountRoot} className="studio-account">
+              <button
+                ref={accountTrigger}
+                type="button"
+                className="studio-account-trigger"
+                aria-label={`Аккаунт: ${nickname}`}
+                aria-expanded={accountOpen}
+                aria-controls="studio-account-menu"
+                aria-haspopup="menu"
+                onClick={() => setAccountOpen((value) => !value)}
+              >
+                <span
+                  className="studio-account-avatar"
+                  style={settings.profilePhoto ? undefined : { background: avatarBg }}
+                  aria-hidden="true"
+                >
+                  {settings.profilePhoto ? (
+                    <img src={settings.profilePhoto} alt="" />
+                  ) : (
+                    avatarInitial
+                  )}
+                </span>
+                <span className="studio-account-meta">
+                  <strong>{nickname}</strong>
+                  <small>{roleLabel}</small>
+                </span>
+                <ChevronDown size={15} className="studio-account-chevron" aria-hidden="true" />
+              </button>
+
+              <AnimatePresence>
+                {accountOpen && (
+                  <motion.div
+                    id="studio-account-menu"
+                    role="menu"
+                    aria-label="Меню аккаунта"
+                    className="studio-account-menu"
+                    initial={reduced ? { opacity: 1 } : { opacity: 0, y: -6, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={reduced ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.97 }}
+                    transition={reduced ? { duration: 0 } : { duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    <div className="studio-account-header">
+                      <strong>{nickname}</strong>
+                      <span>{roleLabel}</span>
+                    </div>
+
+                    <Link
+                      href="/profile"
+                      role="menuitem"
+                      className="studio-account-item"
+                      aria-current={isNavPathActive(path, "/profile") ? "page" : undefined}
+                      onPointerEnter={() => warm("/profile")}
+                      onClick={() => setAccountOpen(false)}
+                    >
+                      <UserRound size={17} aria-hidden="true" />
+                      <span>Профиль</span>
+                    </Link>
+
+                    {showCharacters && (
+                      <Link
+                        href="/avatar"
+                        role="menuitem"
+                        className="studio-account-item"
+                        aria-current={isNavPathActive(path, "/avatar") ? "page" : undefined}
+                        onPointerEnter={() => warm("/avatar")}
+                        onClick={() => setAccountOpen(false)}
+                      >
+                        <Users size={17} aria-hidden="true" />
+                        <span>Персонажи</span>
+                      </Link>
+                    )}
+
+                    <Link
+                      href="/settings"
+                      role="menuitem"
+                      className="studio-account-item"
+                      aria-current={isNavPathActive(path, "/settings") ? "page" : undefined}
+                      onPointerEnter={() => warm("/settings")}
+                      onClick={() => setAccountOpen(false)}
+                    >
+                      <Settings size={17} aria-hidden="true" />
+                      <span>Настройки</span>
+                    </Link>
+
+                    {access.userId ? (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="studio-account-item is-danger"
+                        onClick={() => void handleSignOut()}
+                      >
+                        <LogOut size={17} aria-hidden="true" />
+                        <span>Выйти</span>
+                      </button>
+                    ) : (
+                      <Link
+                        href="/login"
+                        role="menuitem"
+                        className="studio-account-item"
+                        onClick={() => setAccountOpen(false)}
+                      >
+                        <LogIn size={17} aria-hidden="true" />
+                        <span>Войти</span>
+                      </Link>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </header>
         )}
-      </div>
-      <AppLauncher apps={[...pages, { path: "/profile", label: "Профиль", icon: UserRound, color: "red" }, ...teacherPages, { path: "/settings", label: "Настройки", icon: Settings, color: "account" }]} />
-    </nav>
 
-  </div>
+        <div className="os-content">
+          {appPage && !home && !preferences ? (
+            <div className={`workshop-section${path === "/avatar" ? " workshop-avatar" : ""}`}>
+              <div className="workshop-section-body">{children}</div>
+            </div>
+          ) : (
+            children
+          )}
+        </div>
+      </div>
+    </NavigationTransitionContext.Provider>
+  )
 }

@@ -3,7 +3,7 @@ import test from 'node:test'
 import { createRouteWarmer, isApplicationPath } from '../src/lib/startup.ts'
 
 test('startup applies to app routes without blocking public entry and onboarding', () => {
-  for (const path of ['/dashboard','/avatar','/profile','/instructions','/instructions/a','/editor','/admin/instructions/drive','/teacher/achievements']) assert.equal(isApplicationPath(path),true,path)
+  for (const path of ['/dashboard','/battle-pass','/avatar','/profile','/instructions','/instructions/a','/editor','/admin/instructions/drive','/teacher/achievements']) assert.equal(isApplicationPath(path),true,path)
   for (const path of ['/','/trial','/login','/register','/auth/callback','/instructions-public']) assert.equal(isApplicationPath(path),false,path)
 })
 

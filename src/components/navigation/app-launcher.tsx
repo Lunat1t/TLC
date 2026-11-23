@@ -1,38 +1,46 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { motion, useReducedMotion, useSpring, useTransform } from "framer-motion"
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Plus, type LucideIcon } from "lucide-react"
+import { BookOpen, FilePlus2, Plus, Trophy, UserRound, type LucideIcon } from "lucide-react"
+import { isNavPathActive, type NavIconKey, type NavItem } from "@/lib/navigation-shell"
+import { useRouteWarmup } from "@/components/auth/app-startup"
 
-type App = { path: string; label: string; icon: LucideIcon; color: string }
+const EXTRA_ICONS: Partial<Record<NavIconKey, LucideIcon>> = {
+  instructions: BookOpen,
+  avatar: UserRound,
+  profile: UserRound,
+  "add-instruction": FilePlus2,
+  achievements: Trophy,
+}
 
-export function AppLauncher({ apps }: { apps: App[] }) {
+export function AppLauncher({ apps }: { apps: NavItem[] }) {
   const [open, setOpen] = useState(false)
   const reduced = useReducedMotion()
-  const travel = useSpring(0, { stiffness: 440, damping: 29, mass: 0.85 })
-  useEffect(() => {
-    const target = open ? 1 : 0
-    if (reduced) travel.jump(target)
-    else travel.set(target)
-  }, [open, reduced, travel])
-  // Pinch across the short axis midway through the change of shape.
-  const breadth = useTransform(travel, p => 1 - 0.28 * Math.sin(Math.PI * p))
-  const length = useTransform(travel, p => 0.22 + 0.78 * p)
-  const opacity = useTransform(travel, [0, 0.14, 0.32], [0, 0.8, 1])
-  const rotation = useTransform(travel, p => p * 45)
   const root = useRef<HTMLDivElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
   const path = usePathname()
-  useEffect(() => setOpen(false), [path])
+  const warm = useRouteWarmup()
+
+  useEffect(() => {
+    setOpen(false)
+  }, [path])
+
   useEffect(() => {
     if (!open) return
     function dismiss(event: PointerEvent) {
-      if (event.target instanceof Node && !root.current?.contains(event.target)) setOpen(false)
+      if (event.target instanceof Node && !root.current?.contains(event.target)) {
+        setOpen(false)
+      }
     }
     function escape(event: KeyboardEvent) {
-      if (event.key === "Escape") { setOpen(false); trigger.current?.focus() }
+      if (event.key === "Escape") {
+        event.preventDefault()
+        setOpen(false)
+        trigger.current?.focus()
+      }
     }
     document.addEventListener("pointerdown", dismiss)
     document.addEventListener("keydown", escape)
@@ -41,14 +49,67 @@ export function AppLauncher({ apps }: { apps: App[] }) {
       document.removeEventListener("keydown", escape)
     }
   }, [open])
-  return <div ref={root} className="studio-more">
-    <motion.button whileTap={reduced ? undefined : { scale: 0.88 }} transition={{ type: "spring", stiffness: 520, damping: 20 }} ref={trigger} type="button" aria-label={open ? "Закрыть приложения" : "Все приложения"} aria-expanded={open}
-      aria-controls="studio-apps" onClick={() => setOpen(value => !value)}><motion.span style={{ rotate: rotation }}><Plus size={24} /></motion.span></motion.button>
-    <motion.div style={{ "--breadth": breadth, "--length": length, opacity } as import("framer-motion").MotionStyle} id="studio-apps" className="studio-apps" data-open={open} inert={!open} aria-hidden={!open}>
-      <div className="studio-app-grid">{apps.map(app =>
-        <Link key={app.path} href={app.path} aria-current={path === app.path ? "page" : undefined} onClick={() => setOpen(false)}>
-          <app.icon size={23} aria-hidden="true" /><span>{app.label}</span>
-        </Link>)}</div>
-    </motion.div>
-  </div>
+
+  const hasActiveRoute = apps.some((app) => isNavPathActive(path, app.path))
+
+  return (
+    <div ref={root} className="studio-plus-wrap">
+      <button
+        ref={trigger}
+        type="button"
+        className="studio-plus-btn"
+        data-route-active={hasActiveRoute ? "true" : "false"}
+        aria-label={open ? "Закрыть остальные разделы" : "Остальные разделы"}
+        title="Остальные разделы"
+        aria-expanded={open}
+        aria-controls="studio-plus-menu"
+        aria-haspopup="menu"
+        onClick={() => setOpen((value) => !value)}
+      >
+        <motion.span
+          className="studio-plus-icon"
+          animate={{ rotate: open ? 45 : 0 }}
+          transition={reduced ? { duration: 0 } : { type: "spring", stiffness: 460, damping: 28 }}
+        >
+          <Plus size={19} aria-hidden="true" />
+        </motion.span>
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            id="studio-plus-menu"
+            role="menu"
+            aria-label="Остальные разделы"
+            className="studio-plus-menu"
+            initial={reduced ? { opacity: 1 } : { opacity: 0, y: -6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={reduced ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.97 }}
+            transition={reduced ? { duration: 0 } : { duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <div className="studio-plus-heading">Разделы</div>
+            {apps.map((app) => {
+              const Icon = EXTRA_ICONS[app.iconKey] ?? BookOpen
+              const active = isNavPathActive(path, app.path)
+              return (
+                <Link
+                  key={app.path}
+                  href={app.path}
+                  role="menuitem"
+                  className="studio-plus-link"
+                  aria-current={active ? "page" : undefined}
+                  onPointerEnter={() => warm(app.path)}
+                  onFocus={() => warm(app.path)}
+                  onClick={() => setOpen(false)}
+                >
+                  <Icon size={18} aria-hidden="true" />
+                  <span>{app.label}</span>
+                </Link>
+              )
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
 }

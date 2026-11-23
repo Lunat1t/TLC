@@ -71,9 +71,3 @@
   .study-calendar { width: 100%; }
 }
 
-@media (max-width: 600px) {
-  .study-widgets ~ .phone-desktop-add {
-    top: auto;
-    bottom: calc(90px + env(safe-area-inset-bottom));
-  }
-}

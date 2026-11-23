@@ -295,7 +295,7 @@ export default function HomePage() {
       <dialog ref={newDialogRef} onCancel={e=>{if(creating)e.preventDefault();else setNewOpen(false)}} onClose={()=>setNewOpen(false)} aria-label="Новая программа" className="program-picker w-full max-w-md rounded-3xl bg-white p-6 text-slate-800 shadow-2xl"><h2 className="text-2xl font-bold mb-5">Выберите робота</h2><div className="grid grid-cols-2 gap-4">{(['ev3','spike'] as const).map(hub=><button autoFocus={hub==='ev3'} disabled={creating} key={hub} className={`rounded-2xl p-7 text-xl font-bold min-h-32 ${hub==='ev3'?'bg-emerald-100 text-emerald-900':'bg-amber-100 text-amber-900'}`} onClick={()=>void handleCreateProject(hub)}>{HUBS[hub]}</button>)}</div>{formError&&<p role="alert" className="text-red-700 mt-4">{formError}</p>}<button disabled={creating} onClick={()=>setNewOpen(false)} className="mt-5 min-h-11">Отмена</button></dialog>
 
       {selectedProject && !renameOpen && (
-        <div className="fixed inset-0 z-50 bg-[var(--home-overlay)] backdrop-blur-xs grid place-items-center p-4">
+        <div className="fixed inset-0 z-[12100] bg-[var(--home-overlay)] backdrop-blur-xs grid place-items-center p-4">
           <div className="w-full max-w-[480px] rounded-[23px] bg-white p-7 shadow-2xl">
             <p className="text-xs font-bold text-[var(--home-blue)] mb-2">
               ПРОЕКТ
@@ -368,7 +368,7 @@ export default function HomePage() {
       )}
 
       {selectedProject && renameOpen && (
-        <div className="fixed inset-0 z-50 bg-[var(--home-overlay)] backdrop-blur-xs grid place-items-center p-4">
+        <div className="fixed inset-0 z-[12100] bg-[var(--home-overlay)] backdrop-blur-xs grid place-items-center p-4">
           <div className="w-full max-w-[480px] rounded-[23px] bg-white p-7 shadow-2xl">
             <form onSubmit={handleRenameProject}>
               <p className="text-xs font-bold text-[var(--home-blue)] mb-2">
