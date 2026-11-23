@@ -2,19 +2,17 @@
 
 ## Overview
 
-Supplies the same-origin PDF response used by the instruction reader.
+Supplies the same-origin PDF response used by the instruction reader with HTTP Range (`206 Partial Content`) support.
 
 ## Interface
 
-- `GET /api/instructions/[slug]/document` resolves `published_instruction_drive_file` and returns verified `application/pdf` bytes. `route.ts:GET`
+- `GET /api/instructions/[slug]/document` and `HEAD /api/instructions/[slug]/document` verify `requireInstructionGate(slug)`, resolve `published_instruction_drive_file`, and serve `application/pdf` bytes with `Accept-Ranges: bytes`. `route.ts:GET`, `route.ts:HEAD`
 
 ## Invariants
 
-- Checks slug syntax and a `%PDF-` signature. Enforces a 25,000,000-byte limit against both the header and bytes read, returning 413 if exceeded. Successful responses use `private, no-store` and `nosniff`. `route.ts:GET`
-
-## Side Effects
-
-- Reads the Drive file ID via a Supabase RPC, fetches the PDF with a 45-second timeout, buffers up to the endpoint limit, and cancels the stream reader. `route.ts:GET`
+- Checks slug syntax, roadmap rank access via `requireInstructionGate(slug)`, and a `%PDF-` signature.
+- Strictly validates single `Range: bytes=...` headers via `pdf-range.ts`, returning `416 Range Not Satisfiable` on malformed or out-of-bounds ranges.
+- Enforces the 100,000,000-byte `MAX_PDF_BYTES` limit against headers and streamed bytes (`413` if exceeded). All responses use `Cache-Control: private, no-store` and `X-Content-Type-Options: nosniff`.
 
 ## Verification
 

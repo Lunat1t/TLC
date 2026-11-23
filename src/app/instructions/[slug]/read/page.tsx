@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { serverClient } from "@/lib/instructions/access"
 import { publishedCard } from "@/lib/instructions/detail"
 import { checkInstructionGate } from "@/lib/instructions/roadmap-gate"
 import { PdfReader } from "@/components/instructions/pdf-reader"
@@ -37,5 +38,14 @@ export default async function ReaderPage({ params }: { params: Promise<{ slug: s
     )
   }
 
-  return <PdfReader slug={slug} title={card.title} />
+  let initialUserId = "anon"
+  try {
+    const client = await serverClient()
+    const { data } = await client.auth.getUser()
+    if (data.user?.id) initialUserId = data.user.id
+  } catch {
+    initialUserId = "anon"
+  }
+
+  return <PdfReader slug={slug} title={card.title} kit={card.kit} initialUserId={initialUserId} />
 }

@@ -53,8 +53,13 @@
   background-color: var(--workspace-background, #17283c);
 }
 
-.tlc-os.is-app > .os-content:has(.workshop-avatar) {
+.tlc-os.is-app > .os-content:has(.workshop-avatar),
+.tlc-os.is-app > .os-content:has(.pdf-reader) {
   overflow-y: hidden;
+}
+
+.tlc-os.is-app > .os-content:has(.pdf-reader.is-fullscreen) {
+  z-index: 15000;
 }
 
 .tlc-os.is-public > .os-content {
