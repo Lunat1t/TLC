@@ -8,6 +8,7 @@ export type NavIconKey =
   | "profile"
   | "add-instruction"
   | "achievements"
+  | "roadmap-admin"
 
 export interface NavItem {
   path: string
@@ -30,6 +31,7 @@ const TRANSITION_ROUTE_ORDER: readonly string[] = [
   "/instructions",
   "/avatar",
   "/profile",
+  "/teacher/roadmap",
   "/teacher/achievements",
   "/admin/instructions/drive",
   "/link-student",
@@ -73,11 +75,18 @@ export function getExtraNavPages(access: {
   }
   items.push({ path: "/profile", label: "Профиль", iconKey: "profile" })
   if (canPublish) {
-    items.push({
-      path: "/admin/instructions/drive",
-      label: "Добавить инструкцию",
-      iconKey: "add-instruction",
-    })
+    items.push(
+      {
+        path: "/admin/instructions/drive",
+        label: "Добавить инструкцию",
+        iconKey: "add-instruction",
+      },
+      {
+        path: "/teacher/roadmap",
+        label: "Настроить роадмап",
+        iconKey: "roadmap-admin",
+      }
+    )
   }
   if (role === "teacher" || isAdmin) {
     items.push({

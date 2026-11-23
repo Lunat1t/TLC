@@ -60,7 +60,7 @@ export function StudentCard({ profile }: { profile: SessionProfile }) {
   const { settings, update, ready, error } = useWorkspaceSettings()
   const { refreshProfile } = useAccess()
   const { activeWeek, failed, reload } = useStudyWeek(true)
-  const { kit, setKit, balances, amounts, total, pointsScale, rank, target } = useSkillPoints(profile.id)
+  const { kit, setKit, balances, amounts, total, pointsScale, rank, nextThreshold, tierThresholds } = useSkillPoints(profile.id)
   const [editing, setEditing] = useState(false)
   const [age, setAge] = useState("")
   const [message, setMessage] = useState("")
@@ -130,12 +130,12 @@ export function StudentCard({ profile }: { profile: SessionProfile }) {
           <dialog className="rank-dialog" ref={road} aria-label="Дорога рангов"><header><strong>Дорога рангов</strong><form method="dialog"><button aria-label="Закрыть дорогу рангов">Закрыть</button></form></header>
           <ol className="my-3 grid gap-1 rounded-2xl bg-[#faf7ef] p-3">
             {rankNames.map((name, i) => <li key={name} aria-current={i === rank ? "step" : undefined} className="flex items-center gap-3 rounded-xl px-2 py-1.5 aria-[current=step]:bg-white">
-              <Badge index={i} /><strong>{name}</strong><span className="ml-auto text-right text-xs">{i === rank ? "Ты здесь · " : ""}{i === 0 ? "Старт" : i === 1 ? counted(target, "очко", "очка", "очков") : ""}</span>
+              <Badge index={i} /><strong>{name}</strong><span className="ml-auto text-right text-xs">{i === rank ? "Ты здесь · " : ""}{i === 0 ? "Старт" : tierThresholds[i] !== null ? counted(tierThresholds[i]!, "очко", "очка", "очков") : ""}</span>
             </li>)}
           </ol>
         </dialog>
         </div>
-        <div className="mt-4 flex justify-between"><strong>Очки</strong><span>{total}{rank === 0 && ` / ${target}`}</span></div>
+        <div className="mt-4 flex justify-between"><strong>Очки</strong><span>{total}{nextThreshold !== null && ` / ${nextThreshold}`}</span></div>
         <div className="mb-4 mt-2 flex h-2.5 overflow-hidden rounded-full bg-stone-100" aria-hidden="true">
           {tokenSkills.map((skill, i) => <span key={skill.id} style={{ background: skill.color, width: (100 * amounts[i] / pointsScale) + "%" }} />)}
         </div>
@@ -157,7 +157,7 @@ export function StudentCard({ profile }: { profile: SessionProfile }) {
             </li>
           })}
         </ul>
-        {rank === 0 && <small>До Junior+ ещё {counted(target - total, "очко", "очка", "очков")}</small>}
+        {rank < rankNames.length - 1 && nextThreshold !== null && <small>До {rankNames[rank + 1]} ещё {counted(Math.max(0, nextThreshold - total), "очко", "очка", "очков")}</small>}
         </> : <p role="status">Загружаем очки…</p>}
         <Link href={"/map?kit=" + kit.id} className="mt-4 block font-bold text-cyan-800">На карту<span className="rank-kit"> {kit.label}</span> →</Link>
       </div>

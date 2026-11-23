@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { errorResponse, InstructionError, serverClient } from "@/lib/instructions/access"
+import { requireInstructionGate } from "@/lib/instructions/roadmap-gate"
 import { publicDriveDownloadUrl, MAX_PDF_BYTES } from "@/lib/instructions/google-drive"
 
 export const runtime = "nodejs"
@@ -11,6 +12,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
       throw new InstructionError(404, "not_found", "Инструкция не найдена.")
     }
+    await requireInstructionGate(slug)
     const client = await serverClient()
     const { data: fileId, error } = await client.rpc("published_instruction_drive_file", { p_slug: slug })
     if (error || typeof fileId !== "string") throw new InstructionError(404, "not_found", "PDF не найден.")

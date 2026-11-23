@@ -51,7 +51,8 @@ export const createClient = async (request: NextRequest) => {
   const registerPage = path === "/register" && !request.nextUrl.searchParams.has("student");
   const loginPage = path === "/login";
   const uploadPage = path === "/admin/instructions/drive";
-  const protectedPage = path === "/map" || uploadPage || path === "/dashboard" || path === "/editor"
+  const teacherRoadmapPage = path === "/teacher/roadmap" || path.startsWith("/teacher/roadmap/");
+  const protectedPage = path === "/map" || uploadPage || teacherRoadmapPage || path === "/dashboard" || path === "/editor"
     || path === "/instructions" || path.startsWith("/instructions/");
 
   if (protectedPage || registerPage || loginPage) {
@@ -65,7 +66,7 @@ export const createClient = async (request: NextRequest) => {
         if (registerPage || loginPage) {
           return redirect(profile.role === "parent" ? "/profile" : afterLoginPath(request.nextUrl.searchParams.get("next")));
         }
-        if (uploadPage && profile.role !== "teacher") {
+        if ((uploadPage || teacherRoadmapPage) && profile.role !== "teacher") {
           const permission = await supabase.rpc("is_instruction_admin");
           if (permission.error) return unavailable();
           if (permission.data !== true) return redirect("/dashboard");

@@ -18,3 +18,4 @@ import './session-resource.test.ts';
 import './startup.test.ts';
 import './editor-orientation.test.ts';
 import './navigation-shell.test.ts';
+import './roadmap.test.ts';

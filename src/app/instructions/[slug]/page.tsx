@@ -2,12 +2,41 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { publishedCard } from "@/lib/instructions/detail"
 import { driveDownloadPath } from "@/lib/instructions/drive-links"
+import { checkInstructionGate } from "@/lib/instructions/roadmap-gate"
 import "../instructions.css"
 
 export default async function InstructionCardPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const card = await publishedCard(slug)
   if (!card) notFound()
+
+  const gate = await checkInstructionGate(slug)
+  if (!gate.allowed) {
+    if (gate.code === "not_found") notFound()
+    const mapHref = gate.requiredKit ? `/map?kit=${encodeURIComponent(gate.requiredKit)}` : "/map"
+    return (
+      <main className="instruction-page instruction-detail">
+        <Link href={mapHref} className="instruction-back">← На роадмап</Link>
+        <section className="instruction-message" aria-label="Доступ по рангу">
+          <p className="instruction-kit">{card.kit === "spike" ? "SPIKE Prime" : "LEGO EV3"}</p>
+          <h1>{card.title}</h1>
+          <p>{gate.message}</p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginTop: "20px" }}>
+            {gate.code === "unauthenticated" ? (
+              <Link className="instruction-next" href={`/login?next=${encodeURIComponent(`/instructions/${card.slug}`)}`}>
+                Войти в аккаунт
+              </Link>
+            ) : (
+              <Link className="instruction-next" href={mapHref}>
+                Открыть роадмап
+              </Link>
+            )}
+          </div>
+        </section>
+      </main>
+    )
+  }
+
   const downloadUrl = driveDownloadPath(card.slug, card.hasPdf)
   const coverUrl = card.coverAssetId
     ? `/api/instruction-media/${card.id}/${card.coverAssetId}`

@@ -31,6 +31,7 @@ test('top bar visibility covers app pages including /battle-pass and excludes ed
     '/instructions/123',
     '/avatar',
     '/profile',
+    '/teacher/roadmap',
     '/teacher/achievements',
     '/admin/instructions/drive',
     '/link-student',
@@ -50,7 +51,7 @@ test('plus menu filters extra pages by role and permissions', () => {
   )
   assert.deepEqual(
     getExtraNavPages({ role: 'teacher', canPublish: true, isAdmin: false }).map((p) => p.path),
-    ['/instructions', '/avatar', '/profile', '/admin/instructions/drive', '/teacher/achievements']
+    ['/instructions', '/avatar', '/profile', '/admin/instructions/drive', '/teacher/roadmap', '/teacher/achievements']
   )
   assert.deepEqual(
     getExtraNavPages({ role: 'parent', canPublish: false, isAdmin: false }).map((p) => p.path),
@@ -61,6 +62,7 @@ test('plus menu filters extra pages by role and permissions', () => {
     [
       ['/profile', 'Профиль'],
       ['/admin/instructions/drive', 'Добавить инструкцию'],
+      ['/teacher/roadmap', 'Настроить роадмап'],
       ['/teacher/achievements', 'Прогресс учеников'],
     ]
   )
