@@ -24,3 +24,6 @@ venv/
 
 # Local Kotlin compiler cache
 /android/.kotlin/
+
+# Local Supabase CLI state
+supabase/.temp/
