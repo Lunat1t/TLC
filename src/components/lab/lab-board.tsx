@@ -116,29 +116,37 @@ export function PersonalBoard({ userId, projects = [], onProjects, onNewProject,
     </DesktopItem>)}
   </DesktopCanvas></div>
   <div className="studio-create-dock" role="toolbar" aria-label="Добавить на рабочий стол">
-    <button type="button" className="studio-create-btn" data-tone="note" disabled={!canPin} onClick={createNote} aria-label="Добавить заметку" title={pinHint || "Заметка"}>
-      <StickyNote size={19} aria-hidden="true" />
-      <span className="studio-create-tooltip">{pinHint || "Заметка"}</span>
-    </button>
-    <button type="button" className="studio-create-btn" data-tone="image" disabled={!canPin} onClick={() => { setPictureOpen(true); setError("") }} aria-label="Добавить картинку" title={pinHint || "Картинка"}>
-      <ImagePlus size={19} aria-hidden="true" />
-      <span className="studio-create-tooltip">{pinHint || "Картинка"}</span>
-    </button>
-    {onNewProject && (
-      <button type="button" className="studio-create-btn" data-tone="program" onClick={onNewProject} aria-label="Создать программу" title="Программа">
-        <FileCode2 size={19} aria-hidden="true" />
-        <span className="studio-create-tooltip">Программа</span>
+    <svg className="studio-create-shoulder is-left" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <path d="M18 0A18 18 0 0 1 0 18H18V0Z" fill="currentColor" />
+    </svg>
+    <div className="studio-create-row">
+      <button type="button" className="studio-create-btn" data-tone="note" disabled={!canPin} onClick={createNote} aria-label="Добавить заметку" title={pinHint || "Заметка"}>
+        <StickyNote size={19} aria-hidden="true" />
+        <span className="studio-create-tooltip">{pinHint || "Заметка"}</span>
       </button>
-    )}
-    <button type="button" className="studio-create-btn" data-tone="shortcut" disabled={!canPin} onClick={() => open("shortcut")} aria-label="Добавить ярлык" title={pinHint || "Ярлык"}>
-      <Globe size={19} aria-hidden="true" />
-      <span className="studio-create-tooltip">{pinHint || "Ярлык"}</span>
-    </button>
-    <button type="button" className="studio-create-btn" data-tone="widget" disabled={!canPin} onClick={() => widgetsDialog.current?.showModal()} aria-label="Открыть виджеты" title={pinHint || "Виджеты"}>
-      <Grid3X3 size={19} aria-hidden="true" />
-      <span className="studio-create-tooltip">{pinHint || "Виджеты"}</span>
-    </button>
-    {atLimit && <span className="studio-create-limit" role="status">Лимит 18/18</span>}
+      <button type="button" className="studio-create-btn" data-tone="image" disabled={!canPin} onClick={() => { setPictureOpen(true); setError("") }} aria-label="Добавить картинку" title={pinHint || "Картинка"}>
+        <ImagePlus size={19} aria-hidden="true" />
+        <span className="studio-create-tooltip">{pinHint || "Картинка"}</span>
+      </button>
+      {onNewProject && (
+        <button type="button" className="studio-create-btn" data-tone="program" onClick={onNewProject} aria-label="Создать программу" title="Программа">
+          <FileCode2 size={19} aria-hidden="true" />
+          <span className="studio-create-tooltip">Программа</span>
+        </button>
+      )}
+      <button type="button" className="studio-create-btn" data-tone="shortcut" disabled={!canPin} onClick={() => open("shortcut")} aria-label="Добавить ярлык" title={pinHint || "Ярлык"}>
+        <Globe size={19} aria-hidden="true" />
+        <span className="studio-create-tooltip">{pinHint || "Ярлык"}</span>
+      </button>
+      <button type="button" className="studio-create-btn" data-tone="widget" disabled={!canPin} onClick={() => widgetsDialog.current?.showModal()} aria-label="Открыть виджеты" title={pinHint || "Виджеты"}>
+        <Grid3X3 size={19} aria-hidden="true" />
+        <span className="studio-create-tooltip">{pinHint || "Виджеты"}</span>
+      </button>
+      {atLimit && <span className="studio-create-limit" role="status">Лимит 18/18</span>}
+    </div>
+    <svg className="studio-create-shoulder is-right" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <path d="M0 0A18 18 0 0 0 18 18H0V0Z" fill="currentColor" />
+    </svg>
   </div>
   <dialog ref={widgetsDialog} className="game-picker" aria-label="Виджеты">
     <header><strong>Виджеты</strong><button type="button" aria-label="Закрыть" onClick={() => widgetsDialog.current?.close()}><X size={20} /></button></header>

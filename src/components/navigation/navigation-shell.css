@@ -5,11 +5,35 @@
   background-color: var(--workspace-background, #e6f0fa);
 }
 
-.tlc-os[data-background="plain"] {
+.tlc-os.is-app {
+  --frame-x: 10px;
+  --frame-b: 10px;
+  height: 100dvh;
+  overflow: hidden;
+  background: #0d1015;
+  padding: 0 var(--frame-x) var(--frame-b);
+}
+
+.tlc-os.is-app > .os-content {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 22px;
+  overflow-y: auto;
+  overflow-x: clip;
+  padding: 0;
+  background-color: var(--workspace-background, #e6f0fa);
+}
+
+.tlc-os.is-app[data-background="plain"] > .os-content {
   background-image: none;
 }
 
-.tlc-os[data-background="dots"] {
+.tlc-os.is-app[data-background="dots"] > .os-content {
   background-image: radial-gradient(#7b99b980 1px, transparent 1px);
   background-size: 20px 20px;
 }
@@ -19,17 +43,18 @@
   --foreground: 210 40% 94%;
   --background: 216 30% 14%;
   --muted: 216 25% 24%;
+}
+
+.tlc-os.is-public[data-theme="dark"] {
   background-color: var(--workspace-background, #17283c);
 }
 
-.tlc-os.is-app > .os-content {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-  overflow-x: clip;
-  padding: 0;
+.tlc-os.is-app[data-theme="dark"] > .os-content {
+  background-color: var(--workspace-background, #17283c);
+}
+
+.tlc-os.is-app > .os-content:has(.workshop-avatar) {
+  overflow-y: hidden;
 }
 
 .tlc-os.is-public > .os-content {
@@ -55,8 +80,7 @@
   --bar-surface-hover: rgba(255, 255, 255, 0.14);
   --bar-active: rgba(255, 255, 255, 0.11);
   --bar-border: rgba(255, 255, 255, 0.1);
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 12000;
   flex: 0 0 auto;
   display: grid;
@@ -64,10 +88,9 @@
   align-items: center;
   gap: 10px;
   min-height: calc(56px + env(safe-area-inset-top));
-  padding: env(safe-area-inset-top) clamp(10px, 2vw, 24px) 0;
+  padding: env(safe-area-inset-top) clamp(4px, 1.2vw, 14px) 0;
   background: var(--bar-bg);
   color: var(--bar-ink);
-  box-shadow: 0 2px 16px rgba(6, 10, 18, 0.28);
 }
 
 .studio-brand {
@@ -395,22 +418,44 @@
   outline-offset: 2px;
 }
 
-/* Bottom creation dock (rendered only on /dashboard) */
+/* Bottom creation dock (rendered only on /dashboard, integrated into bottom frame) */
 .studio-create-dock {
   position: fixed;
   left: 50%;
-  bottom: max(12px, env(safe-area-inset-bottom));
+  bottom: calc(var(--frame-b, 10px) - 1px);
   transform: translateX(-50%);
   z-index: 11500;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
-  max-width: calc(100vw - 20px);
-  border-radius: 999px;
+  padding: 8px 14px 7px;
+  max-width: calc(100vw - var(--frame-x, 10px) * 2 - 44px);
+  border-radius: 22px 22px 0 0;
   background: #0d1015;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 14px 36px rgba(9, 14, 24, 0.35);
+  box-shadow: 0 2px 0 #0d1015;
+}
+
+.studio-create-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.studio-create-shoulder {
+  position: absolute;
+  bottom: 0;
+  width: 18px;
+  height: 18px;
+  color: #0d1015;
+  pointer-events: none;
+}
+
+.studio-create-shoulder.is-left {
+  right: 100%;
+}
+
+.studio-create-shoulder.is-right {
+  left: 100%;
 }
 
 .studio-create-btn {
@@ -514,8 +559,8 @@
   position: relative;
   inset: auto;
   width: 100%;
-  height: calc(100dvh - 56px - env(safe-area-inset-top));
-  min-height: 540px;
+  height: 100%;
+  min-height: 0;
   z-index: 1;
   border-radius: 0;
   background: #eef4ff;
@@ -553,8 +598,7 @@
 
 /* Dashboard full-height canvas below topbar */
 @media (min-width: 601px) {
-  .tlc-os.is-app.is-desktop {
-    height: 100dvh;
+  .tlc-os.is-app.is-desktop > .os-content {
     overflow: hidden;
   }
   .tlc-os.is-app.is-desktop .home-shell:has(.desktop-lab) {
@@ -866,8 +910,15 @@
 }
 
 @media (max-width: 600px) {
+  .tlc-os.is-app {
+    --frame-x: 5px;
+    --frame-b: max(6px, env(safe-area-inset-bottom));
+  }
+  .tlc-os.is-app > .os-content {
+    border-radius: 16px;
+  }
   .studio-topbar {
-    padding-inline: 10px;
+    padding-inline: 5px;
     gap: 4px;
   }
   .studio-brand-text {
@@ -905,13 +956,17 @@
     margin-inline: auto;
   }
   .studio-create-dock {
+    padding: 7px 11px 6px;
+    max-width: calc(100vw - var(--frame-x, 5px) * 2 - 36px);
+    border-radius: 18px 18px 0 0;
+  }
+  .studio-create-row {
     gap: 6px;
-    padding: 6px 8px;
-    max-width: calc(100vw - 16px);
+    max-width: 100%;
     overflow-x: auto;
     scrollbar-width: none;
   }
-  .studio-create-dock::-webkit-scrollbar {
+  .studio-create-row::-webkit-scrollbar {
     display: none;
   }
   .studio-create-btn {

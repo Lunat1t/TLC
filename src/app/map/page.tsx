@@ -4,7 +4,7 @@ import { mapKits } from "@/lib/map-kits"
 export default async function MapPage({ searchParams }: { searchParams: Promise<{ kit?: string }> }) {
   const { kit } = await searchParams
   const selected = mapKits.find(item => item.id === kit)
-  return <main className="min-h-dvh bg-[#f3ead7] p-5 sm:p-10">
+  return <main className="min-h-full bg-[#f3ead7] p-5 sm:p-10">
     <section className="mx-auto grid max-w-2xl gap-5 rounded-3xl bg-white p-6">
       <h1 className="text-3xl font-black">Карта</h1>
       <nav aria-label="Выбор набора" className="flex flex-wrap gap-2">

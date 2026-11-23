@@ -108,16 +108,17 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
 
   const rootStyle: CSSProperties = {
     "--workspace-background": settings.color,
-    ...(settings.background === "wallpaper" && settings.wallpaper
+  } as CSSProperties
+
+  const contentStyle: CSSProperties =
+    settings.background === "wallpaper" && settings.wallpaper
       ? {
           backgroundImage: `url("${settings.wallpaper}")`,
           backgroundSize: settings.wallpaperFit || "cover",
           backgroundPosition: "center top",
           backgroundRepeat: "no-repeat",
-          backgroundAttachment: "fixed",
         }
-      : {}),
-  } as CSSProperties
+      : {}
 
   return (
     <NavigationTransitionContext.Provider
@@ -318,7 +319,7 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
           </header>
         )}
 
-        <div className="os-content">
+        <div className="os-content" style={contentStyle}>
           {appPage && !home && !preferences ? (
             <div className={`workshop-section${path === "/avatar" ? " workshop-avatar" : ""}`}>
               <div className="workshop-section-body">{children}</div>

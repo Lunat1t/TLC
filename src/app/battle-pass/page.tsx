@@ -3,7 +3,7 @@ import { Sparkles, Map, Home } from "lucide-react"
 
 export default function BattlePassPage() {
   return (
-    <main className="grid min-h-[calc(100dvh-56px)] place-items-center bg-[#f3f6fb] p-5 sm:p-10 text-[#15283d]">
+    <main className="grid min-h-full place-items-center bg-[#f3f6fb] p-5 sm:p-10 text-[#15283d]">
       <section className="battle-pass-card mx-auto grid max-w-xl gap-5 rounded-3xl border border-[#d6e1ee] bg-white p-7 sm:p-9 shadow-sm text-center">
         <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#fef3c7] text-[#b45309]">
           <Sparkles size={28} aria-hidden="true" />
