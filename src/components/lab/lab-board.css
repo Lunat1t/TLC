@@ -1,7 +1,7 @@
 .lab { --lab-ink:#162c45; --lab-blue:#2563eb; color:var(--lab-ink); margin-bottom:44px; }
 .lab-heading { display:flex; align-items:end; justify-content:space-between; gap:24px; margin-bottom:26px; }
 .lab-heading p { color:#4b6077; font-size:13px; margin:0 0 10px; }
-.lab-heading h1 { margin:0; font-family:"Arial Rounded MT Bold","Trebuchet MS",sans-serif; font-size:clamp(32px,4.4vw,54px); font-weight:900; line-height:1.1; letter-spacing:-.055em; }
+.lab-heading h1 { margin:0; font-family:var(--font-ui); font-size:clamp(32px,4.4vw,54px); font-weight:900; line-height:1.1; letter-spacing:-.055em; }
 .lab-heading h1 span { color:#f45139; display:inline-block; margin-left:16px; }
 .lab-library { display:flex; align-items:center; gap:10px; font-size:13px; font-weight:750; padding:12px 0; white-space:nowrap; }
 .lab-board { background:#d9ebff; border:2px solid #bacfeb; border-radius:24px; padding:28px; box-shadow:0 6px 0 #c0d6ed; background-image:radial-gradient(#9bb7db 1px,transparent 1px); background-size:20px 20px; }
