@@ -1,7 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { isAuthRetryableFetchError } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
-import { afterLoginPath } from "@/lib/auth-destination";
+import {
+  afterLoginPath,
+  classifyMiddlewareRoute,
+  getAnonymousRedirect,
+} from "@/lib/auth-destination";
 import { getSupabaseConfig } from "@/utils/supabase/config";
 
 export const createClient = async (request: NextRequest) => {
@@ -48,12 +52,13 @@ export const createClient = async (request: NextRequest) => {
   const { data, error } = await supabase.auth.getClaims();
   const userId = error ? null : data?.claims.sub;
   const path = request.nextUrl.pathname;
-  const registerPage = path === "/register" && !request.nextUrl.searchParams.has("student");
-  const loginPage = path === "/login";
-  const uploadPage = path === "/admin/instructions/drive";
-  const teacherRoadmapPage = path === "/teacher/roadmap" || path.startsWith("/teacher/roadmap/");
-  const protectedPage = path === "/map" || uploadPage || teacherRoadmapPage || path === "/dashboard" || path === "/editor"
-    || path === "/instructions" || path.startsWith("/instructions/");
+  const {
+    registerPage,
+    loginPage,
+    uploadPage,
+    teacherRoadmapPage,
+    protectedPage,
+  } = classifyMiddlewareRoute(path, request.nextUrl.search);
 
   if (protectedPage || registerPage || loginPage) {
     if (error && (isAuthRetryableFetchError(error) || (error.status ?? 0) >= 500)) return unavailable();
@@ -74,9 +79,9 @@ export const createClient = async (request: NextRequest) => {
       } else if (protectedPage) {
         return redirect("/register");
       }
-    } else if (protectedPage) {
-      const search = new URLSearchParams({ next: path + request.nextUrl.search });
-      return redirect(`/login?${search}`);
+    } else {
+      const anonRedirect = getAnonymousRedirect(path, request.nextUrl.search);
+      if (anonRedirect) return redirect(anonRedirect);
     }
   }
 

@@ -5,25 +5,25 @@ import {
   getExtraNavPages,
   getRoleLabel,
   getTopbarBrandTarget,
+  getVisibleMainNavTabs,
   getRouteTransitionDirection,
   isNavPathActive,
   isNavigableAppPath,
   shouldShowMainNavTabs,
 } from '../src/lib/navigation-shell.ts'
 
-test('main top bar tabs match agreed routes and labels', () => {
+test('main top bar tabs match agreed routes and labels without battle-pass', () => {
   assert.deepEqual(
     MAIN_NAV_TABS.map((t) => [t.path, t.label]),
     [
       ['/dashboard', 'Рабочий стол'],
       ['/map', 'Роадмап'],
-      ['/battle-pass', 'Батл пас'],
       ['/settings', 'Настройки'],
     ]
   )
 })
 
-test('top bar visibility covers app pages including /battle-pass and excludes editor/auth/public', () => {
+test('top bar visibility covers app pages and excludes editor/auth/public', () => {
   for (const path of [
     '/dashboard',
     '/map',
@@ -57,6 +57,10 @@ test('plus menu filters extra pages by role and permissions', () => {
     []
   )
   assert.deepEqual(
+    getExtraNavPages({ role: null, canPublish: false, isAdmin: false }).map((p) => p.path),
+    []
+  )
+  assert.deepEqual(
     getExtraNavPages({ role: 'parent', canPublish: true, isAdmin: true }).map((p) => [p.path, p.label]),
     [
       ['/admin/instructions/drive', 'Добавить инструкцию'],
@@ -69,7 +73,7 @@ test('route transition direction follows ordered tabs and handles subroutes clea
   assert.equal(getRouteTransitionDirection(null, '/dashboard'), 0)
   assert.equal(getRouteTransitionDirection('/dashboard', '/dashboard'), 0)
   assert.equal(getRouteTransitionDirection('/dashboard', '/map'), 1)
-  assert.equal(getRouteTransitionDirection('/map', '/battle-pass'), 1)
+  assert.equal(getRouteTransitionDirection('/map', '/settings'), 1)
   assert.equal(getRouteTransitionDirection('/settings', '/dashboard'), -1)
   assert.equal(getRouteTransitionDirection('/instructions', '/instructions/item-1'), 0)
   assert.equal(getRouteTransitionDirection('/dashboard', '/instructions/item-1'), 1)
@@ -86,15 +90,36 @@ test('active path matching and role labels work for subroutes and roles', () => 
   assert.equal(getRoleLabel(null, false), 'Аккаунт')
 })
 
-test('topbar hides workspace tabs and adjusts brand target for parent and anonymous users', () => {
+test('topbar filters workspace tabs and brand target for guest, parent, and student/teacher users', () => {
   assert.equal(shouldShowMainNavTabs('student'), true)
   assert.equal(shouldShowMainNavTabs('teacher'), true)
   assert.equal(shouldShowMainNavTabs('parent'), false)
   assert.equal(shouldShowMainNavTabs(null), false)
 
+  assert.deepEqual(
+    getVisibleMainNavTabs({ userId: null, role: null }).map((t) => t.path),
+    ['/dashboard', '/settings']
+  )
+  assert.deepEqual(
+    getVisibleMainNavTabs({ userId: 'u1', role: 'student' }).map((t) => t.path),
+    ['/dashboard', '/map', '/settings']
+  )
+  assert.deepEqual(
+    getVisibleMainNavTabs({ userId: 'u2', role: 'teacher' }).map((t) => t.path),
+    ['/dashboard', '/map', '/settings']
+  )
+  assert.deepEqual(
+    getVisibleMainNavTabs({ userId: 'u3', role: 'parent' }).map((t) => t.path),
+    []
+  )
+  assert.deepEqual(
+    getVisibleMainNavTabs({ userId: 'u4', role: null }).map((t) => t.path),
+    []
+  )
+
   assert.equal(getTopbarBrandTarget({ userId: 'u1', role: 'student' }).href, '/dashboard')
   assert.equal(getTopbarBrandTarget({ userId: 'u2', role: 'teacher' }).href, '/dashboard')
   assert.equal(getTopbarBrandTarget({ userId: 'u3', role: 'parent' }).href, '/settings')
   assert.equal(getTopbarBrandTarget({ userId: 'u4', role: null }).href, '/settings')
-  assert.equal(getTopbarBrandTarget({ userId: null, role: null }).href, '/login')
+  assert.equal(getTopbarBrandTarget({ userId: null, role: null }).href, '/dashboard')
 })

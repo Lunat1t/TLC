@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { useAccess } from "./access-provider"
-import { createRouteWarmer, isApplicationPath } from "@/lib/startup"
+import { createRouteWarmer, isApplicationPath, isGuestWorkspacePath } from "@/lib/startup"
 import "./app-startup.css"
 
 const RouteWarmupContext = createContext<(path: string) => void>(() => {})
@@ -16,8 +16,9 @@ export function AppStartup({ children }: { children: ReactNode }) {
   const [slow, setSlow] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const warmer = useMemo(() => createRouteWarmer(path => router.prefetch(path)), [router])
+  const guestRoute = isGuestWorkspacePath(pathname)
   const waiting = inApplication && !ready
-  const failed = inApplication && !!error && !profile
+  const failed = inApplication && !!error && !profile && (Boolean(userId) || !guestRoute)
   const blocked = waiting || failed
 
   useEffect(() => { warmer.clear() }, [userId, warmer])

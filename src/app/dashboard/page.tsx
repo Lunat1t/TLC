@@ -332,6 +332,9 @@ export default function HomePage() {
             </button>
           ))}
         </div>
+        <p className="program-picker-hint">
+          Bluetooth к роботу работает в Chrome/Edge (ПК и Android); в любом браузере программу можно скачать как <code>.py</code>.
+        </p>
         {formError && (
           <p role="alert" className="program-picker-error">
             {formError}

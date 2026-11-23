@@ -1,4 +1,4 @@
-export const rankNames = ["Junior", "Junior+", "Midle", "Midle+", "Senior", "Senior+", "King"] as const
+export const rankNames = ["Junior", "Junior+", "Middle", "Middle+", "Senior", "Senior+", "King"] as const
 
 export function studentLevel(totalXp: number) {
   let remaining = Math.max(0, Math.floor(totalXp))

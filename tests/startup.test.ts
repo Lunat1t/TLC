@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { createRouteWarmer, isApplicationPath } from '../src/lib/startup.ts'
+import { createRouteWarmer, isApplicationPath, isGuestWorkspacePath } from '../src/lib/startup.ts'
 
 test('startup applies to app routes without blocking public entry and onboarding', () => {
   for (const path of ['/dashboard','/battle-pass','/instructions','/instructions/a','/editor','/admin/instructions/drive','/teacher/roadmap']) assert.equal(isApplicationPath(path),true,path)
@@ -27,4 +27,11 @@ test('preload failures are retryable and external URLs are ignored', () => {
   assert.equal(calls,0)
   warmer.warm('/map');warmer.warm('/map')
   assert.equal(calls,2)
+})
+
+test('guest workspace routes cover dashboard and editor only', () => {
+  assert.equal(isGuestWorkspacePath('/dashboard'), true)
+  assert.equal(isGuestWorkspacePath('/editor'), true)
+  assert.equal(isGuestWorkspacePath('/map'), false)
+  assert.equal(isGuestWorkspacePath('/instructions'), false)
 })

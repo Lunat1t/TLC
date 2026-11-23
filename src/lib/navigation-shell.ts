@@ -16,7 +16,6 @@ export interface NavItem {
 export const MAIN_NAV_TABS: readonly NavItem[] = [
   { path: "/dashboard", label: "Рабочий стол", iconKey: "home" },
   { path: "/map", label: "Роадмап", iconKey: "map" },
-  { path: "/battle-pass", label: "Батл пас", iconKey: "battle-pass" },
   { path: "/settings", label: "Настройки", iconKey: "settings" },
 ]
 
@@ -101,17 +100,25 @@ export function shouldShowMainNavTabs(role: string | null): boolean {
   return Boolean(role && role !== "parent")
 }
 
+export function getVisibleMainNavTabs(access: {
+  userId: string | null
+  role: string | null
+}): NavItem[] {
+  if (access.role === "parent") return []
+  if (access.userId) {
+    return access.role ? [...MAIN_NAV_TABS] : []
+  }
+  return MAIN_NAV_TABS.filter((tab) => tab.path !== "/map")
+}
+
 export function getTopbarBrandTarget(access: {
   userId: string | null
   role: string | null
 }): { href: string; label: string } {
-  if (shouldShowMainNavTabs(access.role)) {
-    return { href: "/dashboard", label: "Brick Studio — Рабочий стол" }
-  }
-  if (access.userId) {
+  if (access.role === "parent" || (access.userId && !access.role)) {
     return { href: "/settings", label: "Brick Studio — Настройки" }
   }
-  return { href: "/login", label: "Brick Studio — Вход" }
+  return { href: "/dashboard", label: "Brick Studio — Рабочий стол" }
 }
 
 export function getRoleLabel(role: string | null, isAdmin: boolean): string {

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import { rankNames } from "../src/lib/student-level.ts"
 import test from "node:test"
 import {
   cardTotalPoints,
@@ -64,7 +65,7 @@ test("rank progression is per-kit, uses any skill points, and unlocks next tier 
     makeCard("c0", "ev3", 0, 0, 4, 2, 1),
     // Rank 1 (Junior+): total 10 -> stepCost = 7 -> unlocks Rank 2 at 5 + 7 = 12 pts
     makeCard("c1", "ev3", 1, 0, 5, 3, 2),
-    // Rank 2 (Midle): total 5
+    // Rank 2 (Middle): total 5
     makeCard("c2", "ev3", 2, 0, 2, 2, 1),
     // Different kit (spike) should stay isolated
     makeCard("s0", "spike", 0, 0, 3, 2, 0),
@@ -162,4 +163,8 @@ test("isMissingRoadmapMigrationError only matches explicit missing schema/functi
   assert.equal(isMissingRoadmapMigrationError({ code: "42501", message: "tlc_instruction_access permission denied" }), false)
   assert.equal(isMissingRoadmapMigrationError({ code: "57014", message: "canceling statement due to statement timeout in roadmap_cards" }), false)
   assert.equal(isMissingRoadmapMigrationError(new Error("tlc_roadmap_state failed")), false)
+})
+
+test("student level rank names spell Middle and Middle+ correctly", () => {
+  assert.deepEqual([...rankNames], ["Junior", "Junior+", "Middle", "Middle+", "Senior", "Senior+", "King"])
 })

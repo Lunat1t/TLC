@@ -39,7 +39,7 @@ async function imageData(file: File): Promise<string> {
 }
 export function LabBoard(props: BoardProps) {
   const { userId, ready, error, refreshProfile } = useAccess()
-  return <section className="lab desktop-lab" aria-label="Моя инженерная лаборатория">{ready && userId ? <PersonalBoard key={userId} userId={userId} {...props} /> : <div className="lab-loading" role="status">{error ? <><p>Не удалось открыть рабочий стол.</p><button onClick={()=>void refreshProfile()}>Повторить</button></> : "Готовим ваше рабочее место…"}</div>}</section>
+  return <section className="lab desktop-lab" aria-label="Моя инженерная лаборатория">{ready ? <PersonalBoard key={userId ?? "guest"} userId={userId ?? "guest"} {...props} /> : <div className="lab-loading" role="status">{error ? <><p>Не удалось открыть рабочий стол.</p><button onClick={()=>void refreshProfile()}>Повторить</button></> : "Готовим ваше рабочее место…"}</div>}</section>
 }
 function InlineNote({text,focus,onSave}:{text:string;focus:boolean;onSave:(value:string)=>boolean}){
  const [draft,setDraft]=useState(text)

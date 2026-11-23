@@ -67,7 +67,7 @@ export default function LoginPage() {
     <div className="login-page min-h-dvh flex flex-col bg-[radial-gradient(circle_at_14%_18%,rgba(2,199,234,0.15)_0%,transparent_42%),radial-gradient(circle_at_86%_82%,rgba(124,106,247,0.12)_0%,transparent_45%),#f4f8fa]">
       <header className="min-h-[74px] px-5 md:px-16 py-3.5 flex items-center justify-between gap-4 bg-[#02c7ea]">
         <Link
-          href="/"
+          href="/dashboard"
           className="text-[19px] font-black tracking-wide text-[#002c39] inline-flex items-center gap-2.5"
         >
           Brick Studio

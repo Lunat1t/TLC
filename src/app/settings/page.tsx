@@ -45,7 +45,7 @@ export default function SettingsPage() {
     trimmedDraft.length > 0 &&
     !nicknameUnchanged
 
-  const showDashboardLink = Boolean(access.userId) && access.role !== "parent"
+  const showDashboardLink = access.role !== "parent"
 
   async function handleNicknameSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -129,7 +129,11 @@ export default function SettingsPage() {
         <h2 className="settings-title">
           {categories.find((category) => category.id === tab)?.label}
         </h2>
-        <p>Настройки сохраняются в аккаунте и доступны на других устройствах.</p>
+        <p>
+          {access.userId
+            ? "Настройки сохраняются в аккаунте и доступны на других устройствах."
+            : "Настройки сохраняются в этом браузере. Войдите в аккаунт, чтобы синхронизировать их на других устройствах."}
+        </p>
 
         <section hidden={tab !== "appearance"}>
           <label>
@@ -232,6 +236,9 @@ export default function SettingsPage() {
             <div className="settings-account-anon">
               <Link href="/login" className="settings-primary-btn settings-login-link">
                 Войти
+              </Link>
+              <Link href="/register" className="settings-secondary-btn settings-register-link">
+                Регистрация
               </Link>
             </div>
           )}

@@ -115,11 +115,11 @@ export default function RegisterPage() {
 
   return <main className="onboarding" lang={language}>
     <header className="onboarding-header">
-      <Link href="/" className="onboarding-logo" aria-label="Techlab">techlab</Link>
+      <Link href="/dashboard" className="onboarding-logo" aria-label="Brick Studio — Рабочий стол">Brick Studio</Link>
       <Link href="/login" className="onboarding-login">{t("Уже есть аккаунт?", "Аккаунтың бар ма?")}</Link>
     </header>
     <div className="onboarding-track">
-      <button type="button" className="onboarding-back" disabled={busy} aria-label={t("Назад", "Артқа")} onClick={() => { if (step === 0) router.push("/"); else { setStep(step - 1); setError("") } }}><ArrowLeft size={24} /></button>
+      <button type="button" className="onboarding-back" disabled={busy} aria-label={t("Назад", "Артқа")} onClick={() => { if (step === 0) router.push("/dashboard"); else { setStep(step - 1); setError("") } }}><ArrowLeft size={24} /></button>
       <div className="onboarding-progress" role="progressbar" aria-label={t("Знакомство", "Танысу")} aria-valuemin={0} aria-valuemax={steps.length} aria-valuenow={step + 1} aria-valuetext={`${step + 1} / ${steps.length}`}><span style={{ transform: `scaleX(${(step + 1) / steps.length})` }} /></div>
       <span className="onboarding-count">{step + 1}<span> / {steps.length}</span></span>
     </div>

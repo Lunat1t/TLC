@@ -19,13 +19,12 @@ import { useRouteWarmup } from "@/components/auth/app-startup"
 import { useWorkspaceSettings } from "@/components/lab/workspace-settings"
 import { signOutFromSupabase } from "@/lib/auth"
 import {
-  MAIN_NAV_TABS,
   getExtraNavPages,
   getRoleLabel,
   getTopbarBrandTarget,
+  getVisibleMainNavTabs,
   isNavPathActive,
   isNavigableAppPath,
-  shouldShowMainNavTabs,
   type NavIconKey,
 } from "@/lib/navigation-shell"
 import { AppLauncher } from "./app-launcher"
@@ -87,7 +86,7 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
   const preferences = path === "/settings"
   const appPage = isNavigableAppPath(path)
 
-  const showMainTabs = shouldShowMainNavTabs(access.role)
+  const visibleTabs = getVisibleMainNavTabs({ userId: access.userId, role: access.role })
   const brandTarget = getTopbarBrandTarget({
     userId: access.userId,
     role: access.role,
@@ -152,11 +151,11 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
               <span className="studio-brand-text">Brick Studio</span>
             </Link>
 
-            {showMainTabs || extraPages.length > 0 ? (
+            {visibleTabs.length > 0 || extraPages.length > 0 ? (
               <nav className="studio-nav-center" aria-label="Разделы Brick Studio">
-                {showMainTabs && (
+                {visibleTabs.length > 0 && (
                   <div className="studio-tabs">
-                    {MAIN_NAV_TABS.map((tab) => {
+                    {visibleTabs.map((tab) => {
                       const Icon = MAIN_ICONS[tab.iconKey] ?? Home
                       const active = isNavPathActive(path, tab.path)
                       return (
@@ -218,87 +217,99 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
             )}
 
             <div ref={accountRoot} className="studio-account">
-              <button
-                ref={accountTrigger}
-                type="button"
-                className="studio-account-trigger"
-                aria-label={`Аккаунт: ${nickname}`}
-                aria-expanded={accountOpen}
-                aria-controls="studio-account-menu"
-                aria-haspopup="menu"
-                onClick={() => setAccountOpen((value) => !value)}
-              >
-                <span
-                  className="studio-account-avatar"
-                  style={settings.profilePhoto ? undefined : { background: avatarBg }}
-                  aria-hidden="true"
-                >
-                  {settings.profilePhoto ? (
-                    <img src={settings.profilePhoto} alt="" />
-                  ) : (
-                    avatarInitial
-                  )}
-                </span>
-                <span className="studio-account-meta">
-                  <strong>{nickname}</strong>
-                  <small>{roleLabel}</small>
-                </span>
-                <ChevronDown size={15} className="studio-account-chevron" aria-hidden="true" />
-              </button>
-
-              <AnimatePresence>
-                {accountOpen && (
-                  <motion.div
-                    id="studio-account-menu"
-                    role="menu"
-                    aria-label="Меню аккаунта"
-                    className="studio-account-menu"
-                    initial={reduced ? { opacity: 1 } : { opacity: 0, y: -6, scale: 0.97 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={reduced ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.97 }}
-                    transition={reduced ? { duration: 0 } : { duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+              {access.userId ? (
+                <>
+                  <button
+                    ref={accountTrigger}
+                    type="button"
+                    className="studio-account-trigger"
+                    aria-label={`Аккаунт: ${nickname}`}
+                    aria-expanded={accountOpen}
+                    aria-controls="studio-account-menu"
+                    aria-haspopup="menu"
+                    onClick={() => setAccountOpen((value) => !value)}
                   >
-                    <div className="studio-account-header">
-                      <strong>{nickname}</strong>
-                      <span>{roleLabel}</span>
-                    </div>
-
-                    <Link
-                      href="/settings"
-                      role="menuitem"
-                      className="studio-account-item"
-                      aria-current={isNavPathActive(path, "/settings") ? "page" : undefined}
-                      onPointerEnter={() => warm("/settings")}
-                      onClick={() => setAccountOpen(false)}
+                    <span
+                      className="studio-account-avatar"
+                      style={settings.profilePhoto ? undefined : { background: avatarBg }}
+                      aria-hidden="true"
                     >
-                      <Settings size={17} aria-hidden="true" />
-                      <span>Настройки</span>
-                    </Link>
+                      {settings.profilePhoto ? (
+                        <img src={settings.profilePhoto} alt="" />
+                      ) : (
+                        avatarInitial
+                      )}
+                    </span>
+                    <span className="studio-account-meta">
+                      <strong>{nickname}</strong>
+                      <small>{roleLabel}</small>
+                    </span>
+                    <ChevronDown size={15} className="studio-account-chevron" aria-hidden="true" />
+                  </button>
 
-                    {access.userId ? (
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="studio-account-item is-danger"
-                        onClick={() => void handleSignOut()}
+                  <AnimatePresence>
+                    {accountOpen && (
+                      <motion.div
+                        id="studio-account-menu"
+                        role="menu"
+                        aria-label="Меню аккаунта"
+                        className="studio-account-menu"
+                        initial={reduced ? { opacity: 1 } : { opacity: 0, y: -6, scale: 0.97 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={reduced ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.97 }}
+                        transition={reduced ? { duration: 0 } : { duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
                       >
-                        <LogOut size={17} aria-hidden="true" />
-                        <span>Выйти</span>
-                      </button>
-                    ) : (
-                      <Link
-                        href="/login"
-                        role="menuitem"
-                        className="studio-account-item"
-                        onClick={() => setAccountOpen(false)}
-                      >
-                        <LogIn size={17} aria-hidden="true" />
-                        <span>Войти</span>
-                      </Link>
+                        <div className="studio-account-header">
+                          <strong>{nickname}</strong>
+                          <span>{roleLabel}</span>
+                        </div>
+
+                        <Link
+                          href="/settings"
+                          role="menuitem"
+                          className="studio-account-item"
+                          aria-current={isNavPathActive(path, "/settings") ? "page" : undefined}
+                          onPointerEnter={() => warm("/settings")}
+                          onClick={() => setAccountOpen(false)}
+                        >
+                          <Settings size={17} aria-hidden="true" />
+                          <span>Настройки</span>
+                        </Link>
+
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="studio-account-item is-danger"
+                          onClick={() => void handleSignOut()}
+                        >
+                          <LogOut size={17} aria-hidden="true" />
+                          <span>Выйти</span>
+                        </button>
+                      </motion.div>
                     )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  </AnimatePresence>
+                </>
+              ) : (
+                <div className="studio-guest-actions">
+                  <Link
+                    href="/register"
+                    className="studio-guest-register"
+                    onPointerEnter={() => warm("/register")}
+                    onFocus={() => warm("/register")}
+                  >
+                    Регистрация
+                  </Link>
+                  <Link
+                    href="/login"
+                    className="studio-guest-login"
+                    onPointerEnter={() => warm("/login")}
+                    onFocus={() => warm("/login")}
+                  >
+                    <LogIn size={15} aria-hidden="true" />
+                    <span>Войти</span>
+                  </Link>
+                </div>
+              )}
             </div>
           </header>
         )}

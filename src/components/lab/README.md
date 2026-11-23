@@ -21,7 +21,7 @@
 
 ## Side Effects
 
-- `AccountWorkspaceSession` читает и обновляет `/api/workspace`. Хранит идентификатор вкладки в `sessionStorage`, а черновики восстановления в `localStorage` с ключом, включающим аккаунт, секцию и вкладку. `downloadRecovery` сохраняет локальную копию в JSON. [account-workspace.tsx](./account-workspace.tsx)
+- `AccountWorkspaceSession` для вошедшего аккаунта читает и обновляет `/api/workspace`, а для гостя (`userId === null`) хранит секции в `localStorage` под ключами `tlc-workspace-guest:v1:{section}` без миграции в аккаунт. Хранит идентификатор вкладки в `sessionStorage`, а черновики восстановления в `localStorage` с ключом, включающим аккаунт, секцию и вкладку. `downloadRecovery` сохраняет локальную копию в JSON. [account-workspace.tsx](./account-workspace.tsx)
 - `DesktopItem` следит за размерами через `ResizeObserver` и записывает расстановку через `DesktopCanvas`. `InlineNote` сохраняет текст после паузы, при потере фокуса и при `pagehide`. `WallpaperPicker` преобразует выбранное изображение в браузере и обновляет секцию настроек. [desktop-canvas.tsx](./desktop-canvas.tsx) · [lab-board.tsx](./lab-board.tsx) · [wallpaper-picker.tsx](./wallpaper-picker.tsx)
 - `LabCompanion` измеряет карточки и ярлыки как поверхности, обновляет атрибуты SVG в цикле кадров и сохраняет имя, спокойный режим и счётчики под ключом `tlc-companion-v1:{userId}` в `localStorage`. [lab-companion.tsx](./lab-companion.tsx)
 

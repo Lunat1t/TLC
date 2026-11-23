@@ -225,12 +225,18 @@ export function PybricksWorkspace({
 }) {
   const [guideOpen, setGuideOpen] = React.useState(false)
   const [copied, setCopied] = React.useState(false)
+  const [bleUnsupported, setBleUnsupported] = React.useState(false)
   const [confirmOverwrite, setConfirmOverwrite] = React.useState<{ action: "sync" } | { action: "example"; code: string } | null>(null)
   const textareaRef = React.useRef<HTMLTextAreaElement | null>(null)
 
   React.useEffect(() => {
     setConfirmOverwrite(null)
   }, [sheetName])
+
+  React.useEffect(() => {
+    const nav = navigator as Navigator & { bluetooth?: unknown }
+    setBleUnsupported(!nav.bluetooth || !window.isSecureContext)
+  }, [])
 
   async function handleCopy() {
     try {
@@ -365,6 +371,16 @@ export function PybricksWorkspace({
       {hub === "ev3" && (
         <div className="shrink-0 border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-900">
           Прямой запуск по Bluetooth работает только для SPIKE Prime. Для LEGO EV3 скачайте файл <code className="font-mono font-bold">.py</code> и откройте его в Pybricks Code.
+        </div>
+      )}
+
+      {/* Web Bluetooth compatibility hint */}
+      {hub === "spike" && bleUnsupported && (
+        <div
+          role="status"
+          className="shrink-0 border-b border-sky-200 bg-sky-50 px-4 py-2 text-xs font-semibold text-sky-950"
+        >
+          Bluetooth к роботу работает в Chrome/Edge (ПК и Android); здесь можно скачать <code className="font-mono font-bold">.py</code>.
         </div>
       )}
 

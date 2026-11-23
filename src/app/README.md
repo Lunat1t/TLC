@@ -6,7 +6,7 @@ Defines the Next.js pages and route handlers for the public site, robot workspac
 
 ## Interface
 
-- `WelcomePage` renders `/` in Russian or Kazakh and links to the trial, login and registration flows. `page.tsx:WelcomePage`
+- `HomePage` redirects `/` directly to `/dashboard`. `page.tsx:HomePage`
 - `RootLayout` provides shared metadata, viewport, access and workspace context, startup behavior, student navigation and achievement notifications. `layout.tsx:RootLayout`, `layout.tsx:metadata`, `layout.tsx:viewport`
 - `Loading` renders the shared route loading status. `loading.tsx:Loading`
 - [Instruction administration pages](./admin/README.md) — Contains the teacher-facing Drive PDF publication workflow.
@@ -21,17 +21,15 @@ Defines the Next.js pages and route handlers for the public site, robot workspac
 - [Account onboarding](./register/README.md) — Runs the Russian or Kazakh registration and profile completion flow.
 - [Workspace settings page](./settings/README.md) — Exposes workspace appearance, panel, clock and account controls.
 - [Teacher pages](./teacher/README.md) — Groups pages for teacher actions on student accounts.
-- [Trial lesson request](./trial/README.md) — Builds a WhatsApp message for a trial lesson request in Russian or Kazakh.
 
 ## Invariants
 
 - The root provider order places `AccountWorkspaceProvider` inside `AccessProvider`, with `AppStartup` around navigation. `layout.tsx:RootLayout`
-- The welcome page accepts only `ru` or `kk` as a saved locale. `page.tsx:WelcomePage`
-- `middleware` bypasses API routes, `/`, `/trial` and the manifest. With Supabase configuration present, the session middleware redirects incomplete accounts from the dashboard, editor, instructions and Drive submission pages. Those pages also redirect parents with complete profiles to `/settings`. `src/middleware.ts:middleware`, `src/utils/supabase/middleware.ts:createClient`
+- `middleware` bypasses API routes, `/`, `/display-camera`, `/auth/callback` and the manifest. With Supabase configuration present, `/dashboard` and `/editor` allow anonymous guests while authenticated users still enforce onboarding and parent redirects; `/map`, `/instructions`, `/teacher/roadmap` and Drive submission require login. `src/middleware.ts:middleware`, `src/utils/supabase/middleware.ts:createClient`
 
 ## Side Effects
 
-- The welcome page reads and updates `tlc.site-language` in browser storage. The root layout mounts the shared client providers. `page.tsx:changeLanguage`, `layout.tsx:RootLayout`
+- The root layout mounts the shared client providers. `layout.tsx:RootLayout`
 
 ## Verification
 

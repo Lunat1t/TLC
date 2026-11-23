@@ -3,6 +3,10 @@ export function isApplicationPath(path: string) {
     .some(base => path === base || path.startsWith(`${base}/`))
 }
 
+export function isGuestWorkspacePath(path: string) {
+  return ["/dashboard", "/editor"].some(base => path === base || path.startsWith(`${base}/`))
+}
+
 export function createRouteWarmer(prefetch: (path: string) => void, now = Date.now) {
   const warmed = new Map<string, number>()
   return {
