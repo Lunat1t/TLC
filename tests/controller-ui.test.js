@@ -300,7 +300,7 @@ test('controller-blocks and editor use tap-chips, icon pickers, and live telemet
 
   // Block wrapper lifts z-index on any expanded popover; If/blocks use valid Tailwind v3 outline
   assert.ok(editorSource.includes('has-[[aria-expanded="true"]]:z-40'));
-  assert.ok(editorSource.includes('outline outline-[3px] outline-[#087996] outline-offset-2'));
+  assert.ok(editorSource.includes('outline outline-2 outline-[#18313b]'));
   assert.equal(editorSource.includes('ring-3 ring-[#087996]'), false);
 
   // Sensor type switcher is a single active-icon button with ChevronDown cue & popover, dark bg-black/20 capsules without double borders

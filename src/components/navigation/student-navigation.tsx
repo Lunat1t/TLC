@@ -95,6 +95,7 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
     role: access.role,
     canPublish: access.canPublish,
     isAdmin: access.isAdmin,
+    canManageSchool: access.canManageSchool,
   })
 
   const nickname = access.profile?.nickname || "Аккаунт"
@@ -245,6 +246,16 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
                       <small>{roleLabel}</small>
                     </span>
                     <ChevronDown size={15} className="studio-account-chevron" aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    className="studio-quick-signout"
+                    aria-label="Выйти из аккаунта"
+                    title="Выйти"
+                    onClick={() => void handleSignOut()}
+                  >
+                    <LogOut size={15} aria-hidden="true" />
+                    <span>Выйти</span>
                   </button>
 
                   <AnimatePresence>

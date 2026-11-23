@@ -4,8 +4,19 @@ export function afterLoginPath(value: string | null) {
   const path = new URL(value, "https://studio.invalid")
   if (path.origin !== "https://studio.invalid") return "/dashboard"
   if (
-    ["/map", "/dashboard", "/editor", "/instructions", "/admin/instructions/drive", "/settings"].includes(path.pathname)
-    || path.pathname.startsWith("/instructions/")
+    [
+      "/map",
+      "/dashboard",
+      "/editor",
+      "/instructions",
+      "/admin/instructions/drive",
+      "/settings",
+      "/billing",
+      "/join",
+      "/teacher/school",
+      "/teacher/roadmap",
+    ].includes(path.pathname) ||
+    path.pathname.startsWith("/instructions/")
   ) {
     return path.pathname + path.search
   }
@@ -17,6 +28,7 @@ export interface MiddlewareRouteInfo {
   loginPage: boolean
   uploadPage: boolean
   teacherRoadmapPage: boolean
+  teacherSchoolPage: boolean
   guestWorkspacePage: boolean
   authRequiredPage: boolean
   protectedPage: boolean
@@ -28,11 +40,14 @@ export function classifyMiddlewareRoute(path: string, search = ""): MiddlewareRo
   const loginPage = path === "/login"
   const uploadPage = path === "/admin/instructions/drive"
   const teacherRoadmapPage = path === "/teacher/roadmap" || path.startsWith("/teacher/roadmap/")
-  const guestWorkspacePage = path === "/dashboard" || path === "/editor"
+  const teacherSchoolPage = path === "/teacher/school" || path.startsWith("/teacher/school/")
+  const guestWorkspacePage =
+    path === "/dashboard" || path === "/editor" || path === "/billing" || path === "/join"
   const authRequiredPage =
     path === "/map" ||
     uploadPage ||
     teacherRoadmapPage ||
+    teacherSchoolPage ||
     path === "/instructions" ||
     path.startsWith("/instructions/")
   return {
@@ -40,6 +55,7 @@ export function classifyMiddlewareRoute(path: string, search = ""): MiddlewareRo
     loginPage,
     uploadPage,
     teacherRoadmapPage,
+    teacherSchoolPage,
     guestWorkspacePage,
     authRequiredPage,
     protectedPage: guestWorkspacePage || authRequiredPage,

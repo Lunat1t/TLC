@@ -1923,6 +1923,7 @@ function EditorWorkspace() {
             ref={boardRef}
             aria-label="Доска для блоков"
             style={{
+              containerType: "inline-size",
               backgroundImage:
                 "radial-gradient(#bbcbd2 1.15px, transparent 1.15px)",
               backgroundSize: `${24 * zoom}px ${24 * zoom}px`,
@@ -2005,9 +2006,10 @@ function EditorWorkspace() {
           >
             <div
               style={{
-                transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
+                "--row-width": `calc((100cqw - 24px) / ${zoom})`,
+                  transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
                 transformOrigin: "0 0",
-              }}
+              } as React.CSSProperties}
               className="absolute top-0 left-0 w-0 h-0"
             >
               {controlLayout.areas.filter(a=>a.sheetId===currentSheet.id).map(area=>{
@@ -2293,17 +2295,17 @@ function EditorWorkspace() {
                       openMenuBlockId === block.id || openDriveModule?.blockId === block.id ? "z-40" : ""
                     } ${radiusClass} ${
                       isIfBlock
-                        ? "pointer-events-none text-white"
+                        ? "pointer-events-none text-[#18313b]"
                         : isMotorButtons
                           ? `${buttonDrag?.blockId === block.id ? "overflow-visible" : "overflow-hidden"} rounded-[14px] border border-[#b9d0da] bg-[#f4f8fa] text-[#18313b] shadow-[inset_0_-4px_#d6e4e9,0_8px_18px_rgba(20,105,123,0.12)]`
                         : isButtonBlock
-                          ? "w-max min-h-[58px] bg-[#e85d2a] text-white shadow-[inset_0_-4px_#c2410c,0_8px_18px_rgba(232,93,42,0.16)]"
+                          ? "w-max min-h-[58px] bg-[#f1f4f5] text-[#18313b] border-l-4 border-[#e85d2a] shadow-sm"
                           : isSensorBlock
-                            ? "w-max min-h-[64px] bg-[#4f46e5] text-white shadow-[inset_0_-4px_#3730a3,0_8px_18px_rgba(79,70,229,0.18)]"
+                            ? "w-max min-h-[64px] bg-[#f1f4f5] text-[#18313b] border-l-4 border-[#4f46e5] shadow-sm"
                           : isStopBlock
-                            ? "w-max min-h-[64px] bg-[#b1372c] text-white shadow-[inset_0_-4px_#8f2a21,0_8px_18px_rgba(177,55,44,0.16)]"
+                            ? "w-max min-h-[64px] bg-[#f1f4f5] text-[#18313b] border-l-4 border-[#b1372c] shadow-sm"
                             : isChassisBlock
-                              ? "w-max min-h-[64px] bg-[#0284c7] text-white shadow-[inset_0_-4px_#0369a1,0_8px_18px_rgba(3,105,161,0.16)]"
+                              ? "w-max min-h-[64px] bg-[#f1f4f5] text-[#18313b] border-l-4 border-[#0284c7] shadow-sm"
                               : motorBlock
                                 ? paired
                                   ? "w-max min-h-[64px] bg-[#107e79] text-white shadow-[inset_0_-4px_#086560,0_8px_18px_rgba(20,105,123,0.16)]"
@@ -2319,7 +2321,7 @@ function EditorWorkspace() {
                         : ""
                     } ${
                       !isIfBlock && isSelected
-                        ? "outline outline-[3px] outline-[#087996] outline-offset-2"
+                        ? "outline outline-2 outline-[#18313b]"
                         : ""
                     } ${
                       !isIfBlock && isSnapTarget
@@ -2333,7 +2335,7 @@ function EditorWorkspace() {
                         aria-hidden="true"
                         className={`absolute -top-[8px] left-[32px] w-[44px] h-[11px] rounded-t-[6px] pointer-events-auto ${
                           isIfBlock
-                            ? "bg-[#7c3aed]"
+                            ? "bg-[#f1f4f5]"
                             : isSensorBlock
                               ? "bg-[#4f46e5]"
                             : isStopBlock
@@ -2554,13 +2556,13 @@ function EditorWorkspace() {
                       <div className="flex flex-col items-start">
                         {/* 1. Top Header Bar of E-shaped If/Else block */}
                         <div
-                          className={`pointer-events-auto relative flex flex-nowrap items-center min-h-[58px] h-[58px] w-max min-w-[220px] px-5 gap-3 bg-[#7c3aed] shadow-[inset_0_-4px_#5b21b6,0_8px_18px_rgba(91,33,182,0.2)] ${
+                          className={`pointer-events-auto relative flex flex-nowrap items-center min-h-[58px] h-[58px] w-max min-w-[220px] px-5 gap-3 bg-[#f1f4f5] border-l-4 border-[#7353a0] shadow-sm ${
                             isConnected
                               ? "rounded-tl-[5px] rounded-tr-[14px]"
                               : "rounded-t-[14px]"
                           } rounded-br-[14px] ${
                             isSelected
-                              ? "outline outline-[3px] outline-[#087996] outline-offset-2"
+                              ? "outline outline-2 outline-[#18313b]"
                               : isSnapTarget
                                 ? "ring-4 ring-[#fbbf24]"
                                 : blockError || condError
@@ -2571,11 +2573,11 @@ function EditorWorkspace() {
                           {/* Inner top LEGO stud pointing down into the first C-mouth ("Если") */}
                           <span
                             aria-hidden="true"
-                            className="absolute -bottom-[7px] left-[60px] w-[44px] h-[10px] rounded-b-[6px] bg-[#7c3aed] z-20"
+                            className="absolute -bottom-[7px] left-[60px] w-[44px] h-[10px] rounded-b-[6px] bg-[#f1f4f5] z-20"
                           />
 
                           <span className="inline-flex items-center gap-1.5 text-[16px] font-extrabold whitespace-nowrap tracking-tight">
-                            <GitBranch size={16} aria-hidden="true" className="shrink-0 opacity-95" />
+                            <GitBranch size={16} aria-hidden="true" className="shrink-0 text-[#7353a0]" />
                             <span>Если</span>
                           </span>
                           {conditionBlock && !isDraggingCondition ? (
@@ -2635,20 +2637,20 @@ function EditorWorkspace() {
                           style={{ height: `${bodySpineHeight}px` }}
                           className="relative flex items-center"
                         >
-                          <div className="pointer-events-auto w-[28px] h-full bg-[#7c3aed] shadow-[inset_-4px_0_#5b21b6]" />
+                          <div className="pointer-events-auto w-[28px] h-full bg-[#f1f4f5] shadow-[inset_-4px_0_#5b21b6]" />
                         </div>
 
                         {/* 3. Middle Bar ("Иначе") */}
-                        <div className="pointer-events-auto relative flex items-center w-[220px] h-[48px] px-5 bg-[#7c3aed] shadow-[inset_0_-4px_#5b21b6,0_8px_18px_rgba(91,33,182,0.16)] rounded-r-[14px]">
+                        <div className="pointer-events-auto relative flex items-center w-[220px] h-[48px] px-5 bg-[#f1f4f5] shadow-[inset_0_-4px_#5b21b6,0_8px_18px_rgba(91,33,182,0.16)] rounded-r-[14px]">
                           {/* Top LEGO stud to lock with last block in "Если" branch */}
                           <span
                             aria-hidden="true"
-                            className="absolute -top-[8px] left-[60px] w-[44px] h-[10px] rounded-t-[6px] bg-[#7c3aed]"
+                            className="absolute -top-[8px] left-[60px] w-[44px] h-[10px] rounded-t-[6px] bg-[#f1f4f5]"
                           />
                           {/* Bottom LEGO stud pointing down into the second C-mouth ("Иначе") */}
                           <span
                             aria-hidden="true"
-                            className="absolute -bottom-[7px] left-[60px] w-[44px] h-[10px] rounded-b-[6px] bg-[#7c3aed] z-20"
+                            className="absolute -bottom-[7px] left-[60px] w-[44px] h-[10px] rounded-b-[6px] bg-[#f1f4f5] z-20"
                           />
                           <span className="text-[16px] font-extrabold whitespace-nowrap tracking-tight">
                             Иначе
@@ -2660,19 +2662,19 @@ function EditorWorkspace() {
                           style={{ height: `${elseSpineHeight}px` }}
                           className="relative flex items-center"
                         >
-                          <div className="pointer-events-auto w-[28px] h-full bg-[#7c3aed] shadow-[inset_-4px_0_#5b21b6]" />
+                          <div className="pointer-events-auto w-[28px] h-full bg-[#f1f4f5] shadow-[inset_-4px_0_#5b21b6]" />
                         </div>
 
                         {/* 5. Bottom C-Foot */}
                         <div
-                          className={`pointer-events-auto relative w-[220px] h-[28px] bg-[#7c3aed] shadow-[inset_0_-4px_#5b21b6,0_8px_18px_rgba(91,33,182,0.16)] rounded-r-[12px] ${
+                          className={`pointer-events-auto relative w-[220px] h-[28px] bg-[#f1f4f5] shadow-[inset_0_-4px_#5b21b6,0_8px_18px_rgba(91,33,182,0.16)] rounded-r-[12px] ${
                             hasChild ? "rounded-bl-[5px]" : "rounded-bl-[14px]"
                           }`}
                         >
                           {/* Top LEGO stud on C-foot to lock with last block in "Иначе" branch */}
                           <span
                             aria-hidden="true"
-                            className="absolute -top-[8px] left-[60px] w-[44px] h-[10px] rounded-t-[6px] bg-[#7c3aed]"
+                            className="absolute -top-[8px] left-[60px] w-[44px] h-[10px] rounded-t-[6px] bg-[#f1f4f5]"
                           />
                         </div>
                         {(blockError || condError) && (
@@ -3204,7 +3206,7 @@ function EditorWorkspace() {
                 <div
                   data-kid-translation="true"
                   onPointerDown={(e) => e.stopPropagation()}
-                  className="pointer-events-none absolute inset-x-3 bottom-3 z-30 flex justify-center"
+                  className="pointer-events-none absolute inset-x-3 top-2 z-30 flex justify-center"
                 >
                   <div className="pointer-events-auto max-w-[680px] rounded-2xl border border-[#c6dce2] bg-white/95 backdrop-blur-xs px-3 py-1.5 shadow-lg flex items-center gap-2.5">
                     <span className="text-xs sm:text-[13px] font-bold text-[#18313b] leading-snug">
@@ -3251,7 +3253,7 @@ function EditorWorkspace() {
             gesture.type === "start"
               ? "w-[240px] h-[52px] rounded-t-[20px] rounded-b-[12px] bg-[#f59e0b] shadow-[inset_0_-6px_#d97706]"
               : gesture.type === "if"
-                ? "w-[220px] h-[56px] rounded-[12px] bg-[#7c3aed] shadow-[inset_0_-6px_#5b21b6]"
+                ? "w-[220px] h-[56px] rounded-[12px] bg-[#f1f4f5] shadow-[inset_0_-6px_#5b21b6]"
               : gesture.type === "sensor"
                 ? "w-[200px] h-[48px] rounded-full bg-[#4f46e5] shadow-[inset_0_-6px_#3730a3]"
                 : gesture.type === "pair"

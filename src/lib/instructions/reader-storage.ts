@@ -107,6 +107,20 @@ export function calculateCanvasFitScale(
   return Math.max(0.2, Math.min(areaWidth / pageWidthAtScale1, maxAutoScale))
 }
 
+// Fit both dimensions for short laptop screens and tablet landscape mode.
+export function calculateReaderScale(
+  width: number, height: number, pageWidth: number, pageHeight: number,
+  mode: "page" | "width",
+): number {
+  const widthScale = calculateCanvasFitScale(width, pageWidth)
+  if (mode === "width" || height <= 0 || pageHeight <= 0) return widthScale
+  return Math.min(widthScale, height / pageHeight)
+}
+
+export function calculateCanvasPixelRatio(width: number, height: number, deviceRatio: number): number {
+  return Math.min(Math.max(deviceRatio || 1, 1), 2, Math.sqrt(4_000_000 / Math.max(1, width * height)))
+}
+
 export function loadStoredReaderState(userId: string | null | undefined, slug: string): StoredReaderState {
   if (typeof window === "undefined") return { page: 1, rotation: 0 }
   try {
@@ -185,7 +199,7 @@ export async function readCachedPdfBytes(
     record.updatedAt = Date.now()
     store.put(record)
     await idbTransactionDone(tx).catch(() => {})
-    return new Uint8Array(record.bytes.slice(0))
+    return new Uint8Array(record.bytes)
   } catch {
     return null
   } finally {
@@ -228,10 +242,10 @@ export async function writeCachedPdfBytes(
   userId: string | null | undefined,
   slug: string,
   bytes: Uint8Array,
-): Promise<void> {
-  if (bytes.byteLength < 5 || bytes.byteLength > MAX_CACHED_PDF_BYTES) return
+): Promise<boolean> {
+  if (bytes.byteLength < 5 || bytes.byteLength > MAX_CACHED_PDF_BYTES) return false
   const db = await openPdfCacheDb()
-  if (!db) return
+  if (!db) return false
   const normalizedUserId = normalizeReaderUserId(userId)
   const key = pdfCacheEntryKey(normalizedUserId, slug)
   const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
@@ -249,14 +263,16 @@ export async function writeCachedPdfBytes(
     const tx = db.transaction(IDB_STORE, "readwrite")
     tx.objectStore(IDB_STORE).put(record)
     await idbTransactionDone(tx)
+    return true
   } catch {
     try {
       await evictOldestCacheEntries(db, 1, key)
       const tx = db.transaction(IDB_STORE, "readwrite")
       tx.objectStore(IDB_STORE).put(record)
       await idbTransactionDone(tx)
+      return true
     } catch {
-      // Ignore quota / private-mode errors.
+      return false // Quota or private-mode error.
     }
   } finally {
     db.close()

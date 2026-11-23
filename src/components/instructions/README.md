@@ -7,18 +7,24 @@
 ## Interface
 
 - `InstructionCatalogCards` принимает `CatalogCard[]` и открывает выбранную карточку с действиями чтения, скачивания и редактирования. [instruction-catalog-cards.tsx](./instruction-catalog-cards.tsx)
-- `PdfReader` принимает `slug`, `title`, опциональные `kit` и `initialUserId`, поддерживает поворот 90°, зум, полноэкранный режим, предрендер `±1` страницы, свайпы/клавиатуру, ползунок и переход на `/map` и `/editor` на последней странице. [pdf-reader.tsx](./pdf-reader.tsx)
+- `PdfReader` принимает `slug`, `title`, опциональные `kit` и `initialUserId`, поддерживает подгонку всей страницы по ширине и высоте (по умолчанию), режим по ширине, поворот 90°, зум, полноэкранный режим, предрендер `±1` страницы, свайпы/клавиатуру, ползунок и переход на `/map` и `/editor` на последней странице. [pdf-reader.tsx](./pdf-reader.tsx)
 
 ## Invariants
 
 - `InstructionCatalogCards` показывает действие редактирования после готовности `useAccess` при `canPublish`. Для обложки приоритет имеет `coverAssetId`, затем превью PDF при `hasPdf`. [instruction-catalog-cards.tsx](./instruction-catalog-cards.tsx)
-- `PdfReader` изолирует номер страницы, поворот и локальный кэш PDF в IndexedDB по `userId` (или `"anon"`), перепроверяет доступ по рангу перед выдачей из кэша и ограничивает коэффициент плотности canvas значением 2. [pdf-reader.tsx](./pdf-reader.tsx) · [reader-storage.ts](../../lib/instructions/reader-storage.ts)
+- `PdfReader` изолирует номер страницы, поворот и локальный кэш PDF в IndexedDB по `userId` (или `"anon"`), перепроверяет доступ по рангу перед выдачей из кэша и ограничивает коэффициент плотности canvas значением 2 и размер каждого canvas четырьмя миллионами пикселей. [pdf-reader.tsx](./pdf-reader.tsx) · [reader-storage.ts](../../lib/instructions/reader-storage.ts)
 
 ## Side Effects
 
 - `editCard` читает данные карточки через `GET /api/admin/instructions/{id}`. `saveCard` отправляет форму через `PATCH` на тот же адрес и вызывает `router.refresh()` после успеха. [instruction-catalog-cards.tsx](./instruction-catalog-cards.tsx)
-- `PdfReader` загружает PDF с `/api/instructions/{slug}/document` с поддержкой HTTP Range (`206`) и кэширует байты в IndexedDB под ключом `{userId}:{slug}`. Состояние чтения хранится в `localStorage` под ключом `tlc-pdf-state:v1:{userId}:{slug}`. [pdf-reader.tsx](./pdf-reader.tsx)
+- `PdfReader` загружает PDF с `/api/instructions/{slug}/document` с поддержкой HTTP Range (`206`) с отключёнными потоковой загрузкой и автоматическим скачиванием остальных диапазонов. Полный файл загружается и сохраняется только по кнопке «Сохранить офлайн»; байты в IndexedDB хранятся под ключом `{userId}:{slug}`. Состояние чтения хранится в `localStorage` под ключом `tlc-pdf-state:v1:{userId}:{slug}`. [pdf-reader.tsx](./pdf-reader.tsx)
 
 ## Verification
 
 - Из корня репозитория запустите `npm test`.
+
+## Performance
+
+- `getData()` нельзя вызывать автоматически при открытии: он запрашивает все диапазоны PDF. Полная загрузка нужна только для явного сохранения офлайн. Настройки `disableStream` и `disableAutoFetch` используются вместе согласно [PDF.js API](https://mozilla.github.io/pdf.js/api/draft/module-pdfjsLib.html).
+- Фактический объём до первой страницы зависит от структуры исходного PDF и поддержки Range у источника. Нелинеаризованные файлы с разбросанными словарями страниц могут потребовать почти полной загрузки даже при отключённой предзагрузке. Для таких исходников следующий шаг — подготовка linearized PDF и проверка скорости защищённого маршрута с реальным Drive.
+- Изменение размера наблюдается по обеим осям; отложенный предрендер соседей начинается после показа текущей страницы. Каждый активный рендер использует отдельный canvas, поэтому отмена при быстром перелистывании не пересекается с новым рендером.

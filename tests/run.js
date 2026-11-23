@@ -21,3 +21,4 @@ import './navigation-shell.test.ts';
 import './roadmap.test.ts';
 import './pdf-reader.test.ts';
 import './roadmap-gate.test.ts';
+import './billing.test.ts';

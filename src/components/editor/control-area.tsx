@@ -121,7 +121,7 @@ export function ControlAreaView({area,controls,attachedPanels,editing,inputActiv
           const c = {...control, x: Math.max(0, Math.min(area.width - control.width, control.x + d[0])), y: Math.max(0, Math.min(area.height - 44 - control.height, control.y + d[1]))}
           if (fits(c)) onControlChange(c)
         }
-        return <div key={control.id} role={isPlaceable ? "group" : undefined} aria-label={isPlaceable ? control.label : undefined}
+        return <div key={control.id} className="group/control" role={isPlaceable ? "group" : undefined} aria-label={isPlaceable ? control.label : undefined}
           style={{position:'absolute',left:control.x,top:control.y,width:control.width,height:control.height,border:cardError?'2px solid #dc2626':'2px solid #dfae87',borderRadius:12,background:cardError?'#fef2f2':'#fff',padding:6,overflow:isPlaceable?'hidden':'auto',display:isPlaceable?'flex':undefined,flexDirection:isPlaceable?'column':undefined}}>
         {!directionKind && !isDistanceGauge && (!isPlaceable || editing) &&
         <div tabIndex={editing?0:-1} role="button" aria-label={`Переместить ${control.label}`} onKeyDown={moveByKey} onPointerDown={e=>dragControl(e,control)} style={{fontWeight:700,cursor:editing?'grab':'default',touchAction:'none',minHeight:isPlaceable?24:undefined,fontSize:isPlaceable?12:undefined}}>{rename?.id===control.id ? <input autoFocus aria-label={`Название ${control.label}`} value={rename.value} maxLength={40} onPointerDown={e=>e.stopPropagation()} onChange={e=>setRename({id:control.id,value:e.target.value})} onBlur={()=>{if(rename.value.trim())onControlChange({...control,label:rename.value.trim()});setRename(null)}} onKeyDown={e=>{e.stopPropagation();if(e.key==='Enter')e.currentTarget.blur()}}/> : control.label}{editing&&<span style={{float:'right'}}><button type="button" aria-label={`Переименовать ${control.label}`} onPointerDown={e=>e.stopPropagation()} onClick={()=>setRename({id:control.id,value:control.label})}>✎</button>{onDeleteControl&&<button type="button" aria-label={`Удалить ${control.label}`} onPointerDown={e=>e.stopPropagation()} onClick={()=>onDeleteControl(control.id)}>×</button>}</span>}</div>}
@@ -149,7 +149,7 @@ export function ControlAreaView({area,controls,attachedPanels,editing,inputActiv
             title="Удалить"
             onPointerDown={e=>e.stopPropagation()}
             onClick={()=>onDeleteControl(control.id)}
-            className="absolute right-1 top-1 z-20 grid size-[22px] place-items-center rounded-full border border-[#dfae87] bg-white/95 text-xs font-extrabold leading-none text-[#7c2d12] shadow-sm hover:bg-[#fee2e2] hover:text-[#991b1b]"
+            className="pointer-events-none opacity-0 group-focus-within/control:pointer-events-auto group-focus-within/control:opacity-100 absolute right-1 top-1 z-20 grid size-[22px] place-items-center rounded-full border border-[#dfae87] bg-white/95 text-xs font-extrabold leading-none text-[#7c2d12] shadow-sm hover:bg-[#fee2e2] hover:text-[#991b1b]"
           >
             ×
           </button>

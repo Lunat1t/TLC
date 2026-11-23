@@ -542,3 +542,28 @@
   .instruction-catalog-total{font-size:12px;padding:8px 12px}
   .instruction-catalog-heading{margin-bottom:18px}
 }
+
+/* Reader tools fit tablet portrait and compact laptop windows. */
+@media (max-width: 1200px) {
+  .pdf-header { flex-wrap: wrap; gap: 4px; }
+  .pdf-header-main { flex-basis: 100%; }
+  .pdf-header-actions { width: 100%; justify-content: flex-end; flex-wrap: wrap; }
+  .pdf-btn-label { display: none; }
+}
+.pdf-offline-btn { font-size: 12px; }
+.pdf-status-pill { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 1; }
+.pdf-state-card { width: min(100%, 440px); box-sizing: border-box; }
+@media (max-height: 600px) and (min-width: 601px) {
+  .pdf-header { flex-wrap: nowrap; padding: 4px 10px; min-height: 52px; }
+  .pdf-header-main { flex-basis: auto; }
+  .pdf-header-main strong, .pdf-back-link span { display: none; }
+  .pdf-header-actions { width: auto; flex-wrap: nowrap; }
+  .pdf-footer { padding-top: 4px; padding-bottom: calc(4px + env(safe-area-inset-bottom)); }
+  .pdf-step-btn { min-height: 44px; }
+}
+
+@media (max-width: 600px) {
+  .pdf-header-main { width: 100%; flex-basis: auto; }
+  .pdf-zoom-wrap { flex: 1 1 100px; }
+  .pdf-offline-btn { flex: 1 1 100%; min-width: 0; }
+}

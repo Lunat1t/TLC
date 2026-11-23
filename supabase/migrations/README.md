@@ -38,3 +38,7 @@ The `instruction-assets` bucket is private and accepts images only. Covers are s
 Never place a service-role key in browser code. The web app uses the existing publishable key and verified user session. Trusted `security definer` functions must check `auth.uid()` and the active Auth session before reading or writing protected rows. See `specs/001-instruction-library/quickstart.md` for the validation sequence.
 
 For public-link publication apply `20261105_instruction_drive_link_publish.sql`, then `20261105_existing_profile_backfill.sql` to restore profiles for pre-existing Auth users. The teacher link form and public download route require only the Supabase URL/publishable key, with no Google service-account credentials.
+
+## Subscriptions, schools, and Solo checks
+
+Apply [20261123190000_subscriptions_and_schools.sql](./20261123190000_subscriptions_and_schools.sql) to add the `tlc_billing` schema (`solo`, `school_mini`, `school_pro`), invite codes, org-scoped teacher roadmap permissions, `get_effective_entitlements`, `complete_solo_card`, and `public.tlc_billing_apply_event` (`service_role` only).

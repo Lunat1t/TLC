@@ -906,3 +906,39 @@
     position: static;
   }
 }
+
+.rm-solo-check {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1.5px solid #bae6fd;
+  background: #f0f9ff;
+}
+
+[data-theme="dark"] .rm-solo-check {
+  background: #14263b;
+  border-color: #29527a;
+}
+
+.rm-solo-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rm-input {
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1.5px solid #c5d6e8;
+  background: #ffffff;
+  color: #132238;
+  font-size: 14px;
+}
+
+[data-theme="dark"] .rm-input {
+  background: #0f1b2c;
+  color: #e8f1fc;
+  border-color: #344e6e;
+}

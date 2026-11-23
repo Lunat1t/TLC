@@ -6,6 +6,8 @@ export type NavIconKey =
   | "instructions"
   | "add-instruction"
   | "roadmap-admin"
+  | "billing"
+  | "school"
 
 export interface NavItem {
   path: string
@@ -25,6 +27,9 @@ const TRANSITION_ROUTE_ORDER: readonly string[] = [
   "/battle-pass",
   "/settings",
   "/instructions",
+  "/billing",
+  "/join",
+  "/teacher/school",
   "/teacher/roadmap",
   "/admin/instructions/drive",
   "/link-student",
@@ -36,6 +41,8 @@ const APP_PAGE_PREFIXES: readonly string[] = [
   "/battle-pass",
   "/settings",
   "/instructions",
+  "/billing",
+  "/join",
   "/teacher",
   "/admin",
   "/link-student",
@@ -55,11 +62,25 @@ export function getExtraNavPages(access: {
   role: string | null
   canPublish: boolean
   isAdmin?: boolean
+  canManageSchool?: boolean
 }): NavItem[] {
-  const { role, canPublish } = access
+  const { role, canPublish, canManageSchool } = access
   const items: NavItem[] = []
   if (role === "student" || role === "teacher") {
     items.push({ path: "/instructions", label: "Инструкции", iconKey: "instructions" })
+  }
+  if (role === "student" || role === "teacher") {
+    items.push(
+      { path: "/billing", label: "Тарифы и подписка", iconKey: "billing" },
+      { path: "/join", label: "Код школы", iconKey: "school" }
+    )
+  }
+  if (canManageSchool || canPublish) {
+    items.push({
+      path: "/teacher/school",
+      label: "Школа и коды",
+      iconKey: "school",
+    })
   }
   if (canPublish) {
     items.push(

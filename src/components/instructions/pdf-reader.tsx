@@ -18,7 +18,8 @@ import { useWorkspaceSettings } from "@/components/lab/workspace-settings"
 import type { Kit } from "@/lib/instructions/types"
 import {
   READER_ZOOM_OPTIONS,
-  calculateCanvasFitScale,
+  calculateReaderScale,
+  calculateCanvasPixelRatio,
   clampPageNumber,
   deleteCachedPdfBytes,
   loadStoredReaderState,
@@ -75,7 +76,9 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
   const [zoom, setZoom] = useState<ReaderZoom>(1)
   const [stateReady, setStateReady] = useState(false)
   const [busy, setBusy] = useState(true)
-  const [loadProgress, setLoadProgress] = useState<number | null>(null)
+  const [fitMode, setFitMode] = useState<"page" | "width">("page")
+  const [cacheStatus, setCacheStatus] = useState<"idle" | "saving" | "saved" | "error">("idle")
+  const documentGenerationRef = useRef(0)
   const [error, setError] = useState("")
   const [gateBlocked, setGateBlocked] = useState<GateBlockedState | null>(null)
   const [offlineCached, setOfflineCached] = useState(false)
@@ -88,7 +91,8 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const preRenderedRef = useRef<Map<string, PreRenderedEntry>>(new Map())
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null)
-  const [width, setWidth] = useState(640)
+  const [size, setSize] = useState({ width: 640, height: 480 })
+  const { width, height } = size
 
   const mapHref = kit ? `/map?kit=${encodeURIComponent(kit)}` : "/map"
   const downloadHref = `/api/instructions/${encodeURIComponent(slug)}/download`
@@ -96,11 +100,20 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
   useEffect(() => {
     const el = areaRef.current
     if (!el) return
-    const updateWidth = () => setWidth(Math.max(200, el.clientWidth - 24))
+    let frame = 0
+    const updateWidth = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        const style = getComputedStyle(el)
+        const width = Math.max(1, el.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight))
+        const height = Math.max(1, el.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom))
+        setSize((prev) => prev.width === width && prev.height === height ? prev : { width, height })
+      })
+    }
     updateWidth()
     const observer = new ResizeObserver(updateWidth)
     observer.observe(el)
-    return () => observer.disconnect()
+    return () => { observer.disconnect(); cancelAnimationFrame(frame) }
   }, [])
 
   useEffect(() => {
@@ -137,11 +150,13 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
   // Clear pre-rendered cache whenever layout/document parameters change.
   useEffect(() => {
     preRenderedRef.current.clear()
-  }, [pdf, effectiveUserId, width, zoom, rotation])
+  }, [pdf, effectiveUserId, width, height, fitMode, zoom, rotation])
 
   // Load document (with user-scoped IndexedDB cache + live gate re-check).
   useEffect(() => {
     let alive = true
+    documentGenerationRef.current += 1
+    setCacheStatus("idle")
     let task: ReturnType<typeof import("pdfjs-dist")["getDocument"]> | undefined
 
     preRenderedRef.current.clear()
@@ -151,7 +166,6 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
     setError("")
     setGateBlocked(null)
     setOfflineCached(false)
-    setLoadProgress(null)
 
     const saved = loadStoredReaderState(effectiveUserId, slug)
     setPage(saved.page)
@@ -161,21 +175,13 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
       const loadingTask = lib.getDocument({
         url: `/api/instructions/${encodeURIComponent(slug)}/document`,
         rangeChunkSize: 262144,
+        disableStream: true,
+        disableAutoFetch: true,
       })
       task = loadingTask
-      loadingTask.onProgress = (progressData: { loaded: number; total: number }) => {
-        if (!alive) return
-        if (progressData.total > 0) {
-          setLoadProgress(Math.min(100, Math.round((progressData.loaded / progressData.total) * 100)))
-        }
-      }
+      // Do not call getData here: it forces every range to download before
+      // the user has asked for it. Offline saving is an explicit action.
       const doc = await loadingTask.promise
-      void doc
-        .getData()
-        .then((bytes) => {
-          if (alive) return writeCachedPdfBytes(effectiveUserId, slug, bytes)
-        })
-        .catch(() => {})
       return doc
     }
 
@@ -231,10 +237,11 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
           if (!alive || verdict === "blocked") return
           if (verdict === "allow" || verdict === "offline-allow") {
             try {
-              const cacheTask = lib.getDocument({ data: cachedBytes.slice() })
+              const cacheTask = lib.getDocument({ data: cachedBytes })
               task = cacheTask
               doc = await cacheTask.promise
-                      if (alive && verdict === "offline-allow") setOfflineCached(true)
+              if (alive) setCacheStatus("saved")
+              if (alive && verdict === "offline-allow") setOfflineCached(true)
             } catch {
               await deleteCachedPdfBytes(effectiveUserId, slug)
               doc = null
@@ -252,7 +259,6 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
         setPdf(doc)
         setPage((prev) => clampPageNumber(prev, doc.numPages))
         setStateReady(true)
-        setLoadProgress(100)
         setBusy(false)
       } catch {
         if (!alive) return
@@ -263,9 +269,24 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
 
     return () => {
       alive = false
+      documentGenerationRef.current += 1
       void task?.destroy()
     }
   }, [slug, effectiveUserId, initialUserId, mapHref, retryToken])
+
+  async function saveOffline() {
+    if (!pdf || cacheStatus === "saving") return
+    const generation = documentGenerationRef.current
+    setCacheStatus("saving")
+    try {
+      const bytes = await pdf.getData()
+      if (generation !== documentGenerationRef.current) return
+      const saved = await writeCachedPdfBytes(effectiveUserId, slug, bytes)
+      if (generation === documentGenerationRef.current) setCacheStatus(saved ? "saved" : "error")
+    } catch {
+      if (generation === documentGenerationRef.current) setCacheStatus("error")
+    }
+  }
 
   useEffect(() => {
     setPageDraft(String(page))
@@ -303,17 +324,18 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
     let activeRender: RenderTask | undefined
     const preloadRenders: RenderTask[] = []
 
-    const ratio = Math.min(window.devicePixelRatio || 1, 2)
-    const currentKey = `${page}:${width}:${zoom}:${rotation}`
+    let preloadTimer: ReturnType<typeof setTimeout> | undefined
+    const currentKey = `${page}:${width}:${height}:${fitMode}:${zoom}:${rotation}`
 
     async function renderPageToCanvas(targetPage: number, targetCanvas: HTMLCanvasElement, trackActive: boolean) {
       const pdfPage = await currentPdf.getPage(targetPage)
       if (cancelled) return null
       const effectiveRotation = (pdfPage.rotate + rotation) % 360
       const baseView = pdfPage.getViewport({ scale: 1, rotation: effectiveRotation })
-      const fitScale = calculateCanvasFitScale(width, baseView.width)
+      const fitScale = calculateReaderScale(width, height, baseView.width, baseView.height, fitMode)
       const viewport = pdfPage.getViewport({ scale: fitScale * zoom, rotation: effectiveRotation })
 
+      const ratio = calculateCanvasPixelRatio(viewport.width, viewport.height, window.devicePixelRatio)
       targetCanvas.width = Math.max(1, Math.floor(viewport.width * ratio))
       targetCanvas.height = Math.max(1, Math.floor(viewport.height * ratio))
       targetCanvas.style.width = `${viewport.width}px`
@@ -335,7 +357,7 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
       const neighbors = selectPreloadPages(page, currentPdf.numPages)
       for (const neighbor of neighbors) {
         if (cancelled) return
-        const key = `${neighbor}:${width}:${zoom}:${rotation}`
+        const key = `${neighbor}:${width}:${height}:${fitMode}:${zoom}:${rotation}`
         if (preRenderedRef.current.has(key)) continue
         const offscreen = document.createElement("canvas")
         try {
@@ -359,27 +381,39 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
       }
     }
 
+    function showCanvas(source: HTMLCanvasElement, cssWidth: number, cssHeight: number) {
+      const target = canvasRef.current
+      if (cancelled || !target) return
+      target.width = source.width
+      target.height = source.height
+      target.style.width = `${cssWidth}px`
+      target.style.height = `${cssHeight}px`
+      target.getContext("2d")?.drawImage(source, 0, 0)
+      areaRef.current?.scrollTo(0, 0)
+    }
+
+    function schedulePreload() {
+      preloadTimer = setTimeout(() => { void preloadNeighbors() }, 250)
+    }
+
     const cachedEntry = preRenderedRef.current.get(currentKey)
     if (cachedEntry && canvasRef.current) {
-      const target = canvasRef.current
-      target.width = cachedEntry.canvas.width
-      target.height = cachedEntry.canvas.height
-      target.style.width = `${cachedEntry.cssWidth}px`
-      target.style.height = `${cachedEntry.cssHeight}px`
-      const ctx = target.getContext("2d")
-      ctx?.clearRect(0, 0, target.width, target.height)
-      ctx?.drawImage(cachedEntry.canvas, 0, 0)
+      showCanvas(cachedEntry.canvas, cachedEntry.cssWidth, cachedEntry.cssHeight)
       setError("")
       setBusy(false)
-      void preloadNeighbors()
+      schedulePreload()
     } else if (canvasRef.current) {
       setBusy(true)
       setError("")
-      void renderPageToCanvas(page, canvasRef.current, true)
-        .then(() => {
-          if (cancelled) return
+      // Render into a private canvas so rapid resize/page changes cannot
+      // race a cancelled PDF.js render using the same visible canvas.
+      const offscreen = document.createElement("canvas")
+      void renderPageToCanvas(page, offscreen, true)
+        .then((size) => {
+          if (cancelled || !size) return
+          showCanvas(offscreen, size.cssWidth, size.cssHeight)
           setBusy(false)
-          void preloadNeighbors()
+          schedulePreload()
         })
         .catch(() => {
           if (cancelled) return
@@ -390,12 +424,13 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
 
     return () => {
       cancelled = true
+      clearTimeout(preloadTimer)
       activeRender?.cancel()
       for (const task of preloadRenders) {
         task.cancel()
       }
     }
-  }, [pdf, page, width, zoom, rotation])
+  }, [pdf, page, width, height, fitMode, zoom, rotation])
 
   // Keyboard navigation: Left/Right arrows + Escape for pseudo-fullscreen.
   useEffect(() => {
@@ -497,11 +532,19 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
             <span className="sr-only">Масштаб</span>
             <select
               aria-label="Масштаб"
-              value={zoom}
+              value={zoom === 1 ? fitMode : zoom}
               disabled={!pdf}
-              onChange={(e) => setZoom(normalizeZoom(Number(e.target.value)))}
+              onChange={(e) => {
+                const value = e.target.value
+                if (value === "page" || value === "width") {
+                  setFitMode(value)
+                  setZoom(1)
+                } else setZoom(normalizeZoom(Number(value)))
+              }}
             >
-              {READER_ZOOM_OPTIONS.map((opt) => (
+              <option value="page">Вся страница</option>
+              <option value="width">По ширине</option>
+              {READER_ZOOM_OPTIONS.filter((opt) => opt !== 1).map((opt) => (
                 <option key={opt} value={opt}>
                   {ZOOM_LABELS[opt]}
                 </option>
@@ -519,6 +562,16 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
           >
             {activeFullscreen ? <Minimize2 size={18} aria-hidden="true" /> : <Maximize2 size={18} aria-hidden="true" />}
             <span className="pdf-btn-label">{activeFullscreen ? "Свернуть" : "Во весь экран"}</span>
+          </button>
+
+          <button
+            type="button"
+            className="pdf-tool-btn pdf-offline-btn"
+            disabled={!pdf || cacheStatus === "saving" || cacheStatus === "saved"}
+            onClick={() => void saveOffline()}
+            title="Сохранить инструкцию на этом устройстве для чтения без интернета"
+          >
+            {cacheStatus === "saving" ? "Сохранение…" : cacheStatus === "saved" ? "Сохранено офлайн" : cacheStatus === "error" ? "Повторить сохранение" : "Сохранить офлайн"}
           </button>
 
           <a
@@ -549,14 +602,11 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
         {!pdf && busy && !error && !gateBlocked && (
           <div className="pdf-state-card" role="status">
             <p>
-              {loadProgress !== null
-                ? `Загрузка инструкции… ${loadProgress}%`
-                : "Открытие инструкции…"}
+              Открытие инструкции…
             </p>
             <div className="pdf-progress-track" aria-hidden="true">
               <div
-                className={`pdf-progress-fill${loadProgress === null ? " is-indeterminate" : ""}`}
-                style={loadProgress !== null ? { width: `${loadProgress}%` } : undefined}
+                className="pdf-progress-fill is-indeterminate"
               />
             </div>
           </div>
@@ -602,7 +652,7 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
         <canvas
           ref={canvasRef}
           className="pdf-canvas"
-          hidden={Boolean(gateBlocked || (!pdf && error))}
+          hidden={Boolean(gateBlocked || !pdf)}
           aria-label={`Страница ${page} из ${pdf?.numPages ?? "…"}: ${title}`}
         />
       </div>

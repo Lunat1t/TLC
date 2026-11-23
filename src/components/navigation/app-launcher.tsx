@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { BookOpen, FilePlus2, Map, Plus, type LucideIcon } from "lucide-react"
+import { BookOpen, CreditCard, FilePlus2, KeyRound, Map, Plus, type LucideIcon } from "lucide-react"
 import { isNavPathActive, type NavIconKey, type NavItem } from "@/lib/navigation-shell"
 import { useRouteWarmup } from "@/components/auth/app-startup"
 
@@ -12,6 +12,8 @@ const EXTRA_ICONS: Partial<Record<NavIconKey, LucideIcon>> = {
   instructions: BookOpen,
   "add-instruction": FilePlus2,
   "roadmap-admin": Map,
+  billing: CreditCard,
+  school: KeyRound,
 }
 
 export function AppLauncher({ apps }: { apps: NavItem[] }) {

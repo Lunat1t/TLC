@@ -15,6 +15,7 @@ import {
   Wrench,
 } from "lucide-react"
 import { useAccess } from "@/components/auth/access-provider"
+import { SubscriptionGate } from "@/components/billing/subscription-gate"
 import { mapKits, tokenSkills } from "@/lib/map-kits"
 import {
   computeKitRoadmapState,
@@ -42,7 +43,7 @@ type CardDraft = { mechanics: number; logic: number; creativity: number; rankInd
 
 export function TeacherRoadmapAdmin({ initialKit }: { initialKit?: string }) {
   const router = useRouter()
-  const { ready, userId, role, isAdmin, error: accessError, refreshProfile } = useAccess()
+  const { ready, userId, role, isAdmin, canManageSchool, error: accessError, refreshProfile } = useAccess()
   const allowed = Boolean(userId && (role === "teacher" || isAdmin))
 
   const [kit, setKit] = useState<RoadmapKitId>(() =>
@@ -55,6 +56,7 @@ export function TeacherRoadmapAdmin({ initialKit }: { initialKit?: string }) {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [migrationPending, setMigrationPending] = useState(false)
+  const [subscriptionRequired, setSubscriptionRequired] = useState(false)
   const [banner, setBanner] = useState<{ kind: "error" | "ok"; text: string } | null>(null)
 
   const [searchTerm, setSearchTerm] = useState("")
@@ -81,11 +83,21 @@ export function TeacherRoadmapAdmin({ initialKit }: { initialKit?: string }) {
   }, [accessError, allowed, ready, router, userId])
 
   const loadCatalog = useCallback(async () => {
+    if (!canManageSchool && !isAdmin) {
+      setSubscriptionRequired(true)
+      setLoading(false)
+      return
+    }
     setLoading(true)
+    setSubscriptionRequired(false)
     setMigrationPending(false)
     try {
       const { data, error } = await createClient().rpc("tlc_roadmap_admin_catalog")
       if (error) {
+        if (String(error.message || "").toLowerCase().includes("subscription")) {
+          setSubscriptionRequired(true)
+          return
+        }
         if (isMissingRoadmapMigrationError(error)) {
           setMigrationPending(true)
           return
@@ -122,7 +134,7 @@ export function TeacherRoadmapAdmin({ initialKit }: { initialKit?: string }) {
 
   useEffect(() => {
     if (ready && allowed) void loadCatalog()
-  }, [allowed, loadCatalog, ready])
+  }, [allowed, canManageSchool, loadCatalog, ready])
 
   const roadmapState = useMemo(
     () => computeKitRoadmapState(kit, cards, studentProgress, studentSavedRanks[kit] ?? 0),
@@ -345,6 +357,19 @@ export function TeacherRoadmapAdmin({ initialKit }: { initialKit?: string }) {
             </button>
           </div>
         </div>
+      </main>
+    )
+  }
+
+  if (subscriptionRequired || (!canManageSchool && !isAdmin && !loading && !migrationPending)) {
+    return (
+      <main className="rm-page">
+        <SubscriptionGate
+          title="Настройка роадмапа и журнал класса"
+          description="Управление роадмапом, карточками и прогрессом учеников доступно по подписке School Mini или School Pro."
+          userId={userId}
+          nextPath="/teacher/roadmap"
+        />
       </main>
     )
   }

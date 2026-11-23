@@ -277,6 +277,29 @@
   position: relative;
   display: flex;
   align-items: center;
+  gap: 6px;
+}
+
+.studio-quick-signout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  min-width: 40px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--bar-surface);
+  color: #fda4af;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.studio-quick-signout:hover {
+  background: rgba(244, 63, 94, 0.22);
+  color: #ffe4e6;
 }
 
 .studio-guest-actions {
@@ -1258,6 +1281,16 @@
   .studio-plus-btn {
     width: 34px;
     height: 34px;
+  }
+  .studio-quick-signout {
+    padding: 0;
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+    min-height: 42px;
+  }
+  .studio-quick-signout span {
+    display: none;
   }
   .studio-plus-menu {
     position: fixed;

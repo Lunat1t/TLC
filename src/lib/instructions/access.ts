@@ -61,3 +61,26 @@ export async function requireInstructionPublisher() {
   if (data !== true) throw new InstructionError(403, "forbidden", "Добавлять инструкции может только учитель.")
   return { client, user }
 }
+
+import { isMissingBillingMigrationError, parseEntitlementsPayload } from "@/lib/billing/entitlements"
+
+export async function requireLearningAccess() {
+  const { client, user } = await verifiedUser()
+  const { data, error } = await client.rpc("get_effective_entitlements")
+  if (error) {
+    if (isMissingBillingMigrationError(error)) {
+      const adminRes = await client.rpc("is_instruction_admin")
+      if (!adminRes.error && adminRes.data === true) {
+        return { client, user }
+      }
+      throw new InstructionError(403, "subscription_required", "Нужна активная подписка или код школы.")
+    }
+    throw new InstructionError(503, "dependency_unavailable", "Не удалось проверить подписку. Повторите позже.")
+  }
+
+  const entitlements = parseEntitlementsPayload(data)
+  if (!entitlements.canAccessLearning) {
+    throw new InstructionError(403, "subscription_required", "Нужна активная подписка или код школы.")
+  }
+  return { client, user, entitlements }
+}

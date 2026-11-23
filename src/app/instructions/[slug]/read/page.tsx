@@ -1,3 +1,4 @@
+import { SubscriptionGate } from "@/components/billing/subscription-gate"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { serverClient } from "@/lib/instructions/access"
@@ -14,6 +15,13 @@ export default async function ReaderPage({ params }: { params: Promise<{ slug: s
   const gate = await checkInstructionGate(slug)
   if (!gate.allowed) {
     if (gate.code === "not_found") notFound()
+    if (gate.code === "subscription_required") {
+      return (
+        <main className="instruction-page instruction-detail">
+          <SubscriptionGate userId="active" nextPath={`/instructions/${card.slug}`} />
+        </main>
+      )
+    }
     const mapHref = gate.requiredKit ? `/map?kit=${encodeURIComponent(gate.requiredKit)}` : "/map"
     return (
       <main className="instruction-page instruction-detail">

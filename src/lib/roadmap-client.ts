@@ -1,11 +1,11 @@
-import { mapKits } from "./map-kits"
+import { mapKits } from "./map-kits.ts"
 import {
   clampRankIndex,
   isRoadmapKit,
   type RoadmapCard,
   type RoadmapCardProgress,
   type RoadmapKitId,
-} from "./roadmap"
+} from "./roadmap.ts"
 
 export interface RoadmapInstructionOption {
   id: string
@@ -17,9 +17,18 @@ export interface RoadmapInstructionOption {
   hasPdf: boolean
 }
 
+export interface SoloCardCheckSpec {
+  checkKind: "quiz" | "build" | "code"
+  question: string
+  options: string[]
+}
+
 export interface RoadmapStatePayload {
   role: string | null
   isEditor: boolean
+  canUseSoloCheck: boolean
+  isSchoolStudent: boolean
+  soloChecks: Record<string, SoloCardCheckSpec>
   cards: RoadmapCard[]
   progress: Record<string, RoadmapCardProgress>
   savedRanks: Record<RoadmapKitId, number>
@@ -86,6 +95,27 @@ export function mapRpcSavedRanks(raw: unknown): Record<RoadmapKitId, number> {
   return out
 }
 
+function mapSoloChecks(raw: unknown): Record<string, SoloCardCheckSpec> {
+  if (!raw || typeof raw !== "object") return {}
+  const out: Record<string, SoloCardCheckSpec> = {}
+  for (const [cardId, val] of Object.entries(raw as Record<string, unknown>)) {
+    if (!val || typeof val !== "object") continue
+    const row = val as Record<string, unknown>
+    if (typeof row.question !== "string" || !row.question.trim()) continue
+    const checkKind =
+      row.checkKind === "build" || row.checkKind === "code" ? row.checkKind : "quiz"
+    const options = Array.isArray(row.options)
+      ? row.options.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+      : []
+    out[cardId] = {
+      checkKind,
+      question: row.question.trim(),
+      options,
+    }
+  }
+  return out
+}
+
 export function parseRoadmapStatePayload(raw: unknown): RoadmapStatePayload {
   const obj = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>
   const rawCards = Array.isArray(obj.cards) ? obj.cards : []
@@ -93,6 +123,9 @@ export function parseRoadmapStatePayload(raw: unknown): RoadmapStatePayload {
   return {
     role: typeof obj.role === "string" ? obj.role : null,
     isEditor: obj.is_editor === true,
+    canUseSoloCheck: obj.can_use_solo_check === true,
+    isSchoolStudent: obj.is_school_student === true,
+    soloChecks: mapSoloChecks(obj.solo_checks),
     cards,
     progress: mapRpcProgress(obj.progress),
     savedRanks: mapRpcSavedRanks(obj.saved_ranks),

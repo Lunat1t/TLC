@@ -161,3 +161,24 @@ test("checkInstructionGateWithClient fails closed on auth/profile outage and kee
     { allowed: true, migrationPending: true },
   )
 })
+
+test("checkInstructionGateWithClient maps subscription_required to 403", async () => {
+  const client = mockClient({
+    userId: "student-free",
+    profile: { role: "student", onboarding_complete: true },
+    canPublish: false,
+    accessData: {
+      exists: true,
+      allowed: false,
+      reason: "subscription_required",
+      required_rank: 0,
+      required_kit: "spike",
+    },
+  })
+  const res = await checkInstructionGateWithClient(client, "spike-prime-0045")
+  assert.equal(res.allowed, false)
+  if (!res.allowed) {
+    assert.equal(res.status, 403)
+    assert.equal(res.code, "subscription_required")
+  }
+})

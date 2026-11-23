@@ -9,6 +9,8 @@ import {
 } from "../src/lib/instructions/pdf-range.ts"
 import {
   calculateCanvasFitScale,
+  calculateReaderScale,
+  calculateCanvasPixelRatio,
   clampPageNumber,
   normalizeReaderUserId,
   normalizeRotation,
@@ -173,4 +175,18 @@ test("createBoundedRangeReadableStream skips empty chunks without stalling and s
   }
   const combined = new TextDecoder().decode(Buffer.concat(parts))
   assert.equal(combined, "ABCDEFGH")
+})
+
+
+test("whole-page fit respects laptop height, tablet orientation, rotation and width mode", () => {
+  assert.equal(calculateReaderScale(1200, 500, 600, 900, "page"), 500 / 900)
+  assert.equal(calculateReaderScale(740, 850, 600, 900, "page"), 850 / 900)
+  assert.equal(calculateReaderScale(900, 500, 900, 600, "page"), 500 / 600)
+  assert.equal(calculateReaderScale(1200, 500, 600, 900, "width"), 1.8)
+})
+
+test("canvas resolution has a four megapixel budget even at 200% zoom", () => {
+  const ratio = calculateCanvasPixelRatio(2400, 3600, 3)
+  assert.ok(2400 * 3600 * ratio * ratio <= 4_000_001)
+  assert.equal(calculateCanvasPixelRatio(600, 800, 3), 2)
 })

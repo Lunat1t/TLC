@@ -28,6 +28,8 @@ test("middleware gate allows anonymous visitors on /dashboard and /editor withou
   assert.equal(classifyMiddlewareRoute("/editor").guestWorkspacePage, true)
   assert.equal(getAnonymousRedirect("/dashboard"), null)
   assert.equal(getAnonymousRedirect("/editor", "?id=p1"), null)
+  assert.equal(getAnonymousRedirect("/billing"), null)
+  assert.equal(getAnonymousRedirect("/join", "?code=AB12"), null)
 })
 
 test("middleware gate still redirects anonymous visitors on protected routes to /login", () => {
@@ -35,6 +37,7 @@ test("middleware gate still redirects anonymous visitors on protected routes to 
   assert.equal(getAnonymousRedirect("/instructions"), "/login?next=%2Finstructions")
   assert.equal(getAnonymousRedirect("/instructions/abc", "?tab=2"), "/login?next=%2Finstructions%2Fabc%3Ftab%3D2")
   assert.equal(getAnonymousRedirect("/teacher/roadmap"), "/login?next=%2Fteacher%2Froadmap")
+  assert.equal(getAnonymousRedirect("/teacher/school"), "/login?next=%2Fteacher%2Fschool")
   assert.equal(getAnonymousRedirect("/admin/instructions/drive"), "/login?next=%2Fadmin%2Finstructions%2Fdrive")
 })
 

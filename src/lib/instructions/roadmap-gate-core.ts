@@ -7,7 +7,7 @@ export type InstructionGateResult =
   | {
       allowed: false
       status: 401 | 403 | 404
-      code: "unauthenticated" | "rank_locked" | "forbidden" | "not_found"
+      code: "unauthenticated" | "rank_locked" | "subscription_required" | "forbidden" | "not_found"
       message: string
       requiredRank: number
       requiredRankLabel: string
@@ -131,6 +131,20 @@ export function parseInstructionAccessPayload(data: unknown): InstructionGateRes
       requiredKit,
       requiredKitLabel,
       currentRank: 0,
+    }
+  }
+
+  if (row.reason === "subscription_required") {
+    return {
+      allowed: false,
+      status: 403,
+      code: "subscription_required",
+      message: "Для доступа к инструкциям нужна активная подписка или код школы.",
+      requiredRank,
+      requiredRankLabel,
+      requiredKit,
+      requiredKitLabel,
+      currentRank,
     }
   }
 

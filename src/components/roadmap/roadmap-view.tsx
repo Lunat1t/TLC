@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react"
 import { useAccess } from "@/components/auth/access-provider"
+import { SubscriptionGate } from "@/components/billing/subscription-gate"
 import { mapKits, tokenSkills } from "@/lib/map-kits"
 import {
   computeKitRoadmapState,
@@ -62,7 +63,7 @@ function skillShortLabel(id: (typeof tokenSkills)[number]["id"]): string {
 
 export function RoadmapView({ initialKit }: { initialKit?: string }) {
   const router = useRouter()
-  const { userId, canPublish, ready, error: accessError, refreshProfile } = useAccess()
+  const { userId, role, canPublish, canAccessLearning, ready, error: accessError, refreshProfile } = useAccess()
   const [kit, setKitState] = useState<RoadmapKitId>(() =>
     isRoadmapKit(initialKit) ? initialKit : mapKits[0].id
   )
@@ -70,7 +71,11 @@ export function RoadmapView({ initialKit }: { initialKit?: string }) {
   const [loading, setLoading] = useState(true)
   const [migrationPending, setMigrationPending] = useState(false)
   const [loadError, setLoadError] = useState("")
+  const [subscriptionRequired, setSubscriptionRequired] = useState(false)
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null)
+  const [soloAnswer, setSoloAnswer] = useState("")
+  const [soloBusy, setSoloBusy] = useState(false)
+  const [soloFeedback, setSoloFeedback] = useState<{ kind: "error" | "ok"; text: string } | null>(null)
   const ranksDialog = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -86,17 +91,30 @@ export function RoadmapView({ initialKit }: { initialKit?: string }) {
 
   const loadState = useCallback(async () => {
     if (!userId) return
+    if (!canAccessLearning) {
+      setSubscriptionRequired(true)
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setLoadError("")
+    setSubscriptionRequired(false)
     setMigrationPending(false)
     try {
       const { data, error } = await createClient().rpc("tlc_roadmap_state")
       if (error) {
+        if (String(error.message || "").toLowerCase().includes("subscription_required")) {
+          setSubscriptionRequired(true)
+          return
+        }
         if (isMissingRoadmapMigrationError(error)) {
           setMigrationPending(true)
           setPayload({
             role: null,
             isEditor: canPublish,
+            canUseSoloCheck: false,
+            isSchoolStudent: false,
+            soloChecks: {},
             cards: [],
             progress: {},
             savedRanks: { ev3: 0, vex: 0, spike: 0 },
@@ -111,12 +129,17 @@ export function RoadmapView({ initialKit }: { initialKit?: string }) {
     } finally {
       setLoading(false)
     }
-  }, [canPublish, userId])
+  }, [canAccessLearning, canPublish, userId])
 
   useEffect(() => {
     if (!ready || !userId) return
     void loadState()
   }, [ready, userId, loadState])
+
+  useEffect(() => {
+    setSoloAnswer("")
+    setSoloFeedback(null)
+  }, [selectedCardId])
 
   useEffect(() => {
     if (!selectedCardId) return
@@ -158,6 +181,48 @@ export function RoadmapView({ initialKit }: { initialKit?: string }) {
   const hasAnyCards = state.tiers.some((tier) => tier.cards.length > 0)
   const meterScale = Math.max(state.nextThreshold ?? 0, state.totalPoints, 1)
 
+  const soloCheckSpec = selectedEntry ? payload?.soloChecks[selectedEntry.card.id] ?? null : null
+  const showSoloCheck = Boolean(
+    selectedEntry &&
+      payload?.canUseSoloCheck &&
+      !payload?.isSchoolStudent &&
+      selectedEntry.tier.unlocked &&
+      !isRoadmapCardCompleted(selectedEntry.card, payload?.progress[selectedEntry.card.id])
+  )
+
+  async function handleSoloCheckSubmit(answerValue: string) {
+    if (!selectedEntry || soloBusy || !answerValue.trim()) return
+    setSoloBusy(true)
+    setSoloFeedback(null)
+    try {
+      const res = await fetch("/api/roadmap/solo-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cardId: selectedEntry.card.id,
+          answer: answerValue.trim(),
+        }),
+      })
+      const json = (await res.json().catch(() => ({}))) as {
+        ok?: boolean
+        error?: { message?: string }
+      }
+      if (!res.ok || !json.ok) {
+        setSoloFeedback({
+          kind: "error",
+          text: json.error?.message || "Не удалось подтвердить карточку.",
+        })
+        return
+      }
+      setSoloFeedback({ kind: "ok", text: "Карточка зачтена! Ранг и очки обновлены." })
+      await loadState()
+    } catch {
+      setSoloFeedback({ kind: "error", text: "Ошибка сети. Попробуйте ещё раз." })
+    } finally {
+      setSoloBusy(false)
+    }
+  }
+
   if (!ready) {
     return (
       <main className="rm-page">
@@ -192,6 +257,18 @@ export function RoadmapView({ initialKit }: { initialKit?: string }) {
             </button>
           </div>
         </div>
+      </main>
+    )
+  }
+
+  if (subscriptionRequired || (!canAccessLearning && !loading && !migrationPending)) {
+    return (
+      <main className="rm-page">
+        <SubscriptionGate
+          userId={userId}
+          nextPath="/map"
+          canJoinSchool={role !== "parent"}
+        />
       </main>
     )
   }
@@ -538,6 +615,78 @@ export function RoadmapView({ initialKit }: { initialKit?: string }) {
                   <p style={{ margin: 0, fontSize: 13, opacity: 0.75 }}>
                     Инструкция ещё не привязана к этой карточке.
                   </p>
+                )}
+
+                {showSoloCheck && (
+                  <section className="rm-solo-check" aria-label="Самопроверка Solo">
+                    <strong style={{ fontSize: 13, display: "block" }}>
+                      Самопроверка (Solo)
+                    </strong>
+                    <p style={{ margin: 0, fontSize: 13, lineHeight: 1.45, opacity: 0.9 }}>
+                      {soloCheckSpec
+                        ? soloCheckSpec.question
+                        : "Выберите набор робототехники этой карточки для зачёта:"}
+                    </p>
+                    {soloCheckSpec && soloCheckSpec.options.length === 0 ? (
+                      <div style={{ display: "grid", gap: 8 }}>
+                        <input
+                          type="text"
+                          className="rm-input"
+                          placeholder="Введите ответ"
+                          value={soloAnswer}
+                          onChange={(e) => setSoloAnswer(e.target.value)}
+                        />
+                        <button
+                          type="button"
+                          className="rm-btn-primary"
+                          disabled={soloBusy || !soloAnswer.trim()}
+                          onClick={() => void handleSoloCheckSubmit(soloAnswer)}
+                        >
+                          {soloBusy ? "Проверяем…" : "Проверить ответ"}
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: "grid", gap: 8 }}>
+                        <div className="rm-solo-options">
+                          {(soloCheckSpec?.options.length
+                            ? soloCheckSpec.options.map((opt) => ({ value: opt, label: opt }))
+                            : mapKits.map((k) => ({ value: k.id, label: k.label }))
+                          ).map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              className={soloAnswer === opt.value ? "rm-btn-primary" : "rm-btn-secondary"}
+                              style={{ minHeight: 44 }}
+                              disabled={soloBusy}
+                              onClick={() => setSoloAnswer(opt.value)}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          className="rm-btn-primary"
+                          disabled={soloBusy || !soloAnswer}
+                          onClick={() => void handleSoloCheckSubmit(soloAnswer)}
+                        >
+                          {soloBusy ? "Проверяем…" : "Зачесть карточку"}
+                        </button>
+                      </div>
+                    )}
+                    {soloFeedback && (
+                      <p
+                        role={soloFeedback.kind === "error" ? "alert" : "status"}
+                        className="rm-banner"
+                        style={{
+                          margin: 0,
+                          color: soloFeedback.kind === "error" ? "#be123c" : "#15803d",
+                        }}
+                      >
+                        {soloFeedback.text}
+                      </p>
+                    )}
+                  </section>
                 )}
               </aside>
             </div>

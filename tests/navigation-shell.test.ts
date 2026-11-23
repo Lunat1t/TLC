@@ -34,6 +34,9 @@ test('top bar visibility covers app pages and excludes editor/auth/public', () =
     '/teacher/roadmap',
     '/admin/instructions/drive',
     '/link-student',
+    '/billing',
+    '/join',
+    '/teacher/school',
   ]) {
     assert.equal(isNavigableAppPath(path), true, path)
   }
@@ -46,11 +49,11 @@ test('top bar visibility covers app pages and excludes editor/auth/public', () =
 test('plus menu filters extra pages by role and permissions', () => {
   assert.deepEqual(
     getExtraNavPages({ role: 'student', canPublish: false, isAdmin: false }).map((p) => p.path),
-    ['/instructions']
+    ['/instructions', '/billing', '/join']
   )
   assert.deepEqual(
-    getExtraNavPages({ role: 'teacher', canPublish: true, isAdmin: false }).map((p) => p.path),
-    ['/instructions', '/admin/instructions/drive', '/teacher/roadmap']
+    getExtraNavPages({ role: 'teacher', canPublish: true, isAdmin: false, canManageSchool: true }).map((p) => p.path),
+    ['/instructions', '/billing', '/join', '/teacher/school', '/admin/instructions/drive', '/teacher/roadmap']
   )
   assert.deepEqual(
     getExtraNavPages({ role: 'parent', canPublish: false, isAdmin: false }).map((p) => p.path),
@@ -61,8 +64,9 @@ test('plus menu filters extra pages by role and permissions', () => {
     []
   )
   assert.deepEqual(
-    getExtraNavPages({ role: 'parent', canPublish: true, isAdmin: true }).map((p) => [p.path, p.label]),
+    getExtraNavPages({ role: 'parent', canPublish: true, isAdmin: true, canManageSchool: true }).map((p) => [p.path, p.label]),
     [
+      ['/teacher/school', 'Школа и коды'],
       ['/admin/instructions/drive', 'Добавить инструкцию'],
       ['/teacher/roadmap', 'Настроить роадмап'],
     ]

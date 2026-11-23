@@ -57,6 +57,7 @@ export const createClient = async (request: NextRequest) => {
     loginPage,
     uploadPage,
     teacherRoadmapPage,
+    teacherSchoolPage,
     protectedPage,
   } = classifyMiddlewareRoute(path, request.nextUrl.search);
 
@@ -71,7 +72,7 @@ export const createClient = async (request: NextRequest) => {
         if (registerPage || loginPage) {
           return redirect(profile.role === "parent" ? "/settings" : afterLoginPath(request.nextUrl.searchParams.get("next")));
         }
-        if ((uploadPage || teacherRoadmapPage) && profile.role !== "teacher") {
+        if ((uploadPage || teacherRoadmapPage || teacherSchoolPage) && profile.role !== "teacher") {
           const permission = await supabase.rpc("is_instruction_admin");
           if (permission.error) return unavailable();
           if (permission.data !== true) return redirect("/dashboard");

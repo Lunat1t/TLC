@@ -10,6 +10,8 @@ import { signOutFromSupabase } from "@/lib/auth"
 import { NICKNAME_MAX_LENGTH, validateNickname } from "@/lib/account-credentials"
 import { defaults, useWorkspaceSettings } from "@/components/lab/workspace-settings"
 import { createClient } from "@/utils/supabase/client"
+import { JoinSchoolForm } from "@/components/billing/join-school-form"
+import { BILLING_PLANS } from "@/lib/billing/plans"
 
 export default function SettingsPage() {
   const { settings, update, error, ready } = useWorkspaceSettings()
@@ -220,6 +222,32 @@ export default function SettingsPage() {
                   </p>
                 )}
               </form>
+
+              <div className="settings-subscription-card" style={{ display: "grid", gap: 12, paddingTop: 14, borderTop: "1px solid rgba(128,150,180,0.22)" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                  <div>
+                    <strong style={{ display: "block", fontSize: 15 }}>Подписка и школа</strong>
+                    <span style={{ fontSize: 13, opacity: 0.8 }}>
+                      {access.entitlements.isAdmin
+                        ? "Режим администратора"
+                        : access.canAccessLearning
+                          ? `Тариф: ${BILLING_PLANS.find((p) => p.id === access.entitlements.plan)?.name ?? access.entitlements.plan ?? "Активен"}${access.entitlements.orgName ? ` · ${access.entitlements.orgName}` : ""}`
+                          : "Подписка не активна"}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    <Link href="/billing" className="settings-secondary-btn" style={{ minHeight: 44, display: "inline-flex", alignItems: "center", padding: "0 14px" }}>
+                      Тарифы
+                    </Link>
+                    {access.canManageSchool && (
+                      <Link href="/teacher/school" className="settings-secondary-btn" style={{ minHeight: 44, display: "inline-flex", alignItems: "center", padding: "0 14px" }}>
+                        Школа и коды
+                      </Link>
+                    )}
+                  </div>
+                </div>
+                {access.role !== "parent" && <JoinSchoolForm compact={true} />}
+              </div>
 
               <div className="settings-account-actions">
                 <button

@@ -19,13 +19,15 @@ Defines the Next.js pages and route handlers for the public site, robot workspac
 - [Student linking handoff](./link-student/README.md) — Receives a student QR link and passes its token to the profile flow.
 - [Sign-in page](./login/README.md) — Signs in with a TLC login and password.
 - [Account onboarding](./register/README.md) — Runs the Russian or Kazakh registration and profile completion flow.
+- [Billing & plans page](./billing/page.tsx) — Displays `solo`, `school_mini`, and `school_pro` KZT plans and CloudPayments KZ / test checkout.
+- [Join school page](./join/page.tsx) — Redeems school invite codes (`?code=...`).
 - [Workspace settings page](./settings/README.md) — Exposes workspace appearance, panel, clock and account controls.
 - [Teacher pages](./teacher/README.md) — Groups pages for teacher actions on student accounts.
 
 ## Invariants
 
 - The root provider order places `AccountWorkspaceProvider` inside `AccessProvider`, with `AppStartup` around navigation. `layout.tsx:RootLayout`
-- `middleware` bypasses API routes, `/`, `/display-camera`, `/auth/callback` and the manifest. With Supabase configuration present, `/dashboard` and `/editor` allow anonymous guests while authenticated users still enforce onboarding and parent redirects; `/map`, `/instructions`, `/teacher/roadmap` and Drive submission require login. `src/middleware.ts:middleware`, `src/utils/supabase/middleware.ts:createClient`
+- `middleware` bypasses API routes, `/`, `/display-camera`, `/auth/callback` and the manifest. With Supabase configuration present, `/dashboard` and `/editor` allow anonymous guests while authenticated users still enforce onboarding and parent redirects; `/billing` and `/join` are viewable before sign-in; `/map`, `/instructions`, `/teacher/roadmap`, `/teacher/school` and Drive submission require login (and active subscription / org entitlement). `src/middleware.ts:middleware`, `src/utils/supabase/middleware.ts:createClient`
 
 ## Side Effects
 

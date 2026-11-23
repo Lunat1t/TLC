@@ -1,10 +1,11 @@
 export function isApplicationPath(path: string) {
-  return ["/map", "/battle-pass", "/dashboard", "/instructions", "/editor", "/teacher", "/admin", "/link-student"]
+  return ["/map", "/battle-pass", "/dashboard", "/instructions", "/editor", "/teacher", "/admin", "/link-student", "/billing", "/join"]
     .some(base => path === base || path.startsWith(`${base}/`))
 }
 
 export function isGuestWorkspacePath(path: string) {
-  return ["/dashboard", "/editor"].some(base => path === base || path.startsWith(`${base}/`))
+  return ["/dashboard", "/editor", "/billing", "/join"]
+    .some(base => path === base || path.startsWith(`${base}/`))
 }
 
 export function createRouteWarmer(prefetch: (path: string) => void, now = Date.now) {

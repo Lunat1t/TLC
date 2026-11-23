@@ -38,7 +38,6 @@ import {
 } from "@/lib/controller-block-ui"
 import {
   ColorBeamScene,
-  DistanceCompareScene,
   ForceButtonScene,
   ImuTiltScene,
   LightsGlowScene,
@@ -140,7 +139,7 @@ export function ControllerButtonBlock({
 
   return (
     <div className="flex flex-col">
-      <div className="flex flex-nowrap items-center min-h-[58px] px-3.5 gap-2 text-white">
+      <div className="flex flex-nowrap items-center min-h-[58px] px-3 gap-3 text-[#18313b]">
         <span className="inline-flex items-center gap-1.5 text-[15px] font-extrabold whitespace-nowrap tracking-tight shrink-0">
           <Gamepad2 size={16} aria-hidden="true" className="shrink-0 opacity-95" />
           <span>Кнопка</span>
@@ -242,7 +241,7 @@ export function ControllerStopBlock({
 
   return (
     <div className="flex flex-col">
-      <div className="flex flex-nowrap items-center min-h-[64px] px-4 gap-2 text-white">
+      <div className="flex flex-wrap items-center max-w-[var(--row-width)] min-h-[64px] px-3 py-2 gap-3 text-[#18313b]">
         <span
           aria-hidden="true"
           className="w-[28px] h-[28px] shrink-0 rounded-[6px] bg-[#8f2a21] text-white font-black grid place-items-center text-sm shadow-inner"
@@ -257,7 +256,7 @@ export function ControllerStopBlock({
           <div className="flex flex-nowrap items-center min-h-[36px] h-[36px] px-2.5 rounded-[9px] bg-white text-[#18313b] font-black text-xs shadow-xs shrink-0">
             <span className="whitespace-nowrap">Все моторы</span>
           </div>
-        ) : (
+        ) : activePorts.length > 2 ? null : (
           <div className="flex flex-nowrap items-center gap-1.5 shrink-0">
             {activePorts.map((port, idx) => (
               <select
@@ -284,10 +283,10 @@ export function ControllerStopBlock({
         <div ref={menuRef} data-module-picker="true" className="relative shrink-0">
           <button
             type="button"
-            aria-label="Добавить порт для остановки"
+            aria-label={activePorts.length > 2 ? `Изменить порты: ${activePorts.join(", ")}` : "Добавить порт для остановки"}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((prev) => !prev)}
-            className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-full border border-white/55 bg-white/15 hover:bg-white/30 text-white text-lg leading-none font-black grid place-items-center"
+            className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-full border border-white/55 bg-white/15 hover:bg-white/30 text-[#18313b] text-lg leading-none font-black grid place-items-center"
           >
             +
           </button>
@@ -398,7 +397,7 @@ function ModuleCapsuleIconPopover({
   title,
   description,
   icon,
-  iconClassName = "text-white/95",
+  iconClassName = "text-[#18313b]",
   canRemove,
   mandatoryLabel = "Обязательный модуль",
   ariaLabel,
@@ -494,7 +493,7 @@ export function ChassisBlock({
 
   return (
     <div className="flex flex-col">
-      <div className="flex flex-nowrap items-center min-h-[64px] px-3.5 gap-2 text-white">
+      <div className="flex flex-wrap items-center max-w-[var(--row-width)] min-h-[64px] px-3 py-2 gap-3 text-[#18313b]">
         <button
           type="button"
           onClick={onOpenChassis}
@@ -502,7 +501,7 @@ export function ChassisBlock({
           title={chassisConfigured ? "Настройки шасси" : "Настройте шасси"}
           className={`relative shrink-0 min-h-[36px] h-[36px] px-2.5 rounded-[9px] flex items-center justify-center gap-1.5 font-black text-xs whitespace-nowrap transition-colors ${
             chassisConfigured
-              ? "bg-white/20 hover:bg-white/30 text-white border border-white/35"
+              ? "bg-white/20 hover:bg-white/30 text-[#18313b] border border-white/35"
               : "bg-[#fef3c7] hover:bg-[#fde68a] text-[#92400e] border-2 border-[#f59e0b]"
           }`}
         >
@@ -525,7 +524,7 @@ export function ChassisBlock({
                 className={`min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] font-black text-base grid place-items-center transition-colors ${
                   active
                     ? "bg-white text-[#0d3b4c] shadow-sm"
-                    : "bg-white/15 hover:bg-white/30 text-white"
+                    : "bg-white/15 hover:bg-white/30 text-[#18313b]"
                 }`}
               >
                 {opt.icon}
@@ -606,7 +605,7 @@ export function ChassisBlock({
             aria-expanded={menuOpen}
             title="Настроить модули"
             onClick={() => setMenuOpen((prev) => !prev)}
-            className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-full border border-white/55 bg-white/15 hover:bg-white/30 text-white text-lg leading-none font-black grid place-items-center"
+            className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-full border border-white/55 bg-white/15 hover:bg-white/30 text-[#18313b] text-lg leading-none font-black grid place-items-center"
           >
             +
           </button>
@@ -795,7 +794,7 @@ export function SensorBlock({
         data-live-badge={mod}
         aria-label={badge.label}
         title={badge.label}
-        className={`${badge.minWidthClass} h-[22px] text-[11px] font-bold leading-none tabular-nums bg-white/15 px-1.5 rounded-[7px] inline-flex items-center justify-center whitespace-nowrap shrink-0 text-white`}
+        className={`${badge.minWidthClass} h-[22px] text-[11px] font-bold leading-none tabular-nums bg-white/85 px-1.5 rounded-[7px] inline-flex items-center justify-center whitespace-nowrap shrink-0 text-[#18313b]`}
       >
         {badge.kind === "color" ? (
           <span
@@ -818,17 +817,17 @@ export function SensorBlock({
           if ((e.target as HTMLElement).closest("button, select, input")) return
           onStartDrag(e)
         }}
-        className={`flex flex-nowrap items-center text-white ${
+        className={`flex flex-wrap items-center text-[#18313b] ${
           slotted
-            ? "min-h-[42px] h-[42px] px-2 gap-1.5 rounded-full bg-[#4f46e5] cursor-grab active:cursor-grabbing pointer-events-auto"
-            : "min-h-[64px] px-3.5 gap-2"
+            ? "min-h-[48px] max-w-[calc(var(--row-width)-100px)] px-3 gap-3 rounded-xl bg-[#e3e8eb] cursor-grab active:cursor-grabbing pointer-events-auto"
+            : "max-w-[var(--row-width)] min-h-[64px] px-3 py-2 gap-3"
         }`}
       >
         {/* Explicit action badge only on standalone SensorBlock (!slotted) */}
         {!slotted && (
           <span
             data-sensor-action-badge={isOnlyLights ? "lights" : isOnlyReset ? "reset" : "wait"}
-            className="min-h-[36px] h-[36px] px-2.5 rounded-[9px] bg-black/25 text-white font-extrabold text-xs flex items-center gap-1.5 whitespace-nowrap shrink-0"
+            className="min-h-[36px] h-[36px] px-2.5 rounded-[9px] bg-transparent text-[#18313b] font-extrabold text-xs flex items-center gap-1.5 whitespace-nowrap shrink-0"
           >
             {isOnlyLights ? (
               <>
@@ -842,7 +841,7 @@ export function SensorBlock({
               </>
             ) : (
               <>
-                <Hourglass size={14} aria-hidden="true" className="shrink-0 text-indigo-100" />
+                <Hourglass size={14} aria-hidden="true" className="shrink-0 text-indigo-700" />
                 <span>Ждать</span>
               </>
             )}
@@ -923,7 +922,7 @@ export function SensorBlock({
 
         {/* Ultrasonic: threshold */}
         {sensorType === "ultrasonic" && effectiveModules.includes("threshold") && (
-          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 px-1 py-0.5 shrink-0">
+          <div className="flex flex-nowrap items-center gap-1.5 rounded-[12px] bg-black/20 px-2 py-1 shrink-0">
             {renderModulePopoverButton("threshold")}
             {renderLiveBadge("threshold")}
             <button
@@ -933,7 +932,6 @@ export function SensorBlock({
               onClick={() => onChange({ sensorOp: op === "lt" ? "gt" : "lt" })}
               className="min-h-[36px] h-[36px] px-2 rounded-[9px] bg-white text-[#312e81] font-extrabold text-xs flex items-center gap-1 shadow-xs hover:bg-[#eef2ff] whitespace-nowrap"
             >
-              <DistanceCompareScene mode={op} size={14} />
               <span>{getSensorComparisonWord("threshold", op)}</span>
             </button>
             <input
@@ -955,7 +953,7 @@ export function SensorBlock({
 
         {/* Color: color swatch picker */}
         {sensorType === "color" && effectiveModules.includes("color") && (
-          <div ref={colorRef} data-module-picker="true" className="relative flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 px-1 py-0.5 shrink-0">
+          <div ref={colorRef} data-module-picker="true" className="relative flex flex-nowrap items-center gap-1.5 rounded-[12px] bg-black/20 px-2 py-1 shrink-0">
             {renderModulePopoverButton("color")}
             {renderLiveBadge("color")}
             <button
@@ -1015,7 +1013,7 @@ export function SensorBlock({
 
         {/* Color: reflection */}
         {sensorType === "color" && effectiveModules.includes("reflection") && (
-          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 px-1 py-0.5 shrink-0">
+          <div className="flex flex-nowrap items-center gap-1.5 rounded-[12px] bg-black/20 px-2 py-1 shrink-0">
             {renderModulePopoverButton("reflection")}
             {renderLiveBadge("reflection")}
             <button
@@ -1046,7 +1044,7 @@ export function SensorBlock({
 
         {/* Force: pressed */}
         {sensorType === "force" && effectiveModules.includes("pressed") && (
-          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 px-1 py-0.5 shrink-0">
+          <div className="flex flex-nowrap items-center gap-1.5 rounded-[12px] bg-black/20 px-2 py-1 shrink-0">
             {renderModulePopoverButton("pressed")}
             {renderLiveBadge("pressed")}
             <button
@@ -1065,7 +1063,7 @@ export function SensorBlock({
 
         {/* Force: force (N) */}
         {sensorType === "force" && effectiveModules.includes("force") && (
-          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 px-1 py-0.5 shrink-0">
+          <div className="flex flex-nowrap items-center gap-1.5 rounded-[12px] bg-black/20 px-2 py-1 shrink-0">
             {renderModulePopoverButton("force")}
             {renderLiveBadge("force")}
             <button
@@ -1097,7 +1095,7 @@ export function SensorBlock({
 
         {/* IMU: heading */}
         {sensorType === "imu" && effectiveModules.includes("heading") && (
-          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 px-1 py-0.5 shrink-0">
+          <div className="flex flex-nowrap items-center gap-1.5 rounded-[12px] bg-black/20 px-2 py-1 shrink-0">
             {renderModulePopoverButton("heading")}
             {renderLiveBadge("heading")}
             <button
@@ -1128,7 +1126,7 @@ export function SensorBlock({
 
         {/* IMU: tilt */}
         {sensorType === "imu" && effectiveModules.includes("tilt") && (
-          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 px-1 py-0.5 shrink-0">
+          <div className="flex flex-nowrap items-center gap-1.5 rounded-[12px] bg-black/20 px-2 py-1 shrink-0">
             {renderModulePopoverButton("tilt")}
             {renderLiveBadge("tilt")}
             <button
@@ -1168,7 +1166,7 @@ export function SensorBlock({
 
         {/* IMU: reset (chain only) */}
         {sensorType === "imu" && !slotted && effectiveModules.includes("reset") && (
-          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 px-1 py-0.5 shrink-0">
+          <div className="flex flex-nowrap items-center gap-1.5 rounded-[12px] bg-black/20 px-2 py-1 shrink-0">
             {renderModulePopoverButton("reset")}
             <span className="min-h-[36px] h-[36px] px-2 rounded-[9px] bg-white/15 text-xs font-extrabold flex items-center whitespace-nowrap">
               0°
@@ -1178,7 +1176,7 @@ export function SensorBlock({
 
         {/* Lights (ultrasonic & color) */}
         {(sensorType === "ultrasonic" || sensorType === "color") && effectiveModules.includes("lights") && (
-          <div className="flex flex-nowrap items-center gap-1 rounded-[12px] bg-black/20 px-1 py-0.5 shrink-0">
+          <div className="flex flex-nowrap items-center gap-1.5 rounded-[12px] bg-black/20 px-2 py-1 shrink-0">
             {renderModulePopoverButton(
               "lights",
               <Lightbulb
@@ -1209,7 +1207,7 @@ export function SensorBlock({
             aria-label="Добавить модуль датчика"
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((prev) => !prev)}
-            className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-full border border-white/55 bg-white/15 hover:bg-white/30 text-white text-lg leading-none font-black grid place-items-center"
+            className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-full border border-white/55 bg-white/15 hover:bg-white/30 text-[#18313b] text-lg leading-none font-black grid place-items-center"
           >
             +
           </button>
