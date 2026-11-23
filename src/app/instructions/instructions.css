@@ -550,7 +550,6 @@
   .pdf-header-actions { width: 100%; justify-content: flex-end; flex-wrap: wrap; }
   .pdf-btn-label { display: none; }
 }
-.pdf-offline-btn { font-size: 12px; }
 .pdf-status-pill { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 1; }
 .pdf-state-card { width: min(100%, 440px); box-sizing: border-box; }
 @media (max-height: 600px) and (min-width: 601px) {
@@ -565,5 +564,4 @@
 @media (max-width: 600px) {
   .pdf-header-main { width: 100%; flex-basis: auto; }
   .pdf-zoom-wrap { flex: 1 1 100px; }
-  .pdf-offline-btn { flex: 1 1 100%; min-width: 0; }
 }

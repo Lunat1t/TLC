@@ -77,8 +77,7 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
   const [stateReady, setStateReady] = useState(false)
   const [busy, setBusy] = useState(true)
   const [fitMode, setFitMode] = useState<"page" | "width">("page")
-  const [cacheStatus, setCacheStatus] = useState<"idle" | "saving" | "saved" | "error">("idle")
-  const documentGenerationRef = useRef(0)
+  const [loadProgress, setLoadProgress] = useState<number | null>(null)
   const [error, setError] = useState("")
   const [gateBlocked, setGateBlocked] = useState<GateBlockedState | null>(null)
   const [offlineCached, setOfflineCached] = useState(false)
@@ -155,8 +154,6 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
   // Load document (with user-scoped IndexedDB cache + live gate re-check).
   useEffect(() => {
     let alive = true
-    documentGenerationRef.current += 1
-    setCacheStatus("idle")
     let task: ReturnType<typeof import("pdfjs-dist")["getDocument"]> | undefined
 
     preRenderedRef.current.clear()
@@ -166,6 +163,7 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
     setError("")
     setGateBlocked(null)
     setOfflineCached(false)
+    setLoadProgress(null)
 
     const saved = loadStoredReaderState(effectiveUserId, slug)
     setPage(saved.page)
@@ -175,13 +173,21 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
       const loadingTask = lib.getDocument({
         url: `/api/instructions/${encodeURIComponent(slug)}/document`,
         rangeChunkSize: 262144,
-        disableStream: true,
-        disableAutoFetch: true,
       })
       task = loadingTask
-      // Do not call getData here: it forces every range to download before
-      // the user has asked for it. Offline saving is an explicit action.
+      loadingTask.onProgress = (progressData: { loaded: number; total: number }) => {
+        if (!alive) return
+        if (progressData.total > 0) {
+          setLoadProgress(Math.min(100, Math.round((progressData.loaded / progressData.total) * 100)))
+        }
+      }
       const doc = await loadingTask.promise
+      void doc
+        .getData()
+        .then((bytes) => {
+          if (alive) return writeCachedPdfBytes(effectiveUserId, slug, bytes)
+        })
+        .catch(() => {})
       return doc
     }
 
@@ -240,7 +246,6 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
               const cacheTask = lib.getDocument({ data: cachedBytes })
               task = cacheTask
               doc = await cacheTask.promise
-              if (alive) setCacheStatus("saved")
               if (alive && verdict === "offline-allow") setOfflineCached(true)
             } catch {
               await deleteCachedPdfBytes(effectiveUserId, slug)
@@ -259,6 +264,7 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
         setPdf(doc)
         setPage((prev) => clampPageNumber(prev, doc.numPages))
         setStateReady(true)
+        setLoadProgress(100)
         setBusy(false)
       } catch {
         if (!alive) return
@@ -269,24 +275,9 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
 
     return () => {
       alive = false
-      documentGenerationRef.current += 1
       void task?.destroy()
     }
   }, [slug, effectiveUserId, initialUserId, mapHref, retryToken])
-
-  async function saveOffline() {
-    if (!pdf || cacheStatus === "saving") return
-    const generation = documentGenerationRef.current
-    setCacheStatus("saving")
-    try {
-      const bytes = await pdf.getData()
-      if (generation !== documentGenerationRef.current) return
-      const saved = await writeCachedPdfBytes(effectiveUserId, slug, bytes)
-      if (generation === documentGenerationRef.current) setCacheStatus(saved ? "saved" : "error")
-    } catch {
-      if (generation === documentGenerationRef.current) setCacheStatus("error")
-    }
-  }
 
   useEffect(() => {
     setPageDraft(String(page))
@@ -564,16 +555,6 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
             <span className="pdf-btn-label">{activeFullscreen ? "Свернуть" : "Во весь экран"}</span>
           </button>
 
-          <button
-            type="button"
-            className="pdf-tool-btn pdf-offline-btn"
-            disabled={!pdf || cacheStatus === "saving" || cacheStatus === "saved"}
-            onClick={() => void saveOffline()}
-            title="Сохранить инструкцию на этом устройстве для чтения без интернета"
-          >
-            {cacheStatus === "saving" ? "Сохранение…" : cacheStatus === "saved" ? "Сохранено офлайн" : cacheStatus === "error" ? "Повторить сохранение" : "Сохранить офлайн"}
-          </button>
-
           <a
             href={downloadHref}
             className="pdf-tool-btn"
@@ -602,11 +583,14 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
         {!pdf && busy && !error && !gateBlocked && (
           <div className="pdf-state-card" role="status">
             <p>
-              Открытие инструкции…
+              {loadProgress !== null
+                ? `Загрузка инструкции… ${loadProgress}%`
+                : "Открытие инструкции…"}
             </p>
             <div className="pdf-progress-track" aria-hidden="true">
               <div
-                className="pdf-progress-fill is-indeterminate"
+                className={`pdf-progress-fill${loadProgress === null ? " is-indeterminate" : ""}`}
+                style={loadProgress !== null ? { width: `${loadProgress}%` } : undefined}
               />
             </div>
           </div>
