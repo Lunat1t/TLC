@@ -77,7 +77,7 @@ export function Ev3HubIllustration() {
           fill="#FFFFFF"
           fontSize="12"
           fontWeight="900"
-          fontFamily="system-ui, -apple-system, sans-serif"
+          fontFamily="var(--font-ui)"
           letterSpacing="0.06em"
         >
           EV3
@@ -175,7 +175,7 @@ export function SpikeHubIllustration() {
           fill="#64748B"
           fontSize="9.5"
           fontWeight="800"
-          fontFamily="system-ui, -apple-system, sans-serif"
+          fontFamily="var(--font-ui)"
         >
           {port.label}
         </text>

@@ -1,9 +1,19 @@
 import type { Metadata, Viewport } from "next"
+import localFont from "next/font/local"
 import "./globals.css"
 import { StudentNavigation } from "@/components/navigation/student-navigation"
 import { AccountWorkspaceProvider } from "@/components/lab/account-workspace"
 import { AccessProvider } from "@/components/auth/access-provider"
 import { AppStartup } from "@/components/auth/app-startup"
+
+const nunito = localFont({
+  src: [
+    { path: "./fonts/Nunito.woff2", weight: "200 1000", style: "normal" },
+    { path: "./fonts/Nunito-Italic.woff2", weight: "200 1000", style: "italic" },
+  ],
+  variable: "--font-nunito",
+  display: "swap",
+})
 
 export const metadata: Metadata = {
   title: "Brick Studio — программирование роботов",
@@ -27,7 +37,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="ru">
+    <html lang="ru" className={nunito.variable}>
       <body className="min-h-dvh flex flex-col"><AccessProvider><AccountWorkspaceProvider><AppStartup><StudentNavigation>{children}</StudentNavigation></AppStartup></AccountWorkspaceProvider></AccessProvider></body>
     </html>
   )
