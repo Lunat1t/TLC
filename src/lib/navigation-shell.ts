@@ -18,7 +18,6 @@ export interface NavItem {
 export const MAIN_NAV_TABS: readonly NavItem[] = [
   { path: "/dashboard", label: "Рабочий стол", iconKey: "home" },
   { path: "/map", label: "Роадмап", iconKey: "map" },
-  { path: "/settings", label: "Настройки", iconKey: "settings" },
 ]
 
 const TRANSITION_ROUTE_ORDER: readonly string[] = [

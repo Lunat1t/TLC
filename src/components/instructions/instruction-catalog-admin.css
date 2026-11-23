@@ -51,3 +51,5 @@
 .instruction-card-dialog-cover{position:relative}
 .instruction-modal-placeholder{position:absolute;inset:0;display:grid;place-items:center;font-size:75px}
 .instruction-card-dialog-cover img{position:relative;z-index:1}
+
+.instruction-card-title{margin:0;padding:13px 13px 0;font-size:16px;line-height:1.35;font-weight:800;color:#12343e;overflow-wrap:anywhere}

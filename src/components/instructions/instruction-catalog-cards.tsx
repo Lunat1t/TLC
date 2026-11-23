@@ -135,7 +135,7 @@ export function InstructionCatalogCards({ items, nextCursor, kit, query, totalCo
             {coverUrl && <img src={coverUrl} alt="" width={720} height={480} loading={index < 2 ? "eager" : "lazy"} fetchPriority={index === 0 ? "high" : "auto"} decoding="async" onError={(event) => { event.currentTarget.style.display = "none" }} />}
           </div>
           {item.kit === "spike"
-            ? <div className="instruction-card-meta"><strong>{code ? "№ " + code : "SPIKE Prime"}</strong><span>{item.hasPdf ? "PDF" : "Сборка"}</span></div>
+            ? <><h2 className="instruction-card-title">{item.title}</h2><div className="instruction-card-meta"><strong>{code ? "№ " + code : "SPIKE Prime"}</strong><span>{item.hasPdf ? "PDF" : "Сборка"}</span></div></>
             : <div className="instruction-card-copy"><h2>{item.title}</h2><p>{item.summary}</p><div className="instruction-topics">{item.topics.map((topic) => <span key={topic}>{topic}</span>)}</div></div>}
         </>
         return <div className="instruction-admin-shell" key={item.id}>
