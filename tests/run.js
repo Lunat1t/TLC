@@ -20,3 +20,4 @@ import './editor-orientation.test.ts';
 import './navigation-shell.test.ts';
 import './roadmap.test.ts';
 import './pdf-reader.test.ts';
+import './roadmap-gate.test.ts';
