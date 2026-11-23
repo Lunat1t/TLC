@@ -10,7 +10,7 @@ Signs in with a TLC login and password.
 
 ## Invariants
 
-- Successful form sign-in goes to `/profile` when a student link is pending. With no pending link, the exact `/admin/instructions/drive` return path is honored and all other values lead to `/dashboard`. `page.tsx:handleSubmit`
+- Successful form sign-in goes to `/settings` when a student link is pending. With no pending link, the exact `/admin/instructions/drive` return path is honored and all other values lead to `/dashboard`. `page.tsx:handleSubmit`
 
 ## Side Effects
 

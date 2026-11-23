@@ -53,7 +53,7 @@ export default function LoginPage() {
         isError: false,
       })
       const destination = new URLSearchParams(window.location.search).get("next")
-      window.location.replace(sessionStorage.getItem("tlc.pending-student") ? "/profile" : afterLoginPath(destination))
+      window.location.replace(sessionStorage.getItem("tlc.pending-student") ? "/settings" : afterLoginPath(destination))
     } catch (err) {
       setBusy(false)
       setStatus({

@@ -4,9 +4,11 @@ import {
   MAIN_NAV_TABS,
   getExtraNavPages,
   getRoleLabel,
+  getTopbarBrandTarget,
   getRouteTransitionDirection,
   isNavPathActive,
   isNavigableAppPath,
+  shouldShowMainNavTabs,
 } from '../src/lib/navigation-shell.ts'
 
 test('main top bar tabs match agreed routes and labels', () => {
@@ -29,10 +31,7 @@ test('top bar visibility covers app pages including /battle-pass and excludes ed
     '/settings',
     '/instructions',
     '/instructions/123',
-    '/avatar',
-    '/profile',
     '/teacher/roadmap',
-    '/teacher/achievements',
     '/admin/instructions/drive',
     '/link-student',
   ]) {
@@ -47,23 +46,21 @@ test('top bar visibility covers app pages including /battle-pass and excludes ed
 test('plus menu filters extra pages by role and permissions', () => {
   assert.deepEqual(
     getExtraNavPages({ role: 'student', canPublish: false, isAdmin: false }).map((p) => p.path),
-    ['/instructions', '/avatar', '/profile']
+    ['/instructions']
   )
   assert.deepEqual(
     getExtraNavPages({ role: 'teacher', canPublish: true, isAdmin: false }).map((p) => p.path),
-    ['/instructions', '/avatar', '/profile', '/admin/instructions/drive', '/teacher/roadmap', '/teacher/achievements']
+    ['/instructions', '/admin/instructions/drive', '/teacher/roadmap']
   )
   assert.deepEqual(
     getExtraNavPages({ role: 'parent', canPublish: false, isAdmin: false }).map((p) => p.path),
-    ['/profile']
+    []
   )
   assert.deepEqual(
     getExtraNavPages({ role: 'parent', canPublish: true, isAdmin: true }).map((p) => [p.path, p.label]),
     [
-      ['/profile', 'Профиль'],
       ['/admin/instructions/drive', 'Добавить инструкцию'],
       ['/teacher/roadmap', 'Настроить роадмап'],
-      ['/teacher/achievements', 'Прогресс учеников'],
     ]
   )
 })
@@ -87,4 +84,17 @@ test('active path matching and role labels work for subroutes and roles', () => 
   assert.equal(getRoleLabel('parent', false), 'Родитель')
   assert.equal(getRoleLabel('student', true), 'Администратор')
   assert.equal(getRoleLabel(null, false), 'Аккаунт')
+})
+
+test('topbar hides workspace tabs and adjusts brand target for parent and anonymous users', () => {
+  assert.equal(shouldShowMainNavTabs('student'), true)
+  assert.equal(shouldShowMainNavTabs('teacher'), true)
+  assert.equal(shouldShowMainNavTabs('parent'), false)
+  assert.equal(shouldShowMainNavTabs(null), false)
+
+  assert.equal(getTopbarBrandTarget({ userId: 'u1', role: 'student' }).href, '/dashboard')
+  assert.equal(getTopbarBrandTarget({ userId: 'u2', role: 'teacher' }).href, '/dashboard')
+  assert.equal(getTopbarBrandTarget({ userId: 'u3', role: 'parent' }).href, '/settings')
+  assert.equal(getTopbarBrandTarget({ userId: 'u4', role: null }).href, '/settings')
+  assert.equal(getTopbarBrandTarget({ userId: null, role: null }).href, '/login')
 })

@@ -62,9 +62,9 @@ export const createClient = async (request: NextRequest) => {
         .select("onboarding_complete,role").eq("id", userId).maybeSingle();
       if (profileError || !profile) return unavailable();
       if (profile.onboarding_complete) {
-        if (protectedPage && profile.role === "parent") return redirect("/profile");
+        if (protectedPage && profile.role === "parent") return redirect("/settings");
         if (registerPage || loginPage) {
-          return redirect(profile.role === "parent" ? "/profile" : afterLoginPath(request.nextUrl.searchParams.get("next")));
+          return redirect(profile.role === "parent" ? "/settings" : afterLoginPath(request.nextUrl.searchParams.get("next")));
         }
         if ((uploadPage || teacherRoadmapPage) && profile.role !== "teacher") {
           const permission = await supabase.rpc("is_instruction_admin");

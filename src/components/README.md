@@ -2,7 +2,7 @@
 
 ## Overview
 
-React-компоненты страниц TLC. Основная оболочка связывает состояние аккаунта, рабочее место, запуск приложения, навигацию и уведомления о достижениях. [src/app/layout.tsx](../app/layout.tsx)
+React-компоненты страниц TLC. Основная оболочка связывает состояние аккаунта, рабочее место, запуск приложения и навигацию. [src/app/layout.tsx](../app/layout.tsx)
 
 ## Interface
 
@@ -12,13 +12,13 @@ React-компоненты страниц TLC. Основная оболочка
 - Карточки каталога и постраничный PDF описаны в [instructions](./instructions/README.md).
 - Настройки аккаунта, доска, обои и напарник описаны в [lab](./lab/README.md).
 - Оболочка и каталог приложений описаны в [navigation](./navigation/README.md).
-- Аватар, аксессуар и уведомления о достижениях описаны в [profile](./profile/README.md).
+- SVG-аватар и индикатор серии описаны в [profile](./profile/README.md).
 - Базовые элементы, круговое меню и анимированный орб описаны в [ui](./ui/README.md).
 
 ## Invariants
 
 - `GoogleSignIn` активирует кнопку только после ответа с `external.google === true` и блокирует её во время входа. [google-signin.tsx](./google-signin.tsx)
-- `RootLayout` монтирует `AccessProvider` снаружи `AccountWorkspaceProvider`. Затем `AppStartup` оборачивает `StudentNavigation` и `AchievementNotifier`. [src/app/layout.tsx](../app/layout.tsx)
+- `RootLayout` монтирует `AccessProvider` снаружи `AccountWorkspaceProvider`. Затем `AppStartup` оборачивает `StudentNavigation`. [src/app/layout.tsx](../app/layout.tsx)
 
 ## Side Effects
 

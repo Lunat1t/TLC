@@ -30,10 +30,6 @@ const nextConfig = {
         destination: '/login',
       },
       {
-        source: '/avatar.html',
-        destination: '/avatar',
-      },
-      {
         source: '/editor.html',
         destination: '/editor',
       },

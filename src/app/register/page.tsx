@@ -106,7 +106,7 @@ export default function RegisterPage() {
         try { localStorage.setItem("tlc.learning-interests", JSON.stringify(selectedCourses)) } catch {}
       }
       // Reload the route tree after the session cookie and profile are ready.
-      window.location.replace(profile.role === "parent" ? "/profile" : "/dashboard")
+      window.location.replace(profile.role === "parent" ? "/settings" : "/dashboard")
     } catch (e) {
       setError(e instanceof Error ? e.message : t("Не удалось создать аккаунт. Попробуй ещё раз.", "Аккаунт жасау мүмкін болмады. Қайта көр."))
       setBusy(false)

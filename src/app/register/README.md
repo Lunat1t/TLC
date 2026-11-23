@@ -11,7 +11,7 @@ Runs the Russian or Kazakh registration and profile completion flow.
 
 ## Invariants
 
-- Supports `student`, `teacher` and `parent`. Parents skip the courses and age steps and go to `/profile` after success. Students and teachers go to `/dashboard`. Names and passwords go through the credential validators, and a supplied age must be 1–120. `page.tsx:RegisterPage`, `page.tsx:next`
+- Supports `student`, `teacher` and `parent`. Parents skip the courses and age steps and go to `/settings` after success. Students and teachers go to `/dashboard`. Names and passwords go through the credential validators, and a supplied age must be 1–120. `page.tsx:RegisterPage`, `page.tsx:next`
 
 ## Side Effects
 

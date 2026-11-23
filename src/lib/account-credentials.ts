@@ -15,3 +15,14 @@ export function validateAccountPassword(password: string): string {
   if (new TextEncoder().encode(password).length > 72) throw new Error("Пароль слишком длинный: максимум 72 байта.")
   return password
 }
+
+export const NICKNAME_MAX_LENGTH = 60
+
+export function validateNickname(value: string): string {
+  const trimmed = value.trim()
+  if (!trimmed) throw new Error("Укажите имя.")
+  if (trimmed.length > NICKNAME_MAX_LENGTH) {
+    throw new Error(`Имя должно быть не длиннее ${NICKNAME_MAX_LENGTH} символов.`)
+  }
+  return trimmed
+}

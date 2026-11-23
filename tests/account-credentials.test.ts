@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { fullNameLogin, validateAccountPassword } from '../src/lib/account-credentials.ts'
+import { fullNameLogin, NICKNAME_MAX_LENGTH, validateAccountPassword, validateNickname } from '../src/lib/account-credentials.ts'
 
 test('full name login distinguishes surnames and trims input', () => {
   assert.equal(fullNameLogin(' Alua ', ' Serik '), 'Alua_Serik')
@@ -20,4 +20,12 @@ test('new passwords reject PINs and preserve spaces and symbols', () => {
 test('password limit counts UTF-8 bytes for bcrypt', () => {
   assert.equal(validateAccountPassword('я'.repeat(36)).length, 36)
   assert.throws(() => validateAccountPassword('я'.repeat(37)))
+})
+
+test('validateNickname trims whitespace and enforces 1..60 length', () => {
+  assert.equal(validateNickname('  Alua Serik  '), 'Alua Serik')
+  assert.equal(validateNickname('A'.repeat(NICKNAME_MAX_LENGTH)).length, NICKNAME_MAX_LENGTH)
+  assert.throws(() => validateNickname(''))
+  assert.throws(() => validateNickname('   '))
+  assert.throws(() => validateNickname('A'.repeat(NICKNAME_MAX_LENGTH + 1)))
 })

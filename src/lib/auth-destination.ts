@@ -4,7 +4,7 @@ export function afterLoginPath(value: string | null) {
   const path = new URL(value, "https://studio.invalid")
   if (path.origin !== "https://studio.invalid") return "/dashboard"
   if (
-    ["/map", "/dashboard", "/editor", "/instructions", "/admin/instructions/drive", "/teacher/achievements", "/avatar", "/profile"].includes(path.pathname)
+    ["/map", "/dashboard", "/editor", "/instructions", "/admin/instructions/drive", "/settings"].includes(path.pathname)
     || path.pathname.startsWith("/instructions/")
   ) {
     return path.pathname + path.search

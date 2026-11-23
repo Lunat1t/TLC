@@ -11,7 +11,7 @@
 
 ## Invariants
 
-- `StudentNavigation` добавляет в каталог инструкции и аватар для ученика или учителя, достижения для учителя и публикацию инструкции при `canPublish`. [student-navigation.tsx](./student-navigation.tsx)
+- `StudentNavigation` добавляет в каталог инструкции для ученика или учителя, а также публикацию и настройку роадмапа при `canPublish`. [student-navigation.tsx](./student-navigation.tsx)
 - `AppLauncher` закрывается при смене маршрута, выборе пункта и по Escape. Новый клик по кнопке каталога сбрасывает поисковую строку. [app-launcher.tsx](./app-launcher.tsx)
 
 ## Side Effects

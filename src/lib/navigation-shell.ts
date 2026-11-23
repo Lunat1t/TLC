@@ -4,10 +4,7 @@ export type NavIconKey =
   | "battle-pass"
   | "settings"
   | "instructions"
-  | "avatar"
-  | "profile"
   | "add-instruction"
-  | "achievements"
   | "roadmap-admin"
 
 export interface NavItem {
@@ -29,10 +26,7 @@ const TRANSITION_ROUTE_ORDER: readonly string[] = [
   "/battle-pass",
   "/settings",
   "/instructions",
-  "/avatar",
-  "/profile",
   "/teacher/roadmap",
-  "/teacher/achievements",
   "/admin/instructions/drive",
   "/link-student",
 ]
@@ -43,8 +37,6 @@ const APP_PAGE_PREFIXES: readonly string[] = [
   "/battle-pass",
   "/settings",
   "/instructions",
-  "/avatar",
-  "/profile",
   "/teacher",
   "/admin",
   "/link-student",
@@ -63,17 +55,13 @@ export function isNavPathActive(currentPath: string, targetPath: string): boolea
 export function getExtraNavPages(access: {
   role: string | null
   canPublish: boolean
-  isAdmin: boolean
+  isAdmin?: boolean
 }): NavItem[] {
-  const { role, canPublish, isAdmin } = access
+  const { role, canPublish } = access
   const items: NavItem[] = []
   if (role === "student" || role === "teacher") {
-    items.push(
-      { path: "/instructions", label: "Инструкции", iconKey: "instructions" },
-      { path: "/avatar", label: "Персонажи", iconKey: "avatar" }
-    )
+    items.push({ path: "/instructions", label: "Инструкции", iconKey: "instructions" })
   }
-  items.push({ path: "/profile", label: "Профиль", iconKey: "profile" })
   if (canPublish) {
     items.push(
       {
@@ -87,13 +75,6 @@ export function getExtraNavPages(access: {
         iconKey: "roadmap-admin",
       }
     )
-  }
-  if (role === "teacher" || isAdmin) {
-    items.push({
-      path: "/teacher/achievements",
-      label: isAdmin ? "Прогресс учеников" : "Достижения учеников",
-      iconKey: "achievements",
-    })
   }
   return items
 }
@@ -114,6 +95,23 @@ export function getRouteTransitionDirection(
   const nextIndex = resolveRouteOrderIndex(nextPath)
   if (prevIndex === -1 || nextIndex === -1 || prevIndex === nextIndex) return 0
   return nextIndex > prevIndex ? 1 : -1
+}
+
+export function shouldShowMainNavTabs(role: string | null): boolean {
+  return Boolean(role && role !== "parent")
+}
+
+export function getTopbarBrandTarget(access: {
+  userId: string | null
+  role: string | null
+}): { href: string; label: string } {
+  if (shouldShowMainNavTabs(access.role)) {
+    return { href: "/dashboard", label: "Brick Studio — Рабочий стол" }
+  }
+  if (access.userId) {
+    return { href: "/settings", label: "Brick Studio — Настройки" }
+  }
+  return { href: "/login", label: "Brick Studio — Вход" }
 }
 
 export function getRoleLabel(role: string | null, isAdmin: boolean): string {

@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next"
 import "./globals.css"
 import { StudentNavigation } from "@/components/navigation/student-navigation"
-import { AchievementNotifier } from "@/components/profile/achievement-notifier"
 import { AccountWorkspaceProvider } from "@/components/lab/account-workspace"
 import { AccessProvider } from "@/components/auth/access-provider"
 import { AppStartup } from "@/components/auth/app-startup"
@@ -29,7 +28,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
-      <body className="min-h-dvh flex flex-col"><AccessProvider><AccountWorkspaceProvider><AppStartup><StudentNavigation>{children}</StudentNavigation><AchievementNotifier /></AppStartup></AccountWorkspaceProvider></AccessProvider></body>
+      <body className="min-h-dvh flex flex-col"><AccessProvider><AccountWorkspaceProvider><AppStartup><StudentNavigation>{children}</StudentNavigation></AppStartup></AccountWorkspaceProvider></AccessProvider></body>
     </html>
   )
 }

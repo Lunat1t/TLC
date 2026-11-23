@@ -3,7 +3,7 @@ import test from 'node:test'
 import { createRouteWarmer, isApplicationPath } from '../src/lib/startup.ts'
 
 test('startup applies to app routes without blocking public entry and onboarding', () => {
-  for (const path of ['/dashboard','/battle-pass','/avatar','/profile','/instructions','/instructions/a','/editor','/admin/instructions/drive','/teacher/achievements']) assert.equal(isApplicationPath(path),true,path)
+  for (const path of ['/dashboard','/battle-pass','/instructions','/instructions/a','/editor','/admin/instructions/drive','/teacher/roadmap']) assert.equal(isApplicationPath(path),true,path)
   for (const path of ['/','/trial','/login','/register','/auth/callback','/instructions-public']) assert.equal(isApplicationPath(path),false,path)
 })
 
@@ -25,6 +25,6 @@ test('preload failures are retryable and external URLs are ignored', () => {
   const warmer=createRouteWarmer(()=>{calls++;throw new Error('offline')})
   warmer.warm('https://example.com');warmer.warm('//example.com')
   assert.equal(calls,0)
-  warmer.warm('/avatar');warmer.warm('/avatar')
+  warmer.warm('/map');warmer.warm('/map')
   assert.equal(calls,2)
 })
