@@ -217,6 +217,11 @@ export function createWorkspaceSync(options: { userId: string; tabId: string; fe
     getSnapshot: () => snapshot,
     subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener) } },
     async refresh() { requestRead = true; await synchronize() },
+    async flush() {
+      while (!disposed && (work || pending.size > 0)) {
+        await (work ?? synchronize())
+      }
+    },
     update(section: WorkspaceSection, value: unknown, expected?: unknown) {
       try { stage(section, value, expected); void synchronize().catch(() => {}); return true }
       catch (error) { publish({ error: (error as Error).message }); return false }

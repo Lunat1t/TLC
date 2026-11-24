@@ -280,3 +280,28 @@ test("new workspace transport excludes frozen library and leaves its drafts for 
   assert.equal(local.length, 1)
   client.dispose()
 })
+
+test("workspace flush awaits in-flight saves and skips extra reads when idle", async () => {
+  let reads = 0, puts = 0
+  const client = createWorkspaceSync({ userId: "one", tabId: "tab-a", storage: storage(), sections: ["settings"], fetch: async (_url, init) => {
+    if (!init?.method || init.method === "GET") {
+      reads++
+      return Response.json({ userId: "one", sections: [{ section: "settings", value: { theme: "light" }, revision: 1 }] })
+    }
+    await new Promise(resolve => setTimeout(resolve, 25))
+    puts++
+    return Response.json({ userId: "one", section: "settings", revision: 2 })
+  } })
+  await client.refresh()
+  const readsBeforeFlush = reads
+  await client.flush()
+  assert.equal(reads, readsBeforeFlush)
+
+  assert.equal(client.update("settings", { theme: "dark" }, { theme: "light" }), true)
+  await client.flush()
+  assert.equal(puts, 1)
+  assert.equal(reads, readsBeforeFlush)
+  assert.equal(client.getSnapshot().saving, false)
+  assert.equal(client.getSnapshot().error, "")
+  client.dispose()
+})

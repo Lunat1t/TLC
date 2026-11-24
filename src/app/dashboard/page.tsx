@@ -109,6 +109,8 @@ export default function HomePage() {
   const library = useAccountProjects()
   const projects = library.projects
   const [copyingLocal, setCopyingLocal] = React.useState(false)
+  const [autoImporting, setAutoImporting] = React.useState(false)
+  const autoImportStartedRef = React.useRef<string | null>(null)
   const [notice, setNotice] = React.useState<{
     text: string
     isError: boolean
@@ -160,15 +162,52 @@ export default function HomePage() {
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
+  React.useEffect(() => {
+    if (!library.ready || !library.userId) return
+    const userId = library.userId
+    if (autoImportStartedRef.current === userId) return
+    let flagged = false
+    try {
+      flagged = sessionStorage.getItem("tlc.auto-import-local") === userId
+    } catch {
+      flagged = false
+    }
+    if (!flagged) return
+    autoImportStartedRef.current = userId
+    if (library.localCount === 0) {
+      try { sessionStorage.removeItem("tlc.auto-import-local") } catch {}
+      return
+    }
+    setAutoImporting(true)
+    void library.copyLocalPrograms({ clearLocal: true }).then((count) => {
+      try { sessionStorage.removeItem("tlc.auto-import-local") } catch {}
+      if (count > 0) {
+        setNotice({ text: `Перенесено в аккаунт: ${countLabel(count)}.`, isError: false })
+      }
+    }).catch((error) => {
+      setNotice({ text: error instanceof Error ? error.message : "Не удалось перенести локальные программы.", isError: true })
+    }).finally(() => {
+      setAutoImporting(false)
+    })
+  }, [library.ready, library.userId, library.localCount, library.copyLocalPrograms])
+
   async function copyLocalPrograms() {
-    if (copyingLocal || !window.confirm("Скопировать программы этого браузера в текущий аккаунт? На общем устройстве убедитесь, что это ваши программы. Исходные файлы останутся в браузере.")) return
+    if (copyingLocal) return
     setCopyingLocal(true)
     try {
-      const count = await library.copyLocalPrograms()
-      setNotice({ text: `Скопировано в аккаунт: ${countLabel(count)}.`, isError: false })
+      const count = await library.copyLocalPrograms({ clearLocal: true })
+      setNotice({
+        text: count > 0 ? `Перенесено в аккаунт: ${countLabel(count)}.` : "Локальные программы уже есть в аккаунте.",
+        isError: false,
+      })
     } catch (error) {
-      setNotice({ text: error instanceof Error ? error.message : "Не удалось скопировать программы.", isError: true })
+      setNotice({ text: error instanceof Error ? error.message : "Не удалось перенести программы.", isError: true })
     } finally { setCopyingLocal(false) }
+  }
+
+  async function dismissLocalImport() {
+    if (copyingLocal) return
+    await library.dismissLocalImport()
   }
 
   const selectedProject = React.useMemo(
@@ -291,12 +330,37 @@ export default function HomePage() {
       <div className="home-content">
         <main className="home-main">
           <div className="mb-4 flex flex-wrap items-center gap-3 text-sm" aria-label="Хранилище программ">
-            <span role="status">{library.error || (!library.ready ? "Загружаем программы…" : library.userId ? library.saving ? "Сохраняем в облако…" : "Программы в вашем аккаунте" : "Программы хранятся только в этом браузере")}</span>
-            {library.userId && library.localCount > 0 && <button type="button" className="home-import" disabled={!library.ready || copyingLocal} onClick={() => void copyLocalPrograms()}>
-              {copyingLocal ? "Копируем…" : `Скопировать программы браузера в аккаунт (${library.localCount})`}
-            </button>}
-            {library.hasLocalBackup && <button type="button" className="home-import" onClick={() => downloadBackup(library.downloadLocalRaw())}>Скачать программы браузера</button>}
+            <span role="status">{library.error || (!library.ready ? "Загружаем программы…" : library.userId ? (library.saving || autoImporting) ? "Сохраняем в облако…" : "Программы в вашем аккаунте" : "Программы хранятся только в этом браузере")}</span>
           </div>
+          {library.userId && library.ready && library.localCount > 0 && !autoImporting && (
+            <div
+              role="region"
+              aria-label="Перенос программ с этого устройства"
+              className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-slate-900"
+            >
+              <span>
+                На этом устройстве есть {countLabel(library.localCount)}. Перенести их в ваш аккаунт?
+              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className="rounded-lg bg-[#087996] px-3.5 py-2 text-xs font-bold text-white hover:bg-[#055a70] disabled:opacity-50"
+                  disabled={copyingLocal}
+                  onClick={() => void copyLocalPrograms()}
+                >
+                  {copyingLocal ? "Переносим…" : "Перенести"}
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border border-sky-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-sky-100 disabled:opacity-50"
+                  disabled={copyingLocal}
+                  onClick={() => void dismissLocalImport()}
+                >
+                  Пропустить
+                </button>
+              </div>
+            </div>
+          )}
           {library.userId && library.drafts.length > 0 && <details id="drafts" ref={draftsRef} className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm">
             <summary>Несохранённые программы на этом устройстве ({library.drafts.length})</summary>
             <p className="my-2">Можно восстановить правки в аккаунте или скачать отдельную копию. При конфликте с другим устройством копия сохранится здесь.</p>

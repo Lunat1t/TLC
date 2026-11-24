@@ -231,3 +231,30 @@ test("cloud PUT waits for durable journal completion and refuses failed transact
   assert.equal(backend.records.get("p")!.value!.id, "p")
   client.dispose()
 })
+
+test("project flush drains queued program writes before sign-out and skips extra reads when idle", async () => {
+  const backend = server(), journal = createMemoryProjectJournal()
+  const baseFetch = backend.request as typeof fetch
+  let delayed = false
+  const client = createProjectSync({
+    userId: "owner",
+    instanceId: "a",
+    storage: storage(),
+    journal,
+    fetch: async (url, init) => {
+      if (delayed && init?.method === "PUT") await new Promise(resolve => setTimeout(resolve, 25))
+      return baseFetch(url, init)
+    },
+  })
+  await client.refresh()
+  const requestsBeforeIdleFlush = backend.requests.length
+  await client.flush()
+  assert.equal(backend.requests.length, requestsBeforeIdleFlush)
+
+  delayed = true
+  assert.equal(client.update([program("p1")], []), true)
+  await client.flush()
+  assert.equal(backend.records.get("p1")?.value?.id, "p1")
+  assert.equal(client.getSnapshot().saving, false)
+  client.dispose()
+})

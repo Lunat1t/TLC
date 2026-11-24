@@ -8,13 +8,27 @@ import { useRouter } from "next/navigation"
 import { useAccess } from "@/components/auth/access-provider"
 import { signOutFromSupabase } from "@/lib/auth"
 import { NICKNAME_MAX_LENGTH, validateNickname } from "@/lib/account-credentials"
+import { useAccountProjects } from "@/components/lab/account-projects"
+import { useAccountWorkspace } from "@/components/lab/account-workspace"
 import { defaults, useWorkspaceSettings } from "@/components/lab/workspace-settings"
 import { createClient } from "@/utils/supabase/client"
 import { JoinSchoolForm } from "@/components/billing/join-school-form"
 import { BILLING_PLANS } from "@/lib/billing/plans"
 
+function downloadBackupFile(raw: string | null, filename: string) {
+  if (raw === null) return
+  const url = URL.createObjectURL(new Blob([raw], { type: "application/json" }))
+  const link = document.createElement("a")
+  link.href = url
+  link.download = filename
+  link.click()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
 export default function SettingsPage() {
   const { settings, update, error, ready } = useWorkspaceSettings()
+  const workspace = useAccountWorkspace()
+  const library = useAccountProjects()
   const access = useAccess()
   const router = useRouter()
 
@@ -94,6 +108,13 @@ export default function SettingsPage() {
     if (signOutBusy) return
     setSignOutBusy(true)
     try {
+      const flushed = await workspace.flush(5000)
+      if (!flushed.ok) {
+        const confirmed = window.confirm(
+          `${flushed.message || "Не удалось сохранить все изменения в облако."}\n\nНеотправленные изменения останутся в этом браузере. Выйти из аккаунта?`
+        )
+        if (!confirmed) return
+      }
       await signOutFromSupabase(localStorage)
       router.replace("/login")
       router.refresh()
@@ -249,6 +270,36 @@ export default function SettingsPage() {
                 {access.role !== "parent" && <JoinSchoolForm compact={true} />}
               </div>
 
+              <div className="settings-subscription-card" style={{ display: "grid", gap: 12, paddingTop: 14, borderTop: "1px solid rgba(128,150,180,0.22)" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                  <div>
+                    <strong style={{ display: "block", fontSize: 15 }}>Резервная копия программ</strong>
+                    <span style={{ fontSize: 13, opacity: 0.8 }}>
+                      Скачать программы в файл JSON
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    <button
+                      type="button"
+                      className="settings-secondary-btn"
+                      disabled={!library.ready && library.backupRaw() === null}
+                      onClick={() => downloadBackupFile(library.backupRaw() ?? "[]", "tlc-projects-backup.json")}
+                    >
+                      Скачать резервную копию (JSON)
+                    </button>
+                    {library.hasLocalBackup && (
+                      <button
+                        type="button"
+                        className="settings-secondary-btn"
+                        onClick={() => downloadBackupFile(library.downloadLocalRaw(), "tlc-browser-programs-backup.json")}
+                      >
+                        Программы этого браузера
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div className="settings-account-actions">
                 <button
                   type="button"
@@ -256,7 +307,7 @@ export default function SettingsPage() {
                   disabled={signOutBusy}
                   onClick={() => void handleSignOut()}
                 >
-                  {signOutBusy ? "Выходим…" : "Выйти из аккаунта"}
+                  {signOutBusy ? "Сохраняем и выходим…" : "Выйти из аккаунта"}
                 </button>
               </div>
             </div>
@@ -268,6 +319,15 @@ export default function SettingsPage() {
               <Link href="/register" className="settings-secondary-btn settings-register-link">
                 Регистрация
               </Link>
+              {library.hasLocalBackup && (
+                <button
+                  type="button"
+                  className="settings-secondary-btn"
+                  onClick={() => downloadBackupFile(library.downloadLocalRaw(), "tlc-browser-programs-backup.json")}
+                >
+                  Скачать программы браузера (JSON)
+                </button>
+              )}
             </div>
           )}
         </section>

@@ -163,7 +163,7 @@ export function useAccountProjects() {
     return cached.length ? JSON.stringify(cached) : localStorage.getItem(cacheKey(current.store.userId))
   }, [])
 
-  const copyLocalPrograms = useCallback(async (): Promise<number> => {
+  const copyLocalPrograms = useCallback(async (options?: { clearLocal?: boolean }): Promise<number> => {
     const current = latest.current
     if (!current.store.userId || !current.ready) throw new Error("Дождитесь загрузки аккаунта.")
     const source = localStorage.getItem(STORAGE_KEY)
@@ -173,12 +173,40 @@ export function useAccountProjects() {
     const existing = new Set(current.snapshot.projects.map(project => project.id))
     const copies = plannedCopies.filter(project => !existing.has(project.id))
     if (latest.current.store.userId !== current.store.userId) throw new Error("Аккаунт изменился.")
-    await save([...current.snapshot.projects, ...copies], current.snapshot.raw)
+    if (copies.length > 0) {
+      await save([...current.snapshot.projects, ...copies], current.snapshot.raw)
+    }
     const digest = await legacyProjectFingerprint(source), marker = `sha256:${digest}`
     try { localStorage.setItem(importKey(current.store.userId), marker) } catch {}
-    setLocalFingerprint(digest); setImportedRaw(marker)
+    if (options?.clearLocal !== false) {
+      try {
+        if (localStorage.getItem(STORAGE_KEY) === source) {
+          localStorage.removeItem(STORAGE_KEY)
+          localStorage.removeItem(`${STORAGE_KEY}.backup.before-edit`)
+          setLocalRaw(null)
+          setLocalFingerprint(null)
+          fingerprint.current = null
+          window.dispatchEvent(new Event(LOCAL_PROJECTS_CHANGED))
+        }
+      } catch {}
+    } else {
+      setLocalFingerprint(digest)
+    }
+    setImportedRaw(marker)
     return copies.length
   }, [save])
+
+  const dismissLocalImport = useCallback(async (): Promise<void> => {
+    const current = latest.current
+    if (!current.store.userId) return
+    const source = localStorage.getItem(STORAGE_KEY)
+    if (source === null) return
+    const digest = fingerprint.current?.raw === source ? fingerprint.current.value : await legacyProjectFingerprint(source)
+    const marker = `sha256:${digest}`
+    try { localStorage.setItem(importKey(current.store.userId), marker) } catch {}
+    setLocalFingerprint(digest)
+    setImportedRaw(marker)
+  }, [])
 
   const writeDraft = useCallback(async (projectId: string, projects: RobotProject[], baseRaw: string | null): Promise<EditorProjectDraft | null> => {
     const current = latest.current
@@ -223,9 +251,9 @@ export function useAccountProjects() {
   const imported = importedRaw === localRaw || Boolean(localFingerprint && importedRaw === `sha256:${localFingerprint}`)
   return {
     ...snapshot, error, ready, userId: store.userId, saving: store.saving,
-    prepare, save, backupRaw, copyLocalPrograms, drafts: drafts.filter(draft => draft.userId === store.userId), writeDraft, clearDraft, acknowledgeDraft, restoreDraft,
+    prepare, save, backupRaw, copyLocalPrograms, dismissLocalImport, drafts: drafts.filter(draft => draft.userId === store.userId), writeDraft, clearDraft, acknowledgeDraft, restoreDraft,
     localCount: store.userId && !imported ? localCount : 0,
-    hasLocalBackup: localRaw !== null,
+    hasLocalBackup: localRaw !== null && localRaw.trim() !== "[]",
     downloadLocalRaw: () => localStorage.getItem(STORAGE_KEY),
   }
 }

@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 import { useAccess } from "@/components/auth/access-provider"
 import { useRouteWarmup } from "@/components/auth/app-startup"
+import { useAccountWorkspace } from "@/components/lab/account-workspace"
 import { useWorkspaceSettings } from "@/components/lab/workspace-settings"
 import { signOutFromSupabase } from "@/lib/auth"
 import {
@@ -43,7 +44,9 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
   const router = useRouter()
   const access = useAccess()
   const warm = useRouteWarmup()
+  const workspace = useAccountWorkspace()
   const { settings } = useWorkspaceSettings()
+  const [signOutBusy, setSignOutBusy] = useState(false)
   const reduced = useReducedMotion()
 
   const lastCommittedPathRef = useRef<string | null>(null)
@@ -104,10 +107,23 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
   const avatarInitial = nickname.trim().slice(0, 1).toUpperCase() || "B"
 
   async function handleSignOut() {
+    if (signOutBusy) return
     setAccountOpen(false)
-    await signOutFromSupabase(localStorage)
-    router.replace("/login")
-    router.refresh()
+    setSignOutBusy(true)
+    try {
+      const flushed = await workspace.flush(5000)
+      if (!flushed.ok) {
+        const confirmed = window.confirm(
+          `${flushed.message || "Не удалось сохранить все изменения в облако."}\n\nНеотправленные изменения останутся в этом браузере. Выйти из аккаунта?`
+        )
+        if (!confirmed) return
+      }
+      await signOutFromSupabase(localStorage)
+      router.replace("/login")
+      router.refresh()
+    } finally {
+      setSignOutBusy(false)
+    }
   }
 
   const rootStyle: CSSProperties = {
@@ -252,10 +268,11 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
                     className="studio-quick-signout"
                     aria-label="Выйти из аккаунта"
                     title="Выйти"
+                    disabled={signOutBusy}
                     onClick={() => void handleSignOut()}
                   >
                     <LogOut size={15} aria-hidden="true" />
-                    <span>Выйти</span>
+                    <span>{signOutBusy ? "Сохраняем…" : "Выйти"}</span>
                   </button>
 
                   <AnimatePresence>
@@ -291,10 +308,11 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
                           type="button"
                           role="menuitem"
                           className="studio-account-item is-danger"
+                          disabled={signOutBusy}
                           onClick={() => void handleSignOut()}
                         >
                           <LogOut size={17} aria-hidden="true" />
-                          <span>Выйти</span>
+                          <span>{signOutBusy ? "Сохраняем…" : "Выйти"}</span>
                         </button>
                       </motion.div>
                     )}

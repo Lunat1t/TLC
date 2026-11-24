@@ -232,6 +232,11 @@ export function createProjectSync(options: { userId: string; instanceId: string;
     getSnapshot: () => snapshot,
     subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener) } },
     async refresh() { requestRead = true; await synchronize() },
+    async flush() {
+      while (!disposed && (work || pending.size > 0)) {
+        await (work ?? synchronize())
+      }
+    },
     update(projects: RobotProject[], expected?: RobotProject[]) {
       try { stage(projects, expected); void synchronize().catch(() => {}); return true }
       catch (error) { publish({ error: error instanceof Error ? error.message : "Не удалось сохранить программу." }); return false }

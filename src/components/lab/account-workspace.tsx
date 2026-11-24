@@ -7,6 +7,11 @@ import { createProjectSync, type ProjectSyncSnapshot } from "@/lib/project-sync"
 import type { RobotProject } from "@/lib/projects"
 import { createBrowserProjectJournal } from "@/lib/project-journal"
 
+export type WorkspaceFlushResult = {
+  ok: boolean
+  reason?: "timeout" | "error" | "conflict"
+  message?: string
+}
 type Store = {
   userId: string | null
   values: WorkspaceValues
@@ -16,8 +21,9 @@ type Store = {
   update: (section: WorkspaceSection, value: unknown, expectedValue?: unknown) => boolean
   save: (section: WorkspaceSection, value: unknown, expectedValue?: unknown) => Promise<void>
   refresh: () => Promise<void>
+  flush: (timeoutMs?: number) => Promise<WorkspaceFlushResult>
 }
-const Context = createContext<Store>({ userId: null, values: {}, ready: false, error: "", saving: false, update: () => false, save: async () => { throw Error("Рабочее место не загружено.") }, refresh: async () => {} })
+const Context = createContext<Store>({ userId: null, values: {}, ready: false, error: "", saving: false, update: () => false, save: async () => { throw Error("Рабочее место не загружено.") }, refresh: async () => {}, flush: async () => ({ ok: true }) })
 export const useAccountWorkspace = () => useContext(Context)
 
 export function AccountWorkspaceProvider({ children }: { children: ReactNode }) {
@@ -113,6 +119,40 @@ function AccountWorkspaceSession({ userId, accessReady, children }: { userId: st
     }
   }, [userId, update])
   const refresh = useCallback(async () => { await refreshSession.current() }, [])
+  const flush = useCallback(async (timeoutMs = 5000): Promise<WorkspaceFlushResult> => {
+    if (!userId) return { ok: true }
+    const sync = engine.current
+    const prog = projects.current
+    if (!sync && !prog) return { ok: true }
+    if (sync?.getSnapshot().conflicts.length || prog?.getSnapshot().conflicts.length) {
+      return { ok: false, reason: "conflict", message: "Есть несохранённые конфликты версий." }
+    }
+    let timer: number | undefined
+    try {
+      const tasks: Promise<void>[] = []
+      if (sync) tasks.push(sync.flush())
+      if (prog) tasks.push(prog.flush())
+      const outcome = await Promise.race([
+        Promise.all(tasks).then(() => "ok" as const),
+        new Promise<"timeout">(resolve => {
+          timer = window.setTimeout(() => resolve("timeout"), timeoutMs)
+        }),
+      ])
+      if (outcome === "timeout") {
+        return { ok: false, reason: "timeout", message: "Не удалось дождаться отправки всех изменений в облако (превышено время ожидания)." }
+      }
+      return { ok: true }
+    } catch (error) {
+      const hasConflict = Boolean(sync?.getSnapshot().conflicts.length || prog?.getSnapshot().conflicts.length)
+      return {
+        ok: false,
+        reason: hasConflict ? "conflict" : "error",
+        message: error instanceof Error ? error.message : "Не удалось сохранить изменения в облако.",
+      }
+    } finally {
+      if (timer !== undefined) window.clearTimeout(timer)
+    }
+  }, [userId])
   function downloadRecovery() {
     const data = { workspace: engine.current?.backup() ?? { current: state.values }, programs: projects.current?.backup() }
     const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }))
@@ -126,7 +166,7 @@ function AccountWorkspaceSession({ userId, accessReady, children }: { userId: st
     await Promise.allSettled(tasks)
   }
   const error = state.error || (userId ? programs.error || mediaError : "")
-  return <Context.Provider value={{ userId, values: userId ? { ...state.values, projects: programs.projects } : state.values, ready: accessReady && state.ready && (!userId || (programs.ready && initialMediaReady)), error, saving: state.saving || (Boolean(userId) && programs.saving), update, save, refresh }}>
+  return <Context.Provider value={{ userId, values: userId ? { ...state.values, projects: programs.projects } : state.values, ready: accessReady && state.ready && (!userId || (programs.ready && initialMediaReady)), error, saving: state.saving || (Boolean(userId) && programs.saving), update, save, refresh, flush }}>
     {children}
     {userId && error && <div className="workspace-sync-status" role="alert">
       {error}<button onClick={downloadRecovery}>Скачать копию</button>
