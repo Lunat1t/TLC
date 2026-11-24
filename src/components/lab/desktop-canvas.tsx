@@ -3,10 +3,11 @@
 import { Children, cloneElement, isValidElement, createContext, useContext, useEffect, useRef, useState, type ReactElement, type ReactNode } from "react"
 import { createPortal } from "react-dom"
 import { useAccountWorkspace } from "./account-workspace"
+import { workspaceValuesEqual } from "@/lib/workspace-sync"
 
 type Point = { desktop?:number; x: number; y: number; z: number; locked?: boolean; title?: string }
 type Positions = Record<string, Point>
-const CanvasContext = createContext<{ positions: Positions; place: (id: string, point: Point) => void; active: boolean }>({ positions: {}, place: () => {}, active: false })
+const CanvasContext = createContext<{ positions: Positions; place: (id: string, point: Point, expected?: { point?: Point }) => void; active: boolean }>({ positions: {}, place: () => {}, active: false })
 export function DesktopCanvas({ userId, children }: { userId: string; children: ReactNode }) {
   const [positions, setPositions] = useState<Positions>({})
   const [active, setActive] = useState(false)
@@ -26,7 +27,7 @@ export function DesktopCanvas({ userId, children }: { userId: string; children: 
       setPositions(clean);setActive(true);setError('')
     }catch{setError('Не удалось загрузить расстановку аккаунта.')}
   },[store.ready,store.values.layout])
-  function place(id:string,point:Point){if(!active)return;const next={...positions,[id]:point};if(store.update('layout',next)){setPositions(next);setError('')}}
+  function place(id:string,point:Point,expected?:{point?:Point}){if(!active)return;if(expected&&!workspaceValuesEqual(expected.point,positions[id])){setError('Положение изменено на другом устройстве. Повторите перемещение из новой позиции.');return}const next={...positions,[id]:point};if(store.update('layout',next,store.values.layout||{})){setPositions(next);setError('')}}
   return <CanvasContext.Provider value={{positions,place,active}}><div className="desktop-canvas" data-swipe-ignore>{children}</div>{error && <p className="desktop-save-error" role="alert">{error}</p>}</CanvasContext.Provider>
 }
 export function DesktopItem({ id, label, initial, children, className = "", mobileInitial, movable = true, onEdit, onDelete }: { onEdit?:()=>void; onDelete?:()=>void; mobileInitial?: [number,number]; movable?: boolean; id: string; label: string; initial: [number,number]; children: ReactNode; className?: string }) {
@@ -39,7 +40,7 @@ export function DesktopItem({ id, label, initial, children, className = "", mobi
   useEffect(()=>()=>cancelHold(),[])
   useEffect(()=>{if(!menuOpen)return;function dismiss(){setMenuOpen(false)};window.addEventListener("pointerdown",dismiss);window.addEventListener("scroll",dismiss,true);return()=>{window.removeEventListener("pointerdown",dismiss);window.removeEventListener("scroll",dismiss,true)}},[menuOpen])
   const node = useRef<HTMLDivElement>(null)
-  const drag = useRef<{ pointer: number; x: number; y: number; startX: number; startY: number; scrollTop: number; pointerX: number; pointerY: number; point: Point; moved: boolean } | null>(null)
+  const drag = useRef<{ pointer: number; x: number; y: number; startX: number; startY: number; scrollTop: number; pointerX: number; pointerY: number; point: Point; base?: Point; moved: boolean } | null>(null)
   const [size, setSize] = useState({w:0,h:0,mobile:false})
   const [moving, setMoving] = useState<Point | null>(null)
   const systemMobile: Record<string,[number,number]> = {clock:[.98,.02],projects:[0,.42],instructions:[.5,.42],profile:[1,.42]}
@@ -77,7 +78,7 @@ export function DesktopItem({ id, label, initial, children, className = "", mobi
       cancelHold();suppressed.current=false
       if(!movable||e.button!==0||(e.target as Element).closest("textarea,input,button:not(.desktop-launch)"))return
       start.current={x:e.clientX,y:e.clientY}
-      if(!window.matchMedia("(max-width:600px)").matches&&active&&!p.locked&&(e.target as Element).closest(".desktop-app-icon,.lab-pin-head,.tic-handle"))drag.current={pointer:e.pointerId,x:e.clientX,y:e.clientY,startX:p.x*size.w,startY:p.y*size.h,scrollTop:node.current?.parentElement?.scrollTop ?? 0,pointerX:e.clientX,pointerY:e.clientY,point:p,moved:false}
+      if(!window.matchMedia("(max-width:600px)").matches&&active&&!p.locked&&(e.target as Element).closest(".desktop-app-icon,.lab-pin-head,.tic-handle"))drag.current={pointer:e.pointerId,x:e.clientX,y:e.clientY,startX:p.x*size.w,startY:p.y*size.h,scrollTop:node.current?.parentElement?.scrollTop ?? 0,pointerX:e.clientX,pointerY:e.clientY,point:p,base:positions[id],moved:false}
       hold.current=setTimeout(()=>{drag.current=null;suppressed.current=true;setMenuOpen(true)},600)
     }}
     onPointerMove={e=>{
@@ -87,7 +88,7 @@ export function DesktopItem({ id, label, initial, children, className = "", mobi
       d.pointerX=e.clientX; d.pointerY=e.clientY
       if(!d.moved){d.moved=true;suppressed.current=true;e.currentTarget.setPointerCapture(e.pointerId);followDrag()}
     }}
-    onPointerUp={e=>{cancelHold();const d=drag.current;if(d?.pointer===e.pointerId){cancelAnimationFrame(frame.current);if(d.moved)place(id,d.point);drag.current=null;setMoving(null);if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId)}}}
+    onPointerUp={e=>{cancelHold();const d=drag.current;if(d?.pointer===e.pointerId){cancelAnimationFrame(frame.current);if(d.moved)place(id,d.point,{point:d.base});drag.current=null;setMoving(null);if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId)}}}
     onPointerCancel={()=>{cancelAnimationFrame(frame.current);cancelHold();drag.current=null;setMoving(null)}}
     onClickCapture={e=>{if(suppressed.current){e.preventDefault();e.stopPropagation();suppressed.current=false}}}
     onKeyDown={e=>{

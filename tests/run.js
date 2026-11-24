@@ -22,3 +22,4 @@ import './roadmap.test.ts';
 import './pdf-reader.test.ts';
 import './roadmap-gate.test.ts';
 import './billing.test.ts';
+import './workspace-sync.test.ts';

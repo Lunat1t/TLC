@@ -9,15 +9,13 @@ import { Label } from "@/components/ui/label"
 import { Download, FolderOpen, Plus, Upload, MoreHorizontal, X } from "lucide-react"
 import "../home.css"
 import { LabBoard } from "@/components/lab/lab-board"
+import { useAccountProjects } from "@/components/lab/account-projects"
 import { HubIllustration } from "@/components/lab/hub-illustrations"
 import {
   HUBS,
   importProject,
-  loadProjects,
   makeProject,
   projectName,
-  saveEditorProjects,
-  STORAGE_KEY,
   type HubType,
   type RobotProject,
 } from "@/lib/projects"
@@ -108,7 +106,9 @@ export default function HomePage() {
   function openProjects() { projectsLauncherRef.current = document.activeElement as HTMLElement | null; setProjectsOpen(true) }
   function closeProjects() { setProjectsOpen(false); projectsLauncherRef.current?.focus() }
   React.useEffect(()=> { if (projectsOpen) projectsCloseRef.current?.focus() }, [projectsOpen])
-  const [projects, setProjects] = React.useState<RobotProject[]>([])
+  const library = useAccountProjects()
+  const projects = library.projects
+  const [copyingLocal, setCopyingLocal] = React.useState(false)
   const [notice, setNotice] = React.useState<{
     text: string
     isError: boolean
@@ -127,18 +127,28 @@ export default function HomePage() {
 
   const fileInputRef = React.useRef<HTMLInputElement | null>(null)
   const storageRawRef = React.useRef<string | null>(null)
+  React.useEffect(() => { storageRawRef.current = library.raw }, [library.raw])
 
-  React.useEffect(() => {
+  function downloadBackup(raw: string | null, filename = "tlc-browser-programs-backup.json") {
+    if (raw === null) return
+    const url = URL.createObjectURL(new Blob([raw], { type: "application/json" }))
+    const link = document.createElement("a")
+    link.href = url
+    link.download = filename
+    link.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+
+  async function copyLocalPrograms() {
+    if (copyingLocal || !window.confirm("Скопировать программы этого браузера в текущий аккаунт? На общем устройстве убедитесь, что это ваши программы. Исходные файлы останутся в браузере.")) return
+    setCopyingLocal(true)
     try {
-      storageRawRef.current = window.localStorage.getItem(STORAGE_KEY)
-      setProjects(loadProjects(window.localStorage))
-    } catch {
-      setNotice({
-        text: "Список проектов не удалось прочитать. Проверьте хранилище браузера.",
-        isError: true,
-      })
-    }
-  }, [])
+      const count = await library.copyLocalPrograms()
+      setNotice({ text: `Скопировано в аккаунт: ${countLabel(count)}.`, isError: false })
+    } catch (error) {
+      setNotice({ text: error instanceof Error ? error.message : "Не удалось скопировать программы.", isError: true })
+    } finally { setCopyingLocal(false) }
+  }
 
   const selectedProject = React.useMemo(
     () => projects.find((p) => p.id === selectedId) || null,
@@ -146,11 +156,11 @@ export default function HomePage() {
   )
 
   async function commit(next: RobotProject[]) {
-    storageRawRef.current = await saveEditorProjects(window.localStorage, next, storageRawRef.current, navigator.locks)
-    setProjects(next)
+    storageRawRef.current = await library.save(next, storageRawRef.current)
   }
 
   function openNewModal() {
+    if (!library.ready) { setNotice({ text: library.error || "Дождитесь загрузки программ.", isError: true }); return }
     setFormError(null)
     setNewOpen(true)
   }
@@ -259,6 +269,31 @@ export default function HomePage() {
     <div className="home-shell">
       <div className="home-content">
         <main className="home-main">
+          <div className="mb-4 flex flex-wrap items-center gap-3 text-sm" aria-label="Хранилище программ">
+            <span role="status">{library.error || (!library.ready ? "Загружаем программы…" : library.userId ? library.saving ? "Сохраняем в облако…" : "Программы в вашем аккаунте" : "Программы хранятся только в этом браузере")}</span>
+            {library.userId && library.localCount > 0 && <button type="button" className="home-import" disabled={!library.ready || copyingLocal} onClick={() => void copyLocalPrograms()}>
+              {copyingLocal ? "Копируем…" : `Скопировать программы браузера в аккаунт (${library.localCount})`}
+            </button>}
+            {library.hasLocalBackup && <button type="button" className="home-import" onClick={() => downloadBackup(library.downloadLocalRaw())}>Скачать программы браузера</button>}
+          </div>
+          {library.userId && library.drafts.length > 0 && <details className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm">
+            <summary>Несохранённые программы на этом устройстве ({library.drafts.length})</summary>
+            <p className="my-2">Можно восстановить правки в аккаунте или скачать отдельную копию. При конфликте с другим устройством копия сохранится здесь.</p>
+            {library.drafts.map(draft => {
+              const program = draft.projects.find(item => item.id === draft.projectId)
+              return <div key={draft.key} className="flex flex-wrap items-center gap-3 py-1">
+                <strong>{program?.name || "Программа"}</strong>
+                <time dateTime={draft.savedAt}>{new Date(draft.savedAt).toLocaleString("ru-RU")}</time>
+                <button type="button" className="home-import" disabled={!library.ready || library.saving} onClick={async () => {
+                  if (!window.confirm("Восстановить эту копию программы в текущем аккаунте? Изменения с другого устройства будут проверены перед сохранением.")) return
+                  try { await library.restoreDraft(draft); setNotice({ text: "Копия восстановлена в аккаунте.", isError: false }) }
+                  catch (error) { setNotice({ text: error instanceof Error ? error.message : "Не удалось восстановить копию.", isError: true }) }
+                }}>Восстановить</button>
+                <button type="button" className="home-import" onClick={() => downloadBackup(JSON.stringify(program || draft.projects), "tlc-recovered-program.robotproj.json")}>Скачать копию</button>
+              </div>
+            })}
+          </details>}
+          {notice && <p role="status" className={`home-notice ${notice.isError ? "home-notice-error" : "home-notice-success"}`}>{notice.text}</p>}
           <LabBoard projects={projects} onProjects={openProjects} onNewProject={openNewModal} onProjectMenu={id=>{const p=projects.find(p=>p.id===id);if(p){setSelectedId(id);setRenameValue(p.name);setRenameError(null);setRenameOpen(true)}}}  onDeleteProject={async id=>{const project=projects.find(p=>p.id===id);if(!project||!window.confirm(`Удалить программу «${project.name}»?`))return;try{await commit(projects.filter(p=>p.id!==id))}catch(e){setNotice({text:e instanceof Error?e.message:"Не удалось удалить программу.",isError:true})}}} />
           {projectsOpen && <section className="desktop-project-window" aria-label="Мои проекты"><header><strong>Мои проекты</strong><button ref={projectsCloseRef} onClick={closeProjects} aria-label="Закрыть окно проектов"><X size={20}/></button></header>
           <div className="home-main-toolbar">
@@ -288,7 +323,6 @@ export default function HomePage() {
               </div>
             ))}
           </nav>
-          {notice && <p role="status" className={`home-notice ${notice.isError ? "home-notice-error" : "home-notice-success"}`}>{notice.text}</p>}
           </section>}
         </main>
       </div>
