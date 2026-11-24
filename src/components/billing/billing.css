@@ -8,8 +8,12 @@
 
 .bs-gate-wrap {
   width: min(640px, 100%);
-  margin: auto;
+  margin: 0 auto;
   padding: 24px 16px;
+  min-height: calc(100dvh - 120px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .bs-card {
