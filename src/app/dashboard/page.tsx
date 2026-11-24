@@ -329,15 +329,17 @@ export default function HomePage() {
     <div className="home-shell">
       <div className="home-content">
         <main className="home-main">
-          <div className="mb-4 flex flex-wrap items-center gap-3 text-sm" aria-label="Хранилище программ">
-            {library.error ? (
-              <span role="status">{library.error}</span>
-            ) : !library.ready ? (
-              <span role="status">Загружаем программы…</span>
-            ) : library.userId && (library.saving || autoImporting) ? (
-              <span role="status">Сохраняем в облако…</span>
-            ) : null}
-          </div>
+          {(library.error || !library.ready || (library.userId && (library.saving || autoImporting))) && (
+            <div className="mb-4 flex flex-wrap items-center gap-3 text-sm" aria-label="Хранилище программ">
+              {library.error ? (
+                <span role="status">{library.error}</span>
+              ) : !library.ready ? (
+                <span role="status">Загружаем программы…</span>
+              ) : (
+                <span role="status">Сохраняем в облако…</span>
+              )}
+            </div>
+          )}
           {library.userId && library.ready && library.localCount > 0 && !autoImporting && (
             <div
               role="region"

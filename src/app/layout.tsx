@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: "#02c7ea",
+  themeColor: "#0d1015",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -28,7 +28,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
-      <body className="min-h-dvh flex flex-col"><AccessProvider><AccountWorkspaceProvider><AppStartup><StudentNavigation>{children}</StudentNavigation></AppStartup></AccountWorkspaceProvider></AccessProvider></body>
+      <body className="min-h-dvh flex flex-col bg-[#0d1015]"><AccessProvider><AccountWorkspaceProvider><AppStartup><StudentNavigation>{children}</StudentNavigation></AppStartup></AccountWorkspaceProvider></AccessProvider></body>
     </html>
   )
 }
