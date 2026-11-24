@@ -523,8 +523,11 @@ function EditorWorkspace() {
   )
 
   const queueProgramSave = React.useCallback((nextProjects: RobotProject[], updated: RobotProject, nextSheets?: SheetState): Promise<boolean> => {
-    let draft: ReturnType<typeof library.writeDraft>
-    try { draft = library.writeDraft(updated.id, nextProjects, storageRawRef.current) }
+    let draft: Promise<Awaited<ReturnType<typeof library.writeDraft>>>
+    try {
+      draft = Promise.resolve(library.writeDraft(updated.id, nextProjects, storageRawRef.current))
+      void draft.catch(() => {}) // The ordered queue reports this failure before attempting a cloud write.
+    }
     catch (error) {
       setSaveMessage({ text: error instanceof Error ? error.message : "Не удалось сохранить резервную копию программы.", isError: true })
       return Promise.resolve(false)
@@ -537,8 +540,9 @@ function EditorWorkspace() {
     setSaveMessage({ text: library.userId ? "Сохраняем в облако…" : "Сохраняем в браузере…", isError: false })
     const task = writeQueueRef.current.catch(() => {}).then(async () => {
       try {
+        const durableDraft = await draft
         storageRawRef.current = await library.save(nextProjects, storageRawRef.current)
-        library.acknowledgeDraft(draft, storageRawRef.current)
+        await library.acknowledgeDraft(durableDraft, storageRawRef.current)
         if (queuedWritesRef.current === 1) setSaveMessage({ text: library.userId ? "Сохранено в облаке" : "Сохранено в браузере", isError: false })
         return true
       } catch (error) {
@@ -1310,7 +1314,10 @@ function EditorWorkspace() {
     const current = editStateRef.current
     if (current) {
       const proposed = { ...current.project, updatedAt: new Date().toISOString(), workspace: { ...current.project.workspace, ...nextState } }
-      try { library.writeDraft(proposed.id, current.projects.map(item => item.id === proposed.id ? proposed : item), storageRawRef.current) }
+      try {
+        void Promise.resolve(library.writeDraft(proposed.id, current.projects.map(item => item.id === proposed.id ? proposed : item), storageRawRef.current))
+          .catch(error => setSaveMessage({ text: error instanceof Error ? error.message : "Не удалось сохранить резервную копию.", isError: true }))
+      }
       catch (error) { setSaveMessage({ text: error instanceof Error ? error.message : "Не удалось сохранить резервную копию.", isError: true }); return }
     }
     latestSheetsRef.current = nextState

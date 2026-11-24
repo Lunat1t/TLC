@@ -8,6 +8,8 @@ import "./lab-board.css"
 import "./desktop.css"
 import { DesktopCanvas, DesktopItem } from "./desktop-canvas"
 import { useAccountWorkspace } from "./account-workspace"
+import { isWorkspaceMediaUrl } from "@/lib/workspace-media"
+import { storeWorkspaceImage } from "@/lib/workspace-media-client"
 import { workspaceValuesEqual } from "@/lib/workspace-sync"
 import { readNoteDrafts, writeNoteDraft, archiveNoteDrafts } from "@/lib/note-drafts"
 import { CameraGame } from "./camera-game"
@@ -24,7 +26,7 @@ type BoardProps = { projects?: RobotProject[]; onProjects?: () => void; onNewPro
 function validItem(value: unknown): value is PinItem {
   if (!value || typeof value !== "object") return false
   const p = value as PinItem
-  return (p.desktop===undefined||(Number.isInteger(p.desktop)&&p.desktop>=0&&p.desktop<6)) && typeof p.id === "string" && ["note", "image", "event", "shortcut", "tic-tac-toe", "camera-rps"].includes(p.kind) && (p.kind !== "shortcut" || (typeof p.url === "string" && safeUrl(p.url) !== null)) && typeof p.text === "string" && p.text.length <= 300 && colors.includes(p.color as typeof colors[number]) && (p.image === undefined || (typeof p.image === "string" && (/^data:image\/(jpeg|png|webp);base64,/.test(p.image)||(/^https:\/\//.test(p.image)&&safeUrl(p.image)!==null)))) && (p.date === undefined || (typeof p.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(p.date)))
+  return (p.desktop===undefined||(Number.isInteger(p.desktop)&&p.desktop>=0&&p.desktop<6)) && typeof p.id === "string" && ["note", "image", "event", "shortcut", "tic-tac-toe", "camera-rps"].includes(p.kind) && (p.kind !== "shortcut" || (typeof p.url === "string" && safeUrl(p.url) !== null)) && typeof p.text === "string" && p.text.length <= 300 && colors.includes(p.color as typeof colors[number]) && (p.image === undefined || (typeof p.image === "string" && (isWorkspaceMediaUrl(p.image)||/^data:image\/(jpeg|png|webp);base64,/.test(p.image)||(/^https:\/\//.test(p.image)&&safeUrl(p.image)!==null)))) && (p.date === undefined || (typeof p.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(p.date)))
 }
 async function imageData(file: File): Promise<string> {
   if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 12_000_000) throw new Error("Выберите JPG, PNG или WebP до 12 МБ.")
@@ -117,7 +119,7 @@ export function PersonalBoard({ userId, projects = [], onProjects, onNewProject,
     }])
   }
   function createNote(){const id=crypto.randomUUID();if(save([...items,{id,kind:'note',text:'',color:'yellow'}]))setFocusNote(id)}
-  async function insertPicture(file?:File){setBusy(true);setError('');try{const image=file?await imageData(file):safeUrl(pictureUrl.trim());if(!image||(!file&&!image.startsWith('https://')))throw Error('Укажите HTTPS-ссылку на картинку.');if(save([...items,{id:crypto.randomUUID(),kind:'image',text:'',color:'blue',image}])){setPictureOpen(false);setPictureUrl('')}}catch(e){setError(e instanceof Error?e.message:'Не удалось открыть картинку.')}finally{setBusy(false);if(pictureRef.current)pictureRef.current.value=''}}
+  async function insertPicture(file?:File){setBusy(true);setError('');try{const image=file?await storeWorkspaceImage(await imageData(file),store.userId):safeUrl(pictureUrl.trim());if(!image||(!file&&!image.startsWith('https://')))throw Error('Укажите HTTPS-ссылку на картинку.');if(save([...items,{id:crypto.randomUUID(),kind:'image',text:'',color:'blue',image}])){setPictureOpen(false);setPictureUrl('')}}catch(e){setError(e instanceof Error?e.message:'Не удалось открыть картинку.')}finally{setBusy(false);if(pictureRef.current)pictureRef.current.value=''}}
   function open(type: PinItem["kind"] = "note") { setEditing(null); setText(""); setUrl(""); setDate(""); setFile(null); setKind(type); setDialog(true) }
   async function add(event: React.FormEvent) {
     event.preventDefault(); setBusy(true); setError("")
@@ -128,7 +130,7 @@ export function PersonalBoard({ userId, projects = [], onProjects, onNewProject,
       if (!editing && items.length >= LIMIT) throw Error("На доске помещается до 18 материалов.")
       if (kind === "shortcut" && !safeUrl(url.trim())) throw Error("Укажите адрес сайта с https:// или путь страницы Brick Studio, например /instructions.")
       if(editing && !workspaceValuesEqual(items.find(p=>p.id===editing),editingBase.current))throw Error('Этот ярлык изменён на другом устройстве. Скопируйте введённый текст и откройте редактирование заново.')
-      const item: PinItem = { id: editing || crypto.randomUUID(), kind, text: text.trim(), color, ...(kind === "shortcut" ? {url:safeUrl(url.trim())!} : {}), ...(kind === "event" ? { date } : {}), ...(kind === "image" && file ? { image: await imageData(file) } : {}) }
+      const item: PinItem = { id: editing || crypto.randomUUID(), kind, text: text.trim(), color, ...(kind === "shortcut" ? {url:safeUrl(url.trim())!} : {}), ...(kind === "event" ? { date } : {}), ...(kind === "image" && file ? { image: await storeWorkspaceImage(await imageData(file),store.userId) } : {}) }
       if (save(editing?items.map(p=>p.id===editing?item:p):[...items, item])) setDialog(false)
     } catch (e) { setError(e instanceof Error ? e.message : "Не удалось добавить материал.") } finally { setBusy(false) }
   }

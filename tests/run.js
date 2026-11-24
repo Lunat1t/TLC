@@ -23,3 +23,7 @@ import './pdf-reader.test.ts';
 import './roadmap-gate.test.ts';
 import './billing.test.ts';
 import './workspace-sync.test.ts';
+
+import './project-sync.test.ts';
+import './workspace-media.test.ts';
+import './project-journal.test.ts';
