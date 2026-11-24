@@ -1,211 +1,87 @@
 "use client"
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react"
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react"
 import { useAccess } from "@/components/auth/access-provider"
-import {
-  readGuestWorkspaceValues,
-  writeGuestWorkspaceSection,
-  type WorkspaceSection,
-  type WorkspaceValues,
-} from "@/lib/guest-workspace"
+import { readGuestWorkspaceValues, writeGuestWorkspaceSection, type WorkspaceSection, type WorkspaceValues } from "@/lib/guest-workspace"
+import { createWorkspaceSync } from "@/lib/workspace-sync"
 
-type Section = WorkspaceSection
-type Values = WorkspaceValues
 type Store = {
-  values: Values
+  userId: string | null
+  values: WorkspaceValues
   ready: boolean
   error: string
   saving: boolean
-  update: (section: Section, value: unknown) => boolean
+  update: (section: WorkspaceSection, value: unknown, expectedValue?: unknown) => boolean
+  save: (section: WorkspaceSection, value: unknown, expectedValue?: unknown) => Promise<void>
+  refresh: () => Promise<void>
 }
-const Context = createContext<Store>({ values: {}, ready: false, error: "", saving: false, update: () => false })
+const Context = createContext<Store>({ userId: null, values: {}, ready: false, error: "", saving: false, update: () => false, save: async () => { throw Error("Рабочее место не загружено.") }, refresh: async () => {} })
 export const useAccountWorkspace = () => useContext(Context)
 
 export function AccountWorkspaceProvider({ children }: { children: ReactNode }) {
-  const { userId } = useAccess()
-  return <AccountWorkspaceSession key={userId || "guest"} userId={userId}>{children}</AccountWorkspaceSession>
+  const { userId, ready } = useAccess()
+  return <AccountWorkspaceSession key={userId || "guest"} userId={userId} accessReady={ready}>{children}</AccountWorkspaceSession>
 }
 
-function AccountWorkspaceSession({ userId, children }: { userId: string | null; children: ReactNode }) {
-  const [values, setValues] = useState<Values>({})
-  const [ready, setReady] = useState(false)
-  const [error, setError] = useState("")
-  const [saving, setSaving] = useState(false)
-  const [recoveryConflict, setRecoveryConflict] = useState(false)
-  const tab = useRef("")
-  const revisions = useRef<Partial<Record<Section, number>>>({})
-  const pending = useRef<Values>({})
-  const alive = useRef(true)
-  const running = useRef(false)
+function AccountWorkspaceSession({ userId, accessReady, children }: { userId: string | null; accessReady: boolean; children: ReactNode }) {
+  const [state, setState] = useState({ values: {} as WorkspaceValues, ready: false, error: "", saving: false, conflicts: [] as WorkspaceSection[] })
+  const engine = useRef<ReturnType<typeof createWorkspaceSync> | null>(null)
+  const guest = useRef<WorkspaceValues>({})
+  const guestReady = useRef(false)
 
   useEffect(() => {
-    try {
-      tab.current = sessionStorage.getItem("tlc-workspace-tab") || crypto.randomUUID()
-      sessionStorage.setItem("tlc-workspace-tab", tab.current)
-    } catch {
-      tab.current = crypto.randomUUID()
-    }
-    alive.current = true
-    const controller = new AbortController()
-
+    if (!accessReady) return
     if (!userId) {
-      setValues(readGuestWorkspaceValues(localStorage))
-      setError("")
-      setReady(true)
-      return () => {
-        alive.current = false
-        controller.abort()
-      }
+      guest.current = readGuestWorkspaceValues(localStorage)
+      guestReady.current = true
+      setState({ values: guest.current, ready: true, error: "", saving: false, conflicts: [] })
+      return () => { guestReady.current = false }
     }
-
-    void (async () => {
-      try {
-        const response = await fetch("/api/workspace", { cache: "no-store", signal: controller.signal })
-        const result = await response.json()
-        if (!response.ok) throw Error(result.error?.message || "Не удалось загрузить рабочее место.")
-        if (result.userId !== userId) throw Error("Аккаунт изменился. Обновите страницу.")
-        const initial: Values = {}
-        for (const row of result.sections) {
-          initial[row.section as Section] = row.value
-          revisions.current[row.section as Section] = row.revision
-        }
-        // Only data already scoped to this account can be migrated from a shared tablet.
-        // Guest (:guest) local storage is intentionally never merged into an authenticated account.
-        for (const section of ["layout", "board"] as const) {
-          if (initial[section] !== undefined) continue
-          try {
-            const raw = localStorage.getItem(`${section === "layout" ? "tlc-desktop-layout-v1" : "tlc-lab-board-v1"}:${userId}`)
-            if (raw) {
-              const value = JSON.parse(raw)
-              if ((section === "board" && Array.isArray(value)) || (section === "layout" && value && typeof value === "object" && !Array.isArray(value))) {
-                initial[section] = value
-                pending.current[section] = value
-              }
-            }
-          } catch {}
-        }
-        const cloudOnly = { ...initial }
-        let conflict = false
-        for (const section of ["settings", "layout", "board"] as const) {
-          try {
-            const raw = localStorage.getItem(`tlc-workspace-recovery:${userId}:${section}:${tab.current}`)
-            if (!raw) continue
-            const saved = JSON.parse(raw)
-            if (saved.revision === (revisions.current[section] || 0)) {
-              initial[section] = saved.value
-              pending.current[section] = saved.value
-            } else {
-              conflict = true
-            }
-          } catch {}
-        }
-        if (!alive.current) return
-        setValues(initial)
-        if (conflict) {
-          setValues(cloudOnly)
-          pending.current = {}
-          setRecoveryConflict(true)
-          setError("На этом устройстве есть несохранённые изменения другой версии. Скачайте копию перед открытием облачной версии.")
-          return
-        }
-        setReady(true)
-        if (Object.keys(pending.current).length) void flush()
-      } catch (e) {
-        if (alive.current && !controller.signal.aborted) {
-          setError(e instanceof Error ? e.message : "Ошибка загрузки рабочего места.")
-        }
-      }
-    })()
-
+    // Each session instance owns its requests. Strict-mode cleanup never revives old requests.
+    // Duplicate tabs inherit sessionStorage; a fresh instance ID prevents shared draft keys.
+    const tabId = crypto.randomUUID()
+    const sync = createWorkspaceSync({ userId, tabId, fetch: window.fetch.bind(window), storage: localStorage })
+    engine.current = sync
+    const unsubscribe = sync.subscribe(() => setState(sync.getSnapshot()))
+    const refresh = () => { void sync.refresh().catch(() => {}) }
+    const visibleRefresh = () => { if (document.visibilityState === "visible") refresh() }
+    refresh()
+    window.addEventListener("focus", refresh)
+    window.addEventListener("online", refresh)
+    document.addEventListener("visibilitychange", visibleRefresh)
+    const timer = window.setInterval(visibleRefresh, 10_000)
     return () => {
-      alive.current = false
-      controller.abort()
+      window.clearInterval(timer)
+      window.removeEventListener("focus", refresh)
+      window.removeEventListener("online", refresh)
+      document.removeEventListener("visibilitychange", visibleRefresh)
+      unsubscribe()
+      sync.dispose()
+      if (engine.current === sync) engine.current = null
     }
-    // The keyed session is replaced completely whenever the account changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId])
+  }, [userId, accessReady])
 
-  async function flush() {
-    if (running.current || !alive.current || !userId) return
-    running.current = true
-    setSaving(true)
-    let flight: { section: Section; value: unknown } | null = null
-    try {
-      while (alive.current && Object.keys(pending.current).length) {
-        const section = Object.keys(pending.current)[0] as Section
-        const value = pending.current[section]
-        delete pending.current[section]
-        flight = { section, value }
-        const response: Response = await fetch("/api/workspace", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, section, value, revision: revisions.current[section] || 0 }),
-        })
-        const result = (await response.json()) as {
-          userId?: string
-          revision?: number
-          error?: { message?: string }
-        }
-        if (!alive.current) return
-        if (!response.ok || result.userId !== userId) {
-          if (pending.current[section] === undefined) pending.current[section] = value
-          throw Error(result.error?.message || "Аккаунт изменился. Обновите страницу.")
-        }
-        revisions.current[section] = result.revision
-        try {
-          if (pending.current[section] !== undefined) {
-            localStorage.setItem(
-              `tlc-workspace-recovery:${userId}:${section}:${tab.current}`,
-              JSON.stringify({ value: pending.current[section], revision: result.revision }),
-            )
-          } else {
-            localStorage.removeItem(`tlc-workspace-recovery:${userId}:${section}:${tab.current}`)
-          }
-        } catch {}
-        flight = null
-      }
-      if (alive.current) setError("")
-    } catch (e) {
-      if (flight && pending.current[flight.section] === undefined) pending.current[flight.section] = flight.value
-      if (alive.current) {
-        setReady(false)
-        setError(e instanceof Error ? e.message : "Не удалось сохранить рабочее место.")
-      }
-    } finally {
-      running.current = false
-      if (alive.current) setSaving(false)
+  const update = useCallback((section: WorkspaceSection, value: unknown, expected?: unknown) => {
+    if (userId) return engine.current?.update(section, value, expected) ?? false
+    if (!guestReady.current) return false
+    if (!writeGuestWorkspaceSection(localStorage, section, value)) {
+      setState(old => ({ ...old, error: "Не удалось сохранить изменения в браузере." }))
+      return false
     }
-  }
-
-  function update(section: Section, value: unknown) {
-    if (!ready) return false
-    if (!userId) {
-      if (!writeGuestWorkspaceSection(localStorage, section, value)) {
-        setError("Не удалось сохранить изменения в браузере.")
-        return false
-      }
-      setError("")
-      setValues(old => ({ ...old, [section]: value }))
-      return true
-    }
-    try {
-      localStorage.setItem(
-        `tlc-workspace-recovery:${userId}:${section}:${tab.current}`,
-        JSON.stringify({ value, revision: revisions.current[section] || 0 }),
-      )
-    } catch {}
-    pending.current[section] = value
-    setValues(old => ({ ...old, [section]: value }))
-    void flush()
+    guest.current = { ...guest.current, [section]: value }
+    setState(old => ({ ...old, values: guest.current, error: "" }))
     return true
-  }
-
-  function downloadRecovery() {
-    const data: Record<string, unknown> = { current: values, pending: pending.current }
-    for (const section of ["settings", "layout", "board"]) {
-      try {
-        data[section] = JSON.parse(localStorage.getItem(`tlc-workspace-recovery:${userId}:${section}:${tab.current}`) || "null")
-      } catch {}
+  }, [userId])
+  const save = useCallback(async (section: WorkspaceSection, value: unknown, expected?: unknown) => {
+    if (!userId) {
+      if (!update(section, value)) throw new Error("Не удалось сохранить изменения в браузере.")
+      return
     }
+    if (!engine.current) throw new Error("Дождитесь загрузки рабочего места.")
+    await engine.current.save(section, value, expected)
+  }, [userId, update])
+  const refresh = useCallback(async () => { await engine.current?.refresh() }, [])
+  function downloadRecovery() {
+    const data = engine.current?.backup() ?? { current: state.values }
     const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }))
     const link = document.createElement("a")
     link.href = url
@@ -213,25 +89,13 @@ function AccountWorkspaceSession({ userId, children }: { userId: string | null; 
     link.click()
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
-
-  return (
-    <Context.Provider value={{ values, ready, error, saving, update }}>
-      {children}
-      {userId && error && (
-        <div className="workspace-sync-status" role="alert">
-          {error}
-          <>
-            <button onClick={downloadRecovery}>Скачать копию</button>
-            {recoveryConflict ? (
-              <button onClick={() => { setRecoveryConflict(false); setError(""); setReady(true) }}>
-                Открыть облачную версию
-              </button>
-            ) : (
-              <button onClick={() => location.reload()}>Повторить загрузку</button>
-            )}
-          </>
-        </div>
-      )}
-    </Context.Provider>
-  )
+  return <Context.Provider value={{ userId, values: state.values, ready: accessReady && state.ready, error: state.error, saving: state.saving, update, save, refresh }}>
+    {children}
+    {userId && state.error && <div className="workspace-sync-status" role="alert">
+      {state.error}
+      <button onClick={downloadRecovery}>Скачать копию</button>
+      {state.conflicts.length ? <button onClick={() => { void engine.current?.useCloud().catch(() => {}) }}>Открыть облачную версию</button>
+        : <button onClick={() => { void refresh().catch(() => {}) }}>Повторить синхронизацию</button>}
+    </div>}
+  </Context.Provider>
 }

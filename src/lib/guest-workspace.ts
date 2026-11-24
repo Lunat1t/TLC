@@ -1,4 +1,4 @@
-export type WorkspaceSection = "settings" | "layout" | "board"
+export type WorkspaceSection = "settings" | "layout" | "board" | "projects"
 export type WorkspaceValues = Partial<Record<WorkspaceSection, unknown>>
 
 export const GUEST_WORKSPACE_PREFIX = "tlc-workspace-guest:v1"
@@ -8,7 +8,7 @@ export function guestWorkspaceKey(section: WorkspaceSection): string {
 }
 
 export function isValidWorkspaceSectionValue(section: WorkspaceSection, value: unknown): boolean {
-  if (section === "board") return Array.isArray(value)
+  if (section === "board" || section === "projects") return Array.isArray(value)
   return Boolean(value && typeof value === "object" && !Array.isArray(value))
 }
 

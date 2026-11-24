@@ -36,11 +36,10 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { useAccountProjects } from "@/components/lab/account-projects"
+import { workspaceValuesEqual } from "@/lib/workspace-sync"
 import {
   HUBS,
-  STORAGE_KEY,
-  prepareEditorProjects,
-  saveEditorProjects,
   type RobotProject,
 } from "@/lib/projects"
 import {
@@ -249,6 +248,13 @@ type DragGesture =
     }
 
 function EditorWorkspace() {
+  const library = useAccountProjects()
+  const projects = library.projects
+  const loadedProjectRef = React.useRef<string | null>(null)
+  const [reloadProject, setReloadProject] = React.useState(0)
+  const writeQueueRef = React.useRef<Promise<unknown>>(Promise.resolve())
+  const queuedWritesRef = React.useRef(0)
+  const editStateRef = React.useRef<{ project: RobotProject; projects: RobotProject[] } | null>(null)
   const searchParams = useSearchParams()
   const projectId = searchParams.get("id")
 
@@ -258,7 +264,6 @@ function EditorWorkspace() {
   const storageRawRef = React.useRef<string | null>(null)
   const saveBusyRef = React.useRef(false)
   const [renaming,setRenaming]=React.useState(false),[nameDraft,setNameDraft]=React.useState("")
-  const [projects, setProjects] = React.useState<RobotProject[]>([])
   const [project, setProject] = React.useState<RobotProject | null>(null)
   const [loadError, setLoadError] = React.useState<string | null>(null)
 
@@ -443,16 +448,21 @@ function EditorWorkspace() {
 
   React.useEffect(() => {
     let cancelled = false
+    if (!library.ready) return
+    const loadKey = `${library.userId || "guest"}:${projectId || ""}`
+    if (loadedProjectRef.current === loadKey) return
     async function load() {
     try {
-      const prepared = await prepareEditorProjects(window.localStorage, projectId || "", navigator.locks)
+      const prepared = await library.prepare(projectId || "")
       if (cancelled) return
+      loadedProjectRef.current = loadKey
       storageRawRef.current = prepared.raw
       if (prepared.readOnly) setSaveMessage({ text: "Только просмотр: безопасное сохранение в этом браузере недоступно.", isError: true })
       const loaded = prepared.projects
-      setProjects(loaded)
       const found = loaded.find((item) => item.id === projectId)
       if (!found) {
+        editStateRef.current = null
+        setProject(null)
         setLoadError("Проект не найден. Выберите проект из списка.")
         setSaveMessage({ text: "Ошибка проекта", isError: true })
         return
@@ -463,9 +473,10 @@ function EditorWorkspace() {
           (s) => s.id === initialSheets.activeSheetId
         ) || initialSheets.sheets[0]
 
-      setProjects(loaded)
+      editStateRef.current = { project: found, projects: loaded }
       setProject(found)
       setSheetState(initialSheets)
+      setSaveMessage({ text: library.userId ? "Загружено из облака" : "Загружено из браузера", isError: false })
       setLoadError(null)
       document.title = `${found.name} — Brick Studio`
 
@@ -487,7 +498,7 @@ function EditorWorkspace() {
     }
     void load()
     return () => { cancelled = true }
-  }, [projectId])
+  }, [projectId, library.ready, library.userId, library.prepare, reloadProject])
 
   const snapshotSheets = React.useCallback(
     (
@@ -511,51 +522,74 @@ function EditorWorkspace() {
     [sheetState, panX, panY, zoom]
   )
 
-  async function renameProgram(){
-    if(!project||saveBusyRef.current)return
-    const name=nameDraft.trim().slice(0,64)
-    if(!name){setSaveMessage({text:"Введите название программы.",isError:true});return}
-    saveBusyRef.current=true
-    try{const updated={...project,name,updatedAt:new Date().toISOString()};const next=projects.map(p=>p.id===project.id?updated:p);storageRawRef.current=await saveEditorProjects(localStorage,next,storageRawRef.current,navigator.locks);setProjects(next);setProject(updated);setRenaming(false);document.title=`${name} — Brick Studio`;setSaveMessage({text:"Название сохранено",isError:false})}catch(e){setSaveMessage({text:e instanceof Error?e.message:"Не удалось сохранить название",isError:true})}finally{saveBusyRef.current=false}
-  }
-
-  const persistSheets = React.useCallback(
-    async (nextState: SheetState, nextLayout?: ControlLayout, nextChassis?: DriveSettings): Promise<boolean> => {
-      if (!project) return false
-      if (saveBusyRef.current) {
-        setSaveMessage({ text: "Сохранение выполняется. Повторите изменение.", isError: true })
-        return false
-      }
-      saveBusyRef.current = true
-      const updated: RobotProject = {
-        ...project,
-        updatedAt: new Date().toISOString(),
-        workspace: {
-          ...project.workspace,
-          ...nextState,
-          ...(nextLayout ? { controlLayout: nextLayout } : {}),
-          ...(nextChassis ? { chassis: nextChassis } : {}),
-        } as unknown as Record<string, unknown>,
-      }
-      const nextProjects = projects.map((p) =>
-        p.id === project.id ? updated : p
-      )
+  const queueProgramSave = React.useCallback((nextProjects: RobotProject[], updated: RobotProject, nextSheets?: SheetState): Promise<boolean> => {
+    let draft: ReturnType<typeof library.writeDraft>
+    try { draft = library.writeDraft(updated.id, nextProjects, storageRawRef.current) }
+    catch (error) {
+      setSaveMessage({ text: error instanceof Error ? error.message : "Не удалось сохранить резервную копию программы.", isError: true })
+      return Promise.resolve(false)
+    }
+    editStateRef.current = { project: updated, projects: nextProjects }
+    setProject(updated)
+    if (nextSheets) setSheetState(nextSheets)
+    queuedWritesRef.current++
+    saveBusyRef.current = true
+    setSaveMessage({ text: library.userId ? "Сохраняем в облако…" : "Сохраняем в браузере…", isError: false })
+    const task = writeQueueRef.current.catch(() => {}).then(async () => {
       try {
-        storageRawRef.current = await saveEditorProjects(window.localStorage, nextProjects, storageRawRef.current, navigator.locks)
-        setProjects(nextProjects)
-        setProject(updated)
-        setSheetState(nextState)
-        setSaveMessage({ text: "Сохранено", isError: false })
+        storageRawRef.current = await library.save(nextProjects, storageRawRef.current)
+        library.acknowledgeDraft(draft, storageRawRef.current)
+        if (queuedWritesRef.current === 1) setSaveMessage({ text: library.userId ? "Сохранено в облаке" : "Сохранено в браузере", isError: false })
         return true
       } catch (error) {
         setSaveMessage({ text: error instanceof Error ? error.message : "Не удалось сохранить", isError: true })
         return false
       } finally {
-        saveBusyRef.current = false
+        queuedWritesRef.current--
+        saveBusyRef.current = queuedWritesRef.current > 0
       }
+    })
+    writeQueueRef.current = task
+    return task
+  }, [library.save, library.userId, library.writeDraft, library.acknowledgeDraft])
+
+  async function renameProgram() {
+    const current = editStateRef.current
+    if (!current) return
+    const name = nameDraft.trim().slice(0, 64)
+    if (!name) { setSaveMessage({ text: "Введите название программы.", isError: true }); return }
+    const updated = { ...current.project, name, updatedAt: new Date().toISOString() }
+    const next = current.projects.map(item => item.id === updated.id ? updated : item)
+    if (await queueProgramSave(next, updated)) {
+      setRenaming(false)
+      document.title = `${name} — Brick Studio`
+    }
+  }
+
+  const persistSheets = React.useCallback(
+    async (nextState: SheetState, nextLayout?: ControlLayout, nextChassis?: DriveSettings): Promise<boolean> => {
+      const current = editStateRef.current
+      if (!current) return false
+      const updated: RobotProject = {
+        ...current.project,
+        updatedAt: new Date().toISOString(),
+        workspace: {
+          ...current.project.workspace,
+          ...nextState,
+          ...(nextLayout ? { controlLayout: nextLayout } : {}),
+          ...(nextChassis ? { chassis: nextChassis } : {}),
+        } as unknown as Record<string, unknown>,
+      }
+      const nextProjects = current.projects.map(item => item.id === updated.id ? updated : item)
+      // Keep a durable draft before reflecting edits or waiting for the network.
+      return queueProgramSave(nextProjects, updated, nextState)
     },
-    [project, projects]
+    [queueProgramSave]
   )
+
+  const remoteProject = library.projects.find(item => item.id === projectId)
+  const remoteChanged = Boolean(library.userId && library.ready && project && !library.saving && !saveBusyRef.current
+    && !workspaceValuesEqual(remoteProject ?? null, project))
 
   const controlLayout = (project?.workspace?.controlLayout as ControlLayout | undefined) || {version:1 as const, areas:[], controls:[]}
   const projectChassis = React.useMemo(() => resolveProjectChassis(project), [project])
@@ -1273,6 +1307,12 @@ function EditorWorkspace() {
           : s
       ),
     }
+    const current = editStateRef.current
+    if (current) {
+      const proposed = { ...current.project, updatedAt: new Date().toISOString(), workspace: { ...current.project.workspace, ...nextState } }
+      try { library.writeDraft(proposed.id, current.projects.map(item => item.id === proposed.id ? proposed : item), storageRawRef.current) }
+      catch (error) { setSaveMessage({ text: error instanceof Error ? error.message : "Не удалось сохранить резервную копию.", isError: true }); return }
+    }
     latestSheetsRef.current = nextState
     setSheetState(nextState)
     setSaveMessage({ text: "Не сохранено…", isError: false })
@@ -1391,8 +1431,17 @@ function EditorWorkspace() {
           ← <span className="hidden xs:inline">Проекты</span>
         </Link>
 
-        {loadError && <button type="button" className="text-xs font-bold text-[#a13620]" onClick={() => {
-          const raw = window.localStorage.getItem(STORAGE_KEY)
+        {library.drafts.some(draft => draft.projectId === projectId) && !library.saving && !saveBusyRef.current && <Link href="/dashboard" className="text-xs font-bold text-[#a13620]">Есть несохранённая копия — восстановить</Link>}
+        {remoteChanged && <button type="button" className="text-xs font-bold text-[#087996]" onClick={() => {
+          if (!window.confirm("Программа изменена на другом устройстве. Загрузить облачную версию? Несохранённые изменения редактора будут заменены.")) return
+          loadedProjectRef.current = null
+          setReloadProject(attempt => attempt + 1)
+        }}>Изменения с другого устройства — загрузить</button>}
+        {(loadError || saveMessage.isError || library.error) && <button type="button" className="text-xs font-bold text-[#a13620]" onClick={() => {
+          const current = editStateRef.current
+          const raw = current ? JSON.stringify(current.projects.map(item => item.id === current.project.id ? {
+            ...current.project, workspace: { ...current.project.workspace, ...latestSheetsRef.current },
+          } : item)) : library.backupRaw()
           if (raw === null) return
           const url = URL.createObjectURL(new Blob([raw], {type:"application/json"}))
           const link = document.createElement("a")
@@ -1400,7 +1449,7 @@ function EditorWorkspace() {
           link.download = "tlc-projects-backup.json"
           link.click()
           setTimeout(() => URL.revokeObjectURL(url), 1000)
-        }}>Скачать исходные проекты</button>}
+        }}>Скачать копию программ</button>}
         <div className="flex items-baseline gap-3 min-w-0">
           {renaming?<form onSubmit={e=>{e.preventDefault();void renameProgram()}} className="flex gap-2 min-w-0"><input autoFocus aria-label="Название программы" className="min-w-0 w-40 border rounded-lg p-2" maxLength={64} value={nameDraft} onChange={e=>setNameDraft(e.target.value)} onKeyDown={e=>{if(e.key==='Escape')setRenaming(false)}}/><button type="submit" aria-label="Сохранить название">✓</button></form>:<button disabled={!project||checking} title="Изменить название" aria-label={`Название программы: ${project?.name||'Проект'}. Изменить`} className="text-[17px] font-black truncate text-left" onClick={()=>{setNameDraft(project?.name||'');setRenaming(true)}}>{project?project.name:loadError?'Проект недоступен':'Проект'} <span aria-hidden="true">✎</span></button>}
           {project && (
@@ -1413,10 +1462,10 @@ function EditorWorkspace() {
         <span
           role="status"
           className={`ml-auto text-xs font-semibold ${
-            saveMessage.isError ? "text-[#b1372c] max-sm:order-last max-sm:w-full" : "hidden whitespace-nowrap text-[#6f8992] sm:inline"
+            (saveMessage.isError || library.error) ? "text-[#b1372c] max-sm:order-last max-sm:w-full" : "hidden whitespace-nowrap text-[#6f8992] sm:inline"
           }`}
         >
-          {saveMessage.text}
+          {library.error || (library.saving ? "Сохраняем…" : !library.ready ? "Загружаем программы…" : saveMessage.text)}
         </span>
 
         <div
