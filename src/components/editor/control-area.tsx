@@ -8,7 +8,6 @@ import {SENSOR_PORTS} from '@/lib/block-registry'
 import {AlertTriangle, Waves} from 'lucide-react'
 import {DirectionButtons, DriveSettingsButton} from './direction-control'
 import {DisplayStreamView} from './display-stream-view'
-import {DistanceSonarCanvas} from './distance-sonar'
 
 const LABELS:Record<string,string>={up:'▲',down:'▼',left:'◀',right:'▶',forward:'▲',backward:'▼',a:'A',b:'B',x:'X',y:'Y',l:'L',r:'R'}
 type Props = {
@@ -155,76 +154,54 @@ export function ControlAreaView({area,controls,attachedPanels,editing,inputActiv
             ×
           </button>
         )}
-                {isDistanceGauge ? (() => {
-          const rawDist = sensorDistances[gaugePort]
-          const simDist = rawDist === null ? null : typeof rawDist === 'number' ? rawDist : 50
-          const shownText = editing
-            ? '-- см'
-            : isLiveRobot
-              ? rawDist === undefined
-                ? '--'
-                : rawDist === null
-                  ? '>200 см'
-                  : `${rawDist} см`
-              : !inputActive
-                ? '--'
-                : simDist === null
-                  ? '>200 см'
-                  : `${simDist} см`
-          const sonarDistance = editing
-            ? null
-            : isLiveRobot
-              ? (typeof rawDist === 'number' ? rawDist : null)
-              : inputActive
-                ? simDist
-                : null
-
-          return (
+                {isDistanceGauge ? (
           <div
             tabIndex={editing ? 0 : -1}
             role={editing ? "button" : undefined}
             aria-label={editing ? `Переместить ${control.label}` : undefined}
             onKeyDown={moveByKey}
             onPointerDown={editing ? event => dragControl(event, control) : undefined}
-            className={`relative flex min-h-0 flex-1 flex-col justify-between gap-1 ${
+            className={`relative flex min-h-0 flex-1 flex-col justify-between gap-1.5 pt-1 ${
               editing ? 'touch-none cursor-grab rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal-700' : ''
             }`}
           >
-            <div className="flex shrink-0 items-center justify-between gap-1.5">
+            <div className="flex items-center justify-between gap-2">
               <div className={`flex items-center gap-1 ${cardError ? 'pl-6' : ''}`}>
-                {editing ? (
-                  <>
-                    <Waves size={15} className="shrink-0 text-[#4f46e5]" aria-hidden="true" />
-                    <select
-                      aria-label="Порт дальномера"
-                      value={gaugePort}
-                      onPointerDown={e => e.stopPropagation()}
-                      onChange={e => onControlChange({ ...control, port: e.target.value })}
-                      className="h-[34px] rounded-lg border border-[#c7d2fe] bg-white px-2 text-xs font-black text-[#18313b] cursor-pointer"
-                    >
-                      {SENSOR_PORTS.map(p => (
-                        <option key={p} value={p}>{p}</option>
-                      ))}
-                    </select>
-                  </>
-                ) : (
-                  <span
-                    aria-label={`Порт дальномера ${gaugePort}`}
-                    className="inline-flex h-6 items-center gap-1 rounded-md border border-[#c7d2fe] bg-[#eef2ff] px-2 text-xs font-black text-[#18313b]"
-                  >
-                    <Waves size={13} className="shrink-0 text-[#4f46e5]" aria-hidden="true" />
-                    {gaugePort}
-                  </span>
-                )}
+                <Waves size={15} className="shrink-0 text-[#4f46e5]" aria-hidden="true" />
+                <select
+                  aria-label="Порт дальномера"
+                  value={gaugePort}
+                  disabled={!editing}
+                  onPointerDown={e => e.stopPropagation()}
+                  onChange={e => onControlChange({ ...control, port: e.target.value })}
+                  className="min-h-[36px] h-[36px] rounded-lg border border-[#c7d2fe] bg-white px-2 text-xs font-black text-[#18313b] cursor-pointer disabled:cursor-default disabled:opacity-90"
+                >
+                  {SENSOR_PORTS.map(p => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
               </div>
-              <span className="text-base font-black tabular-nums leading-none text-[#18313b] whitespace-nowrap">
-                {shownText}
-              </span>
+              {(() => {
+                const rawDist = sensorDistances[gaugePort]
+                const trialVal = typeof rawDist === 'number' ? rawDist : 50
+                const shownText = editing
+                  ? '-- см'
+                  : isLiveRobot
+                    ? rawDist === undefined
+                      ? '--'
+                      : rawDist === null
+                        ? '>200 см'
+                        : `${rawDist} см`
+                    : `${trialVal} см`
+                return (
+                  <span className="text-lg font-black tabular-nums text-[#18313b] whitespace-nowrap">
+                    {shownText}
+                  </span>
+                )
+              })()}
             </div>
 
-            <DistanceSonarCanvas distance={sonarDistance} editing={editing} />
-
-            {!editing && inputActive && !isLiveRobot && (
+            {!editing && inputActive && !isLiveRobot ? (
               <input
                 type="range"
                 min={0}
@@ -234,12 +211,32 @@ export function ControlAreaView({area,controls,attachedPanels,editing,inputActiv
                 value={typeof sensorDistances[gaugePort] === 'number' ? (sensorDistances[gaugePort] as number) : 50}
                 onPointerDown={e => e.stopPropagation()}
                 onChange={e => onSimulateDistance?.(gaugePort, Number(e.target.value))}
-                className="h-6 w-full shrink-0 accent-[#4f46e5] cursor-pointer"
+                className="w-full min-h-[36px] accent-[#4f46e5] cursor-pointer"
               />
+            ) : (
+              (() => {
+                const rawDist = sensorDistances[gaugePort]
+                const activeDist = !editing && isLiveRobot && typeof rawDist === 'number' ? rawDist : null
+                const pct = activeDist === null ? 0 : Math.max(4, Math.min(100, Math.round((activeDist / 200) * 100)))
+                const barColor = activeDist === null
+                  ? '#cbd5e1'
+                  : activeDist < 15
+                    ? '#dc2626'
+                    : activeDist <= 45
+                      ? '#eab308'
+                      : '#16a34a'
+                return (
+                  <div className="h-3 w-full overflow-hidden rounded-full bg-[#e2e8f0]" aria-hidden="true">
+                    <div
+                      className="h-full rounded-full transition-all duration-150"
+                      style={{ width: editing || activeDist === null ? '100%' : `${pct}%`, backgroundColor: barColor }}
+                    />
+                  </div>
+                )
+              })()
             )}
           </div>
-          )
-        })() : isDisplay ? (
+        ) : isDisplay ? (
           <div className="flex min-h-0 flex-1">
             <DisplayStreamView editing={editing} />
           </div>

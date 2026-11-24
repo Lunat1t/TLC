@@ -27,4 +27,3 @@ import './workspace-sync.test.ts';
 import './project-sync.test.ts';
 import './workspace-media.test.ts';
 import './project-journal.test.ts';
-import './distance-sonar.test.ts';
