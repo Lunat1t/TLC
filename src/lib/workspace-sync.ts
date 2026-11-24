@@ -44,8 +44,9 @@ export function mergeWorkspaceSection(section: WorkspaceSection, base: unknown, 
   return { value: arraySection(section) ? Object.values(merged) : merged, conflict: false }
 }
 
-export function createWorkspaceSync(options: { userId: string; tabId: string; fetch: Fetcher; storage: RecoveryStorage }) {
+export function createWorkspaceSync(options: { userId: string; tabId: string; fetch: Fetcher; storage: RecoveryStorage; sections?: WorkspaceSection[] }) {
   const { userId, tabId, storage } = options
+  const sections = options.sections ?? WORKSPACE_SECTIONS
   let snapshot: WorkspaceSnapshot = { values: {}, ready: false, saving: false, error: "", conflicts: [] }
   let confirmed: WorkspaceValues = {}, revisions: Partial<Record<WorkspaceSection, number>> = {}
   const pending = new Map<WorkspaceSection, Pending>()
@@ -98,7 +99,7 @@ export function createWorkspaceSync(options: { userId: string; tabId: string; fe
     const keys = Array.from({ length: storage.length }, (_, i) => storage.key(i)).filter((key): key is string => Boolean(key?.startsWith(prefix)))
     for (const key of keys) {
       const section = key.slice(prefix.length).split(":")[0] as WorkspaceSection
-      if (!WORKSPACE_SECTIONS.includes(section)) continue
+      if (!sections.includes(section)) continue
       const raw = storage.getItem(key)
       if (!raw) continue
       try {
@@ -119,14 +120,14 @@ export function createWorkspaceSync(options: { userId: string; tabId: string; fe
     return arraySection(section) ? Array.isArray(value) : record(value)
   }
   async function read() {
-    const response = await options.fetch("/api/workspace", { cache: "no-store", signal: controller.signal })
+    const response = await options.fetch("/api/workspace", { cache: "no-store", signal: controller.signal, headers: sections.includes("projects") ? undefined : { "X-TLC-Program-Storage": "records" } })
     const result = await response.json()
     if (!response.ok) throw new Error(result.error?.message || "Не удалось загрузить рабочее место.")
     if (result.userId !== userId) throw new Error("Аккаунт изменился. Обновите страницу.")
     if (!Array.isArray(result.sections)) throw new Error("Неверный ответ облачного хранилища.")
     const remote: WorkspaceValues = {}, nextRevisions: typeof revisions = {}
     for (const row of result.sections) {
-      if (!WORKSPACE_SECTIONS.includes(row.section)) continue
+      if (!sections.includes(row.section)) continue
       if (!valid(row.section, row.value) || !Number.isInteger(row.revision) || row.revision < 1) throw new Error("Данные рабочего места повреждены.")
       remote[row.section as WorkspaceSection] = row.value
       nextRevisions[row.section as WorkspaceSection] = row.revision
@@ -149,6 +150,7 @@ export function createWorkspaceSync(options: { userId: string; tabId: string; fe
     for (const section of pending.keys()) persist(section)
   }
   function stage(section: WorkspaceSection, value: unknown, expected?: unknown) {
+    if (!sections.includes(section)) throw new Error("Эта секция использует отдельное хранилище.")
     if (!snapshot.ready) throw new Error("Дождитесь загрузки облачного рабочего места.")
     if (snapshot.conflicts.includes(section)) throw new Error("Сначала разрешите конфликт версий рабочего места.")
     if (!valid(section, value)) throw new Error("Неверные данные рабочего места.")

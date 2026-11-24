@@ -1,5 +1,6 @@
 "use client"
 import { useAccountWorkspace } from "./account-workspace"
+import { isWorkspaceMediaUrl } from "@/lib/workspace-media"
 export type DockShortcut={href:string;label:string}
 export function cleanShortcut(value:unknown):DockShortcut|null {
  if(!value||typeof value!=='object')return null
@@ -11,6 +12,6 @@ export type WorkspaceSettings = { profilePhoto?:string; wallpaper?:string; wallp
 export const defaults: WorkspaceSettings = {wallpaper:"",wallpaperFit:"cover",theme:"light",background:"grid",color:"#e6f0fa",bar:"bottom",clock:"digital"}
 function clean(value:unknown):WorkspaceSettings {
  const s=(value&&typeof value==='object'?value:{}) as Partial<WorkspaceSettings>
- return {profilePhoto:typeof s.profilePhoto==='string'&&s.profilePhoto.length<=150000&&/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(s.profilePhoto)?s.profilePhoto:'',wallpaper:typeof s.wallpaper==='string'&&s.wallpaper.length<=900_000&&/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(s.wallpaper)?s.wallpaper:'',wallpaperFit:s.wallpaperFit==='contain'?'contain':'cover',dockPins:Array.isArray(s.dockPins)?s.dockPins.map(cleanShortcut).filter((p):p is DockShortcut=>p!==null).slice(0,10):[],theme:s.theme==='dark'?'dark':'light',background:s.background&&['grid','plain','dots','wallpaper'].includes(s.background)?s.background:'grid',color:typeof s.color==='string'&&/^#[0-9a-f]{6}$/i.test(s.color)?s.color:defaults.color,bar:s.bar&&['bottom','top','left','right'].includes(s.bar)?s.bar:'bottom',clock:s.clock&&['digital','minimal','hidden'].includes(s.clock)?s.clock:'digital'}
+ return {profilePhoto:isWorkspaceMediaUrl(s.profilePhoto)||(typeof s.profilePhoto==='string'&&s.profilePhoto.length<=150000&&/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(s.profilePhoto))?s.profilePhoto:'',wallpaper:isWorkspaceMediaUrl(s.wallpaper)||(typeof s.wallpaper==='string'&&s.wallpaper.length<=900_000&&/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(s.wallpaper))?s.wallpaper:'',wallpaperFit:s.wallpaperFit==='contain'?'contain':'cover',dockPins:Array.isArray(s.dockPins)?s.dockPins.map(cleanShortcut).filter((p):p is DockShortcut=>p!==null).slice(0,10):[],theme:s.theme==='dark'?'dark':'light',background:s.background&&['grid','plain','dots','wallpaper'].includes(s.background)?s.background:'grid',color:typeof s.color==='string'&&/^#[0-9a-f]{6}$/i.test(s.color)?s.color:defaults.color,bar:s.bar&&['bottom','top','left','right'].includes(s.bar)?s.bar:'bottom',clock:s.clock&&['digital','minimal','hidden'].includes(s.clock)?s.clock:'digital'}
 }
-export function useWorkspaceSettings(){const store=useAccountWorkspace();return {settings:clean(store.values.settings),ready:store.ready,error:store.error,update:(patch:Partial<WorkspaceSettings>)=>store.update('settings',{...clean(store.values.settings),...patch},store.values.settings||{})}}
+export function useWorkspaceSettings(){const store=useAccountWorkspace();return {userId:store.userId,settings:clean(store.values.settings),ready:store.ready,error:store.error,update:(patch:Partial<WorkspaceSettings>)=>store.update('settings',{...clean(store.values.settings),...patch},store.values.settings||{})}}

@@ -261,7 +261,7 @@ export default function HomePage() {
     () =>
       projects
         .slice()
-        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+        .sort((a, b) => String(b.updatedAt || b.createdAt).localeCompare(String(a.updatedAt || a.createdAt))),
     [projects]
   )
 

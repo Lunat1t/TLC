@@ -228,16 +228,16 @@ test("legacy import retries reuse IDs after reconnect saved a previously failed 
   const backend = server(), local = storage(), client = backend.client("a")
   const old = [makeProject("Legacy", "spike", "local-id")], source = JSON.stringify(old)
   await client.refresh()
-  const copies = prepareLegacyProjectCopies(local, "one", source, old)
+  const copies = await prepareLegacyProjectCopies(local, "one", source, old)
   backend.offline(true)
   await assert.rejects(client.save("projects", copies, []))
   backend.offline(false); await client.refresh()
-  const retry = prepareLegacyProjectCopies(local, "one", source, old)
+  const retry = await prepareLegacyProjectCopies(local, "one", source, old)
   assert.deepEqual(retry, copies)
   const stored = client.getSnapshot().values.projects as { id: string }[]
   assert.equal(retry.filter(p => !stored.some(remote => remote.id === p.id)).length, 0)
   assert.equal(stored.length, 1)
-  assert.notEqual(prepareLegacyProjectCopies(local, "two", source, old)[0].id, copies[0].id)
+  assert.notEqual((await prepareLegacyProjectCopies(local, "two", source, old))[0].id, copies[0].id)
   client.dispose()
 })
 
@@ -262,4 +262,21 @@ test("a slow card upload merges against its opening snapshot after remote refres
   await b.refresh()
   assert.deepEqual(new Set((backend.rows.get("board")!.value as { id: string }[]).map(p => p.id)), new Set(["remote", "upload"]))
   a.dispose(); b.dispose()
+})
+
+
+test("new workspace transport excludes frozen library and leaves its drafts for record migration", async () => {
+  const local = storage()
+  local.setItem("tlc-workspace-recovery:one:projects:old", JSON.stringify({ base: [], value: [{ id: "legacy" }], revision: 0 }))
+  let recordsHeader = ""
+  const client = createWorkspaceSync({ userId: "one", tabId: "new", storage: local, sections: ["settings", "layout", "board"], fetch: async (_url, init) => {
+    recordsHeader = new Headers(init?.headers).get("X-TLC-Program-Storage") || ""
+    assert.notEqual(init?.method, "PUT")
+    return Response.json({ userId: "one", sections: [{ section: "projects", value: [{ id: "old" }], revision: 1 }] })
+  } })
+  await client.refresh()
+  assert.equal(recordsHeader, "records")
+  assert.equal(client.getSnapshot().values.projects, undefined)
+  assert.equal(local.length, 1)
+  client.dispose()
 })

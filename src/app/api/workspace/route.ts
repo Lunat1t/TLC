@@ -28,13 +28,15 @@ function validateValue(section: string, value: unknown) {
   // Persist the original records, retaining unknown fields and nested workspace data.
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const { client, user } = await verifiedUser()
-    const { data, error } = await client
+    let query = client
       .from("account_workspace")
       .select("section,value,revision")
       .eq("user_id", user.id)
+    if (request.headers.get("X-TLC-Program-Storage") === "records") query = query.neq("section", "projects")
+    const { data, error } = await query
     if (error) throw new InstructionError(503, "workspace_unavailable", "Облачное рабочее место недоступно.")
     return NextResponse.json({ userId: user.id, sections: data ?? [] }, { headers })
   } catch (error) {
@@ -66,6 +68,9 @@ export async function PUT(request: Request) {
     }
     if (!sections.includes(body.section as typeof sections[number]) || !Number.isSafeInteger(body.revision) || Number(body.revision) < 0) {
       throw new InstructionError(400, "invalid", "Неверная секция или версия рабочего места.")
+    }
+    if (body.section === "projects") {
+      throw new InstructionError(409, "client_upgrade_required", "Хранилище программ обновлено. Обновите страницу перед сохранением; локальная копия сохранится.")
     }
     validateValue(body.section as string, body.value)
     const { data, error } = await client.rpc("save_workspace_section", {
