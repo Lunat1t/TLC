@@ -1438,7 +1438,7 @@ function EditorWorkspace() {
           ← <span className="hidden xs:inline">Проекты</span>
         </Link>
 
-        {library.drafts.some(draft => draft.projectId === projectId) && !library.saving && !saveBusyRef.current && <Link href="/dashboard" className="text-xs font-bold text-[#a13620]">Есть несохранённая копия — восстановить</Link>}
+        {library.drafts.some(draft => draft.projectId === projectId) && !library.saving && !saveBusyRef.current && <Link href="/dashboard#drafts" className="text-xs font-bold text-[#a13620]">Есть несохранённая копия — восстановить</Link>}
         {remoteChanged && <button type="button" className="text-xs font-bold text-[#087996]" onClick={() => {
           if (!window.confirm("Программа изменена на другом устройстве. Загрузить облачную версию? Несохранённые изменения редактора будут заменены.")) return
           loadedProjectRef.current = null

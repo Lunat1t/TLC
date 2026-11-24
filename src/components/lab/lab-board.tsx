@@ -45,6 +45,15 @@ export function LabBoard(props: BoardProps) {
   const { userId, ready, error, refreshProfile } = useAccess()
   return <section className="lab desktop-lab" aria-label="Моя инженерная лаборатория">{ready ? <PersonalBoard key={userId ?? "guest"} userId={userId ?? "guest"} {...props} /> : <div className="lab-loading" role="status">{error ? <><p>Не удалось открыть рабочий стол.</p><button onClick={()=>void refreshProfile()}>Повторить</button></> : "Готовим ваше рабочее место…"}</div>}</section>
 }
+function downloadNoteBackup(userId: string, noteId: string, text: string) {
+  const data = { text, drafts: readNoteDrafts(localStorage, userId, noteId).map(item => item.value) }
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }))
+  const link = document.createElement("a")
+  link.href = url
+  link.download = "tlc-note-backup.json"
+  link.click()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
 function InlineNote({userId,noteId,text,focus,onSave}:{userId:string;noteId:string;text:string;focus:boolean;onSave:(value:string,base:string)=>boolean}){
  const [draft,setDraft]=useState(text),[conflict,setConflict]=useState(false),[draftError,setDraftError]=useState("")
  const draftRef=useRef(text),savedRef=useRef(text),saveRef=useRef(onSave),conflictRef=useRef(false),instance=useRef("")
@@ -70,7 +79,7 @@ function InlineNote({userId,noteId,text,focus,onSave}:{userId:string;noteId:stri
  },[text])
  useEffect(()=>{const timer=setTimeout(persist,600);return()=>clearTimeout(timer)},[draft])
  useEffect(()=>{const save=()=>persist();window.addEventListener('pagehide',save);return()=>{window.removeEventListener('pagehide',save)}},[])
- function downloadDraft(){const data={text:draftRef.current,drafts:readNoteDrafts(localStorage,userId,noteId).map(item=>item.value)};const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download='tlc-note-backup.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+ function downloadDraft(){downloadNoteBackup(userId,noteId,draftRef.current)}
  function acceptCloud(){
    if(!window.confirm('Открыть облачный текст? Своя версия останется в резервной копии браузера.'))return
    try{archiveNoteDrafts(localStorage,userId,noteId)}catch{setDraftError('Не удалось сохранить резервную копию. Скачайте текст перед продолжением.');return}
@@ -80,7 +89,7 @@ function InlineNote({userId,noteId,text,focus,onSave}:{userId:string;noteId:stri
    try{instance.current ||= crypto.randomUUID();writeNoteDraft(localStorage,userId,noteId,instance.current,e.target.value,savedRef.current);setDraftError("")}
    catch{setDraftError('Не удалось сохранить черновик в браузере. Освободите место и повторите.');return}
    draftRef.current=e.target.value;setDraft(e.target.value)
- }} onBlur={persist}/>{draftError&&<p role="alert">{draftError}</p>}{conflict&&<div role="alert">Заметка изменена на другом устройстве. Ваш текст сохранён в браузере.<button onClick={downloadDraft}>Скачать мой текст</button><button onClick={acceptCloud}>Открыть облачный текст</button></div>}</>
+ }} onBlur={persist}/>{draftError&&<p role="alert">{draftError}</p>}{conflict&&<div role="alert">Заметка изменена на другом устройстве. Ваш текст сохранён в браузере.<button type="button" onClick={downloadDraft}>Скачать мой текст</button><button type="button" onClick={acceptCloud}>Открыть облачный текст</button></div>}</>
 }
 export function PersonalBoard({ userId, projects = [], onProjects, onNewProject, onProjectMenu, onDeleteProject }: { userId: string } & BoardProps) {
   const [focusNote,setFocusNote]=useState<string|null>(null)
@@ -95,6 +104,11 @@ export function PersonalBoard({ userId, projects = [], onProjects, onNewProject,
   const [items, setItems] = useState<PinItem[]>([])
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState("")
+  const [conflictNote, setConflictNote] = useState<{ noteId: string; text: string } | null>(null)
+  function showError(message: string, conflict: { noteId: string; text: string } | null = null) {
+    setError(message)
+    setConflictNote(conflict)
+  }
   const [dialog, setDialog] = useState(false)
   const [kind, setKind] = useState<PinItem["kind"]>("note")
   const [color, setColor] = useState("yellow")
@@ -108,21 +122,21 @@ export function PersonalBoard({ userId, projects = [], onProjects, onNewProject,
     setLoaded(false)
     if(!store.ready)return
     const data=store.values.board||[]
-    if(!Array.isArray(data)||!data.every(validItem)){setError('Не удалось прочитать доску аккаунта.');return}
+    if(!Array.isArray(data)||!data.every(validItem)){showError('Не удалось прочитать доску аккаунта.');return}
     setItems(data);setLoaded(true)
   },[store.ready,store.values.board])
   useEffect(() => { if (dialog) dialogRef.current?.showModal(); else dialogRef.current?.close() }, [dialog])
-  function save(next:PinItem[]){if(!loaded)return false;if(JSON.stringify(next).length>3_000_000){setError('Доска слишком большая. Выберите картинку поменьше.');return false}if(!store.update('board',next,items))return false;setItems(next);setError('');return true}
+  function save(next:PinItem[]){if(!loaded)return false;if(JSON.stringify(next).length>3_000_000){showError('Доска слишком большая. Выберите картинку поменьше.');return false}if(!store.update('board',next,items))return false;setItems(next);showError('');return true}
   function addGame(kind: "tic-tac-toe" | "camera-rps") {
     if (loaded && items.length < LIMIT) save([...items, {
       id: crypto.randomUUID(), kind, text: kind === "camera-rps" ? "Камень, ножницы, бумага" : "Крестики-нолики", color: "blue"
     }])
   }
   function createNote(){const id=crypto.randomUUID();if(save([...items,{id,kind:'note',text:'',color:'yellow'}]))setFocusNote(id)}
-  async function insertPicture(file?:File){setBusy(true);setError('');try{const image=file?await storeWorkspaceImage(await imageData(file),store.userId):safeUrl(pictureUrl.trim());if(!image||(!file&&!image.startsWith('https://')))throw Error('Укажите HTTPS-ссылку на картинку.');if(save([...items,{id:crypto.randomUUID(),kind:'image',text:'',color:'blue',image}])){setPictureOpen(false);setPictureUrl('')}}catch(e){setError(e instanceof Error?e.message:'Не удалось открыть картинку.')}finally{setBusy(false);if(pictureRef.current)pictureRef.current.value=''}}
+  async function insertPicture(file?:File){setBusy(true);showError('');try{const image=file?await storeWorkspaceImage(await imageData(file),store.userId):safeUrl(pictureUrl.trim());if(!image||(!file&&!image.startsWith('https://')))throw Error('Укажите HTTPS-ссылку на картинку.');if(save([...items,{id:crypto.randomUUID(),kind:'image',text:'',color:'blue',image}])){setPictureOpen(false);setPictureUrl('')}}catch(e){showError(e instanceof Error?e.message:'Не удалось открыть картинку.')}finally{setBusy(false);if(pictureRef.current)pictureRef.current.value=''}}
   function open(type: PinItem["kind"] = "note") { setEditing(null); setText(""); setUrl(""); setDate(""); setFile(null); setKind(type); setDialog(true) }
   async function add(event: React.FormEvent) {
-    event.preventDefault(); setBusy(true); setError("")
+    event.preventDefault(); setBusy(true); showError("")
     try {
       if (kind !== "image" && !text.trim()) throw Error("Напишите текст карточки.")
       if (kind === "event" && (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(new Date(`${date}T12:00:00`).getTime()))) throw Error("Укажите дату события.")
@@ -132,7 +146,7 @@ export function PersonalBoard({ userId, projects = [], onProjects, onNewProject,
       if(editing && !workspaceValuesEqual(items.find(p=>p.id===editing),editingBase.current))throw Error('Этот ярлык изменён на другом устройстве. Скопируйте введённый текст и откройте редактирование заново.')
       const item: PinItem = { id: editing || crypto.randomUUID(), kind, text: text.trim(), color, ...(kind === "shortcut" ? {url:safeUrl(url.trim())!} : {}), ...(kind === "event" ? { date } : {}), ...(kind === "image" && file ? { image: await storeWorkspaceImage(await imageData(file),store.userId) } : {}) }
       if (save(editing?items.map(p=>p.id===editing?item:p):[...items, item])) setDialog(false)
-    } catch (e) { setError(e instanceof Error ? e.message : "Не удалось добавить материал.") } finally { setBusy(false) }
+    } catch (e) { showError(e instanceof Error ? e.message : "Не удалось добавить материал.") } finally { setBusy(false) }
   }
   const atLimit = loaded && items.length >= LIMIT
   const canPin = loaded && items.length < LIMIT
@@ -143,7 +157,7 @@ export function PersonalBoard({ userId, projects = [], onProjects, onNewProject,
     <DesktopCanvas userId={userId}>
     {projects.map((project,index)=><DesktopItem key={project.id} id={`project:${project.id}`} label={project.name} onEdit={()=>onProjectMenu?.(project.id)} onDelete={()=>onDeleteProject?.(project.id)} initial={[.5+(index%3)*.17, .48+index/(projects.length+1)*.46]} mobileInitial={[(index%3)*.5,.36+Math.floor(index/3)/(Math.ceil(projects.length/3)+1)*.2]} className="desktop-shortcut"><Link className="desktop-launch" href={`/editor?id=${encodeURIComponent(project.id)}`}><span className={`desktop-app-icon is-project is-project-${project.hub}`} title={project.hub === "ev3" ? "LEGO EV3" : "SPIKE Prime"}><FileCode2 aria-label={project.hub === "ev3" ? "Программа EV3" : "Программа SPIKE"}/></span><strong>{project.name}</strong></Link><button className="desktop-project-menu" onClick={()=>onProjectMenu?.(project.id)} aria-label={`Действия с проектом ${project.name}`}>•••</button></DesktopItem>)}
     {items.map((item,index)=><DesktopItem id={`pin:${item.id}`} key={item.id} label={item.kind==="shortcut" || item.kind==="tic-tac-toe" || item.kind==="camera-rps" ? item.text : "Карточка"} initial={[.08+(index%4)*.22, .23+Math.floor(index/4)*.15]} mobileInitial={[(index%2)*.98,.58+index/(items.length+1)*.4]} onEdit={item.kind==="shortcut"?()=>{editingBase.current=item;setEditing(item.id);setKind(item.kind);setText(item.text);setUrl(item.url||"");setColor(item.color);setDialog(true)}:undefined} onDelete={()=>{if(window.confirm(`Удалить «${item.text||"карточку"}»?`))save(items.filter(p=>p.id!==item.id))}} className={item.kind==="shortcut"?"desktop-shortcut":"desktop-note"}>
-      {item.kind==="camera-rps" ? <CameraGame /> : item.kind==="tic-tac-toe" ? <TicTacToe /> : item.kind==="shortcut" ? <><a className="desktop-launch" href={item.url} target={item.url?.startsWith("/")?undefined:"_blank"} rel="noopener noreferrer"><span className="desktop-app-icon is-purple"><Globe/></span><strong>{item.text}</strong></a><button className="desktop-unpin" onClick={()=>save(items.filter(p=>p.id!==item.id))} aria-label={`Убрать ярлык ${item.text}`}><X size={14}/></button></> : <article className={`lab-pin lab-pin-${item.kind} lab-pin-${item.color}`}><span className="lab-pin-head" aria-hidden="true"/>{item.image?<img src={item.image} referrerPolicy="no-referrer" alt={item.text||"Закреплённая картинка"}/>:null}{item.kind==="event"&&item.date?<time dateTime={item.date}>{new Date(`${item.date}T12:00:00`).toLocaleDateString("ru-RU",{day:"numeric",month:"long",year:"numeric"})}</time>:null}{item.kind==='note'?<InlineNote userId={userId} noteId={item.id} text={item.text} focus={focusNote===item.id} onSave={(value,base)=>{if(item.text!==base){setError('Заметка изменена на другом устройстве. Скачайте свой текст перед открытием облачной версии.');return false}return save(items.map(p=>p.id===item.id?{...p,text:value}:p))}}/>:<p>{item.text}</p>}<button className="desktop-remove" onClick={()=>save(items.filter(p=>p.id!==item.id))} aria-label={`Открепить ${item.text||"картинку"}`}><X size={16}/></button></article>}
+      {item.kind==="camera-rps" ? <CameraGame /> : item.kind==="tic-tac-toe" ? <TicTacToe /> : item.kind==="shortcut" ? <><a className="desktop-launch" href={item.url} target={item.url?.startsWith("/")?undefined:"_blank"} rel="noopener noreferrer"><span className="desktop-app-icon is-purple"><Globe/></span><strong>{item.text}</strong></a><button className="desktop-unpin" onClick={()=>save(items.filter(p=>p.id!==item.id))} aria-label={`Убрать ярлык ${item.text}`}><X size={14}/></button></> : <article className={`lab-pin lab-pin-${item.kind} lab-pin-${item.color}`}><span className="lab-pin-head" aria-hidden="true"/>{item.image?<img src={item.image} referrerPolicy="no-referrer" alt={item.text||"Закреплённая картинка"}/>:null}{item.kind==="event"&&item.date?<time dateTime={item.date}>{new Date(`${item.date}T12:00:00`).toLocaleDateString("ru-RU",{day:"numeric",month:"long",year:"numeric"})}</time>:null}{item.kind==='note'?<InlineNote userId={userId} noteId={item.id} text={item.text} focus={focusNote===item.id} onSave={(value,base)=>{if(item.text!==base){showError('Заметка изменена на другом устройстве. Скачайте свой текст перед открытием облачной версии.',{noteId:item.id,text:value});return false}return save(items.map(p=>p.id===item.id?{...p,text:value}:p))}}/>:<p>{item.text}</p>}<button className="desktop-remove" onClick={()=>save(items.filter(p=>p.id!==item.id))} aria-label={`Открепить ${item.text||"картинку"}`}><X size={16}/></button></article>}
     </DesktopItem>)}
   </DesktopCanvas></div>
   <div className="studio-create-dock" role="toolbar" aria-label="Добавить на рабочий стол">
@@ -155,7 +169,7 @@ export function PersonalBoard({ userId, projects = [], onProjects, onNewProject,
         <StickyNote size={19} aria-hidden="true" />
         <span className="studio-create-tooltip">{pinHint || "Заметка"}</span>
       </button>
-      <button type="button" className="studio-create-btn" data-tone="image" disabled={!canPin} onClick={() => { setPictureOpen(true); setError("") }} aria-label="Добавить картинку" title={pinHint || "Картинка"}>
+      <button type="button" className="studio-create-btn" data-tone="image" disabled={!canPin} onClick={() => { setPictureOpen(true); showError("") }} aria-label="Добавить картинку" title={pinHint || "Картинка"}>
         <ImagePlus size={19} aria-hidden="true" />
         <span className="studio-create-tooltip">{pinHint || "Картинка"}</span>
       </button>
@@ -184,6 +198,6 @@ export function PersonalBoard({ userId, projects = [], onProjects, onNewProject,
     <button type="button" disabled={!canPin} onClick={() => { widgetsDialog.current?.close(); addGame("tic-tac-toe") }}><Grid3X3 size={18} aria-hidden="true" />Крестики-нолики</button>
     <button type="button" disabled={!canPin} onClick={() => { widgetsDialog.current?.close(); addGame("camera-rps") }}><Hand size={18} aria-hidden="true" />Камень, ножницы, бумага</button>
   </dialog>
-  {error&&!dialog?<p role="alert" className="lab-error">{error}</p>:null}<dialog ref={pictureDialog} onCancel={()=>setPictureOpen(false)} onClose={()=>setPictureOpen(false)} aria-label="Добавить картинку" className="picture-picker"><header><h2>Картинка</h2><button disabled={busy} onClick={()=>setPictureOpen(false)} aria-label="Закрыть">×</button></header><input ref={pictureRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={e=>{const selected=e.target.files?.[0];if(selected)void insertPicture(selected)}}/><button autoFocus className="picture-gallery" disabled={busy} onClick={()=>pictureRef.current?.click()}><ImagePlus/> Из галереи</button><form onSubmit={e=>{e.preventDefault();void insertPicture()}}><label>Или ссылка на картинку<input type="url" required placeholder="https://…" value={pictureUrl} onChange={e=>setPictureUrl(e.target.value)}/></label><button disabled={busy} type="submit">Добавить</button></form>{error&&<p role="alert">{error}</p>}</dialog>
+  {error&&!dialog?<div role="alert" className="lab-error flex flex-wrap items-center justify-between gap-2"><span>{error}</span>{conflictNote?<button type="button" className="underline font-bold" onClick={()=>downloadNoteBackup(userId,conflictNote.noteId,conflictNote.text)}>Скачать мой текст</button>:null}</div>:null}<dialog ref={pictureDialog} onCancel={()=>setPictureOpen(false)} onClose={()=>setPictureOpen(false)} aria-label="Добавить картинку" className="picture-picker"><header><h2>Картинка</h2><button disabled={busy} onClick={()=>setPictureOpen(false)} aria-label="Закрыть">×</button></header><input ref={pictureRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={e=>{const selected=e.target.files?.[0];if(selected)void insertPicture(selected)}}/><button autoFocus className="picture-gallery" disabled={busy} onClick={()=>pictureRef.current?.click()}><ImagePlus/> Из галереи</button><form onSubmit={e=>{e.preventDefault();void insertPicture()}}><label>Или ссылка на картинку<input type="url" required placeholder="https://…" value={pictureUrl} onChange={e=>setPictureUrl(e.target.value)}/></label><button disabled={busy} type="submit">Добавить</button></form>{error&&<p role="alert">{error}</p>}</dialog>
 <dialog ref={dialogRef} className="lab-dialog" aria-labelledby="lab-dialog-title" onCancel={()=>setDialog(false)} onClose={()=>setDialog(false)}><form onSubmit={add}><header><h2 id="lab-dialog-title">{editing?'Изменить ярлык':'Новый ярлык'}</h2><button type="button" onClick={()=>setDialog(false)} aria-label="Закрыть">×</button></header><label>Название<input required maxLength={64} value={text} onChange={e=>setText(e.target.value)}/></label><label>Адрес<input type="text" required value={url} onChange={e=>setUrl(e.target.value)} placeholder="https://example.com или /instructions"/></label>{error&&<p role="alert">{error}</p>}<button className="lab-submit" disabled={busy}>Сохранить</button></form></dialog></>
 }

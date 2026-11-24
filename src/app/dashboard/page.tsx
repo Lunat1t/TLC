@@ -126,6 +126,27 @@ export default function HomePage() {
   const [renameError, setRenameError] = React.useState<string | null>(null)
 
   const fileInputRef = React.useRef<HTMLInputElement | null>(null)
+  const draftsRef = React.useRef<HTMLDetailsElement | null>(null)
+  const shouldExpandDrafts = Boolean(library.userId && library.drafts.length > 0)
+  React.useEffect(() => {
+    if (!shouldExpandDrafts) return
+    const syncDraftsHash = () => {
+      const recover = new URLSearchParams(window.location.search).get("recover") === "1"
+      if (window.location.hash === "#drafts" || recover) {
+        if (draftsRef.current) {
+          draftsRef.current.open = true
+          draftsRef.current.scrollIntoView({ block: "nearest" })
+        }
+      }
+    }
+    syncDraftsHash()
+    window.addEventListener("hashchange", syncDraftsHash)
+    window.addEventListener("popstate", syncDraftsHash)
+    return () => {
+      window.removeEventListener("hashchange", syncDraftsHash)
+      window.removeEventListener("popstate", syncDraftsHash)
+    }
+  }, [shouldExpandDrafts])
   const storageRawRef = React.useRef<string | null>(null)
   React.useEffect(() => { storageRawRef.current = library.raw }, [library.raw])
 
@@ -276,7 +297,7 @@ export default function HomePage() {
             </button>}
             {library.hasLocalBackup && <button type="button" className="home-import" onClick={() => downloadBackup(library.downloadLocalRaw())}>Скачать программы браузера</button>}
           </div>
-          {library.userId && library.drafts.length > 0 && <details className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm">
+          {library.userId && library.drafts.length > 0 && <details id="drafts" ref={draftsRef} className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm">
             <summary>Несохранённые программы на этом устройстве ({library.drafts.length})</summary>
             <p className="my-2">Можно восстановить правки в аккаунте или скачать отдельную копию. При конфликте с другим устройством копия сохранится здесь.</p>
             {library.drafts.map(draft => {
