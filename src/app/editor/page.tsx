@@ -127,6 +127,7 @@ const ALL_BLOCKS = {
 const DISPLAY_LABEL = "Дисплей"
 const DISPLAY_SIZE = [224, 160] as const
 const GAUGE_LABEL = "Дальномер"
+const GAUGE_SIZE = [200, 148] as const
 
 const BLOCK_CATEGORIES = [
   {
@@ -911,7 +912,7 @@ function EditorWorkspace() {
     const panels = blocks.filter(block => block.type === "motor-buttons" && block.controlAreaId === area.id)
       .map(block => ({ x: block.x - area.x, y: block.y - area.y - 44, width: block.width || 180, height: block.height || 132 }))
     const occupied = [...siblings, ...panels]
-    const [width, height] = kind === "display" ? DISPLAY_SIZE : CONTROL_MIN[kind]
+    const [width, height] = kind === "display" ? DISPLAY_SIZE : kind === "distance-gauge" ? GAUGE_SIZE : CONTROL_MIN[kind]
     const maxX = area.width - width
     const maxY = area.height - 44 - height
     const x = Math.max(0, Math.min(maxX, location.x - area.x - width / 2))
