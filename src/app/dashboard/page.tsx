@@ -330,7 +330,13 @@ export default function HomePage() {
       <div className="home-content">
         <main className="home-main">
           <div className="mb-4 flex flex-wrap items-center gap-3 text-sm" aria-label="Хранилище программ">
-            <span role="status">{library.error || (!library.ready ? "Загружаем программы…" : library.userId ? (library.saving || autoImporting) ? "Сохраняем в облако…" : "Программы в вашем аккаунте" : "Программы хранятся только в этом браузере")}</span>
+            {library.error ? (
+              <span role="status">{library.error}</span>
+            ) : !library.ready ? (
+              <span role="status">Загружаем программы…</span>
+            ) : library.userId && (library.saving || autoImporting) ? (
+              <span role="status">Сохраняем в облако…</span>
+            ) : null}
           </div>
           {library.userId && library.ready && library.localCount > 0 && !autoImporting && (
             <div

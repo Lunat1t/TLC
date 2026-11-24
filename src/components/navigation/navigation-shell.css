@@ -1208,9 +1208,53 @@
 }
 
 /* Responsive adjustments */
-@media (max-width: 900px) {
+@media (max-width: 960px) {
+  .tlc-os.is-preferences .os-content {
+    padding: 12px;
+  }
   .workspace-settings {
-    grid-template-columns: 190px minmax(0, 1fr);
+    display: block;
+    border-radius: 18px;
+  }
+  .settings-sidebar {
+    padding: 14px 16px;
+    border-right: 0;
+    border-bottom: 1px solid #d6e1ee;
+  }
+  [data-theme="dark"] .settings-sidebar {
+    border-color: #304562;
+  }
+  .settings-home {
+    margin: 0 0 8px;
+  }
+  .workspace-settings .settings-sidebar h1 {
+    padding: 0 0 10px;
+    font-size: 20px;
+  }
+  .settings-sidebar nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .settings-sidebar button {
+    flex: 1 1 auto;
+    min-width: 140px;
+    justify-content: center;
+    min-height: 44px;
+    padding: 8px 14px;
+  }
+  .settings-detail {
+    padding: 20px 16px;
+  }
+  .workspace-settings section:not(.settings-account-section) label {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .workspace-settings section {
+    padding: 8px 0;
+  }
+  .workspace-settings .settings-account-section {
+    padding: 16px 0;
   }
 }
 
