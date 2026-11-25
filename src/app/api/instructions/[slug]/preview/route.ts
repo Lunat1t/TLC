@@ -4,7 +4,7 @@ import { publishedPreview } from "@/lib/instructions/public-preview"
 export const runtime = "nodejs"
 export const maxDuration = 60
 
-const fallbackCover = `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="480" viewBox="0 0 720 480"><rect width="720" height="480" fill="#d5f7fc"/><path d="M360 118 442 200 360 282 278 200z" fill="none" stroke="#0085a0" stroke-width="12"/><path d="M360 148 412 200 360 252 308 200z" fill="#0085a0"/></svg>`
+const fallbackCover = `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="480" viewBox="0 0 720 480"><rect width="720" height="480" fill="#eee8dc"/><path d="M360 118 442 200 360 282 278 200z" fill="none" stroke="#575249" stroke-width="12"/><path d="M360 148 412 200 360 252 308 200z" fill="#575249"/></svg>`
 
 function fallbackResponse() {
   return new NextResponse(fallbackCover, {

@@ -11,7 +11,8 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-rubik)", "Rubik", "ui-sans-serif", "system-ui", "sans-serif"],
+        sans: ["var(--font-onest)", "Onest", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono-tech)", "JetBrains Mono", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -48,10 +49,21 @@ const config: Config = {
           foreground: "hsl(var(--card-foreground))",
         },
         tlc: {
-          cyan: "#02c7ea",
-          dark: "#072733",
-          button: "#092c37",
+          red: "#d62718",
+          cyan: "#d62718",
+          paper: "#ece5d2",
+          dark: "#1a1813",
+          button: "#1a1813",
         },
+      },
+      boxShadow: {
+        sm: "0 2px 0 rgba(26,24,19,0.16)",
+        DEFAULT: "0 3px 0 rgba(26,24,19,0.16)",
+        md: "0 3px 0 rgba(26,24,19,0.2)",
+        lg: "0 4px 0 rgba(26,24,19,0.22)",
+        xl: "0 5px 0 rgba(26,24,19,0.24)",
+        "2xl": "0 6px 0 rgba(26,24,19,0.26)",
+        hard: "3px 3px 0 #1a1813",
       },
       borderRadius: {
         lg: "var(--radius)",

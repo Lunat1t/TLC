@@ -154,7 +154,7 @@ export function DisplayStreamView({ editing }: { editing: boolean }) {
 
   const showVideo = status === "connecting" || status === "live"
   return (
-    <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-md bg-[#12232d] p-2 text-white" aria-label="Экран дисплея">
+    <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-md bg-[#1c1a16] p-2 text-white" aria-label="Экран дисплея">
       <video
         ref={video}
         className={`absolute inset-0 size-full object-contain ${showVideo ? "" : "invisible"}`}
@@ -192,15 +192,15 @@ export function DisplayStreamView({ editing }: { editing: boolean }) {
       )}
       {status !== "idle" && (
         <button type="button" onClick={() => stop()} title="Отключить трансляцию" aria-label="Отключить трансляцию"
-          className={`absolute right-1 top-1 grid size-8 place-items-center rounded-md bg-[#12232d]/90 hover:bg-[#334155] ${editing ? "" : "focus-visible:outline focus-visible:outline-2"}`}>
+          className={`absolute right-1 top-1 grid size-8 place-items-center rounded-md bg-[#1c1a16]/90 hover:bg-[#35312a] ${editing ? "" : "focus-visible:outline focus-visible:outline-2"}`}>
           <X size={16} aria-hidden="true" />
         </button>
       )}
       <DisplayDiagnostics peer={diagnosticPeer} videoRef={video} signaling={signaling} lowDelayRequested={lowDelayRequested} />
-      <dialog ref={dialog} aria-label="Подключение камеры телефона" className="m-auto max-w-[calc(100vw-24px)] rounded-xl bg-white p-4 text-center text-slate-900 backdrop:bg-slate-950/60">
+      <dialog ref={dialog} aria-label="Подключение камеры телефона" className="m-auto max-w-[calc(100vw-24px)] rounded-md bg-white p-4 text-center text-stone-900 backdrop:bg-stone-950/60">
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-bold">Откройте QR-код камерой телефона</p>
-          <button type="button" onClick={() => dialog.current?.close()} aria-label="Закрыть QR-код" className="grid size-8 place-items-center rounded-md hover:bg-slate-100">
+          <button type="button" onClick={() => dialog.current?.close()} aria-label="Закрыть QR-код" className="grid size-8 place-items-center rounded-md hover:bg-stone-100">
             <X size={20} aria-hidden="true" />
           </button>
         </div>
@@ -208,7 +208,7 @@ export function DisplayStreamView({ editing }: { editing: boolean }) {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={qr} alt="QR-код для камеры телефона" width={320} height={320} className="mx-auto size-auto max-h-[65vh] max-w-full" />
         )}
-        <p className="text-xs text-slate-600">Оба устройства должны быть в одной сети Wi‑Fi.</p>
+        <p className="text-xs text-stone-600">Оба устройства должны быть в одной сети Wi‑Fi.</p>
       </dialog>
     </div>
   )

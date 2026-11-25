@@ -229,13 +229,13 @@ export default function DisplayCameraPage() {
   const busy = phase === "connecting" || phase === "live"
   return (
     <main className="mx-auto grid w-full max-w-md gap-4 px-5 py-10">
-      <h1 className="text-2xl font-black tracking-tight">Камера для дисплея</h1>
+      <h1 className="text-2xl font-bold tracking-tight">Камера для дисплея</h1>
       {linkReady && !token ? (
-        <p role="alert" className="text-sm text-slate-700">Откройте QR-код из блока «Дисплей» в Brick Studio.</p>
+        <p role="alert" className="text-sm text-stone-700">Откройте QR-код из блока «Дисплей» в Brick Studio.</p>
       ) : null}
       {token ? (
         <>
-          <div className="relative grid aspect-video place-items-center overflow-hidden rounded-xl bg-slate-950 text-slate-300">
+          <div className="relative grid aspect-video place-items-center overflow-hidden rounded-md bg-stone-950 text-stone-300">
             <video
               ref={videoRef}
               autoPlay
@@ -247,7 +247,7 @@ export default function DisplayCameraPage() {
             {!preview ? <Video size={32} aria-hidden="true" className="relative" /> : null}
             <DisplayDiagnostics peer={diagnosticPeer} videoRef={videoRef} track={active.current?.stream?.getVideoTracks()[0]} signaling={signaling} />
           </div>
-          <p role="status" className="text-sm text-slate-700">
+          <p role="status" className="text-sm text-stone-700">
             {phase === "live" ? "Камера транслируется в Brick Studio."
               : phase === "connecting" ? "Подключаем камеру…"
               : phase === "ended" ? "Для повторного подключения отсканируйте новый QR-код."
@@ -257,7 +257,7 @@ export default function DisplayCameraPage() {
           {phase !== "ended" ? (
             <button
               type="button"
-              className={`min-h-12 rounded-xl px-4 font-bold text-white ${busy ? "bg-red-700" : "bg-[#087992]"}`}
+              className={`min-h-12 rounded-md px-4 font-bold text-white ${busy ? "bg-red-700" : "bg-[#544f46]"}`}
               onClick={busy ? () => { if (active.current) finish(active.current, active.current.published) } : () => void startCamera()}
             >
               {busy ? "Остановить" : "Включить камеру"}

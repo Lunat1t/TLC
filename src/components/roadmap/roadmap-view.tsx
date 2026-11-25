@@ -37,9 +37,9 @@ import "./roadmap.css"
 
 const RANK_BADGES = [
   { icon: Sprout, color: "#397337", bg: "#e5f2ce" },
-  { icon: Leaf, color: "#007264", bg: "#cef3e9" },
-  { icon: Wrench, color: "#275dae", bg: "#dfeaff" },
-  { icon: Cog, color: "#7044a9", bg: "#ece3fc" },
+  { icon: Leaf, color: "#2d2a24", bg: "#e8e1d1" },
+  { icon: Wrench, color: "#bb241a", bg: "#f2eee4" },
+  { icon: Cog, color: "#7044a9", bg: "#f2eee5" },
   { icon: Rocket, color: "#ac4721", bg: "#ffe6d4" },
   { icon: Star, color: "#ad3062", bg: "#ffe2ed" },
   { icon: Crown, color: "#805508", bg: "#ffe69b" },
@@ -716,7 +716,7 @@ export function RoadmapView({ initialKit }: { initialKit?: string }) {
                 gap: 10,
                 padding: "8px 10px",
                 borderRadius: 12,
-                border: tier.current ? "1.5px solid #2563eb" : "1px solid #dde6f2",
+                border: tier.current ? "1.5px solid #e02c1f" : "1px solid #ede7da",
               }}
             >
               <RankIcon index={tier.rankIndex} />

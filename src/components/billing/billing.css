@@ -18,39 +18,39 @@
 
 .bs-card {
   background: var(--studio-surface, #ffffff);
-  color: var(--studio-text, #132238);
-  border: 1.5px solid var(--studio-border, #d4e1ee);
-  border-radius: 18px;
+  color: var(--studio-text, #201d19);
+  border: 1.5px solid var(--studio-border, #e9e2d2);
+  border-radius: 6px;
   padding: 22px;
-  box-shadow: 0 10px 28px rgba(15, 32, 58, 0.08);
+  box-shadow: 0 3px 0 rgba(30,28,23,.16);
   display: grid;
   gap: 14px;
 }
 
 [data-theme="dark"] .bs-card {
-  background: #17263b;
-  color: #e9f1fc;
-  border-color: #304562;
-  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.35);
+  background: #22201b;
+  color: #f4f1e9;
+  border-color: #38342c;
+  box-shadow: 0 3px 0 rgba(30,28,23,.16);
 }
 
 .bs-eyebrow {
   margin: 0;
   font-size: 12px;
-  font-weight: 800;
+  font-weight:700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #0284c7;
+  color: #b12218;
 }
 
 [data-theme="dark"] .bs-eyebrow {
-  color: #56ccf2;
+  color: #e02c1f;
 }
 
 .bs-title {
   margin: 0;
   font-size: clamp(22px, 3vw, 28px);
-  font-weight: 900;
+  font-weight:700;
   line-height: 1.18;
 }
 
@@ -58,11 +58,11 @@
   margin: 0;
   font-size: 14px;
   line-height: 1.5;
-  color: #4a607a;
+  color: #6b6559;
 }
 
 [data-theme="dark"] .bs-muted {
-  color: #b4c6de;
+  color: #cecbc4;
 }
 
 .bs-actions-row {
@@ -77,8 +77,8 @@
 .bs-btn-danger {
   min-height: 44px;
   padding: 0 18px;
-  border-radius: 12px;
-  font-weight: 800;
+  border-radius: 6px;
+  font-weight:700;
   font-size: 14px;
   display: inline-flex;
   align-items: center;
@@ -91,32 +91,32 @@
 }
 
 .bs-btn-primary {
-  background: #0284c7;
+  background: #b12218;
   color: #ffffff;
 }
 
 .bs-btn-primary:hover:not(:disabled) {
-  background: #0369a1;
+  background: #59544b;
 }
 
 .bs-btn-secondary {
-  background: #edf5fc;
-  color: #133153;
-  border-color: #c3d8ec;
+  background: #f6f3ec;
+  color: #292620;
+  border-color: #e2dac5;
 }
 
 .bs-btn-secondary:hover:not(:disabled) {
-  background: #dfeefb;
+  background: #f1ece2;
 }
 
 [data-theme="dark"] .bs-btn-secondary {
-  background: #20334d;
-  color: #e6f0fc;
-  border-color: #3a5272;
+  background: #2c2822;
+  color: #f3f0e7;
+  border-color: #5e594e;
 }
 
 [data-theme="dark"] .bs-btn-secondary:hover:not(:disabled) {
-  background: #283f5e;
+  background: #343129;
 }
 
 .bs-btn-danger {
@@ -156,8 +156,8 @@
 }
 
 .bs-plan-card.is-featured {
-  border-color: #0284c7;
-  box-shadow: 0 12px 30px rgba(2, 132, 199, 0.16);
+  border-color: #b12218;
+  box-shadow: 0 3px 0 rgba(30,28,23,.16);
 }
 
 .bs-plan-price {
@@ -168,7 +168,7 @@
 
 .bs-plan-price strong {
   font-size: 28px;
-  font-weight: 900;
+  font-weight:700;
 }
 
 .bs-plan-features {
@@ -193,11 +193,11 @@
   align-items: center;
   gap: 6px;
   padding: 5px 11px;
-  border-radius: 999px;
+  border-radius:6px;
   font-size: 12px;
-  font-weight: 800;
-  background: #e0f2fe;
-  color: #0369a1;
+  font-weight:700;
+  background: #f2eee4;
+  color: #59544b;
   width: fit-content;
 }
 
@@ -212,8 +212,8 @@
 }
 
 [data-theme="dark"] .bs-status-pill {
-  background: #1f3954;
-  color: #7dd3fc;
+  background: #2e2a24;
+  color: #e02c1f;
 }
 
 [data-theme="dark"] .bs-status-pill.is-active {
@@ -233,17 +233,17 @@
 
 .bs-field label {
   font-size: 13px;
-  font-weight: 800;
+  font-weight:700;
 }
 
 .bs-input,
 .bs-select {
   min-height: 44px;
   padding: 0 12px;
-  border-radius: 11px;
-  border: 1.5px solid #c5d6e8;
+  border-radius: 6px;
+  border: 1px solid #1a181373;
   background: #ffffff;
-  color: #132238;
+  color: #201d19;
   font-size: 15px;
   width: 100%;
   box-sizing: border-box;
@@ -252,22 +252,22 @@
 .bs-input-code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 19px;
-  font-weight: 800;
+  font-weight:700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 [data-theme="dark"] .bs-input,
 [data-theme="dark"] .bs-select {
-  background: #0f1b2c;
-  color: #eaf2ff;
-  border-color: #324a68;
+  background: #1a1815;
+  color: #f6f3ec;
+  border-color: #544f46;
 }
 
 .bs-alert {
   margin: 0;
   padding: 11px 14px;
-  border-radius: 12px;
+  border-radius: 6px;
   font-size: 13.5px;
   font-weight: 700;
   line-height: 1.45;
@@ -286,9 +286,9 @@
 }
 
 .bs-alert.is-info {
-  background: #eff6ff;
-  color: #1e40af;
-  border: 1px solid #bfdbfe;
+  background: #f7f5ef;
+  color: #b42319;
+  border: 1px solid #1a181373;
 }
 
 [data-theme="dark"] .bs-alert.is-error {
@@ -304,9 +304,9 @@
 }
 
 [data-theme="dark"] .bs-alert.is-info {
-  background: #172d4d;
-  color: #93c5fd;
-  border-color: #284b7a;
+  background: #282620;
+  color: #e02c1f;
+  border-color: #58534a;
 }
 
 .bs-school-grid {
@@ -330,14 +330,14 @@
   justify-content: space-between;
   gap: 10px;
   padding: 12px;
-  border-radius: 12px;
-  border: 1px solid #dbe6f3;
-  background: #f8fbff;
+  border-radius: 6px;
+  border: 1px solid #1a181373;
+  background: #fbf9f4;
 }
 
 [data-theme="dark"] .bs-list-row {
-  background: #122033;
-  border-color: #2d425e;
+  background: #1e1c17;
+  border-color: #36322a;
 }
 
 .bs-invite-spotlight {
@@ -346,20 +346,20 @@
   gap: 16px;
   align-items: center;
   padding: 14px;
-  border-radius: 14px;
-  border: 1.5px dashed #0284c7;
-  background: #f0f9ff;
+  border-radius: 6px;
+  border: 1.5px dashed #b12218;
+  background: #f8f5f0;
 }
 
 [data-theme="dark"] .bs-invite-spotlight {
-  background: #12283d;
-  border-color: #38bdf8;
+  background: #211f1a;
+  border-color: #e02c1f;
 }
 
 .bs-invite-code-big {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: clamp(22px, 4vw, 30px);
-  font-weight: 900;
+  font-weight:700;
   letter-spacing: 0.16em;
   word-break: break-all;
 }
@@ -367,7 +367,7 @@
 .bs-qr-img {
   width: 144px;
   height: 144px;
-  border-radius: 12px;
+  border-radius: 6px;
   background: #ffffff;
   padding: 6px;
 }
@@ -385,7 +385,7 @@
   }
   .bs-card {
     padding: 16px;
-    border-radius: 16px;
+    border-radius: 6px;
   }
   .bs-actions-row > a,
   .bs-actions-row > button {

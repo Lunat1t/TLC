@@ -4,32 +4,33 @@
 
 @layer base {
   :root {
-    --background: 196 33% 97%;
-    --foreground: 199 43% 12%;
-    --card: 0 0% 100%;
-    --card-foreground: 199 43% 12%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 199 43% 12%;
-    --primary: 194 72% 13%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 195 29% 95%;
-    --secondary-foreground: 197 26% 32%;
-    --muted: 195 29% 95%;
-    --muted-foreground: 197 16% 46%;
-    --accent: 189 98% 46%;
-    --accent-foreground: 194 86% 11%;
-    --destructive: 4 56% 45%;
+    --background: 43 34% 86%;
+    --foreground: 40 14% 9%;
+    --card: 45 55% 97%;
+    --card-foreground: 40 14% 9%;
+    --popover: 45 55% 97%;
+    --popover-foreground: 40 14% 9%;
+    --primary: 40 14% 9%;
+    --primary-foreground: 45 55% 97%;
+    --secondary: 43 28% 91%;
+    --secondary-foreground: 40 12% 25%;
+    --muted: 43 28% 91%;
+    --muted-foreground: 40 9% 38%;
+    --accent: 5 80% 46%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 4 70% 38%;
     --destructive-foreground: 0 0% 98%;
-    --border: 196 31% 88%;
-    --input: 196 31% 84%;
-    --ring: 189 98% 46%;
-    --radius: 1rem;
-  }
-}
+    --border: 41 18% 66%;
+    --input: 40 14% 9%;
+    --ring: 5 80% 46%;
+    --radius: 0.375rem;
 
-@layer base {
-  :root {
-    --font-ui: var(--font-rubik), Rubik, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --ink: #1a1813;
+    --paper: #ece5d2;
+    --paper-card: #fbf8ef;
+    --signal: #d62718;
+    --font-ui: var(--font-onest), Onest, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-tech: var(--font-mono-tech), "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   }
 }
 
@@ -41,9 +42,38 @@
     font-family: var(--font-ui);
   }
   body {
-    @apply bg-[#f4f8fa] text-[#12242d] antialiased;
+    @apply text-[#1a1813] antialiased;
     font-family: var(--font-ui);
+    background-color: var(--paper);
+    background-image:
+      linear-gradient(rgba(26, 24, 19, 0.055) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(26, 24, 19, 0.055) 1px, transparent 1px);
+    background-size: 24px 24px;
   }
+  h1, h2, h3 {
+    letter-spacing: -0.02em;
+  }
+}
+
+/* Миллиметровка: фон страниц-холстов. */
+.paper-grid {
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(rgba(26, 24, 19, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26, 24, 19, 0.055) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Технические метки: порты A–F, номера деталей, значения. */
+.tech, code, kbd, samp {
+  font-family: var(--font-tech);
+  font-feature-settings: "zero" 1;
+}
+.tech {
+  font-size: 0.78em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 @keyframes legoBlockSpawn {
@@ -130,4 +160,4 @@ input, textarea, [contenteditable]:not([contenteditable="false"]),
 
 @media(max-width:767px){.editor-topbar{height:auto!important;min-height:104px;display:flex;flex-wrap:wrap;gap:8px!important;padding:8px 12px!important}.editor-topbar>div:first-of-type{flex:1;min-width:100px}.editor-topbar>button,.editor-topbar summary{min-height:44px}.editor-topbar>button{padding-inline:10px;font-size:12px}.editor-topbar>details{margin-left:auto}.tlc-editor [aria-label="Меню блоков"]{max-width:calc(100vw - 48px)}}
 
-.workspace-sync-status:empty{display:none}.workspace-sync-status{position:fixed;left:12px;top:12px;z-index:14000;max-width:calc(100vw - 24px);padding:10px 14px;border:1px solid #b5c9df;border-radius:12px;background:#fff;color:#193b68;box-shadow:0 4px 18px #1233;font-size:13px}.workspace-sync-status button{margin-left:12px;text-decoration:underline;min-height:36px}
+.workspace-sync-status:empty{display:none}.workspace-sync-status{position:fixed;left:12px;top:12px;z-index:14000;max-width:calc(100vw - 24px);padding:10px 14px;border:1px solid #1a181373;border-radius:6px;background:#ffffff;color:#332f28;box-shadow:0 3px 0 rgba(30,28,23,.16);font-size:13px}.workspace-sync-status button{margin-left:12px;text-decoration:underline;min-height:36px}

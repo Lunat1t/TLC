@@ -3,15 +3,15 @@
   width: 100%;
   min-height: 100dvh;
   padding: clamp(24px, 5vw, 64px) 24px;
-  background: #f4f8fa;
-  color: #102f3a;
+  background: #f7f5ef;
+  color: #1f1d19;
 }
 
 .teacher-upload-back {
   display: block;
   width: min(100%, 680px);
   margin: 0 auto 24px;
-  color: #006f88;
+  color: #35312a;
   font-size: 14px;
   font-weight: 700;
   text-decoration: none;
@@ -26,17 +26,17 @@
   width: min(100%, 680px);
   margin: 0 auto;
   padding: clamp(24px, 4vw, 40px);
-  border: 1px solid #d4e8ed;
-  border-radius: 24px;
-  background: #fff;
-  box-shadow: 0 12px 36px #0734420a;
+  border: 1px solid #1a181373;
+  border-radius: 6px;
+  background: #ffffff;
+  box-shadow: 0 3px 0 rgba(30,28,23,.16);
 }
 
 .teacher-upload-kicker {
   display: block;
-  color: #007f99;
+  color: #534f46;
   font-size: 11px;
-  font-weight: 800;
+  font-weight:700;
   line-height: 1.5;
   letter-spacing: .14em;
 }
@@ -44,14 +44,14 @@
 .teacher-upload-heading h1 {
   margin: 10px 0 12px;
   font-size: clamp(26px, 4vw, 34px);
-  font-weight: 800;
+  font-weight:700;
   line-height: 1.15;
   letter-spacing: -.025em;
 }
 
 .teacher-upload-heading p {
   margin: 0;
-  color: #526c78;
+  color: #6e685c;
   font-size: 14px;
   line-height: 1.7;
 }
@@ -78,10 +78,10 @@
   min-width: 0;
   min-height: 48px;
   padding: 12px 14px;
-  border: 1px solid #bcd9e0;
-  border-radius: 12px;
-  background: #fff;
-  color: #102f3a;
+  border: 1px solid #1a181373;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1f1d19;
   font: inherit;
   font-size: 16px;
   font-weight: 400;
@@ -94,7 +94,7 @@
 }
 
 .teacher-upload-field input::placeholder {
-  color: #7b929c;
+  color: #968f81;
   opacity: 1;
 }
 
@@ -104,7 +104,7 @@
 }
 
 .teacher-upload-help {
-  color: #6a828d;
+  color: #877f70;
   font-size: 12px;
   font-weight: 400;
 }
@@ -113,7 +113,7 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  color: #526c78;
+  color: #6e685c;
   font-size: 13px;
   line-height: 1.65;
   cursor: pointer;
@@ -124,7 +124,7 @@
   width: 18px;
   height: 18px;
   margin-top: 2px;
-  accent-color: #007f99;
+  accent-color: #534f46;
   cursor: pointer;
 }
 
@@ -136,17 +136,17 @@
   min-height: 50px;
   padding: 13px 20px;
   border: 1px solid transparent;
-  border-radius: 12px;
-  background: #073442;
-  color: #fff;
+  border-radius: 6px;
+  background: #1f1d18;
+  color: #ffffff;
   font-size: 15px;
-  font-weight: 750;
+  font-weight:700;
   line-height: 1.5;
   cursor: pointer;
 }
 
 .teacher-upload-submit:hover:not(:disabled) {
-  background: #005e73;
+  background: #2e2a24;
 }
 
 .teacher-upload-submit:disabled {
@@ -156,7 +156,7 @@
 
 .teacher-upload-signin {
   justify-self: center;
-  color: #006f88;
+  color: #35312a;
   font-size: 13px;
   font-weight: 600;
   text-align: center;
@@ -167,20 +167,20 @@
 .teacher-upload-success {
   margin: 0;
   padding: 12px 14px;
-  border-radius: 12px;
+  border-radius: 6px;
   font-size: 13px;
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
 
 .teacher-upload-error {
-  border: 1px solid #f0ccc7;
+  border: 1px solid #1a181373;
   background: #fff2ef;
   color: #a3362b;
 }
 
 .teacher-upload-success {
-  border: 1px solid #bce8ce;
+  border: 1px solid #1a181373;
   background: #e7f8ef;
   color: #1e6b46;
 }
@@ -189,12 +189,12 @@
 .teacher-upload-page input:focus-visible,
 .teacher-upload-page select:focus-visible,
 .teacher-upload-page button:focus-visible {
-  outline: 3px solid #02c7ea;
+  outline: 3px solid #d0281c;
   outline-offset: 3px;
 }
 
 @media (max-width: 480px) {
   .teacher-upload-page { padding: 24px 16px; }
-  .teacher-upload-card { padding: 24px 20px; border-radius: 20px; }
+  .teacher-upload-card { padding: 24px 20px; border-radius: 6px; }
   .teacher-upload-form { gap: 20px; margin-top: 24px; }
 }
