@@ -139,7 +139,7 @@ export function ControllerButtonBlock({
 
   return (
     <div className="flex flex-col">
-      <div className="flex flex-nowrap items-center min-h-[58px] px-3 gap-3 text-[#18313b]">
+      <div className="flex flex-nowrap items-center min-h-[58px] px-3 gap-3 text-[#262423]">
         <span className="inline-flex items-center gap-1.5 text-[15px] font-extrabold whitespace-nowrap tracking-tight shrink-0">
           <Gamepad2 size={16} aria-hidden="true" className="shrink-0 opacity-95" />
           <span>Кнопка</span>
@@ -160,7 +160,7 @@ export function ControllerButtonBlock({
                     },
                   })
                 }}
-                className="min-h-[36px] h-[36px] max-w-[96px] shrink-0 px-2 rounded-[9px] bg-white text-[#18313b] font-black text-xs shadow-xs cursor-pointer"
+                className="min-h-[36px] h-[36px] max-w-[96px] shrink-0 px-2 rounded-[9px] bg-white text-[#262423] font-black text-xs shadow-xs cursor-pointer"
               >
                 <option value="">Пульт</option>
                 {block.target?.controlId && !selectedControl && (
@@ -182,7 +182,7 @@ export function ControllerButtonBlock({
               aria-label="Выбрать кнопку пульта"
               title="Кнопка"
               onChange={e => onChange({ target: { controlId: activeControlId, input: e.target.value } })}
-              className="min-h-[36px] h-[36px] min-w-[52px] shrink-0 px-2 rounded-[9px] bg-white text-[#18313b] font-black text-sm shadow-xs cursor-pointer"
+              className="min-h-[36px] h-[36px] min-w-[52px] shrink-0 px-2 rounded-[9px] bg-white text-[#262423] font-black text-sm shadow-xs cursor-pointer"
             >
               <option value="">•</option>
               {selectedControl
@@ -199,7 +199,7 @@ export function ControllerButtonBlock({
             value={currentButton}
             aria-label="Выбрать кнопку пульта"
             onChange={(e) => onChange({ button: e.target.value as ControllerButton })}
-            className="min-h-[36px] h-[36px] shrink-0 px-2 rounded-[9px] bg-white text-[#18313b] font-black text-sm shadow-xs cursor-pointer"
+            className="min-h-[36px] h-[36px] shrink-0 px-2 rounded-[9px] bg-white text-[#262423] font-black text-sm shadow-xs cursor-pointer"
           >
             {CONTROLLER_BUTTONS.map((btn) => (
               <option key={btn} value={btn} aria-label={BUTTON_ARIA_LABELS[btn]}>
@@ -214,7 +214,7 @@ export function ControllerButtonBlock({
           aria-label={`Режим срабатывания кнопки: ${CONTROLLER_EVENT_LABELS[currentEvent]}`}
           title={`Режим кнопки: ${CONTROLLER_EVENT_LABELS[currentEvent]}`}
           onClick={() => onChange({ event: nextControllerEvent(currentEvent) })}
-          className="min-h-[36px] min-w-[36px] h-[36px] shrink-0 px-2.5 rounded-[9px] bg-white text-[#18313b] font-black text-xs shadow-xs cursor-pointer hover:bg-[#fff7ed] transition-colors flex items-center justify-center whitespace-nowrap"
+          className="min-h-[36px] min-w-[36px] h-[36px] shrink-0 px-2.5 rounded-[9px] bg-white text-[#262423] font-black text-xs shadow-xs cursor-pointer hover:bg-[#fff7ed] transition-colors flex items-center justify-center whitespace-nowrap"
         >
           {CONTROLLER_EVENT_LABELS[currentEvent]}
         </button>
@@ -241,7 +241,7 @@ export function ControllerStopBlock({
 
   return (
     <div className="flex flex-col">
-      <div className="flex flex-wrap items-center max-w-[var(--row-width)] min-h-[64px] px-3 py-2 gap-3 text-[#18313b]">
+      <div className="flex flex-wrap items-center max-w-[var(--row-width)] min-h-[64px] px-3 py-2 gap-3 text-[#262423]">
         <span
           aria-hidden="true"
           className="w-[28px] h-[28px] shrink-0 rounded-[6px] bg-[#8f2a21] text-white font-black grid place-items-center text-sm shadow-inner"
@@ -253,7 +253,7 @@ export function ControllerStopBlock({
         </span>
 
         {isStopAll ? (
-          <div className="flex flex-nowrap items-center min-h-[36px] h-[36px] px-2.5 rounded-[9px] bg-white text-[#18313b] font-black text-xs shadow-xs shrink-0">
+          <div className="flex flex-nowrap items-center min-h-[36px] h-[36px] px-2.5 rounded-[9px] bg-white text-[#262423] font-black text-xs shadow-xs shrink-0">
             <span className="whitespace-nowrap">Все моторы</span>
           </div>
         ) : activePorts.length > 2 ? null : (
@@ -268,7 +268,7 @@ export function ControllerStopBlock({
                   next[idx] = e.target.value
                   onChange({ stopAll: false, motors: next, motor: next[0], motor2: next[1] })
                 }}
-                className="min-h-[36px] h-[36px] px-2.5 rounded-[9px] bg-white text-[#18313b] font-black text-sm shadow-xs cursor-pointer hover:bg-[#fef2f2] focus:outline-none"
+                className="min-h-[36px] h-[36px] px-2.5 rounded-[9px] bg-white text-[#262423] font-black text-sm shadow-xs cursor-pointer hover:bg-[#fef2f2] focus:outline-none"
               >
                 {ports.map((p) => (
                   <option key={p} value={p}>
@@ -286,12 +286,12 @@ export function ControllerStopBlock({
             aria-label={activePorts.length > 2 ? `Изменить порты: ${activePorts.join(", ")}` : "Добавить порт для остановки"}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((prev) => !prev)}
-            className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-full border border-white/55 bg-white/15 hover:bg-white/30 text-[#18313b] text-lg leading-none font-black grid place-items-center"
+            className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-full border border-white/55 bg-white/15 hover:bg-white/30 text-[#262423] text-lg leading-none font-black grid place-items-center"
           >
             +
           </button>
           {menuOpen && (
-            <div className={`absolute ${openUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${alignLeft ? "left-0" : "right-0"} z-50 w-[168px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-1.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-1`}>
+            <div className={`absolute ${openUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${alignLeft ? "left-0" : "right-0"} z-50 w-[168px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-1.5 rounded-[12px] border border-[#d9e8ef] bg-white text-[#262423] shadow-xl flex flex-col gap-1`}>
               <button
                 type="button"
                 aria-pressed={isStopAll}
@@ -336,8 +336,8 @@ export function ControllerStopBlock({
                     }}
                     className={`min-h-[36px] flex items-center gap-2 text-left px-3 py-1.5 rounded-lg text-xs font-extrabold disabled:opacity-60 ${
                       isPortActive
-                        ? "bg-[#e5f2f7] hover:bg-[#d7ebf3] text-[#086985]"
-                        : "bg-[#f4f8fa] hover:bg-[#e5f2f7] text-[#18313b]"
+                        ? "bg-[#e7f0f5] hover:bg-[#dae9f0] text-[#6f3fb0]"
+                        : "bg-[#f3f8fb] hover:bg-[#e7f0f5] text-[#262423]"
                     }`}
                   >
                     <Check size={14} aria-hidden="true" className={isPortActive ? "opacity-100 shrink-0" : "opacity-0 shrink-0"} />
@@ -397,7 +397,7 @@ function ModuleCapsuleIconPopover({
   title,
   description,
   icon,
-  iconClassName = "text-[#18313b]",
+  iconClassName = "text-[#262423]",
   canRemove,
   mandatoryLabel = "Обязательный модуль",
   ariaLabel,
@@ -438,11 +438,11 @@ function ModuleCapsuleIconPopover({
         <div
           className={`absolute ${openUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${
             alignLeft ? "left-0" : "right-0"
-          } z-50 w-[216px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-2.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-2`}
+          } z-50 w-[216px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-2.5 rounded-[12px] border border-[#d9e8ef] bg-white text-[#262423] shadow-xl flex flex-col gap-2`}
         >
           <div>
-            <p className="text-xs font-black text-[#18313b] leading-snug">{title}</p>
-            <p className="mt-0.5 text-[11px] font-semibold text-[#57717d] leading-snug">{description}</p>
+            <p className="text-xs font-black text-[#262423] leading-snug">{title}</p>
+            <p className="mt-0.5 text-[11px] font-semibold text-[#6a6272] leading-snug">{description}</p>
           </div>
           {canRemove ? (
             <button
@@ -457,7 +457,7 @@ function ModuleCapsuleIconPopover({
               <span>Убрать</span>
             </button>
           ) : (
-            <div className="rounded-lg bg-[#f4f8fa] px-2.5 py-1.5 text-[11px] font-bold text-[#475569] text-center">
+            <div className="rounded-lg bg-[#f3f8fb] px-2.5 py-1.5 text-[11px] font-bold text-[#58515f] text-center">
               {mandatoryLabel}
             </div>
           )}
@@ -493,7 +493,7 @@ export function ChassisBlock({
 
   return (
     <div className="flex flex-col">
-      <div className="flex flex-wrap items-center max-w-[var(--row-width)] min-h-[64px] px-3 py-2 gap-3 text-[#18313b]">
+      <div className="flex flex-wrap items-center max-w-[var(--row-width)] min-h-[64px] px-3 py-2 gap-3 text-[#262423]">
         <button
           type="button"
           onClick={onOpenChassis}
@@ -501,7 +501,7 @@ export function ChassisBlock({
           title={chassisConfigured ? "Настройки шасси" : "Настройте шасси"}
           className={`relative shrink-0 min-h-[36px] h-[36px] px-2.5 rounded-[9px] flex items-center justify-center gap-1.5 font-black text-xs whitespace-nowrap transition-colors ${
             chassisConfigured
-              ? "bg-white/20 hover:bg-white/30 text-[#18313b] border border-white/35"
+              ? "bg-white/20 hover:bg-white/30 text-[#262423] border border-white/35"
               : "bg-[#fef3c7] hover:bg-[#fde68a] text-[#92400e] border-2 border-[#f59e0b]"
           }`}
         >
@@ -523,8 +523,8 @@ export function ChassisBlock({
                 onClick={() => onChange({ chassisDirection: opt.value })}
                 className={`min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] font-black text-base grid place-items-center transition-colors ${
                   active
-                    ? "bg-white text-[#0d3b4c] shadow-sm"
-                    : "bg-white/15 hover:bg-white/30 text-[#18313b]"
+                    ? "bg-white text-[#262423] shadow-sm"
+                    : "bg-white/15 hover:bg-white/30 text-[#262423]"
                 }`}
               >
                 {opt.icon}
@@ -555,7 +555,7 @@ export function ChassisBlock({
                 if (!Number.isFinite(val)) return
                 onChange({ speed: val })
               }}
-              className="w-[70px] min-h-[36px] h-[36px] rounded-full px-2 text-center bg-white text-[#0d3b4c] font-extrabold text-sm shadow-xs"
+              className="w-[70px] min-h-[36px] h-[36px] rounded-full px-2 text-center bg-white text-[#262423] font-extrabold text-sm shadow-xs"
             />
             <span className="text-xs font-extrabold whitespace-nowrap">°/с</span>
           </div>
@@ -584,14 +584,14 @@ export function ChassisBlock({
                 if (!Number.isFinite(val) || val < 0.01 || val > 10000) return
                 onChange({ value: val })
               }}
-              className="w-[68px] min-h-[36px] h-[36px] rounded-full px-2 text-center bg-white text-[#0d3b4c] font-extrabold text-sm shadow-xs"
+              className="w-[68px] min-h-[36px] h-[36px] rounded-full px-2 text-center bg-white text-[#262423] font-extrabold text-sm shadow-xs"
             />
             <button
               type="button"
               aria-label={`Единица измерения шасси: ${TRAVEL_UNIT_ARIA_LABELS[unit]}`}
               title={`Единица: ${TRAVEL_UNIT_ARIA_LABELS[unit]}`}
               onClick={() => onChange({ unit: nextTravelUnit(unit) })}
-              className="min-h-[36px] min-w-[36px] h-[36px] px-2.5 rounded-full bg-white text-[#0d3b4c] hover:bg-[#e7f4f8] font-extrabold text-sm shadow-xs cursor-pointer flex items-center justify-center shrink-0"
+              className="min-h-[36px] min-w-[36px] h-[36px] px-2.5 rounded-full bg-white text-[#262423] hover:bg-[#e9f2f6] font-extrabold text-sm shadow-xs cursor-pointer flex items-center justify-center shrink-0"
             >
               {TRAVEL_UNIT_LABELS[unit]}
             </button>
@@ -605,12 +605,12 @@ export function ChassisBlock({
             aria-expanded={menuOpen}
             title="Настроить модули"
             onClick={() => setMenuOpen((prev) => !prev)}
-            className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-full border border-white/55 bg-white/15 hover:bg-white/30 text-[#18313b] text-lg leading-none font-black grid place-items-center"
+            className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-full border border-white/55 bg-white/15 hover:bg-white/30 text-[#262423] text-lg leading-none font-black grid place-items-center"
           >
             +
           </button>
           {menuOpen && (
-            <div className={`absolute ${openUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${alignLeft ? "left-0" : "right-0"} z-50 w-[164px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-1.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-1`}>
+            <div className={`absolute ${openUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${alignLeft ? "left-0" : "right-0"} z-50 w-[164px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-1.5 rounded-[12px] border border-[#d9e8ef] bg-white text-[#262423] shadow-xl flex flex-col gap-1`}>
               <button
                 type="button"
                 aria-pressed={hasSpeed}
@@ -624,8 +624,8 @@ export function ChassisBlock({
                 }}
                 className={`min-h-[36px] flex items-center gap-2 text-left px-3 py-1.5 rounded-lg text-xs font-extrabold ${
                   hasSpeed
-                    ? "bg-[#d6f0f8] hover:bg-[#c3e8f4] text-[#086985]"
-                    : "bg-[#eff8fb] hover:bg-[#dff2f8] text-[#0d3b4c]"
+                    ? "bg-[#ddeaf1] hover:bg-[#cde0ea] text-[#6f3fb0]"
+                    : "bg-[#f0f7fa] hover:bg-[#e3eef4] text-[#262423]"
                 }`}
               >
                 <Check size={14} aria-hidden="true" className={hasSpeed ? "opacity-100 shrink-0" : "opacity-0 shrink-0"} />
@@ -645,8 +645,8 @@ export function ChassisBlock({
                 }}
                 className={`min-h-[36px] flex items-center gap-2 text-left px-3 py-1.5 rounded-lg text-xs font-extrabold ${
                   hasTravel
-                    ? "bg-[#d6f0f8] hover:bg-[#c3e8f4] text-[#086985]"
-                    : "bg-[#eff8fb] hover:bg-[#dff2f8] text-[#0d3b4c]"
+                    ? "bg-[#ddeaf1] hover:bg-[#cde0ea] text-[#6f3fb0]"
+                    : "bg-[#f0f7fa] hover:bg-[#e3eef4] text-[#262423]"
                 }`}
               >
                 <Check size={14} aria-hidden="true" className={hasTravel ? "opacity-100 shrink-0" : "opacity-0 shrink-0"} />
@@ -794,7 +794,7 @@ export function SensorBlock({
         data-live-badge={mod}
         aria-label={badge.label}
         title={badge.label}
-        className={`${badge.minWidthClass} h-[22px] text-[11px] font-bold leading-none tabular-nums bg-white/85 px-1.5 rounded-[7px] inline-flex items-center justify-center whitespace-nowrap shrink-0 text-[#18313b]`}
+        className={`${badge.minWidthClass} h-[22px] text-[11px] font-bold leading-none tabular-nums bg-white/85 px-1.5 rounded-[7px] inline-flex items-center justify-center whitespace-nowrap shrink-0 text-[#262423]`}
       >
         {badge.kind === "color" ? (
           <span
@@ -817,9 +817,9 @@ export function SensorBlock({
           if ((e.target as HTMLElement).closest("button, select, input")) return
           onStartDrag(e)
         }}
-        className={`flex flex-wrap items-center text-[#18313b] ${
+        className={`flex flex-wrap items-center text-[#262423] ${
           slotted
-            ? "min-h-[48px] max-w-[calc(var(--row-width)-100px)] px-3 gap-3 rounded-xl bg-[#e3e8eb] cursor-grab active:cursor-grabbing pointer-events-auto"
+            ? "min-h-[48px] max-w-[calc(var(--row-width)-100px)] px-3 gap-3 rounded-xl bg-[#ddeaf1] cursor-grab active:cursor-grabbing pointer-events-auto"
             : "max-w-[var(--row-width)] min-h-[64px] px-3 py-2 gap-3"
         }`}
       >
@@ -827,7 +827,7 @@ export function SensorBlock({
         {!slotted && (
           <span
             data-sensor-action-badge={isOnlyLights ? "lights" : isOnlyReset ? "reset" : "wait"}
-            className="min-h-[36px] h-[36px] px-2.5 rounded-[9px] bg-transparent text-[#18313b] font-extrabold text-xs flex items-center gap-1.5 whitespace-nowrap shrink-0"
+            className="min-h-[36px] h-[36px] px-2.5 rounded-[9px] bg-transparent text-[#262423] font-extrabold text-xs flex items-center gap-1.5 whitespace-nowrap shrink-0"
           >
             {isOnlyLights ? (
               <>
@@ -862,7 +862,7 @@ export function SensorBlock({
             }}
             className={`min-h-[36px] h-[36px] ${
               slotted ? "px-2 gap-1" : "px-2.5 gap-1.5"
-            } rounded-[9px] bg-white text-[#312e81] flex items-center justify-center shadow-xs hover:bg-[#eef2ff] cursor-pointer whitespace-nowrap`}
+            } rounded-[9px] bg-white text-[#6f3fb0] flex items-center justify-center shadow-xs hover:bg-[#f2f8fb] cursor-pointer whitespace-nowrap`}
           >
             {activeSensorOption.renderIcon(slotted ? 15 : 17)}
             <span className="text-xs font-extrabold whitespace-nowrap">
@@ -871,7 +871,7 @@ export function SensorBlock({
             <ChevronDown size={11} aria-hidden="true" className="shrink-0 opacity-75" />
           </button>
           {typeOpen && (
-            <div className={`absolute ${typeOpenUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${typeAlignLeft ? "left-0" : "right-0"} z-50 w-[190px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-1.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-1`}>
+            <div className={`absolute ${typeOpenUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${typeAlignLeft ? "left-0" : "right-0"} z-50 w-[190px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-1.5 rounded-[12px] border border-[#d9e8ef] bg-white text-[#262423] shadow-xl flex flex-col gap-1`}>
               {SENSOR_TYPE_OPTIONS.map(({ value, label, renderIcon }) => {
                 const active = sensorType === value
                 return (
@@ -889,8 +889,8 @@ export function SensorBlock({
                     }}
                     className={`min-h-[36px] flex items-center gap-2 text-left px-3 py-1.5 rounded-lg text-xs font-extrabold ${
                       active
-                        ? "bg-[#e0e7ff] hover:bg-[#c7d2fe] text-[#312e81]"
-                        : "bg-[#f8fafc] hover:bg-[#eef2ff] text-[#312e81]"
+                        ? "bg-[#e9f2f6] hover:bg-[#d7e6ee] text-[#6f3fb0]"
+                        : "bg-[#f8fbfc] hover:bg-[#f2f8fb] text-[#6f3fb0]"
                     }`}
                   >
                     <Check size={14} aria-hidden="true" className={active ? "opacity-100 shrink-0" : "opacity-0 shrink-0"} />
@@ -910,7 +910,7 @@ export function SensorBlock({
             aria-label="Порт датчика"
             title="Порт датчика (C–F)"
             onChange={(e) => onChange({ sensorPort: e.target.value })}
-            className="min-h-[36px] h-[36px] shrink-0 px-2 rounded-[9px] bg-white text-[#18313b] font-black text-sm shadow-xs cursor-pointer"
+            className="min-h-[36px] h-[36px] shrink-0 px-2 rounded-[9px] bg-white text-[#262423] font-black text-sm shadow-xs cursor-pointer"
           >
             {SENSOR_PORTS.map((p) => (
               <option key={p} value={p}>
@@ -930,7 +930,7 @@ export function SensorBlock({
               aria-label="Условие сравнения расстояния"
               title={op === "lt" ? "Ближе (<)" : "Дальше (>)"}
               onClick={() => onChange({ sensorOp: op === "lt" ? "gt" : "lt" })}
-              className="min-h-[36px] h-[36px] px-2 rounded-[9px] bg-white text-[#312e81] font-extrabold text-xs flex items-center gap-1 shadow-xs hover:bg-[#eef2ff] whitespace-nowrap"
+              className="min-h-[36px] h-[36px] px-2 rounded-[9px] bg-white text-[#6f3fb0] font-extrabold text-xs flex items-center gap-1 shadow-xs hover:bg-[#f2f8fb] whitespace-nowrap"
             >
               <span>{getSensorComparisonWord("threshold", op)}</span>
             </button>
@@ -945,7 +945,7 @@ export function SensorBlock({
                 if (!Number.isFinite(val)) return
                 onChange({ sensorDistance: val })
               }}
-              className="w-[52px] min-h-[36px] h-[36px] rounded-full px-1.5 text-center bg-white text-[#18313b] font-extrabold text-sm shadow-xs"
+              className="w-[52px] min-h-[36px] h-[36px] rounded-full px-1.5 text-center bg-white text-[#262423] font-extrabold text-sm shadow-xs"
             />
             <span className="text-xs font-extrabold whitespace-nowrap pr-1">см</span>
           </div>
@@ -962,20 +962,20 @@ export function SensorBlock({
               aria-expanded={colorOpen}
               title={COLOR_SWATCH_STYLES[color].label}
               onClick={() => setColorOpen((prev) => !prev)}
-              className="min-h-[36px] min-w-[36px] h-[36px] px-2 rounded-[9px] bg-white text-[#18313b] shadow-xs flex items-center justify-center gap-1 cursor-pointer"
+              className="min-h-[36px] min-w-[36px] h-[36px] px-2 rounded-[9px] bg-white text-[#262423] shadow-xs flex items-center justify-center gap-1 cursor-pointer"
             >
               {color === "none" ? (
-                <span className="text-sm font-black text-[#475569]">⊘</span>
+                <span className="text-sm font-black text-[#58515f]">⊘</span>
               ) : (
                 <span
                   aria-hidden="true"
-                  className="w-4 h-4 rounded-full border border-[#cbd5e1]"
+                  className="w-4 h-4 rounded-full border border-[#c5dce7]"
                   style={{ backgroundColor: COLOR_SWATCH_STYLES[color].hex }}
                 />
               )}
             </button>
             {colorOpen && (
-              <div className={`absolute ${colorOpenUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${colorAlignLeft ? "left-0" : "right-0"} z-50 p-1.5 rounded-[12px] border border-[#dce8ec] bg-white shadow-xl grid grid-cols-4 gap-1 w-[164px] max-h-[calc(100dvh-24px)] overflow-y-auto`}>
+              <div className={`absolute ${colorOpenUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${colorAlignLeft ? "left-0" : "right-0"} z-50 p-1.5 rounded-[12px] border border-[#d9e8ef] bg-white shadow-xl grid grid-cols-4 gap-1 w-[164px] max-h-[calc(100dvh-24px)] overflow-y-auto`}>
                 {SENSOR_COLORS.map((c) => {
                   const sw = COLOR_SWATCH_STYLES[c]
                   const selected = c === color
@@ -991,15 +991,15 @@ export function SensorBlock({
                         onChange({ sensorColor: c })
                       }}
                       className={`min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-lg grid place-items-center border ${
-                        selected ? "border-[#4f46e5] ring-2 ring-[#818cf8]" : "border-[#e2e8f0] hover:bg-[#f1f5f9]"
+                        selected ? "border-[#8350c4] ring-2 ring-[#ba9bde]" : "border-[#e0ecf2] hover:bg-[#f0f7fa]"
                       }`}
                     >
                       {c === "none" ? (
-                        <span className="text-sm font-black text-[#475569]">⊘</span>
+                        <span className="text-sm font-black text-[#58515f]">⊘</span>
                       ) : (
                         <span
                           aria-hidden="true"
-                          className="w-5 h-5 rounded-full border border-[#cbd5e1]"
+                          className="w-5 h-5 rounded-full border border-[#c5dce7]"
                           style={{ backgroundColor: sw.hex }}
                         />
                       )}
@@ -1021,7 +1021,7 @@ export function SensorBlock({
               aria-label="Условие сравнения отражения"
               title={op === "lt" ? "Темнее (<)" : "Светлее (>)"}
               onClick={() => onChange({ sensorOp: op === "lt" ? "gt" : "lt" })}
-              className="min-h-[36px] h-[36px] px-2 rounded-[9px] bg-white text-[#312e81] font-extrabold text-xs flex items-center justify-center shadow-xs hover:bg-[#eef2ff] whitespace-nowrap"
+              className="min-h-[36px] h-[36px] px-2 rounded-[9px] bg-white text-[#6f3fb0] font-extrabold text-xs flex items-center justify-center shadow-xs hover:bg-[#f2f8fb] whitespace-nowrap"
             >
               {getSensorComparisonWord("reflection", op)}
             </button>
@@ -1036,7 +1036,7 @@ export function SensorBlock({
                 if (!Number.isFinite(val)) return
                 onChange({ sensorReflection: val })
               }}
-              className="w-[50px] min-h-[36px] h-[36px] rounded-full px-1.5 text-center bg-white text-[#18313b] font-extrabold text-sm shadow-xs"
+              className="w-[50px] min-h-[36px] h-[36px] rounded-full px-1.5 text-center bg-white text-[#262423] font-extrabold text-sm shadow-xs"
             />
             <span className="text-xs font-extrabold whitespace-nowrap pr-1">%</span>
           </div>
@@ -1053,7 +1053,7 @@ export function SensorBlock({
               aria-pressed={pressed}
               title={pressed ? "Нажат" : "Отпущен"}
               onClick={() => onChange({ sensorPressed: !pressed })}
-              className="min-h-[36px] min-w-[36px] h-[36px] px-2.5 rounded-[9px] bg-white text-[#312e81] font-black text-xs flex items-center gap-1 shadow-xs hover:bg-[#eef2ff] whitespace-nowrap"
+              className="min-h-[36px] min-w-[36px] h-[36px] px-2.5 rounded-[9px] bg-white text-[#6f3fb0] font-black text-xs flex items-center gap-1 shadow-xs hover:bg-[#f2f8fb] whitespace-nowrap"
             >
               <span aria-hidden="true">{pressed ? "●" : "○"}</span>
               <span>{pressed ? "Нажат" : "Отпущен"}</span>
@@ -1071,7 +1071,7 @@ export function SensorBlock({
               aria-label="Условие сравнения силы"
               title={op === "lt" ? "Слабее (<)" : "Сильнее (>)"}
               onClick={() => onChange({ sensorOp: op === "lt" ? "gt" : "lt" })}
-              className="min-h-[36px] h-[36px] px-2 rounded-[9px] bg-white text-[#312e81] font-extrabold text-xs flex items-center justify-center shadow-xs hover:bg-[#eef2ff] whitespace-nowrap"
+              className="min-h-[36px] h-[36px] px-2 rounded-[9px] bg-white text-[#6f3fb0] font-extrabold text-xs flex items-center justify-center shadow-xs hover:bg-[#f2f8fb] whitespace-nowrap"
             >
               {getSensorComparisonWord("force", op)}
             </button>
@@ -1087,7 +1087,7 @@ export function SensorBlock({
                 if (!Number.isFinite(val)) return
                 onChange({ sensorForce: val })
               }}
-              className="w-[50px] min-h-[36px] h-[36px] rounded-full px-1.5 text-center bg-white text-[#18313b] font-extrabold text-sm shadow-xs"
+              className="w-[50px] min-h-[36px] h-[36px] rounded-full px-1.5 text-center bg-white text-[#262423] font-extrabold text-sm shadow-xs"
             />
             <span className="text-xs font-extrabold whitespace-nowrap pr-1">Н</span>
           </div>
@@ -1103,7 +1103,7 @@ export function SensorBlock({
               aria-label="Условие сравнения курса"
               title={op === "lt" ? "Меньше (<)" : "Больше (>)"}
               onClick={() => onChange({ sensorOp: op === "lt" ? "gt" : "lt" })}
-              className="min-h-[36px] h-[36px] px-2 rounded-[9px] bg-white text-[#312e81] font-extrabold text-xs flex items-center justify-center shadow-xs hover:bg-[#eef2ff] whitespace-nowrap"
+              className="min-h-[36px] h-[36px] px-2 rounded-[9px] bg-white text-[#6f3fb0] font-extrabold text-xs flex items-center justify-center shadow-xs hover:bg-[#f2f8fb] whitespace-nowrap"
             >
               {getSensorComparisonWord("heading", op)}
             </button>
@@ -1118,7 +1118,7 @@ export function SensorBlock({
                 if (!Number.isFinite(val)) return
                 onChange({ sensorAngle: val })
               }}
-              className="w-[54px] min-h-[36px] h-[36px] rounded-full px-1.5 text-center bg-white text-[#18313b] font-extrabold text-sm shadow-xs"
+              className="w-[54px] min-h-[36px] h-[36px] rounded-full px-1.5 text-center bg-white text-[#262423] font-extrabold text-sm shadow-xs"
             />
             <span className="text-xs font-extrabold whitespace-nowrap pr-1">°</span>
           </div>
@@ -1134,7 +1134,7 @@ export function SensorBlock({
               aria-label={tiltAxis === "pitch" ? "Ось наклона: тангаж" : "Ось наклона: крен"}
               title={tiltAxis === "pitch" ? "Тангаж (↕)" : "Крен (↔)"}
               onClick={() => onChange({ sensorAxis: tiltAxis === "pitch" ? "roll" : "pitch" })}
-              className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-white text-[#312e81] font-black text-sm grid place-items-center shadow-xs hover:bg-[#eef2ff]"
+              className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-white text-[#6f3fb0] font-black text-sm grid place-items-center shadow-xs hover:bg-[#f2f8fb]"
             >
               {tiltAxis === "pitch" ? "↕" : "↔"}
             </button>
@@ -1143,7 +1143,7 @@ export function SensorBlock({
               aria-label="Условие сравнения наклона"
               title={tiltOp === "lt" ? "Меньше (<)" : "Больше (>)"}
               onClick={() => onChange({ sensorTiltOp: tiltOp === "lt" ? "gt" : "lt" })}
-              className="min-h-[36px] h-[36px] px-2 rounded-[9px] bg-white text-[#312e81] font-extrabold text-xs flex items-center justify-center shadow-xs hover:bg-[#eef2ff] whitespace-nowrap"
+              className="min-h-[36px] h-[36px] px-2 rounded-[9px] bg-white text-[#6f3fb0] font-extrabold text-xs flex items-center justify-center shadow-xs hover:bg-[#f2f8fb] whitespace-nowrap"
             >
               {getSensorComparisonWord("tilt", tiltOp)}
             </button>
@@ -1158,7 +1158,7 @@ export function SensorBlock({
                 if (!Number.isFinite(val)) return
                 onChange({ sensorTilt: val })
               }}
-              className="w-[52px] min-h-[36px] h-[36px] rounded-full px-1.5 text-center bg-white text-[#18313b] font-extrabold text-sm shadow-xs"
+              className="w-[52px] min-h-[36px] h-[36px] rounded-full px-1.5 text-center bg-white text-[#262423] font-extrabold text-sm shadow-xs"
             />
             <span className="text-xs font-extrabold whitespace-nowrap pr-1">°</span>
           </div>
@@ -1193,7 +1193,7 @@ export function SensorBlock({
               className={`min-h-[36px] min-w-[36px] h-[36px] px-2.5 rounded-[9px] font-black text-xs cursor-pointer flex items-center justify-center shrink-0 ${
                 light === -1
                   ? "bg-white/25 text-white border border-white/35 hover:bg-white/35"
-                  : "bg-white text-[#18313b] shadow-xs hover:bg-[#fefce8]"
+                  : "bg-white text-[#262423] shadow-xs hover:bg-[#fefce8]"
               }`}
             >
               {formatSensorLightLabel(light)}
@@ -1207,12 +1207,12 @@ export function SensorBlock({
             aria-label="Добавить модуль датчика"
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((prev) => !prev)}
-            className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-full border border-white/55 bg-white/15 hover:bg-white/30 text-[#18313b] text-lg leading-none font-black grid place-items-center"
+            className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-full border border-white/55 bg-white/15 hover:bg-white/30 text-[#262423] text-lg leading-none font-black grid place-items-center"
           >
             +
           </button>
           {menuOpen && (
-            <div className={`absolute ${menuOpenUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${menuAlignLeft ? "left-0" : "right-0"} z-50 w-[184px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-1.5 rounded-[12px] border border-[#dce8ec] bg-white text-[#18313b] shadow-xl flex flex-col gap-1`}>
+            <div className={`absolute ${menuOpenUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${menuAlignLeft ? "left-0" : "right-0"} z-50 w-[184px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-1.5 rounded-[12px] border border-[#d9e8ef] bg-white text-[#262423] shadow-xl flex flex-col gap-1`}>
               {menuModules.map((mod) => {
                 const { label, renderIcon } = SENSOR_MODULE_MENU_ITEMS[mod]
                 const active = effectiveModules.includes(mod)
@@ -1238,8 +1238,8 @@ export function SensorBlock({
                           ? "bg-[#fef08a] hover:bg-[#fde047] text-[#854d0e]"
                           : "bg-[#fefce8] hover:bg-[#fef08a] text-[#854d0e]"
                         : active
-                          ? "bg-[#e0e7ff] hover:bg-[#c7d2fe] text-[#312e81]"
-                          : "bg-[#eef2ff] hover:bg-[#e0e7ff] text-[#312e81]"
+                          ? "bg-[#e9f2f6] hover:bg-[#d7e6ee] text-[#6f3fb0]"
+                          : "bg-[#f2f8fb] hover:bg-[#e9f2f6] text-[#6f3fb0]"
                     }`}
                   >
                     <Check size={14} aria-hidden="true" className={active ? "opacity-100 shrink-0" : "opacity-0 shrink-0"} />
@@ -1255,7 +1255,7 @@ export function SensorBlock({
                     setMenuOpen(false)
                     onRemoveFromCondition()
                   }}
-                  className="mt-1 border-t border-[#e2e8f0] pt-1.5 min-h-[36px] flex items-center gap-2 text-left px-3 py-1.5 rounded-lg bg-[#fef2f2] hover:bg-[#fee2e2] text-xs font-extrabold text-[#991b1b]"
+                  className="mt-1 border-t border-[#e0ecf2] pt-1.5 min-h-[36px] flex items-center gap-2 text-left px-3 py-1.5 rounded-lg bg-[#fef2f2] hover:bg-[#fee2e2] text-xs font-extrabold text-[#991b1b]"
                 >
                   <Trash2 size={14} aria-hidden="true" className="shrink-0" />
                   <span>Убрать из условия</span>

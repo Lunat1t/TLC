@@ -133,7 +133,7 @@ const BLOCK_CATEGORIES = [
     id: "events",
     label: "События",
     icon: Play,
-    color: "#9a4b08",
+    color: "#8350c4",
     blocks: [
       { type: "start", label: "При запуске", icon: Play },
       { type: "button", event: "hold", label: "Кнопка пульта", icon: Gamepad2 },
@@ -143,7 +143,7 @@ const BLOCK_CATEGORIES = [
     id: "motion",
     label: "Движение",
     icon: ArrowRight,
-    color: "#524258",
+    color: "#4d6d94",
     blocks: [
       { type: "chassis", label: "Ехать", icon: Navigation },
       { type: "drive", label: "Движение мотора", icon: ArrowRight },
@@ -154,7 +154,7 @@ const BLOCK_CATEGORIES = [
     id: "sensors",
     label: "Датчики",
     icon: Waves,
-    color: "#8350c4",
+    color: "#402b47",
     blocks: [
       { type: "sensor", label: "Датчик", icon: Waves },
     ],
@@ -163,7 +163,7 @@ const BLOCK_CATEGORIES = [
     id: "logic",
     label: "Логика",
     icon: Workflow,
-    color: "#8350c4",
+    color: "#7392b5",
     blocks: [
       { type: "if", label: "Если / иначе", icon: Workflow },
     ],
