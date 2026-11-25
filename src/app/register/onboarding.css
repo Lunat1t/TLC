@@ -3,7 +3,7 @@
   --on-muted: #90897a;
   --on-line: #ede8db;
   --on-white: #ffffff;
-  --on-green: #d62718;
+  --on-green: #b79cf5;
   --on-green-shadow: #1a1813;
   --on-selected: #fbeae4;
   --on-teal: #534f46;
@@ -37,11 +37,11 @@
 .course-choice { padding: 30px 12px 26px; min-height: 242px; display: flex; flex-direction: column; align-items: center; text-align: center; }
 .onboarding-art { width: 86px; height: 86px; display: inline-flex; justify-content: center; align-items: center; border-radius: 6px; margin-bottom: 24px; flex-shrink: 0; transform: rotate(-6deg); }
 .onboarding-art svg { transform: rotate(6deg); }
-.art-coral { background: #fbeae4; color: #d62718; }
+.art-coral { background: #fbeae4; color: #b79cf5; }
 .art-yellow { background: #f4efe0; color: #1a1813; }
-.art-blue { background: #f2eee5; color: #dc2b1e; }
-.art-mint { background: #efeadf; color: #ac2118; }
-.art-lilac { background: #f6f3ec; color: #e02c1f; }
+.art-blue { background: #f2eee5; color: #b79cf5; }
+.art-mint { background: #efeadf; color: #6a4bd6; }
+.art-lilac { background: #f6f3ec; color: #b79cf5; }
 .onboarding-choice strong { display: block; font-size: 16px; font-weight:700; overflow-wrap: normal; hyphens: manual; }
 .choice-description { display: block; margin-top: 8px; font-size: 13px; line-height: 1.4; color: var(--on-muted); }
 .choice-check { position: absolute; right: 10px; top: 10px; border-radius: 50%; padding: 2px; background: var(--on-green); color: var(--on-ink); }

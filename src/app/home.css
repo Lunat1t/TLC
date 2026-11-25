@@ -10,7 +10,7 @@
   --home-ev3: #ac681d;
   --home-canvas: #f7f5ef;
   --home-rail: #f4f0e8;
-  --home-cyan: #d0281c;
+  --home-cyan: #b79cf5;
   --home-cyan-soft: #f0ebe0;
   --home-blue: #353129;
   --home-blue-soft: #f1ede3;
@@ -22,7 +22,8 @@
   --home-error: #a9352e;
 }
 html, body { overflow-x: clip; }
-.home-shell { min-height: 100dvh; background-color: var(--paper); background-image: linear-gradient(rgba(26,24,19,.055) 1px, transparent 1px), linear-gradient(90deg, rgba(26,24,19,.055) 1px, transparent 1px); background-size: 24px 24px; color: var(--home-ink); font-family: var(--home-font); }
+.home-shell { min-height: 100dvh; background-color: var(--paper); background-image: radial-gradient(circle, rgba(26, 24, 19, 0.28) 1px, transparent 1.4px);
+  background-size: 16px 16px; color: var(--home-ink); font-family: var(--home-font); }
 .home-shell :is(button, a, select, input):focus-visible { outline: 3px solid var(--home-focus); outline-offset: 2px; }
 .home-content { min-width: 0; }
 .home-main { width: min(100%, 1110px); margin: 0 auto; padding: clamp(32px, 5vw, 64px) clamp(20px, 5vw, 56px) 80px; }

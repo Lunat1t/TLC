@@ -157,7 +157,7 @@ export function DirectionPalettePreview({ kind }: { kind: DirectionControlKind }
 
 
 const PALETTE_MOTOR_DOTS = [
-  { face: "#b12218", shade: "#3a362e" },
+  { face: "#6a4bd6", shade: "#3a362e" },
   { face: "#d9473d", shade: "#a92b26" },
   { face: "#32a66a", shade: "#21804e" },
   { face: "#edc13d", shade: "#c59b24" },

@@ -7,7 +7,7 @@
 
 [data-theme="dark"] .rm-page {
   background: #201d19;
-  color: #f3efe6;
+  color: #f8f4ec;
 }
 
 .rm-shell {
@@ -76,13 +76,13 @@
 [data-theme="dark"] .rm-kit-btn {
   background: #2b2822;
   border-color: #605b50;
-  color: #f3efe6;
+  color: #f8f4ec;
 }
 
 [data-theme="dark"] .rm-kit-btn[aria-pressed="true"] {
-  background: #e02c1f;
-  border-color: #e02c1f;
-  color: #ffffff;
+  background: #b79cf5;
+  border-color: #b79cf5;
+  color:#1a1813;
 }
 
 .rm-actions {
@@ -117,7 +117,7 @@
 [data-theme="dark"] .rm-btn-secondary {
   background: #2b2822;
   border-color: #605b50;
-  color: #f3efe6;
+  color: #f8f4ec;
 }
 
 .rm-btn-primary {
@@ -126,7 +126,7 @@
 }
 
 [data-theme="dark"] .rm-btn-primary {
-  background: #e02c1f;
+  background: #b79cf5;
 }
 
 .rm-btn-secondary:disabled,
@@ -217,7 +217,7 @@
 .rm-meter {
   height: 10px;
   border-radius:6px;
-  background: #f3efe6;
+  background: #f8f4ec;
   overflow: hidden;
   display: flex;
 }
@@ -291,7 +291,7 @@
 }
 
 .rm-tier.is-current {
-  border-color: #e02c1f;
+  border-color: #b79cf5;
   box-shadow: 0 3px 0 rgba(30,28,23,.16);
 }
 
@@ -342,7 +342,7 @@
 
 [data-theme="dark"] .rm-tier-num {
   background: #343029;
-  color: #f3efe6;
+  color: #f8f4ec;
 }
 
 .rm-tier-title h2 {
@@ -394,7 +394,7 @@
 .rm-card:hover,
 .rm-card:focus-visible {
   transform: translateY(-6px) rotate(-0.8deg);
-  border-color: #e02c1f;
+  border-color: #b79cf5;
   box-shadow: 0 3px 0 rgba(30,28,23,.16);
 }
 
@@ -406,7 +406,7 @@
 .rm-card.is-selected {
   transform: translateY(-7px);
   border-color: #12100e;
-  outline: 3px solid #e02c1f;
+  outline: 3px solid #b79cf5;
   outline-offset: 2px;
 }
 
@@ -467,7 +467,7 @@
   padding: 3px 7px;
   border-radius:6px;
   background: #f5f2ea;
-  color: #d82a1d;
+  color: #b79cf5;
 }
 
 .rm-card.is-completed .rm-card-status {
@@ -582,7 +582,7 @@
 [data-theme="dark"] .rm-inspector-close {
   background: #322e27;
   border-color: #645e53;
-  color: #f3efe6;
+  color: #f8f4ec;
 }
 
 .rm-inspector-cover {
@@ -652,7 +652,7 @@
 [data-theme="dark"] .rm-dialog {
   background: #28251f;
   border-color: #534f46;
-  color: #f3efe6;
+  color: #f8f4ec;
 }
 
 .rm-admin-grid {
@@ -737,7 +737,7 @@
 [data-theme="dark"] .rm-mini-input {
   background: #2b2822;
   border-color: #615c51;
-  color: #f3efe6;
+  color: #f8f4ec;
 }
 
 .rm-icon-btn {
@@ -755,7 +755,7 @@
 [data-theme="dark"] .rm-icon-btn {
   background: #2b2822;
   border-color: #615c51;
-  color: #f3efe6;
+  color: #f8f4ec;
 }
 
 .rm-icon-btn:disabled {

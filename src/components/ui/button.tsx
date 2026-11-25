@@ -3,22 +3,22 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md border-2 border-[#1a1813] text-sm font-bold transition-[transform,box-shadow,background-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1a1813] focus-visible:ring-offset-2 focus-visible:ring-offset-[#ece5d2] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:pointer-events-none disabled:opacity-55",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md border-2 border-[#1a1813] text-sm font-bold transition-[transform,box-shadow,background-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1a1813] focus-visible:ring-offset-2 focus-visible:ring-offset-[#f8f4ec] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:pointer-events-none disabled:opacity-55",
   {
     variants: {
       variant: {
         default:
-          "bg-[#1a1813] text-[#fbf8ef] shadow-[3px_3px_0_#d62718] hover:bg-[#33302a]",
+          "bg-[#1a1813] text-[#fffdf8] shadow-[3px_3px_0_#b79cf5] hover:bg-[#33302a]",
         cyan:
-          "bg-[#d62718] text-white shadow-[3px_3px_0_#1a1813] hover:bg-[#bf2114]",
+          "bg-[#b79cf5] text-[#1a1813] shadow-[3px_3px_0_#1a1813] hover:bg-[#a487f0]",
         destructive:
-          "bg-[#fbf8ef] text-[#a81d12] shadow-[3px_3px_0_#1a1813] hover:bg-[#f6e3dc]",
+          "bg-[#fffdf8] text-[#b3261e] shadow-[3px_3px_0_#1a1813] hover:bg-[#fbe4e0]",
         outline:
-          "bg-[#fbf8ef] text-[#1a1813] shadow-[3px_3px_0_#1a1813] hover:bg-[#f3eddc]",
+          "bg-[#fffdf8] text-[#1a1813] shadow-[3px_3px_0_#1a1813] hover:bg-[#f3eddc]",
         secondary:
-          "bg-[#ece5d2] text-[#6b6455] border-dashed border-[#8a8372] shadow-none",
+          "bg-[#f8f4ec] text-[#6b6455] border-dashed border-[#8a8372] shadow-none",
         ghost: "border-transparent hover:bg-secondary hover:border-[#1a1813]/30",
-        link: "border-transparent text-[#a81d12] underline-offset-4 hover:underline",
+        link: "border-transparent text-[#6a4bd6] underline-offset-4 hover:underline",
       },
       size: {
         default: "min-h-[48px] px-5 py-3",

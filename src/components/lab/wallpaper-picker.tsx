@@ -13,7 +13,7 @@ async function prepareWallpaper(file:File){
   const context=canvas.getContext('2d');if(!context)throw Error('Не удалось обработать картинку.')
   for(let attempt=0;attempt<4;attempt++){
    canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale))
-   context.fillStyle='#f3efe6';context.fillRect(0,0,canvas.width,canvas.height);context.drawImage(bitmap,0,0,canvas.width,canvas.height)
+   context.fillStyle='#f8f4ec';context.fillRect(0,0,canvas.width,canvas.height);context.drawImage(bitmap,0,0,canvas.width,canvas.height)
    const image=canvas.toDataURL('image/jpeg',.8)
    if(image.length<=900_000)return image
    scale*=.75

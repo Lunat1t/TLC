@@ -8,7 +8,7 @@ export default function BattlePassPage() {
         <div className="mx-auto grid h-14 w-14 place-items-center rounded-md bg-[#fef3c7] text-[#b45309]">
           <Sparkles size={28} aria-hidden="true" />
         </div>
-        <span className="mx-auto inline-flex items-center rounded-md bg-[#f4f1e9] px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#d82a1d]">
+        <span className="mx-auto inline-flex items-center rounded-md bg-[#f4f1e9] px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#b79cf5]">
           Скоро
         </span>
         <h1 className="text-3xl font-bold tracking-tight">Батл пас</h1>

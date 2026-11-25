@@ -167,7 +167,7 @@ export function ControlAreaView({area,controls,attachedPanels,editing,inputActiv
           >
             <div className="flex items-center justify-between gap-2">
               <div className={`flex items-center gap-1 ${cardError ? 'pl-6' : ''}`}>
-                <Waves size={15} className="shrink-0 text-[#e02c1f]" aria-hidden="true" />
+                <Waves size={15} className="shrink-0 text-[#b79cf5]" aria-hidden="true" />
                 <select
                   aria-label="Порт дальномера"
                   value={gaugePort}
@@ -211,7 +211,7 @@ export function ControlAreaView({area,controls,attachedPanels,editing,inputActiv
                 value={typeof sensorDistances[gaugePort] === 'number' ? (sensorDistances[gaugePort] as number) : 50}
                 onPointerDown={e => e.stopPropagation()}
                 onChange={e => onSimulateDistance?.(gaugePort, Number(e.target.value))}
-                className="w-full min-h-[36px] accent-[#e02c1f] cursor-pointer"
+                className="w-full min-h-[36px] accent-[#b79cf5] cursor-pointer"
               />
             ) : (
               (() => {

@@ -40,11 +40,11 @@
   font-weight:700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #b12218;
+  color: #6a4bd6;
 }
 
 [data-theme="dark"] .bs-eyebrow {
-  color: #e02c1f;
+  color: #b79cf5;
 }
 
 .bs-title {
@@ -91,8 +91,8 @@
 }
 
 .bs-btn-primary {
-  background: #b12218;
-  color: #ffffff;
+  background: #b79cf5;
+  color:#1a1813;
 }
 
 .bs-btn-primary:hover:not(:disabled) {
@@ -156,7 +156,7 @@
 }
 
 .bs-plan-card.is-featured {
-  border-color: #b12218;
+  border-color: #6a4bd6;
   box-shadow: 0 3px 0 rgba(30,28,23,.16);
 }
 
@@ -213,7 +213,7 @@
 
 [data-theme="dark"] .bs-status-pill {
   background: #2e2a24;
-  color: #e02c1f;
+  color: #b79cf5;
 }
 
 [data-theme="dark"] .bs-status-pill.is-active {
@@ -287,7 +287,7 @@
 
 .bs-alert.is-info {
   background: #f7f5ef;
-  color: #b42319;
+  color: #6a4bd6;
   border: 1px solid #1a181373;
 }
 
@@ -305,7 +305,7 @@
 
 [data-theme="dark"] .bs-alert.is-info {
   background: #282620;
-  color: #e02c1f;
+  color: #b79cf5;
   border-color: #58534a;
 }
 
@@ -347,13 +347,13 @@
   align-items: center;
   padding: 14px;
   border-radius: 6px;
-  border: 1.5px dashed #b12218;
+  border: 1.5px dashed #6a4bd6;
   background: #f8f5f0;
 }
 
 [data-theme="dark"] .bs-invite-spotlight {
   background: #211f1a;
-  border-color: #e02c1f;
+  border-color: #b79cf5;
 }
 
 .bs-invite-code-big {

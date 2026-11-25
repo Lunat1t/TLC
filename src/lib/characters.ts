@@ -14,7 +14,7 @@ export const CHARACTER_CATALOG: {
   personality: string
   bodyColor: string
 }[] = [
-  { id: "cloud", label: "Облачко", personality: "Тихое, задумчивое, любит побыть в своём мире.", bodyColor: "#e02c1f" },
+  { id: "cloud", label: "Облачко", personality: "Тихое, задумчивое, любит побыть в своём мире.", bodyColor: "#b79cf5" },
   { id: "rectangle", label: "Прямоугольник", personality: "Заботливый и добрый. Всегда готов помочь.", bodyColor: "#E2A2F6" },
   { id: "square", label: "Квадрат", personality: "Шумный и упрямый. Любит настоять на своём.", bodyColor: "#FF2D2D" },
   { id: "triangle", label: "Треугольник", personality: "Шустрый, легко отвлекается и всегда за игру.", bodyColor: "#FF6E1A" },
@@ -22,13 +22,13 @@ export const CHARACTER_CATALOG: {
 ]
 
 export const CHARACTER_COLORS = [
-  { name: "Голубой", color: "#e02c1f" },
+  { name: "Голубой", color: "#b79cf5" },
   { name: "Красный", color: "#ef5b64" },
   { name: "Оранжевый", color: "#ff9b45" },
   { name: "Жёлтый", color: "#ffd34e" },
   { name: "Зелёный", color: "#57c785" },
-  { name: "Бирюзовый", color: "#df2b1e" },
-  { name: "Фиолетовый", color: "#e02c1f" },
+  { name: "Бирюзовый", color: "#b79cf5" },
+  { name: "Фиолетовый", color: "#b79cf5" },
   { name: "Розовый", color: "#ee82b4" },
   { name: "Белый", color: "#f6f3ec" },
   { name: "Графитовый", color: "#555047" },

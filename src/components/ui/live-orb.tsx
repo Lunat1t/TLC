@@ -74,8 +74,8 @@ export interface AvatarPreset {
 
 export const WHITE = { color: "#f6f3ec", eyeColor: "#0d0c0a" } as const
 export const BLACK = { color: "#171612", eyeColor: "#f6f3ec" } as const
-export const CUSTOM_DEFAULT = { color: "#e02c1f", eyeColor: "#f9f7f3" } as const
-export const WEBGL_COLORS = ["#e02c1f", "#b0aba0", "#E8B4D4"]
+export const CUSTOM_DEFAULT = { color: "#b79cf5", eyeColor: "#f9f7f3" } as const
+export const WEBGL_COLORS = ["#b79cf5", "#b0aba0", "#E8B4D4"]
 
 export const AVATAR_PRESETS: AvatarPreset[] = [
   {
@@ -83,8 +83,8 @@ export const AVATAR_PRESETS: AvatarPreset[] = [
     name: "Aurora WebGL",
     badge: "21st.dev Original",
     variant: "webgl",
-    colors: ["#e02c1f", "#b0aba0", "#E8B4D4"],
-    color: "#e02c1f",
+    colors: ["#b79cf5", "#b0aba0", "#E8B4D4"],
+    color: "#b79cf5",
     eyeColor: "#0d0c0a",
   },
   {
@@ -92,8 +92,8 @@ export const AVATAR_PRESETS: AvatarPreset[] = [
     name: "Brick Studio Импульс",
     badge: "SPIKE Cyan",
     variant: "webgl",
-    colors: ["#d0281c", "#e02c1f", "#b0aba0"],
-    color: "#d0281c",
+    colors: ["#b79cf5", "#b79cf5", "#b0aba0"],
+    color: "#b79cf5",
     eyeColor: "#171612",
   },
   {
@@ -119,7 +119,7 @@ export const AVATAR_PRESETS: AvatarPreset[] = [
     name: "Неоновый Вектор",
     badge: "Custom",
     variant: "custom",
-    colors: ["#e02c1f", "#e02c1f", "#e3dbc7"],
+    colors: ["#b79cf5", "#b79cf5", "#e3dbc7"],
     color: CUSTOM_DEFAULT.color,
     eyeColor: CUSTOM_DEFAULT.eyeColor,
   },

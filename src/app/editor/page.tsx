@@ -154,7 +154,7 @@ const BLOCK_CATEGORIES = [
     id: "sensors",
     label: "Датчики",
     icon: Waves,
-    color: "#e02c1f",
+    color: "#b79cf5",
     blocks: [
       { type: "sensor", label: "Датчик", icon: Waves },
     ],
@@ -163,7 +163,7 @@ const BLOCK_CATEGORIES = [
     id: "logic",
     label: "Логика",
     icon: Workflow,
-    color: "#d72a1d",
+    color: "#b79cf5",
     blocks: [
       { type: "if", label: "Если / иначе", icon: Workflow },
     ],
@@ -1759,7 +1759,7 @@ function EditorWorkspace() {
                             if (!project || event.button !== 0) return
                             dragControlFromPalette(event, "distance-gauge")
                           }}
-                          className="grid h-12 w-full touch-none cursor-grab place-items-center rounded-md border-2 border-[#1a181373] bg-[#f7f4ee]/60 p-1 hover:border-[#e02c1f] hover:bg-[#f7f4ee] focus-visible:outline focus-visible:outline-2 focus-visible:outline-stone-700 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+                          className="grid h-12 w-full touch-none cursor-grab place-items-center rounded-md border-2 border-[#1a181373] bg-[#f7f4ee]/60 p-1 hover:border-[#b79cf5] hover:bg-[#f7f4ee] focus-visible:outline focus-visible:outline-2 focus-visible:outline-stone-700 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <DistanceGaugePalettePreview />
                         </button>
@@ -1816,7 +1816,7 @@ function EditorWorkspace() {
                             clientY: event.clientY,
                           })
                         }}
-                        className="flex min-h-10 w-full touch-none cursor-grab items-center gap-2 rounded-lg bg-[#f7f5ef] px-2 py-1.5 text-left text-xs font-bold leading-tight hover:bg-[#f3efe6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-current active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex min-h-10 w-full touch-none cursor-grab items-center gap-2 rounded-lg bg-[#f7f5ef] px-2 py-1.5 text-left text-xs font-bold leading-tight hover:bg-[#f8f4ec] focus-visible:outline focus-visible:outline-2 focus-visible:outline-current active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <span className="grid size-6 shrink-0 place-items-center rounded-md text-white" style={{ backgroundColor: color }}>
                           {type === "sensor" ? (
@@ -2357,11 +2357,11 @@ function EditorWorkspace() {
                         : isButtonBlock
                           ? "w-max min-h-[58px] bg-[#f5f1ea] text-[#23201b] border-l-4 border-[#e85d2a] shadow-sm"
                           : isSensorBlock
-                            ? "w-max min-h-[64px] bg-[#f5f1ea] text-[#23201b] border-l-4 border-[#e02c1f] shadow-sm"
+                            ? "w-max min-h-[64px] bg-[#f5f1ea] text-[#23201b] border-l-4 border-[#b79cf5] shadow-sm"
                           : isStopBlock
                             ? "w-max min-h-[64px] bg-[#f5f1ea] text-[#23201b] border-l-4 border-[#b1372c] shadow-sm"
                             : isChassisBlock
-                              ? "w-max min-h-[64px] bg-[#f5f1ea] text-[#23201b] border-l-4 border-[#b12218] shadow-sm"
+                              ? "w-max min-h-[64px] bg-[#f5f1ea] text-[#23201b] border-l-4 border-[#6a4bd6] shadow-sm"
                               : motorBlock
                                 ? paired
                                   ? "w-max min-h-[64px] bg-[#37332b] text-white shadow-[0_3px_0_rgba(30,28,23,0.16)]"
@@ -2393,11 +2393,11 @@ function EditorWorkspace() {
                           isIfBlock
                             ? "bg-[#f5f1ea]"
                             : isSensorBlock
-                              ? "bg-[#e02c1f]"
+                              ? "bg-[#b79cf5]"
                             : isStopBlock
                               ? "bg-[#b1372c]"
                               : isChassisBlock
-                                ? "bg-[#b12218]"
+                                ? "bg-[#b79cf5]"
                                 : paired
                                   ? "bg-[#37332b]"
                                   : "bg-[#635e53]"
@@ -2422,7 +2422,7 @@ function EditorWorkspace() {
                             .filter(color => !hiddenButtons.includes(color))
                           const panelErrors = [...new Set(colors.map(color => inputErrors[`${block.id}:${color}`]).filter(Boolean))]
                           const paint: Record<MotorPanelButton, { face: string; shade: string }> = {
-                            blue: { face: "#b12218", shade: "#3a362e" },
+                            blue: { face: "#6a4bd6", shade: "#3a362e" },
                             red: { face: "#d9473d", shade: "#a92b26" },
                             green: { face: "#32a66a", shade: "#21804e" },
                             yellow: { face: "#edc13d", shade: "#c59b24" },
@@ -3311,7 +3311,7 @@ function EditorWorkspace() {
               : gesture.type === "if"
                 ? "w-[220px] h-[56px] rounded-md bg-[#f5f1ea] shadow-[0_3px_0_rgba(30,28,23,0.16)]"
               : gesture.type === "sensor"
-                ? "w-[200px] h-[48px] rounded-full bg-[#e02c1f] shadow-[0_3px_0_rgba(30,28,23,0.16)]"
+                ? "w-[200px] h-[48px] rounded-full bg-[#b79cf5] shadow-[0_3px_0_rgba(30,28,23,0.16)]"
                 : gesture.type === "pair"
                   ? "w-[220px] h-[56px] rounded-md bg-[#37332b] shadow-[0_3px_0_rgba(30,28,23,0.16)]"
                   : gesture.type === "button"
@@ -3321,7 +3321,7 @@ function EditorWorkspace() {
                       : gesture.type === "stop"
                         ? "w-[220px] h-[56px] rounded-md bg-[#b1372c] shadow-[0_3px_0_rgba(30,28,23,0.16)]"
                         : gesture.type === "chassis"
-                          ? "w-[220px] h-[56px] rounded-md bg-[#b12218] shadow-[0_3px_0_rgba(30,28,23,0.16)]"
+                          ? "w-[220px] h-[56px] rounded-md bg-[#b79cf5] shadow-[0_3px_0_rgba(30,28,23,0.16)]"
                           : "w-[220px] h-[56px] rounded-md bg-[#635e53] shadow-[0_3px_0_rgba(30,28,23,0.16)]"
           }`}
         >
@@ -3559,7 +3559,7 @@ function EditorWorkspace() {
         className="fixed inset-0 z-[13000] grid place-items-center bg-[#1c1a16]/92 p-6 text-white backdrop-blur-md"
       >
         <div className="w-full max-w-sm rounded-md border border-white/15 bg-[#24211c] p-6 text-center shadow-2xl">
-          <div className="mx-auto mb-4 grid size-14 place-items-center rounded-md bg-[#565148]/25 text-[#e02c1f]">
+          <div className="mx-auto mb-4 grid size-14 place-items-center rounded-md bg-[#565148]/25 text-[#b79cf5]">
             <RotateCw size={28} aria-hidden="true" />
           </div>
           <h2 id="editor-landscape-title" className="text-xl font-bold tracking-tight">
@@ -3587,13 +3587,13 @@ function EditorWorkspace() {
                   setOrientationManualHint(true)
                 }
               }}
-              className="min-h-[44px] w-full rounded-md bg-[#565148] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#322f27] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e02c1f]"
+              className="min-h-[44px] w-full rounded-md bg-[#565148] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#322f27] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b79cf5]"
             >
               Перейти в горизонт
             </button>
             <Link
               href="/dashboard"
-              className="grid min-h-[44px] w-full place-items-center rounded-md border border-white/20 px-4 py-2.5 text-sm font-bold text-[#f0ebe0] transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e02c1f]"
+              className="grid min-h-[44px] w-full place-items-center rounded-md border border-white/20 px-4 py-2.5 text-sm font-bold text-[#f0ebe0] transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b79cf5]"
             >
               На главную
             </Link>

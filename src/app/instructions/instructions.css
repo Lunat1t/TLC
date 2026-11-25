@@ -4,13 +4,13 @@
 /* PDF Reader V1 */
 .pdf-reader {
   --reader-surface: #f9f7f3;
-  --reader-table: #ebe4d6;
+  --reader-table: #f1ece1;
   --reader-ink: #221f1b;
   --reader-muted: #716b5e;
   --reader-border: #e0d7c0;
   --reader-control-bg: #ffffff;
   --reader-control-hover: #f2eee4;
-  --reader-accent: #c6261b;
+  --reader-accent: #6a4bd6;
   --reader-accent-ink: #ffffff;
   --reader-danger-bg: #fef2f2;
   --reader-danger-border: #fca5a5;
@@ -35,7 +35,7 @@
   --reader-border: #36322a;
   --reader-control-bg: #2a2721;
   --reader-control-hover: #37332b;
-  --reader-accent: #e02c1f;
+  --reader-accent: #b79cf5;
   --reader-accent-ink: #161512;
   --reader-danger-bg: #3b1720;
   --reader-danger-border: #99394d;

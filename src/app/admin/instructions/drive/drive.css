@@ -189,7 +189,7 @@
 .teacher-upload-page input:focus-visible,
 .teacher-upload-page select:focus-visible,
 .teacher-upload-page button:focus-visible {
-  outline: 3px solid #d0281c;
+  outline: 3px solid #b79cf5;
   outline-offset: 3px;
 }
 

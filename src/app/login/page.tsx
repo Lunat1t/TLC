@@ -65,7 +65,7 @@ export default function LoginPage() {
 
   return (
     <div className="login-page min-h-dvh flex flex-col paper-grid">
-      <header className="min-h-[74px] px-5 md:px-16 py-3.5 flex items-center justify-between gap-4 bg-[#fbf8ef] border-b-2 border-[#1a1813]">
+      <header className="min-h-[74px] px-5 md:px-16 py-3.5 flex items-center justify-between gap-4 bg-[#fffdf8] border-b-2 border-[#1a1813]">
         <Link
           href="/dashboard"
           className="text-[19px] font-bold tracking-wide text-[#1a1814] inline-flex items-center gap-2.5"
@@ -158,7 +158,7 @@ export default function LoginPage() {
               <Link
                 id="registerRedirect"
                 href="/register"
-                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-md bg-[#fbf8ef] border-b-2 border-[#1a1813] text-white text-sm font-bold shadow-[0_3px_0_rgba(30,28,23,0.16)] hover:bg-[#bc251a] transition-transform hover:-translate-y-0.5 whitespace-nowrap"
+                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-md bg-[#fffdf8] border-b-2 border-[#1a1813] text-[#1a1813] text-sm font-bold shadow-[0_3px_0_rgba(30,28,23,0.16)] hover:bg-[#a487f0] transition-transform hover:-translate-y-0.5 whitespace-nowrap"
               >
                 Регистрация <span aria-hidden="true">↗</span>
               </Link>

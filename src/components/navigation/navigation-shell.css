@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
-  background-color: var(--workspace-background, #ece5d2);
+  background-color: var(--workspace-background, #f8f4ec);
 }
 
 .tlc-os.is-app {
@@ -26,7 +26,7 @@
   overflow-y: auto;
   overflow-x: clip;
   padding: 0;
-  background-color: var(--workspace-background, #ece5d2);
+  background-color: var(--workspace-background, #f8f4ec);
 }
 
 .tlc-os.is-app[data-background="plain"] > .os-content {
@@ -34,10 +34,8 @@
 }
 
 .tlc-os.is-app[data-background="grid"] > .os-content {
-  background-image:
-    linear-gradient(rgba(26, 24, 19, 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(26, 24, 19, 0.055) 1px, transparent 1px);
-  background-size: 24px 24px;
+  background-image: radial-gradient(circle, rgba(26, 24, 19, 0.28) 1px, transparent 1.4px);
+  background-size: 16px 16px;
 }
 
 .tlc-os.is-app[data-background="dots"] > .os-content {
@@ -127,8 +125,8 @@
   height: 28px;
   flex: 0 0 auto;
   border-radius: 8px;
-  background: linear-gradient(135deg, #e02c1f 0%, #e02c1f 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, #b79cf5 0%, #b79cf5 100%);
+  color:#1a1813;
   font-size: 12px;
   font-weight:700;
   letter-spacing: -0.02em;
@@ -224,7 +222,7 @@
 .studio-plus-btn[data-route-active="true"] {
   border-color: rgba(224,44,31, 0.72);
   background: rgba(224,44,31, 0.16);
-  color: #e02c1f;
+  color: #b79cf5;
 }
 
 .studio-plus-icon {
@@ -342,8 +340,8 @@
   min-height: 40px;
   padding: 0 14px;
   border-radius:6px;
-  background: #d0281c;
-  color:#ffffff;
+  background: #b79cf5;
+  color:#1a1813;
   font-size: 13px;
   font-weight:700;
   white-space: nowrap;
@@ -494,7 +492,7 @@
 }
 
 .studio-topbar :is(a, button):focus-visible {
-  outline: 2px solid #e02c1f;
+  outline: 2px solid #b79cf5;
   outline-offset: 2px;
 }
 
@@ -566,13 +564,13 @@
 }
 
 .studio-create-btn:focus-visible {
-  outline: 2px solid #e02c1f;
+  outline: 2px solid #b79cf5;
   outline-offset: 2px;
 }
 
 .studio-create-btn[data-tone="note"] { background: #eee9dd; color: #322e27; }
 .studio-create-btn[data-tone="image"] { background: #ebe5d7; color: #2b2822; }
-.studio-create-btn[data-tone="program"] { background: #d62718; color: #ffffff; border-color: #ffffff55; }
+.studio-create-btn[data-tone="program"] { background: #b79cf5; color:#1a1813; border-color: #ffffff55; }
 .studio-create-btn[data-tone="shortcut"] { background: #ebe5d7; color: #2b2822; }
 .studio-create-btn[data-tone="widget"] { background: #ebe5d7; color: #2b2822; }
 
@@ -800,7 +798,7 @@
 
 .settings-sidebar button[aria-current="page"] {
   background: #f4f1e9;
-  color: #d82a1d;
+  color: #b79cf5;
 }
 
 .settings-detail {
@@ -1031,7 +1029,7 @@
 [data-theme="dark"] .workspace-settings {
   background: #27251f;
   border-color: #38342c;
-  color: #f3efe6;
+  color: #f8f4ec;
   box-shadow: 0 3px 0 rgba(30,28,23,.16);
 }
 
@@ -1046,13 +1044,13 @@
 
 [data-theme="dark"] .settings-home:hover {
   background: #2e2a24;
-  color: #f3efe6;
+  color: #f8f4ec;
 }
 
 [data-theme="dark"] .workspace-settings .settings-sidebar h1,
 [data-theme="dark"] .workspace-settings .settings-title,
 [data-theme="dark"] .settings-field-label {
-  color: #f3efe6;
+  color: #f8f4ec;
 }
 
 [data-theme="dark"] .workspace-settings .settings-title {
@@ -1065,7 +1063,7 @@
 
 [data-theme="dark"] .settings-sidebar button:hover {
   background: #2e2a24;
-  color: #f3efe6;
+  color: #f8f4ec;
 }
 
 [data-theme="dark"] .settings-sidebar button[aria-current="page"] {
@@ -1080,7 +1078,7 @@
 [data-theme="dark"] .workspace-settings section {
   background: #211f1a;
   border-color: #38342c;
-  color: #f3efe6;
+  color: #f8f4ec;
 }
 
 [data-theme="dark"] .workspace-settings section:not(.settings-account-section) label,
@@ -1091,13 +1089,13 @@
 [data-theme="dark"] .workspace-settings :is(select, .settings-input, input[type="color"]) {
   background: #27251f;
   border-color: #38342c;
-  color: #f3efe6;
+  color: #f8f4ec;
 }
 
 [data-theme="dark"] .settings-primary-btn {
-  background: #e02c1f;
-  border-color: #e02c1f;
-  color: #ffffff;
+  background: #b79cf5;
+  border-color: #b79cf5;
+  color:#1a1813;
 }
 
 [data-theme="dark"] .settings-signout,
@@ -1105,7 +1103,7 @@
 [data-theme="dark"] .settings-secondary-btn {
   background: #27251f;
   border-color: #38342c;
-  color: #f3efe6;
+  color: #f8f4ec;
 }
 
 [data-theme="dark"] .settings-signout:hover:not(:disabled),
@@ -1201,13 +1199,13 @@
 [data-theme="dark"] .wallpaper-actions button {
   background: #27251f;
   border-color: #38342c;
-  color: #f3efe6;
+  color: #f8f4ec;
 }
 
 [data-theme="dark"] .wallpaper-actions button:first-child {
-  background: #e02c1f;
-  border-color: #e02c1f;
-  color: #ffffff;
+  background: #b79cf5;
+  border-color: #b79cf5;
+  color:#1a1813;
 }
 
 [data-theme="dark"] .wallpaper-picker .wallpaper-error {
@@ -1451,7 +1449,7 @@
 [data-theme="dark"] .battle-pass-card {
   background: #22201b;
   border-color: #5c574c;
-  color: #f3efe6;
+  color: #f8f4ec;
 }
 [data-theme="dark"] .battle-pass-card p {
   color: #cfccc6;
