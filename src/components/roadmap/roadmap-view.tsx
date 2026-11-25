@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   Check,
-  ChevronRight,
+  Code2,
   Cog,
   Crown,
   Leaf,
@@ -55,10 +55,20 @@ function RankIcon({ index }: { index: number }) {
   )
 }
 
-function skillShortLabel(id: (typeof tokenSkills)[number]["id"]): string {
-  if (id === "mechanics") return "М"
-  if (id === "logic") return "Л"
-  return "Т"
+const SKILL_MARKS = {
+  mechanics: { icon: Cog, color: "#b35300" },
+  logic: { icon: Code2, color: "#2556d9" },
+  creativity: { icon: Star, color: "#c92a6d" },
+} as const
+
+function SkillMark({ id, size = 16 }: { id: keyof typeof SKILL_MARKS; size?: number }) {
+  const { icon: Icon, color } = SKILL_MARKS[id]
+  return <Icon size={size} strokeWidth={2.5} style={{ color }} aria-hidden="true" />
+}
+
+// Номер набора вида «(0132)» нужен только в деталях карточки.
+function shortCardTitle(title: string): string {
+  return title.replace(/\s*\(\d+\)\s*$/, "") || title
 }
 
 export function RoadmapView({ initialKit }: { initialKit?: string }) {
@@ -284,77 +294,79 @@ export function RoadmapView({ initialKit }: { initialKit?: string }) {
                   key={item.id}
                   type="button"
                   className="rm-kit-btn"
+                  data-kit={item.id}
                   aria-pressed={kit === item.id}
                   onClick={() => selectKit(item.id)}
                 >
-                  {item.label}
+                  {item.label.replace(/^LEGO /, "")}
                 </button>
               ))}
             </nav>
 
-            <div className="rm-actions">
-              <button
-                type="button"
-                className="rm-btn-secondary"
-                onClick={() => ranksDialog.current?.showModal()}
+            {canPublish && (
+              <Link
+                href={`/teacher/roadmap?kit=${kit}`}
+                className="rm-icon-link"
+                aria-label="Настроить карту"
+                title="Настроить карту"
               >
-                Все ранги
-                <ChevronRight size={16} aria-hidden="true" />
-              </button>
-              {canPublish && (
-                <Link href={`/teacher/roadmap?kit=${kit}`} className="rm-btn-primary">
-                  <SlidersHorizontal size={16} aria-hidden="true" />
-                  Настроить карту
-                </Link>
-              )}
-            </div>
+                <SlidersHorizontal size={20} aria-hidden="true" />
+              </Link>
+            )}
           </div>
 
           <section className="rm-rank-bar" aria-label={`Прогресс по набору ${kitLabel}`}>
-            <div className="rm-rank-summary">
-              <div className="rm-rank-head">
-                <div className="rm-rank-badge">
-                  <RankIcon index={state.unlockedRank} />
-                  <div className="rm-rank-title">
-                    <small>{kitLabel} · {payload?.isEditor ? "Режим учителя" : "Текущий ранг"}</small>
-                    <strong>{rankNames[state.unlockedRank]}</strong>
-                  </div>
-                </div>
-                <div className="rm-rank-score">
-                  {state.nextThreshold !== null && state.nextRankIndex !== null ? (
-                    <span>
-                      {state.totalPoints} / {state.nextThreshold} очк. · до {rankNames[state.nextRankIndex]}: {state.pointsToNext}
-                    </span>
-                  ) : state.unlockedRank === rankNames.length - 1 ? (
-                    <span>{state.totalPoints} очк. · Максимальный ранг</span>
-                  ) : (
-                    <span>{state.totalPoints} очк. · Следующий ярус настраивается</span>
-                  )}
-                </div>
-              </div>
-              <div className="rm-meter" aria-hidden="true">
-                {tokenSkills.map((skill) => {
-                  const pts = state.skillPoints[skill.id]
-                  const width = (pts / meterScale) * 100
-                  return (
-                    <span
-                      key={skill.id}
-                      className="rm-meter-seg"
-                      style={{ width: `${width}%`, background: skill.color }}
-                    />
-                  )
-                })}
-              </div>
+            <button
+              type="button"
+              className="rm-rank-button"
+              title="Все ранги"
+              aria-label={`Ранг ${rankNames[state.unlockedRank]}. Все ранги`}
+              onClick={() => ranksDialog.current?.showModal()}
+            >
+              <RankIcon index={state.unlockedRank} />
+              <strong>{rankNames[state.unlockedRank]}</strong>
+            </button>
+
+            <div
+              className="rm-meter"
+              role="img"
+              aria-label={
+                state.nextThreshold !== null && state.nextRankIndex !== null
+                  ? `${state.totalPoints} из ${state.nextThreshold} очков до ранга ${rankNames[state.nextRankIndex]}`
+                  : `Очков: ${state.totalPoints}`
+              }
+            >
+              {tokenSkills.map((skill) => (
+                <span
+                  key={skill.id}
+                  className="rm-meter-seg"
+                  style={{
+                    width: `${(state.skillPoints[skill.id] / meterScale) * 100}%`,
+                    background: SKILL_MARKS[skill.id].color,
+                  }}
+                />
+              ))}
             </div>
 
-            <div className="rm-skills-row" aria-label="Уровни навыков">
+            {state.nextThreshold !== null && state.nextRankIndex !== null && (
+              <span className="rm-rank-score" aria-hidden="true">
+                {state.totalPoints} / {state.nextThreshold}
+              </span>
+            )}
+
+            <div className="rm-skills-row">
               {state.skillLevels.map((skill) => (
-                <div key={skill.id} className="rm-skill-pill">
-                  <span className="rm-skill-dot" style={{ background: skill.color }} aria-hidden="true" />
-                  <span>{skill.label}</span>
-                  <span>Ур. {skill.level}</span>
-                  <small style={{ opacity: 0.7 }}>({skill.points})</small>
-                </div>
+                <button
+                  key={skill.id}
+                  type="button"
+                  className="rm-skill-count"
+                  title={`${skill.label}: уровень ${skill.level}`}
+                  aria-label={`${skill.label}: уровень ${skill.level}, очков ${skill.points}`}
+                  onClick={() => ranksDialog.current?.showModal()}
+                >
+                  <SkillMark id={skill.id} size={18} />
+                  {skill.points}
+                </button>
               ))}
             </div>
           </section>
@@ -407,23 +419,21 @@ export function RoadmapView({ initialKit }: { initialKit?: string }) {
                     aria-label={`Ярус ${tier.numeral} — ${tier.rankName}`}
                   >
                     <div className="rm-tier-head">
-                      <div className="rm-tier-title">
-                        <span className="rm-tier-num">{tier.numeral}</span>
-                        <h2>{tier.rankName}</h2>
-                      </div>
-                      <div className="rm-tier-meta">
-                        {tier.unlocked || payload?.isEditor ? (
-                          <span>
-                            Открыт{tier.rankIndex > 0 ? ` · от ${tier.threshold} очк.` : " · старт"}
-                          </span>
-                        ) : tier.pointsNeeded !== null ? (
-                          <span>
-                            Закрыт · нужно {tier.threshold} очк. (ещё {tier.pointsNeeded})
-                          </span>
-                        ) : (
-                          <span>Закрыт · заполните предыдущий ярус</span>
-                        )}
-                      </div>
+                      <h2>{tier.rankName}</h2>
+                      {tierLocked && (
+                        <span
+                          className="rm-tier-lock"
+                          role="img"
+                          aria-label={
+                            tier.pointsNeeded !== null
+                              ? `Закрыт, нужно очков: ${tier.threshold}, осталось ${tier.pointsNeeded}`
+                              : "Закрыт, заполните предыдущий ярус"
+                          }
+                        >
+                          <Lock size={16} aria-hidden="true" />
+                          {tier.pointsNeeded !== null && tier.threshold}
+                        </span>
+                      )}
                     </div>
 
                     <div className="rm-cards-grid">
@@ -441,23 +451,15 @@ export function RoadmapView({ initialKit }: { initialKit?: string }) {
                             onClick={() => setSelectedCardId(selected ? null : card.id)}
                             aria-pressed={selected}
                           >
-                            <div className="rm-card-top">
-                              <span className="rm-card-status">
+                            {(locked || completed) && (
+                              <span className="rm-card-mark" role="img" aria-label={locked ? "Закрыт" : "Пройден"}>
                                 {locked ? (
-                                  <>
-                                    <Lock size={11} aria-hidden="true" />
-                                    Нужен {tier.rankName}
-                                  </>
-                                ) : completed ? (
-                                  <>
-                                    <Check size={11} aria-hidden="true" />
-                                    Пройден
-                                  </>
+                                  <Lock size={14} aria-hidden="true" />
                                 ) : (
-                                  "Доступен"
+                                  <Check size={16} strokeWidth={3} aria-hidden="true" />
                                 )}
                               </span>
-                            </div>
+                            )}
 
                             <div className="rm-card-cover">
                               {coverUrl ? (
@@ -467,7 +469,7 @@ export function RoadmapView({ initialKit }: { initialKit?: string }) {
                               )}
                             </div>
 
-                            <h3 className="rm-card-name">{card.title}</h3>
+                            <h3 className="rm-card-name">{shortCardTitle(card.title)}</h3>
 
                             <div className="rm-card-chips">
                               {tokenSkills.map((skill) => {
@@ -488,10 +490,13 @@ export function RoadmapView({ initialKit }: { initialKit?: string }) {
                                   <span
                                     key={skill.id}
                                     className={`rm-chip${done ? " is-done" : ""}`}
-                                    style={{ background: skill.color }}
+                                    role="img"
+                                    aria-label={`${skill.label}: ${pts}${done ? ", зачтено" : ""}`}
+                                    title={skill.label}
                                   >
-                                    +{pts} {skillShortLabel(skill.id)}
-                                    {done && <Check size={10} aria-hidden="true" />}
+                                    <SkillMark id={skill.id} />
+                                    {pts}
+                                    {done && <Check size={12} aria-hidden="true" />}
                                   </span>
                                 )
                               })}
@@ -576,7 +581,7 @@ export function RoadmapView({ initialKit }: { initialKit?: string }) {
                       return (
                         <li key={skill.id} className={`rm-step-row${done ? " is-done" : ""}`}>
                           <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                            <span className="rm-skill-dot" style={{ background: skill.color }} aria-hidden="true" />
+                            <SkillMark id={skill.id} />
                             {stepTitle}
                           </span>
                           <span>{done ? `Зачтено (+${pts})` : `+${pts} очк.`}</span>
@@ -706,6 +711,16 @@ export function RoadmapView({ initialKit }: { initialKit?: string }) {
             <X size={18} />
           </button>
         </div>
+        <ul className="rm-skill-levels" aria-label="Уровни навыков">
+          {state.skillLevels.map((skill) => (
+            <li key={skill.id}>
+              <SkillMark id={skill.id} />
+              <span>{skill.label}</span>
+              <strong>Ур. {skill.level}</strong>
+              <span>{skill.points} очк.</span>
+            </li>
+          ))}
+        </ul>
         <ol style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 8 }}>
           {state.tiers.map((tier) => (
             <li

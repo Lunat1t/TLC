@@ -95,3 +95,39 @@ html body .tlc-os.is-desktop .desktop-app-icon.is-project-spike { background: #f
 html body .tlc-os.is-desktop .desktop-app-icon.is-project-spike, html body .tlc-os.is-desktop .desktop-app-icon.is-project-spike svg { color: #3d2c00 !important; }
 html body .tlc-os.is-desktop .desktop-app-icon.is-project-ev3 { background: #d92d20 !important; border-color: #d92d20 !important; }
 html body .tlc-os.is-desktop .desktop-app-icon.is-project-ev3, html body .tlc-os.is-desktop .desktop-app-icon.is-project-ev3 svg { color: #ffffff !important; }
+
+/* Роадмап: меньше текста, значки вместо подписей. */
+html body .rm-top-row { flex-wrap: nowrap; }
+html body .rm-kit-btn { border: 0; background: #eef1f8; color: var(--bs-muted); }
+html body .rm-kit-btn[aria-pressed="true"] { background: var(--bs-action); color: #fff; }
+html body .rm-kit-btn[data-kit="spike"][aria-pressed="true"] { background: #ffcb3d; color: #3d2c00; }
+html body .rm-kit-btn[data-kit="ev3"][aria-pressed="true"] { background: #d92d20; color: #fff; }
+html body .rm-icon-link { display: grid; place-items: center; flex: 0 0 44px; height: 44px; border: 1px solid var(--bs-line); border-radius: 8px; color: var(--bs-text); }
+html body .rm-rank-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 0; border: 0; background: transparent; }
+html body .rm-rank-button { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; border: 0; background: transparent; color: var(--bs-text); font-size: 20px; cursor: pointer; }
+html body .rm-rank-bar .rm-meter { flex: 1 1 120px; height: 12px; background: #e3e8f5; }
+html body .rm-skills-row { flex-wrap: nowrap; gap: 4px; }
+html body .rm-skill-count { display: inline-flex; align-items: center; gap: 5px; min-width: 44px; min-height: 44px; justify-content: center; border: 0; background: transparent; color: var(--bs-text); font-weight: 700; cursor: pointer; }
+html body .rm-tier { border: 0; padding: 4px 0; background: transparent; }
+html body .rm-tier-head { justify-content: flex-start; gap: 10px; }
+html body .rm-tier-head h2 { margin: 0; font-size: 20px; font-weight: 700; }
+html body .rm-tier-lock { display: inline-flex; align-items: center; gap: 4px; color: var(--bs-muted); font-weight: 700; }
+html body .rm-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); }
+html body .rm-card { width: auto; min-height: 0; align-items: center; text-align: center; border: 2px solid transparent; border-radius: 14px; background: #f3f5fb; }
+html body .rm-card:hover, html body .rm-card:focus-visible, html body .rm-card.is-selected { transform: none; border-color: var(--bs-action); }
+html body .rm-card.is-completed { background: #e5f6ee; }
+html body .rm-card.is-locked .rm-card-cover, html body .rm-card.is-locked .rm-card-chips { opacity: .5; }
+html body .rm-card-cover { width: 100%; height: 150px; }
+html body .rm-card-mark { position: absolute; top: 8px; right: 8px; z-index: 1; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #fff; color: var(--bs-muted); }
+html body .rm-card.is-completed .rm-card-mark { background: #0f7561; color: #fff; }
+html body .rm-card-chips { justify-content: center; gap: 12px; }
+html body .rm-chip { display: inline-flex; align-items: center; gap: 4px; padding: 0; background: transparent; color: var(--bs-text); font-size: 14px; }
+html body .rm-skill-levels { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 6px; }
+html body .rm-skill-levels li { display: grid; grid-template-columns: 20px 1fr auto 64px; align-items: center; gap: 8px; font-size: 13px; }
+html body .rm-card.is-completed:not(.is-selected), html body .rm-card.is-locked:not(.is-selected) { border: 2px solid transparent; }
+html body .rm-card.is-completed:hover, html body .rm-card.is-completed:focus-visible { border-color: var(--bs-action); }
+@media (max-width: 640px) {
+  html body .rm-cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  html body .rm-card-cover { height: 110px; }
+}
+html body .rm-card.is-locked { background: #f3f5fb; }
