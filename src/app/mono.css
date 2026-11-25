@@ -39,8 +39,21 @@ html body :is([aria-pressed="true"], [aria-selected="true"], [aria-checked="true
 html body [role="progressbar"] { border: 1px solid #000; }
 html body [role="progressbar"] > * { background: #000 !important; }
 
-/* Декоративные «уголки» панелей без цвета выглядят как кляксы. */
-html body :is(.studio-tab-notch, .studio-create-shoulder) { display: none !important; }
+/* Чёрная рамка вокруг страниц: верхняя панель, края и нижний док. */
+html body .tlc-os.is-app,
+html body .tlc-os.is-app :is(.studio-topbar, .studio-create-dock) { background: #000 !important; }
+html body .tlc-os.is-app :is(.studio-tab-notch, .studio-tab-notch *, .studio-create-shoulder, .studio-create-shoulder *) { color: #000 !important; background: transparent !important; }
+
+/* Всё, что лежит на рамке, — белым по чёрному (выпадающие меню остаются белыми). */
+html body .tlc-os.is-app .studio-topbar :is(a, button, span, svg):not(:is(.studio-account-menu, .studio-plus-menu, .studio-tab-notch) *, .studio-tab-notch),
+html body .tlc-os.is-app .studio-create-dock :is(button, button *) {
+  color: #fff !important;
+  background-color: transparent !important;
+}
+html body .tlc-os.is-app .studio-topbar :is(a, button):not(:is(.studio-account-menu, .studio-plus-menu) *) { border-color: transparent !important; }
+html body .tlc-os.is-app .studio-create-dock button { border-color: #fff !important; }
+html body .tlc-os.is-app :is(.studio-topbar, .studio-create-dock) :focus-visible { outline-color: #fff !important; }
+
 
 /* Настройки темы и фона временно скрыты. */
 [data-mono="hidden"] { display: none !important; }
