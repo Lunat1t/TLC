@@ -53,7 +53,7 @@ function DirectionButton({
 
   const arrow = <Icon size={Math.round(size * 0.5)} strokeWidth={3.5} aria-hidden="true" />
   const style = { width: size, height: size }
-  const base = "grid shrink-0 place-items-center rounded-full border-2 border-stone-500 text-white shadow-[0_3px_0_rgba(38,36,35,0.16)] select-none"
+  const base = "grid shrink-0 place-items-center rounded-full border-2 border-stone-500 text-white shadow-[0_3px_0_rgba(29,27,26,0.16)] select-none"
 
   if (editing) return <span aria-hidden="true" className={`${base} bg-[#363331]`} style={style}>{arrow}</span>
 
@@ -64,7 +64,7 @@ function DirectionButton({
       aria-pressed={pressed && enabled}
       title={error || label}
       disabled={!enabled}
-      className={`${base} cursor-pointer touch-none bg-[#363331] p-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-700 aria-pressed:border-[#8a8093] aria-pressed:bg-[#353230] aria-pressed:shadow-[0_3px_0_rgba(38,36,35,0.16)] disabled:opacity-55`}
+      className={`${base} cursor-pointer touch-none bg-[#363331] p-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-700 aria-pressed:border-[#938b80] aria-pressed:bg-[#353230] aria-pressed:shadow-[0_3px_0_rgba(29,27,26,0.16)] disabled:opacity-55`}
       style={style}
       onPointerDown={event => {
         if (event.button !== 0 || key.current !== null) return
@@ -145,7 +145,7 @@ export function DirectionPalettePreview({ kind }: { kind: DirectionControlKind }
         return (
           <span
             key={direction}
-            className={`grid ${btnSize} place-items-center rounded-full border-[1.5px] border-stone-500 bg-[#363331] text-white shadow-[0_3px_0_rgba(38,36,35,0.16)]`}
+            className={`grid ${btnSize} place-items-center rounded-full border-[1.5px] border-stone-500 bg-[#363331] text-white shadow-[0_3px_0_rgba(29,27,26,0.16)]`}
           >
             <Icon size={iconSize} strokeWidth={3.2} />
           </span>
@@ -157,17 +157,17 @@ export function DirectionPalettePreview({ kind }: { kind: DirectionControlKind }
 
 
 const PALETTE_MOTOR_DOTS = [
-  { face: "#6f3fb0", shade: "#382d3b" },
+  { face: "#a8211a", shade: "#383530" },
   { face: "#d9473d", shade: "#a92b26" },
   { face: "#32a66a", shade: "#21804e" },
-  { face: "#edc13d", shade: "#756b7e" },
+  { face: "#edc13d", shade: "#7e766b" },
 ] as const
 
 export function DistanceGaugePalettePreview() {
   return (
-    <span aria-hidden="true" className="flex items-center justify-center gap-1.5 text-[#58505e]">
+    <span aria-hidden="true" className="flex items-center justify-center gap-1.5 text-[#5e5850]">
       <Waves size={16} strokeWidth={2.4} />
-      <span className="rounded-md bg-[#ecf5f9] px-2 py-0.5 text-xs font-bold tabular-nums">-- см</span>
+      <span className="rounded-md bg-[#f9f4ec] px-2 py-0.5 text-xs font-bold tabular-nums">-- см</span>
     </span>
   )
 }

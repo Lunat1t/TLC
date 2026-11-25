@@ -257,7 +257,7 @@ export default function DisplayCameraPage() {
           {phase !== "ended" ? (
             <button
               type="button"
-              className={`min-h-12 rounded-md px-4 font-bold text-white ${busy ? "bg-red-700" : "bg-[#524258]"}`}
+              className={`min-h-12 rounded-md px-4 font-bold text-white ${busy ? "bg-red-700" : "bg-[#534e47]"}`}
               onClick={busy ? () => { if (active.current) finish(active.current, active.current.published) } : () => void startCamera()}
             >
               {busy ? "Остановить" : "Включить камеру"}
