@@ -55,5 +55,33 @@ html body .tlc-os.is-app .studio-create-dock button { border-color: #fff !import
 html body .tlc-os.is-app :is(.studio-topbar, .studio-create-dock) :focus-visible { outline-color: #fff !important; }
 
 
+/* Блоки редактора цветные, как в каталоге, чтобы их было легко различать. */
+html body [data-block-cat="events"] { --block: #d12f20; --block-ink: #fff; }
+html body [data-block-cat="motion"] { --block: #b9741a; --block-ink: #fff; }
+html body [data-block-cat="sensors"] { --block: #1d1b1a; --block-ink: #fff; }
+html body [data-block-cat="logic"] { --block: #f4b04c; --block-ink: #000; }
+
+/* У «Если» красятся только части С-образной формы, у остальных — весь блок. */
+html body [data-block-cat]:not([data-block-cat="logic"]),
+html body [data-block-cat="logic"] .block-fill,
+html body [data-block-cat="logic"][class*="fixed"],
+html body [data-block-cat] > .block-fill { background-color: var(--block) !important; }
+html body [data-block-cat] .block-fill { border-color: var(--block) !important; }
+html body [data-block-cat]:not([data-block-cat="logic"]) { border-color: var(--block) !important; color: var(--block-ink) !important; }
+html body [data-block-cat="logic"][class*="fixed"] { color: var(--block-ink) !important; }
+
+/* Подписи прямо на блоке. Поля, кнопки, меню и ошибки остаются белыми. */
+html body [data-block-cat] :not(:is(button, select, input, .bg-white, [role="alert"], [class*="z-50"]), [data-block-cat] :is(button, .bg-white, [role="alert"], [class*="z-50"]) *) { color: var(--block-ink) !important; }
+html body [data-block-cat] :is(button, select, input):not([data-block-cat] [class*="z-50"] *) { background-color: #fff !important; color: #000 !important; }
+html body [data-block-cat] button:not([data-block-cat] [class*="z-50"] *) * { color: #000 !important; }
+html body [data-block-cat] button[aria-pressed]:not([data-block-cat] [class*="z-50"] *) *:not([style]) { background-color: transparent !important; }
+
+/* Квадрат «стоп» на белом значке. */
+html body [data-block-cat][data-block-cat] span[class][class*="bg-[#8f2a21]"] { color: #000 !important; }
+
+/* Значки в каталоге. */
+html body [data-catalog-icon], html body [data-catalog-icon] * { color: #fff !important; }
+html body [data-catalog-icon="logic"], html body [data-catalog-icon="logic"] * { color: #000 !important; }
+
 /* Настройки темы и фона временно скрыты. */
 [data-mono="hidden"] { display: none !important; }

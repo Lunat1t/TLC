@@ -817,6 +817,7 @@ export function SensorBlock({
           if ((e.target as HTMLElement).closest("button, select, input")) return
           onStartDrag(e)
         }}
+        data-block-cat={slotted ? "sensors" : undefined}
         className={`flex flex-wrap items-center text-[#1d1b1a] ${
           slotted
             ? "min-h-[48px] max-w-[calc(var(--row-width)-100px)] px-3 gap-3 rounded-xl bg-[#f4ebda] cursor-grab active:cursor-grabbing pointer-events-auto"
