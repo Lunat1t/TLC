@@ -4,7 +4,7 @@
 .lab-heading h1 { margin:0; font-family:var(--font-ui); font-size:clamp(32px,4.4vw,54px); font-weight:700; line-height:1.1; letter-spacing:-.055em; }
 .lab-heading h1 span { color:#f45139; display:inline-block; margin-left:16px; }
 .lab-library { display:flex; align-items:center; gap:10px; font-size:13px; font-weight:700; padding:12px 0; white-space:nowrap; }
-.lab-board { background:#f5ebdb; border:1px solid #1d1b1a73; border-radius:6px; padding:28px; box-shadow:0 6px 0 #ebd9bb; background-image:radial-gradient(#c0bcb6 1px,transparent 1px); background-size:20px 20px; }
+.lab-board { background:#f5ebdb; border:1px solid #1d1b1a73; border-radius:6px; padding:28px; box-shadow:0 6px 0 #ebd9bb; }
 .lab-fixed { display:grid; grid-template-columns:230px 1fr 220px; align-items:center; gap:32px; padding:0 8px 30px; }
 .lab-avatar { display:flex; flex-direction:column; background:white; padding:10px 10px 16px; transform:rotate(-3deg); box-shadow:2px 5px 0 #827a6e25; text-align:center; position:relative; }
 .lab-avatar:before,.lab-tape { content:""; position:absolute; width:86px; height:24px; top:-12px; left:calc(50% - 43px); background:#fff2aabf; transform:rotate(4deg); }

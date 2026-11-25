@@ -1,6 +1,5 @@
 "use client"
 
-import { WallpaperPicker } from "@/components/lab/wallpaper-picker"
 import Link from "next/link"
 import { useEffect, useState, type FormEvent } from "react"
 import { ArrowLeft, Palette, UserRound } from "lucide-react"
@@ -10,7 +9,7 @@ import { signOutFromSupabase } from "@/lib/auth"
 import { NICKNAME_MAX_LENGTH, validateNickname } from "@/lib/account-credentials"
 import { useAccountProjects } from "@/components/lab/account-projects"
 import { useAccountWorkspace } from "@/components/lab/account-workspace"
-import { defaults, useWorkspaceSettings } from "@/components/lab/workspace-settings"
+import { useWorkspaceSettings } from "@/components/lab/workspace-settings"
 import { createClient } from "@/utils/supabase/client"
 import { JoinSchoolForm } from "@/components/billing/join-school-form"
 import { BILLING_PLANS } from "@/lib/billing/plans"
@@ -25,19 +24,14 @@ function downloadBackupFile(raw: string | null, filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
-const WORKSPACE_THEMES = [
-  { id: "workshop", name: "Мастерская", theme: "light", color: "#ecdcc1", accent: "#d12f20" },
-] as const
-
 export default function SettingsPage() {
-  const { settings, update, error, ready } = useWorkspaceSettings()
+  const { error } = useWorkspaceSettings()
   const workspace = useAccountWorkspace()
   const library = useAccountProjects()
   const access = useAccess()
   const router = useRouter()
 
   const [tab, setTab] = useState<"appearance" | "account">("appearance")
-  const [wallpaperBusy, setWallpaperBusy] = useState(false)
 
   const [nicknameDraft, setNicknameDraft] = useState("")
   const [nicknameBusy, setNicknameBusy] = useState(false)
@@ -158,46 +152,7 @@ export default function SettingsPage() {
         </h2>
 
         <section hidden={tab !== "appearance"}>
-          <p>Оформление временно чёрно-белое.</p>
-          <div data-mono="hidden">
-          <fieldset className="settings-themes" disabled={!ready || wallpaperBusy}>
-            <legend>Тема</legend>
-            <div className="settings-theme-grid" role="radiogroup" aria-label="Тема">
-              {WORKSPACE_THEMES.map((item) => {
-                const selected = settings.color.toLowerCase() === item.color && settings.theme === item.theme
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    className={`settings-theme${selected ? " is-selected" : ""}`}
-                    onClick={() => update({ theme: item.theme, color: item.color })}
-                  >
-                    <span className="settings-theme-swatch" style={{ background: item.color }}>
-                      <i style={{ background: item.accent }} />
-                    </span>
-                    <span className="settings-theme-name">{item.name}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </fieldset>
-          <label>
-            <span>Фон</span>
-            <select
-              disabled={!ready || wallpaperBusy}
-              value={settings.background}
-              onChange={(e) => update({ background: e.target.value as typeof settings.background })}
-            >
-              <option value="grid">Чертёжная сетка</option>
-              <option value="plain">Однотонный</option>
-              <option value="dots">Точки</option>
-              {settings.wallpaper && <option value="wallpaper">Свои обои</option>}
-            </select>
-          </label>
-          <WallpaperPicker onBusyChange={setWallpaperBusy} />
-          </div>
+          <p>Включена тема «Конструктор».</p>
         </section>
 
         <section hidden={tab !== "account"} className="settings-account-section">
@@ -337,16 +292,6 @@ export default function SettingsPage() {
           )}
         </section>
 
-        <button
-          type="button"
-          disabled={!ready || wallpaperBusy}
-          hidden={tab === "account"}
-          className="settings-reset"
-          data-mono="hidden"
-          onClick={() => update(defaults)}
-        >
-          Восстановить оформление
-        </button>
         {error && tab === "appearance" && <p role="alert" className="settings-feedback is-error">{error}</p>}
       </div>
     </main>

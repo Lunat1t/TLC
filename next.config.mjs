@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 // Сборка (и кэш Vercel) не замечает изменений PostCSS-плагинов и оставляет старый CSS.
-const cssPipelineHash = ["./postcss.config.mjs", "./scripts/postcss-mono.cjs"]
+const cssPipelineHash = ["./postcss.config.mjs", "./scripts/postcss-brick.cjs"]
   .reduce((hash, file) => hash.update(readFileSync(new URL(file, import.meta.url))), createHash("sha1"))
   .digest("hex");
 

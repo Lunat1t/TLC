@@ -1,7 +1,7 @@
 const config = {
   plugins: {
     tailwindcss: {},
-    "./scripts/postcss-mono.cjs": {},
+    "./scripts/postcss-brick.cjs": {},
     autoprefixer: {},
   },
 };

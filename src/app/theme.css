@@ -1,0 +1,97 @@
+/* Тема «Конструктор» без теней. Палитра меняется здесь; перенос старых цветов — scripts/postcss-brick.cjs. */
+:root {
+  --bs-bg: #ffffff;
+  --bs-card: #ffffff;
+  --bs-deep: #1b2033;
+  --bs-line: #cdd3e4;
+  --bs-text: #1b2033;
+  --bs-muted: #555d75;
+  --bs-on-dark: #ffffff;
+  --bs-action: #2556d9;
+  --bs-on-action: #ffffff;
+  --bs-reward: #ffcb3d;
+  --bs-on-reward: #3d2c00;
+  --bs-danger: #b3261e;
+  --bs-danger-bg: #fdecec;
+  color-scheme: light;
+}
+
+/* Тени, заданные прямо в разметке. */
+html body [style*="box-shadow"]:not(:focus-visible) { box-shadow: none !important; }
+
+/* Блоки редактора: свой цвет у каждой категории. */
+html body [data-block-cat="events"] { --block: #ffcb3d; --block-ink: #3d2c00; }
+html body [data-block-cat="motion"] { --block: #2556d9; --block-ink: #ffffff; }
+html body [data-block-cat="sensors"] { --block: #0f7561; --block-ink: #ffffff; }
+html body [data-block-cat="logic"] { --block: #ff9b45; --block-ink: #3d2000; }
+
+/* У «Если» красятся только части С-образной формы, у остальных — весь блок. */
+html body [data-block-cat]:not([data-block-cat="logic"]),
+html body [data-block-cat="logic"] .block-fill,
+html body [data-block-cat="logic"][class*="fixed"],
+html body [data-block-cat] > .block-fill { background-color: var(--block) !important; }
+html body [data-block-cat] .block-fill { border-color: var(--block) !important; }
+html body [data-block-cat]:not([data-block-cat="logic"]) { border-color: var(--block) !important; color: var(--block-ink) !important; }
+html body [data-block-cat="logic"][class*="fixed"] { color: var(--block-ink) !important; }
+
+/* Подписи прямо на блоке. Поля, кнопки и меню остаются светлыми с тёмным текстом. */
+html body [data-block-cat] :not(:is(button, select, input, .bg-white, [role="alert"], [class*="z-50"]), [data-block-cat] :is(button, .bg-white, [role="alert"], [class*="z-50"]) *) { color: var(--block-ink) !important; }
+html body [data-block-cat] :is(button, select, input):not([data-block-cat] [class*="z-50"] *) { background-color: #fff !important; color: #1b2033 !important; }
+html body [data-block-cat] button:not([data-block-cat] [class*="z-50"] *) * { color: #1b2033 !important; }
+html body [data-block-cat] button[aria-pressed]:not([data-block-cat] [class*="z-50"] *) *:not([style]) { background-color: transparent !important; }
+
+/* Значки в каталоге. */
+html body [data-catalog-icon], html body [data-catalog-icon] * { color: #fff !important; }
+html body [data-catalog-icon="events"] { background-color: #ffcb3d !important; }
+html body [data-catalog-icon="logic"] { background-color: #ff9b45 !important; }
+html body [data-catalog-icon="events"], html body [data-catalog-icon="events"] *,
+html body [data-catalog-icon="logic"], html body [data-catalog-icon="logic"] * { color: #3d2c00 !important; }
+
+/* Рабочий стол: ровный фон без обоев и узоров. */
+html body .tlc-os.is-desktop > .os-content { background: var(--bs-bg) !important; }
+html body .tlc-os.is-desktop .os-content :is(.tlc-page-frame, .home-shell, .home-content, .home-main, .desktop-lab, .desktop-board-surface, .desktop-canvas) { background: transparent !important; }
+html body .tlc-os.is-desktop .desktop-app-icon { background: var(--bs-card) !important; color: var(--bs-action) !important; border: 1px solid var(--bs-line) !important; }
+html body .tlc-os.is-desktop .desktop-app-icon svg { color: var(--bs-action) !important; }
+html body .tlc-os.is-desktop .desktop-launch { background: transparent !important; border: 0 !important; }
+html body .tlc-os.is-desktop .desktop-launch strong { background: transparent !important; color: var(--bs-text) !important; text-shadow: none !important; }
+
+/* Синяя рамка: верхняя панель, края и нижний док — одна деталь. Меню белые. */
+html body .tlc-os.is-app { background: var(--bs-action); }
+html body .studio-topbar {
+  --bar-bg: var(--bs-action);
+  --bar-ink: #ffffff;
+  --bar-muted: #dbe4ff;
+  --bar-surface: rgba(255,255,255, .14);
+  --bar-surface-hover: rgba(255,255,255, .22);
+  --bar-active: transparent;
+  --bar-border: rgba(255,255,255, .24);
+}
+html body .studio-topbar .studio-tab[data-active="true"], html body .studio-topbar .studio-tab[data-active="true"] * { color: #ffffff; }
+html body .studio-topbar .studio-tab[data-active="true"] .studio-tab-notch, html body .studio-topbar .studio-tab[data-active="true"] .studio-tab-notch * { color: var(--bs-action); }
+
+html body .studio-topbar :is(.studio-brand, .studio-guest-register) { color: #ffffff; }
+html body .studio-topbar :is(.studio-brand-mark, .studio-guest-login), html body .studio-topbar .studio-guest-login svg { background-color: #ffffff; background-image: none; color: var(--bs-action); }
+html body :is(.studio-topbar, .studio-create-dock) :is(a, button):focus-visible { outline-color: #ffffff; }
+html body :is(.studio-account-menu, .studio-plus-menu) { background: var(--bs-card); color: var(--bs-text); border: 1px solid var(--bs-line); }
+html body :is(.studio-account-menu, .studio-plus-menu) :is(a, button, strong, span, small, svg) { color: var(--bs-text); }
+html body :is(.studio-account-menu, .studio-plus-menu) :is(a, button):hover,
+html body :is(.studio-account-menu, .studio-plus-menu) [aria-current="page"] { background: #eef1f8; }
+html body .studio-account-menu .studio-account-item.is-danger, html body .studio-account-menu .studio-account-item.is-danger * { color: var(--bs-danger); }
+html body .studio-account-menu :is(a, button):focus-visible, html body .studio-plus-menu :is(a, button):focus-visible { outline-color: var(--bs-action); }
+html body .studio-create-dock { background: var(--bs-action); }
+html body .studio-create-shoulder { color: var(--bs-action); }
+
+/* Кнопки нижнего дока: белые, у каждой значок своего цвета. */
+html body .studio-create-dock .studio-create-btn { border: 0 !important; }
+html body .studio-create-dock .studio-create-btn[data-tone="note"] { background: #ffffff; color: #c98a00; }
+html body .studio-create-dock .studio-create-btn[data-tone="image"] { background: #ffffff; color: #0f8a66; }
+html body .studio-create-dock .studio-create-btn[data-tone="program"] { background: #ffffff; color: #e2620a; }
+html body .studio-create-dock .studio-create-btn[data-tone="shortcut"] { background: #ffffff; color: #7c4dcc; }
+html body .studio-create-dock .studio-create-btn[data-tone="widget"] { background: #ffffff; color: #c92a6d; }
+html body .studio-create-dock .studio-create-btn > svg { width: 26px; height: 26px; stroke-width: 2.4; }
+
+/* Ярлыки программ по роботу: SPIKE — жёлтый, EV3 — красный. */
+html body .tlc-os.is-desktop .desktop-app-icon.is-project-spike { background: #ffcb3d !important; border-color: #ffcb3d !important; }
+html body .tlc-os.is-desktop .desktop-app-icon.is-project-spike, html body .tlc-os.is-desktop .desktop-app-icon.is-project-spike svg { color: #3d2c00 !important; }
+html body .tlc-os.is-desktop .desktop-app-icon.is-project-ev3 { background: #d92d20 !important; border-color: #d92d20 !important; }
+html body .tlc-os.is-desktop .desktop-app-icon.is-project-ev3, html body .tlc-os.is-desktop .desktop-app-icon.is-project-ev3 svg { color: #ffffff !important; }

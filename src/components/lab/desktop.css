@@ -45,7 +45,7 @@
 
 [data-theme=dark] .desktop-launch strong { background:#2d2a29; color:#f6edde; }
 @media(max-width:600px){
- .is-desktop .desktop-canvas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-content:start;align-items:start;gap:24px 8px;padding:24px 12px 110px;height:auto;min-height:100dvh}
+ .is-desktop .desktop-canvas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-content:start;align-items:start;gap:24px 8px;padding:24px 12px 110px;height:auto;min-height:calc(100dvh - 56px - env(safe-area-inset-top, 0px) - var(--frame-b, 6px))}
  .desktop-canvas>.desktop-item{position:relative!important;left:auto!important;top:auto!important;transform:none!important;width:100%;max-width:100%;min-width:0}
  .desktop-canvas>.desktop-clock{display:none}
  .desktop-canvas>.desktop-note{grid-column:span 2}.desktop-drag-handle{visibility:hidden;height:12px;pointer-events:none}.shortcut-menu-trigger{top:0;width:32px;height:32px}.desktop-launch strong{font-size:12px;max-width:100%}
@@ -109,7 +109,7 @@
 @media(max-width:600px){.home-shell:has(.desktop-lab) .desktop-canvas{height:100%;min-height:0}}
 @media(max-width:600px){
  .home-shell:has(.desktop-lab),.home-shell:has(.desktop-lab) :is(.home-content,.home-main,.desktop-lab,.desktop-board-surface){height:auto;min-height:0;overflow:visible}
- .home-shell:has(.desktop-lab) .desktop-canvas{height:auto;min-height:100dvh;overflow:visible;touch-action:pan-y}
+ .home-shell:has(.desktop-lab) .desktop-canvas{height:auto;min-height:calc(100dvh - 56px - env(safe-area-inset-top, 0px) - var(--frame-b, 6px));overflow:visible;touch-action:pan-y}
 }
 .desktop-app-icon,.lab-pin-head { touch-action:none; user-select:none; -webkit-touch-callout:none; cursor:grab; }
 .desktop-item.is-moving .desktop-app-icon { cursor:grabbing; }

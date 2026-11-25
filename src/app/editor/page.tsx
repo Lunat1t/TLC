@@ -133,7 +133,7 @@ const BLOCK_CATEGORIES = [
     id: "events",
     label: "События",
     icon: Play,
-    color: "#d12f20",
+    color: "#8a5f00",
     blocks: [
       { type: "start", label: "При запуске", icon: Play },
       { type: "button", event: "hold", label: "Кнопка пульта", icon: Gamepad2 },
@@ -143,7 +143,7 @@ const BLOCK_CATEGORIES = [
     id: "motion",
     label: "Движение",
     icon: ArrowRight,
-    color: "#b9741a",
+    color: "#2556d9",
     blocks: [
       { type: "chassis", label: "Ехать", icon: Navigation },
       { type: "drive", label: "Движение мотора", icon: ArrowRight },
@@ -154,7 +154,7 @@ const BLOCK_CATEGORIES = [
     id: "sensors",
     label: "Датчики",
     icon: Waves,
-    color: "#1d1b1a",
+    color: "#0f7561",
     blocks: [
       { type: "sensor", label: "Датчик", icon: Waves },
     ],
@@ -163,7 +163,7 @@ const BLOCK_CATEGORIES = [
     id: "logic",
     label: "Логика",
     icon: Workflow,
-    color: "#f4b04c",
+    color: "#a8480a",
     blocks: [
       { type: "if", label: "Если / иначе", icon: Workflow },
     ],
@@ -172,7 +172,7 @@ const BLOCK_CATEGORIES = [
     id: "controls",
     label: "Пульт",
     icon: Gamepad2,
-    color: "#363331",
+    color: "#1b2033",
     blocks: [
       { type: "area", label: "Область управления", icon: RectangleHorizontal },
       { type: "motor-buttons", label: "Кнопки моторов", icon: Gamepad2 },
@@ -1980,10 +1980,6 @@ function EditorWorkspace() {
             aria-label="Доска для блоков"
             style={{
               containerType: "inline-size",
-              backgroundImage:
-                "radial-gradient(#cbc7c2 1.15px, transparent 1.15px)",
-              backgroundSize: `${24 * zoom}px ${24 * zoom}px`,
-              backgroundPosition: `${panX}px ${panY}px`,
             }}
             onPointerDown={(e) => {
               if (
@@ -3589,7 +3585,7 @@ function EditorWorkspace() {
                   setOrientationManualHint(true)
                 }
               }}
-              className="min-h-[44px] w-full rounded-md bg-[#555049] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#34302f] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d12f20]"
+              className="min-h-[44px] w-full rounded-md bg-[#d12f20] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#a8211a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d12f20]"
             >
               Перейти в горизонт
             </button>

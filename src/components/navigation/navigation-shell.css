@@ -29,20 +29,6 @@
   background-color: var(--workspace-background, #ecdcc1);
 }
 
-.tlc-os.is-app[data-background="plain"] > .os-content {
-  background-image: none;
-}
-
-.tlc-os.is-app[data-background="grid"] > .os-content {
-  background-image: radial-gradient(circle, rgba(29,27,26, 0.42) 1px, transparent 1.5px);
-  background-size: 16px 16px;
-}
-
-.tlc-os.is-app[data-background="dots"] > .os-content {
-  background-image: radial-gradient(#a29b9280 1px, transparent 1px);
-  background-size: 20px 20px;
-}
-
 .tlc-os[data-theme="dark"] {
   color: #f6edde;
   --foreground: 210 40% 94%;

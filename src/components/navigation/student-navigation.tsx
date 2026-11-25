@@ -127,26 +127,15 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
   }
 
   const rootStyle: CSSProperties = {
-    "--workspace-background": settings.color,
+    "--workspace-background": "var(--bs-bg)",
   } as CSSProperties
-
-  const contentStyle: CSSProperties =
-    settings.background === "wallpaper" && settings.wallpaper
-      ? {
-          backgroundImage: `url("${settings.wallpaper}")`,
-          backgroundSize: settings.wallpaperFit || "cover",
-          backgroundPosition: "center top",
-          backgroundRepeat: "no-repeat",
-        }
-      : {}
 
   return (
     <NavigationTransitionContext.Provider
       value={{ getPrevPath, currentPath: path, appPage }}
     >
       <div
-        data-wallpaper={settings.background === "wallpaper" && !!settings.wallpaper ? "true" : undefined}
-        data-theme={settings.theme}
+        data-theme="light"
         data-background={settings.background}
         style={rootStyle}
         className={`tlc-os${home ? " is-desktop" : ""}${preferences ? " is-preferences" : ""}${
@@ -343,7 +332,7 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
           </header>
         )}
 
-        <div className="os-content" style={contentStyle}>
+        <div className="os-content">
           {appPage && !home && !preferences ? (
             <div className="workshop-section">
               <div className="workshop-section-body">{children}</div>

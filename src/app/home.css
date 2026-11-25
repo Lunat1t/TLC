@@ -22,7 +22,7 @@
   --home-error: #a9352e;
 }
 html, body { overflow-x: clip; }
-.home-shell { min-height: 100dvh; background-color: var(--paper); background-image: radial-gradient(circle, rgba(29,27,26, 0.42) 1px, transparent 1.5px);
+.home-shell { min-height: 100dvh; background-color: var(--paper);
   background-size: 16px 16px; color: var(--home-ink); font-family: var(--home-font); }
 .home-shell :is(button, a, select, input):focus-visible { outline: 3px solid var(--home-focus); outline-offset: 2px; }
 .home-content { min-width: 0; }
