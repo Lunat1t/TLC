@@ -244,7 +244,7 @@ export default function SettingsPage() {
                 )}
               </form>
 
-              <div className="settings-subscription-card" style={{ display: "grid", gap: 12, paddingTop: 14, borderTop: "1px solid rgba(163,157,145,0.22)" }}>
+              <div className="settings-subscription-card" style={{ display: "grid", gap: 12, paddingTop: 14, borderTop: "1px solid rgba(154,146,162,0.22)" }}>
                 <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                   <div>
                     <strong style={{ display: "block", fontSize: 15 }}>Подписка и школа</strong>
@@ -270,7 +270,7 @@ export default function SettingsPage() {
                 {access.role !== "parent" && <JoinSchoolForm compact={true} />}
               </div>
 
-              <div className="settings-subscription-card" style={{ display: "grid", gap: 12, paddingTop: 14, borderTop: "1px solid rgba(163,157,145,0.22)" }}>
+              <div className="settings-subscription-card" style={{ display: "grid", gap: 12, paddingTop: 14, borderTop: "1px solid rgba(154,146,162,0.22)" }}>
                 <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                   <div>
                     <strong style={{ display: "block", fontSize: 15 }}>Резервная копия программ</strong>

@@ -58,9 +58,9 @@ export const COLOR_SWATCH_STYLES: Record<SensorColor, { hex: string; label: stri
   red: { hex: "#ef4444", label: "Красный" },
   yellow: { hex: "#facc15", label: "Жёлтый" },
   green: { hex: "#22c55e", label: "Зелёный" },
-  blue: { hex: "#b79cf5", label: "Синий" },
-  white: { hex: "#f9f7f3", label: "Белый" },
-  black: { hex: "#1a1814", label: "Чёрный" },
+  blue: { hex: "#8350c4", label: "Синий" },
+  white: { hex: "#f1f7fa", label: "Белый" },
+  black: { hex: "#1c1a19", label: "Чёрный" },
   none: { hex: "transparent", label: "Нет цвета" },
 }
 

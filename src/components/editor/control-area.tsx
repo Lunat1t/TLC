@@ -122,7 +122,7 @@ export function ControlAreaView({area,controls,attachedPanels,editing,inputActiv
           if (fits(c)) onControlChange(c)
         }
         return <div key={control.id} className="group/control" role={isPlaceable ? "group" : undefined} aria-label={isPlaceable ? control.label : undefined}
-          style={{position:'absolute',left:control.x,top:control.y,width:control.width,height:control.height,border:cardError?'2px solid #dc2626':'2px solid #dfae87',borderRadius:12,background:cardError?'#fef2f2':'#ffffff',padding:6,overflow:isPlaceable?'hidden':'auto',display:isPlaceable?'flex':undefined,flexDirection:isPlaceable?'column':undefined}}>
+          style={{position:'absolute',left:control.x,top:control.y,width:control.width,height:control.height,border:cardError?'2px solid #dc2626':'2px solid #b3adb9',borderRadius:12,background:cardError?'#fef2f2':'#ffffff',padding:6,overflow:isPlaceable?'hidden':'auto',display:isPlaceable?'flex':undefined,flexDirection:isPlaceable?'column':undefined}}>
         {!directionKind && !isDistanceGauge && (!isPlaceable || editing) &&
         <div tabIndex={editing?0:-1} role="button" aria-label={`Переместить ${control.label}`} onKeyDown={moveByKey} onPointerDown={e=>dragControl(e,control)} style={{fontWeight:700,cursor:editing?'grab':'default',touchAction:'none',minHeight:isPlaceable?24:undefined,fontSize:isPlaceable?12:undefined}}>{rename?.id===control.id ? <input autoFocus aria-label={`Название ${control.label}`} value={rename.value} maxLength={40} onPointerDown={e=>e.stopPropagation()} onChange={e=>setRename({id:control.id,value:e.target.value})} onBlur={()=>{if(rename.value.trim())onControlChange({...control,label:rename.value.trim()});setRename(null)}} onKeyDown={e=>{e.stopPropagation();if(e.key==='Enter')e.currentTarget.blur()}}/> : control.label}{editing&&<span style={{float:'right'}}><button type="button" aria-label={`Переименовать ${control.label}`} onPointerDown={e=>e.stopPropagation()} onClick={()=>setRename({id:control.id,value:control.label})}>✎</button>{onDeleteControl&&<button type="button" aria-label={`Удалить ${control.label}`} onPointerDown={e=>e.stopPropagation()} onClick={()=>onDeleteControl(control.id)}>×</button>}</span>}</div>}
         {(directionKind || isDistanceGauge) && cardError && (
@@ -149,7 +149,7 @@ export function ControlAreaView({area,controls,attachedPanels,editing,inputActiv
             title="Удалить"
             onPointerDown={e=>e.stopPropagation()}
             onClick={()=>onDeleteControl(control.id)}
-            className="pointer-events-none opacity-0 group-focus-within/control:pointer-events-auto group-focus-within/control:opacity-100 absolute right-1 top-1 z-20 grid size-[22px] place-items-center rounded-full border border-[#dfae87] bg-white/95 text-xs font-bold leading-none text-[#7c2d12] shadow-sm hover:bg-[#fee2e2] hover:text-[#991b1b]"
+            className="pointer-events-none opacity-0 group-focus-within/control:pointer-events-auto group-focus-within/control:opacity-100 absolute right-1 top-1 z-20 grid size-[22px] place-items-center rounded-full border border-[#b3adb9] bg-white/95 text-xs font-bold leading-none text-[#7c2d12] shadow-sm hover:bg-[#fee2e2] hover:text-[#991b1b]"
           >
             ×
           </button>
@@ -167,14 +167,14 @@ export function ControlAreaView({area,controls,attachedPanels,editing,inputActiv
           >
             <div className="flex items-center justify-between gap-2">
               <div className={`flex items-center gap-1 ${cardError ? 'pl-6' : ''}`}>
-                <Waves size={15} className="shrink-0 text-[#b79cf5]" aria-hidden="true" />
+                <Waves size={15} className="shrink-0 text-[#8350c4]" aria-hidden="true" />
                 <select
                   aria-label="Порт дальномера"
                   value={gaugePort}
                   disabled={!editing}
                   onPointerDown={e => e.stopPropagation()}
                   onChange={e => onControlChange({ ...control, port: e.target.value })}
-                  className="min-h-[36px] h-[36px] rounded-lg border border-[#1a181373] bg-white px-2 text-xs font-bold text-[#23201b] cursor-pointer disabled:cursor-default disabled:opacity-90"
+                  className="min-h-[36px] h-[36px] rounded-lg border border-[#26242373] bg-white px-2 text-xs font-bold text-[#252221] cursor-pointer disabled:cursor-default disabled:opacity-90"
                 >
                   {SENSOR_PORTS.map(p => (
                     <option key={p} value={p}>{p}</option>
@@ -194,7 +194,7 @@ export function ControlAreaView({area,controls,attachedPanels,editing,inputActiv
                         : `${rawDist} см`
                     : `${trialVal} см`
                 return (
-                  <span className="text-lg font-bold tabular-nums text-[#23201b] whitespace-nowrap">
+                  <span className="text-lg font-bold tabular-nums text-[#252221] whitespace-nowrap">
                     {shownText}
                   </span>
                 )
@@ -211,7 +211,7 @@ export function ControlAreaView({area,controls,attachedPanels,editing,inputActiv
                 value={typeof sensorDistances[gaugePort] === 'number' ? (sensorDistances[gaugePort] as number) : 50}
                 onPointerDown={e => e.stopPropagation()}
                 onChange={e => onSimulateDistance?.(gaugePort, Number(e.target.value))}
-                className="w-full min-h-[36px] accent-[#b79cf5] cursor-pointer"
+                className="w-full min-h-[36px] accent-[#8350c4] cursor-pointer"
               />
             ) : (
               (() => {
@@ -219,14 +219,14 @@ export function ControlAreaView({area,controls,attachedPanels,editing,inputActiv
                 const activeDist = !editing && isLiveRobot && typeof rawDist === 'number' ? rawDist : null
                 const pct = activeDist === null ? 0 : Math.max(4, Math.min(100, Math.round((activeDist / 200) * 100)))
                 const barColor = activeDist === null
-                  ? '#e1d8c3'
+                  ? '#bfd8e5'
                   : activeDist < 15
                     ? '#dc2626'
                     : activeDist <= 45
                       ? '#eab308'
                       : '#16a34a'
                 return (
-                  <div className="h-3 w-full overflow-hidden rounded-full bg-[#eee9dc]" aria-hidden="true">
+                  <div className="h-3 w-full overflow-hidden rounded-full bg-[#dae9f0]" aria-hidden="true">
                     <div
                       className="h-full rounded-full transition-all duration-150"
                       style={{ width: editing || activeDist === null ? '100%' : `${pct}%`, backgroundColor: barColor }}
@@ -254,7 +254,7 @@ export function ControlAreaView({area,controls,attachedPanels,editing,inputActiv
           </div>
         ) : <div style={{display:'flex',flexWrap:'wrap',gap:4}}>{CONTROL_INPUTS[control.kind].map(input=>{
           const error=errors[`${control.id}:${input}`]
-          return <button key={input} type="button" disabled={editing||Boolean(error)} aria-label={`${control.label}: ${LABELS[input]||input}`} title={error} onPointerDown={e=>{if(e.button!==0)return;e.stopPropagation();e.currentTarget.setPointerCapture(e.pointerId);onInput(control.id,input,'pressed')}} onPointerUp={e=>{e.stopPropagation();onInput(control.id,input,'released')}} onPointerCancel={onCancel} onKeyDown={e=>{if((e.key===' '||e.key==='Enter')&&!e.repeat){e.preventDefault();onInput(control.id,input,'pressed')}}} onKeyUp={e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();onInput(control.id,input,'released')}}} style={{minWidth:44,minHeight:44,borderRadius:8,background:error?'#fee2e2':'#ffe4c8',border:'1px solid #b75c28',fontWeight:800}}>{LABELS[input]||input}{error&&<span aria-label={`Ошибка: ${error}`}> ⚠</span>}</button>
+          return <button key={input} type="button" disabled={editing||Boolean(error)} aria-label={`${control.label}: ${LABELS[input]||input}`} title={error} onPointerDown={e=>{if(e.button!==0)return;e.stopPropagation();e.currentTarget.setPointerCapture(e.pointerId);onInput(control.id,input,'pressed')}} onPointerUp={e=>{e.stopPropagation();onInput(control.id,input,'released')}} onPointerCancel={onCancel} onKeyDown={e=>{if((e.key===' '||e.key==='Enter')&&!e.repeat){e.preventDefault();onInput(control.id,input,'pressed')}}} onKeyUp={e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();onInput(control.id,input,'released')}}} style={{minWidth:44,minHeight:44,borderRadius:8,background:error?'#fee2e2':'#ffe4c8',border:'1px solid #6f6778',fontWeight:800}}>{LABELS[input]||input}{error&&<span aria-label={`Ошибка: ${error}`}> ⚠</span>}</button>
         })}</div>}
         {editing&&<button type="button" aria-label={`Изменить размер ${control.label}`} onPointerDown={e=>resizeControl(e,control)} style={{position:'absolute',right:nearAreaResize?32:0,bottom:0,width:28,height:28,zIndex:20,touchAction:'none',cursor:'nwse-resize'}}>◢</button>}
         {!directionKind && CONTROL_INPUTS[control.kind].some(input=>errors[`${control.id}:${input}`])&&<p role="alert" style={{color:'#991b1b',fontSize:12}}>{CONTROL_INPUTS[control.kind].map(input=>errors[`${control.id}:${input}`]).find(Boolean)}</p>}
@@ -263,11 +263,11 @@ export function ControlAreaView({area,controls,attachedPanels,editing,inputActiv
     {editing&&<button type="button" aria-label="Изменить размер области" onPointerDown={e=>dragArea(e,true)} style={{position:'absolute',right:0,bottom:0,width:32,height:32,touchAction:'none',cursor:'nwse-resize'}}>◢</button>}
     <dialog ref={errorDialog} role="dialog" aria-labelledby={errorTitleId}
       onPointerDown={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()}
-      className="fixed inset-0 m-auto w-[calc(100%_-_32px)] max-w-sm rounded-md border border-[#dfae87] bg-white p-5 text-[#23201b] shadow-xl backdrop:bg-black/30">
+      className="fixed inset-0 m-auto w-[calc(100%_-_32px)] max-w-sm rounded-md border border-[#b3adb9] bg-white p-5 text-[#252221] shadow-xl backdrop:bg-black/30">
       <h2 id={errorTitleId} className="mb-3 text-lg font-bold">Кнопка недоступна</h2>
       <p className="whitespace-pre-line text-sm">{selectedError}</p>
       <form method="dialog" className="mt-4 flex justify-end">
-        <button type="submit" className="rounded-md bg-[#343028] px-4 py-2 font-bold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-700">Понятно</button>
+        <button type="submit" className="rounded-md bg-[#353230] px-4 py-2 font-bold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-700">Понятно</button>
       </form>
     </dialog>
   </section>

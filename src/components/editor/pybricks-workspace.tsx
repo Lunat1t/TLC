@@ -291,13 +291,13 @@ export function PybricksWorkspace({
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col bg-[#f8f5f0] text-[#23201b]">
+    <div className="flex-1 min-h-0 flex flex-col bg-[#eef6fa] text-[#252221]">
       {/* Pybricks Toolbar */}
-      <div className="shrink-0 flex flex-wrap items-center gap-2 px-3 sm:px-4 py-2 bg-white border-b border-[#1a181373]">
+      <div className="shrink-0 flex flex-wrap items-center gap-2 px-3 sm:px-4 py-2 bg-white border-b border-[#26242373]">
         <button
           type="button"
           onClick={handleRequestSync}
-          className="min-h-[36px] h-[36px] px-3 rounded-[10px] border border-[#1a181373] bg-[#f7f5ef] hover:bg-[#f1ede3] text-[#37332b] text-xs font-bold flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
+          className="min-h-[36px] h-[36px] px-3 rounded-[10px] border border-[#26242373] bg-[#edf5f9] hover:bg-[#e1edf3] text-[#393533] text-xs font-bold flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
         >
           <RefreshCw size={14} aria-hidden="true" />
           <span>Из блоков</span>
@@ -306,7 +306,7 @@ export function PybricksWorkspace({
         <button
           type="button"
           onClick={() => void handleCopy()}
-          className="min-h-[36px] h-[36px] px-3 rounded-[10px] border border-[#1a181373] bg-white hover:bg-[#f7f5ef] text-[#38342c] text-xs font-bold flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
+          className="min-h-[36px] h-[36px] px-3 rounded-[10px] border border-[#26242373] bg-white hover:bg-[#edf5f9] text-[#3a3634] text-xs font-bold flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
         >
           {copied ? <Check size={14} aria-hidden="true" className="text-stone-600" /> : <Copy size={14} aria-hidden="true" />}
           <span>{copied ? "Скопировано ✓" : "Копировать"}</span>
@@ -315,7 +315,7 @@ export function PybricksWorkspace({
         <button
           type="button"
           onClick={onDownload}
-          className="min-h-[36px] h-[36px] px-3 rounded-[10px] border border-[#1a181373] bg-white hover:bg-[#f7f5ef] text-[#38342c] text-xs font-bold flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
+          className="min-h-[36px] h-[36px] px-3 rounded-[10px] border border-[#26242373] bg-white hover:bg-[#edf5f9] text-[#3a3634] text-xs font-bold flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
         >
           <Download size={14} aria-hidden="true" />
           <span>Скачать .py</span>
@@ -346,7 +346,7 @@ export function PybricksWorkspace({
 
         <span
           className={`hidden md:inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${
-            dirty ? "bg-amber-50 text-amber-800 border border-amber-200" : "bg-[#f6f3ec] text-[#37332b]"
+            dirty ? "bg-amber-50 text-amber-800 border border-amber-200" : "bg-[#ebf3f7] text-[#393533]"
           }`}
         >
           {dirty ? "Свой код" : "Из блоков"}
@@ -358,8 +358,8 @@ export function PybricksWorkspace({
           onClick={() => setGuideOpen((prev) => !prev)}
           className={`min-h-[36px] h-[36px] px-3 rounded-[10px] text-xs font-bold flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors ${
             guideOpen
-              ? "bg-[#565148] text-white shadow-xs"
-              : "border border-[#565148]/35 bg-[#f6f3ec] text-[#37332b] hover:bg-[#efeadf]"
+              ? "bg-[#55445a] text-white shadow-xs"
+              : "border border-[#55445a]/35 bg-[#ebf3f7] text-[#393533] hover:bg-[#ddeaf1]"
           }`}
         >
           <HelpCircle size={15} aria-hidden="true" />
@@ -401,7 +401,7 @@ export function PybricksWorkspace({
                 if (pending.action === "sync") onSyncFromBlocks()
                 else onChangeCode(pending.code)
               }}
-              className="min-h-[32px] rounded-lg bg-[#565148] px-3 text-xs font-bold text-white hover:bg-[#322f27]"
+              className="min-h-[32px] rounded-lg bg-[#55445a] px-3 text-xs font-bold text-white hover:bg-[#34302f]"
             >
               Да, заменить
             </button>
@@ -429,7 +429,7 @@ export function PybricksWorkspace({
 
       {/* Status info when running/uploading */}
       {!errorMessage && statusMessage && (
-        <div role="status" className="shrink-0 border-b border-[#1a181373] bg-[#f8f6f0] px-4 py-1.5 text-xs font-semibold text-[#38342c]">
+        <div role="status" className="shrink-0 border-b border-[#26242373] bg-[#eef6fa] px-4 py-1.5 text-xs font-semibold text-[#3a3634]">
           {statusMessage}
         </div>
       )}
@@ -437,8 +437,8 @@ export function PybricksWorkspace({
       {/* Split Editor + Optional Guide Drawer */}
       <div className="flex-1 min-h-0 flex relative overflow-hidden">
         <div className="flex-1 min-w-0 min-h-0 p-2 sm:p-4 flex flex-col">
-          <div className="flex-1 min-h-0 rounded-md border border-[#1a181373] bg-white shadow-xs flex flex-col overflow-hidden">
-            <div className="shrink-0 flex items-center justify-between px-3.5 py-2 border-b border-[#1a181373] bg-[#faf8f5] text-[11px] font-bold text-[#746d60]">
+          <div className="flex-1 min-h-0 rounded-md border border-[#26242373] bg-white shadow-xs flex flex-col overflow-hidden">
+            <div className="shrink-0 flex items-center justify-between px-3.5 py-2 border-b border-[#26242373] bg-[#f4f9fb] text-[11px] font-bold text-[#6a6272]">
               <span>Python (Pybricks) — {sheetName}</span>
               <span className="tabular-nums">{code.length} / {MAX_PYTHON_CODE_CHARS}</span>
             </div>
@@ -465,7 +465,7 @@ export function PybricksWorkspace({
                 }
               }}
               placeholder="# Напишите код Pybricks или нажмите «Из блоков»"
-              className="flex-1 w-full min-h-0 resize-none p-3.5 font-mono text-[13px] sm:text-sm leading-relaxed text-[#23201b] bg-white focus:outline-none select-text"
+              className="flex-1 w-full min-h-0 resize-none p-3.5 font-mono text-[13px] sm:text-sm leading-relaxed text-[#252221] bg-white focus:outline-none select-text"
             />
           </div>
         </div>
@@ -473,38 +473,38 @@ export function PybricksWorkspace({
         {guideOpen && (
           <aside
             aria-label="Гайд по Pybricks"
-            className="w-full max-w-[340px] sm:w-[330px] shrink-0 border-l border-[#1a181373] bg-white overflow-y-auto p-3.5 flex flex-col gap-3 max-md:absolute max-md:inset-y-0 max-md:right-0 max-md:z-30 max-md:shadow-2xl"
+            className="w-full max-w-[340px] sm:w-[330px] shrink-0 border-l border-[#26242373] bg-white overflow-y-auto p-3.5 flex flex-col gap-3 max-md:absolute max-md:inset-y-0 max-md:right-0 max-md:z-30 max-md:shadow-2xl"
           >
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-sm font-bold text-[#23201b]">Гайд по Pybricks</h2>
+              <h2 className="text-sm font-bold text-[#252221]">Гайд по Pybricks</h2>
               <button
                 type="button"
                 aria-label="Закрыть гайд"
                 onClick={() => setGuideOpen(false)}
-                className="grid size-8 place-items-center rounded-lg text-[#746d60] hover:bg-[#f7f5ef] hover:text-[#23201b]"
+                className="grid size-8 place-items-center rounded-lg text-[#6a6272] hover:bg-[#edf5f9] hover:text-[#252221]"
               >
                 <X size={16} aria-hidden="true" />
               </button>
             </div>
 
             <section className="flex flex-col gap-2">
-              <h3 className="text-xs font-bold uppercase tracking-wide text-[#37332b]">
+              <h3 className="text-xs font-bold uppercase tracking-wide text-[#393533]">
                 Примеры программ
               </h3>
               {GUIDE_EXAMPLES.map((ex) => (
                 <div
                   key={ex.id}
-                  className="rounded-md border border-[#1a181373] bg-[#f9f7f3] p-2.5 flex flex-col gap-2"
+                  className="rounded-md border border-[#26242373] bg-[#f1f7fa] p-2.5 flex flex-col gap-2"
                 >
                   <GuideIllustration kind={ex.illustration} />
                   <div>
-                    <p className="text-xs font-bold text-[#23201b]">{ex.title}</p>
-                    <p className="mt-0.5 text-[11px] font-medium text-[#746d60] leading-snug">{ex.summary}</p>
+                    <p className="text-xs font-bold text-[#252221]">{ex.title}</p>
+                    <p className="mt-0.5 text-[11px] font-medium text-[#6a6272] leading-snug">{ex.summary}</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => handleInsertExample(hub === "ev3" ? ex.ev3Code : ex.spikeCode)}
-                    className="min-h-[34px] w-full rounded-lg bg-[#565148] hover:bg-[#322f27] text-white text-xs font-bold cursor-pointer"
+                    className="min-h-[34px] w-full rounded-lg bg-[#55445a] hover:bg-[#34302f] text-white text-xs font-bold cursor-pointer"
                   >
                     Вставить
                   </button>
@@ -513,26 +513,26 @@ export function PybricksWorkspace({
             </section>
 
             <section className="flex flex-col gap-2">
-              <h3 className="text-xs font-bold uppercase tracking-wide text-[#37332b]">
+              <h3 className="text-xs font-bold uppercase tracking-wide text-[#393533]">
                 Команды
               </h3>
               {GUIDE_COMMANDS.map((cmd) => (
                 <div
                   key={cmd.id}
-                  className="rounded-md border border-[#1a181373] bg-white p-2.5 flex flex-col gap-1.5"
+                  className="rounded-md border border-[#26242373] bg-white p-2.5 flex flex-col gap-1.5"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs font-bold text-[#23201b]">{cmd.title}</p>
+                    <p className="text-xs font-bold text-[#252221]">{cmd.title}</p>
                     <button
                       type="button"
                       onClick={() => handleInsertSnippet(cmd.snippet)}
-                      className="min-h-[28px] px-2.5 rounded-md bg-[#f6f3ec] hover:bg-[#efeadf] text-[#37332b] text-[11px] font-bold cursor-pointer"
+                      className="min-h-[28px] px-2.5 rounded-md bg-[#ebf3f7] hover:bg-[#ddeaf1] text-[#393533] text-[11px] font-bold cursor-pointer"
                     >
                       Вставить
                     </button>
                   </div>
-                  <p className="text-[11px] font-medium text-[#746d60] leading-snug">{cmd.description}</p>
-                  <pre className="rounded-lg bg-[#f7f5ef] px-2 py-1.5 font-mono text-[11px] text-[#25221d] overflow-x-auto">
+                  <p className="text-[11px] font-medium text-[#6a6272] leading-snug">{cmd.description}</p>
+                  <pre className="rounded-lg bg-[#edf5f9] px-2 py-1.5 font-mono text-[11px] text-[#272423] overflow-x-auto">
                     {cmd.snippet}
                   </pre>
                 </div>

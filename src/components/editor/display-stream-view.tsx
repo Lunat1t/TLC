@@ -154,7 +154,7 @@ export function DisplayStreamView({ editing }: { editing: boolean }) {
 
   const showVideo = status === "connecting" || status === "live"
   return (
-    <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-md bg-[#1c1a16] p-2 text-white" aria-label="Экран дисплея">
+    <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-md bg-[#1e1c1b] p-2 text-white" aria-label="Экран дисплея">
       <video
         ref={video}
         className={`absolute inset-0 size-full object-contain ${showVideo ? "" : "invisible"}`}
@@ -192,7 +192,7 @@ export function DisplayStreamView({ editing }: { editing: boolean }) {
       )}
       {status !== "idle" && (
         <button type="button" onClick={() => stop()} title="Отключить трансляцию" aria-label="Отключить трансляцию"
-          className={`absolute right-1 top-1 grid size-8 place-items-center rounded-md bg-[#1c1a16]/90 hover:bg-[#35312a] ${editing ? "" : "focus-visible:outline focus-visible:outline-2"}`}>
+          className={`absolute right-1 top-1 grid size-8 place-items-center rounded-md bg-[#1e1c1b]/90 hover:bg-[#373332] ${editing ? "" : "focus-visible:outline focus-visible:outline-2"}`}>
           <X size={16} aria-hidden="true" />
         </button>
       )}

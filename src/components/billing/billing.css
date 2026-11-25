@@ -18,20 +18,20 @@
 
 .bs-card {
   background: var(--studio-surface, #ffffff);
-  color: var(--studio-text, #201d19);
-  border: 1.5px solid var(--studio-border, #e9e2d2);
+  color: var(--studio-text, #22201f);
+  border: 1.5px solid var(--studio-border, #cfe2ec);
   border-radius: 6px;
   padding: 22px;
-  box-shadow: 0 3px 0 rgba(30,28,23,.16);
+  box-shadow: 0 3px 0 rgba(38,36,35,.16);
   display: grid;
   gap: 14px;
 }
 
 [data-theme="dark"] .bs-card {
-  background: #22201b;
-  color: #f4f1e9;
-  border-color: #38342c;
-  box-shadow: 0 3px 0 rgba(30,28,23,.16);
+  background: #242221;
+  color: #e8f1f5;
+  border-color: #3a3634;
+  box-shadow: 0 3px 0 rgba(38,36,35,.16);
 }
 
 .bs-eyebrow {
@@ -40,11 +40,11 @@
   font-weight:700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #6a4bd6;
+  color: #6f3fb0;
 }
 
 [data-theme="dark"] .bs-eyebrow {
-  color: #b79cf5;
+  color: #8350c4;
 }
 
 .bs-title {
@@ -58,11 +58,11 @@
   margin: 0;
   font-size: 14px;
   line-height: 1.5;
-  color: #6b6559;
+  color: #625a6a;
 }
 
 [data-theme="dark"] .bs-muted {
-  color: #cecbc4;
+  color: #c9c5cd;
 }
 
 .bs-actions-row {
@@ -91,32 +91,32 @@
 }
 
 .bs-btn-primary {
-  background: #b79cf5;
-  color:#1a1813;
+  background: #8350c4;
+  color:#ffffff;
 }
 
 .bs-btn-primary:hover:not(:disabled) {
-  background: #59544b;
+  background: #524b59;
 }
 
 .bs-btn-secondary {
-  background: #f6f3ec;
-  color: #292620;
-  border-color: #e2dac5;
+  background: #ebf3f7;
+  color: #2b2827;
+  border-color: #c1dae6;
 }
 
 .bs-btn-secondary:hover:not(:disabled) {
-  background: #f1ece2;
+  background: #e0edf3;
 }
 
 [data-theme="dark"] .bs-btn-secondary {
-  background: #2c2822;
-  color: #f3f0e7;
-  border-color: #5e594e;
+  background: #2e2a29;
+  color: #e5f0f5;
+  border-color: #564f5d;
 }
 
 [data-theme="dark"] .bs-btn-secondary:hover:not(:disabled) {
-  background: #343129;
+  background: #363231;
 }
 
 .bs-btn-danger {
@@ -156,8 +156,8 @@
 }
 
 .bs-plan-card.is-featured {
-  border-color: #6a4bd6;
-  box-shadow: 0 3px 0 rgba(30,28,23,.16);
+  border-color: #6f3fb0;
+  box-shadow: 0 3px 0 rgba(38,36,35,.16);
 }
 
 .bs-plan-price {
@@ -196,8 +196,8 @@
   border-radius:6px;
   font-size: 12px;
   font-weight:700;
-  background: #f2eee4;
-  color: #59544b;
+  background: #e3eef3;
+  color: #524b59;
   width: fit-content;
 }
 
@@ -212,8 +212,8 @@
 }
 
 [data-theme="dark"] .bs-status-pill {
-  background: #2e2a24;
-  color: #b79cf5;
+  background: #302c2b;
+  color: #8350c4;
 }
 
 [data-theme="dark"] .bs-status-pill.is-active {
@@ -222,7 +222,7 @@
 }
 
 [data-theme="dark"] .bs-status-pill.is-warn {
-  background: #422c10;
+  background: #302c2b;
   color: #fcd34d;
 }
 
@@ -241,13 +241,12 @@
   min-height: 44px;
   padding: 0 12px;
   border-radius: 6px;
-  border: 1px solid #1a181373;
+  border: 1.5px solid #262423;
   background: #ffffff;
-  color: #201d19;
+  color: #22201f;
   font-size: 15px;
   width: 100%;
-  box-sizing: border-box;
-}
+  box-sizing: border-box;;box-shadow:3px 3px 0 #262423;}
 
 .bs-input-code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -259,9 +258,9 @@
 
 [data-theme="dark"] .bs-input,
 [data-theme="dark"] .bs-select {
-  background: #1a1815;
-  color: #f6f3ec;
-  border-color: #544f46;
+  background: #1d1b1a;
+  color: #ebf3f7;
+  border-color: #524258;
 }
 
 .bs-alert {
@@ -286,9 +285,9 @@
 }
 
 .bs-alert.is-info {
-  background: #f7f5ef;
-  color: #6a4bd6;
-  border: 1px solid #1a181373;
+  background: #edf5f9;
+  color: #6f3fb0;
+  border: 1px solid #26242373;
 }
 
 [data-theme="dark"] .bs-alert.is-error {
@@ -304,9 +303,9 @@
 }
 
 [data-theme="dark"] .bs-alert.is-info {
-  background: #282620;
-  color: #b79cf5;
-  border-color: #58534a;
+  background: #2a2726;
+  color: #8350c4;
+  border-color: #57465c;
 }
 
 .bs-school-grid {
@@ -331,13 +330,13 @@
   gap: 10px;
   padding: 12px;
   border-radius: 6px;
-  border: 1px solid #1a181373;
-  background: #fbf9f4;
+  border: 1px solid #26242373;
+  background: #f4f9fb;
 }
 
 [data-theme="dark"] .bs-list-row {
-  background: #1e1c17;
-  border-color: #36322a;
+  background: #201e1d;
+  border-color: #383432;
 }
 
 .bs-invite-spotlight {
@@ -347,13 +346,13 @@
   align-items: center;
   padding: 14px;
   border-radius: 6px;
-  border: 1.5px dashed #6a4bd6;
-  background: #f8f5f0;
+  border: 1.5px dashed #6f3fb0;
+  background: #eef6fa;
 }
 
 [data-theme="dark"] .bs-invite-spotlight {
-  background: #211f1a;
-  border-color: #b79cf5;
+  background: #232120;
+  border-color: #8350c4;
 }
 
 .bs-invite-code-big {
