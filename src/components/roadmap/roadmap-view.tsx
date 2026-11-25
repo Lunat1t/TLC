@@ -36,13 +36,13 @@ import { createClient } from "@/utils/supabase/client"
 import "./roadmap.css"
 
 const RANK_BADGES = [
-  { icon: Sprout, color: "#397337", bg: "#e5f2ce" },
-  { icon: Leaf, color: "#007264", bg: "#cef3e9" },
-  { icon: Wrench, color: "#275dae", bg: "#dfeaff" },
-  { icon: Cog, color: "#7044a9", bg: "#ece3fc" },
-  { icon: Rocket, color: "#ac4721", bg: "#ffe6d4" },
+  { icon: Sprout, color: "#2d4a68", bg: "#d3e2ed" },
+  { icon: Leaf, color: "#2f2c2b", bg: "#cee1eb" },
+  { icon: Wrench, color: "#6f3fb0", bg: "#e3eef3" },
+  { icon: Cog, color: "#7044a9", bg: "#e3eef4" },
+  { icon: Rocket, color: "#ac4721", bg: "#e9ddf6" },
   { icon: Star, color: "#ad3062", bg: "#ffe2ed" },
-  { icon: Crown, color: "#805508", bg: "#ffe69b" },
+  { icon: Crown, color: "#4a2a78", bg: "#cbafeb" },
 ] as const
 
 function RankIcon({ index }: { index: number }) {
@@ -680,7 +680,7 @@ export function RoadmapView({ initialKit }: { initialKit?: string }) {
                         className="rm-banner"
                         style={{
                           margin: 0,
-                          color: soloFeedback.kind === "error" ? "#be123c" : "#15803d",
+                          color: soloFeedback.kind === "error" ? "#be123c" : "#2d4a68",
                         }}
                       >
                         {soloFeedback.text}
@@ -716,7 +716,7 @@ export function RoadmapView({ initialKit }: { initialKit?: string }) {
                 gap: 10,
                 padding: "8px 10px",
                 borderRadius: 12,
-                border: tier.current ? "1.5px solid #2563eb" : "1px solid #dde6f2",
+                border: tier.current ? "1.5px solid #8350c4" : "1px solid #d8e7ef",
               }}
             >
               <RankIcon index={tier.rankIndex} />

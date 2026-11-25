@@ -25,6 +25,14 @@ function downloadBackupFile(raw: string | null, filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
+const WORKSPACE_THEMES = [
+  { id: "pale-sky", name: "Бледное небо", theme: "light", color: "#e4eff5", accent: "#8350c4" },
+  { id: "dusty-denim", name: "Пыльный деним", theme: "light", color: "#c3d3e4", accent: "#402b47" },
+  { id: "lilac", name: "Лиловая дымка", theme: "light", color: "#e6dcf4", accent: "#8350c4" },
+  { id: "midnight", name: "Полночный фиолет", theme: "dark", color: "#402b47", accent: "#c4a6ec" },
+  { id: "graphite", name: "Тёмный графит", theme: "dark", color: "#262423", accent: "#7392b5" },
+] as const
+
 export default function SettingsPage() {
   const { settings, update, error, ready } = useWorkspaceSettings()
   const workspace = useAccountWorkspace()
@@ -159,17 +167,29 @@ export default function SettingsPage() {
         </p>
 
         <section hidden={tab !== "appearance"}>
-          <label>
-            <span>Тема</span>
-            <select
-              disabled={!ready || wallpaperBusy}
-              value={settings.theme}
-              onChange={(e) => update({ theme: e.target.value as typeof settings.theme })}
-            >
-              <option value="light">Светлая</option>
-              <option value="dark">Тёмная</option>
-            </select>
-          </label>
+          <fieldset className="settings-themes" disabled={!ready || wallpaperBusy}>
+            <legend>Тема</legend>
+            <div className="settings-theme-grid" role="radiogroup" aria-label="Тема">
+              {WORKSPACE_THEMES.map((item) => {
+                const selected = settings.color.toLowerCase() === item.color && settings.theme === item.theme
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    className={`settings-theme${selected ? " is-selected" : ""}`}
+                    onClick={() => update({ theme: item.theme, color: item.color })}
+                  >
+                    <span className="settings-theme-swatch" style={{ background: item.color }}>
+                      <i style={{ background: item.accent }} />
+                    </span>
+                    <span className="settings-theme-name">{item.name}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </fieldset>
           <label>
             <span>Фон</span>
             <select
@@ -182,15 +202,6 @@ export default function SettingsPage() {
               <option value="dots">Точки</option>
               {settings.wallpaper && <option value="wallpaper">Свои обои</option>}
             </select>
-          </label>
-          <label>
-            <span>Цвет фона</span>
-            <input
-              disabled={!ready || wallpaperBusy}
-              type="color"
-              value={settings.color}
-              onChange={(e) => update({ color: e.target.value })}
-            />
           </label>
           <WallpaperPicker onBusyChange={setWallpaperBusy} />
         </section>
@@ -244,7 +255,7 @@ export default function SettingsPage() {
                 )}
               </form>
 
-              <div className="settings-subscription-card" style={{ display: "grid", gap: 12, paddingTop: 14, borderTop: "1px solid rgba(128,150,180,0.22)" }}>
+              <div className="settings-subscription-card" style={{ display: "grid", gap: 12, paddingTop: 14, borderTop: "1px solid rgba(154,146,162,0.22)" }}>
                 <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                   <div>
                     <strong style={{ display: "block", fontSize: 15 }}>Подписка и школа</strong>
@@ -270,7 +281,7 @@ export default function SettingsPage() {
                 {access.role !== "parent" && <JoinSchoolForm compact={true} />}
               </div>
 
-              <div className="settings-subscription-card" style={{ display: "grid", gap: 12, paddingTop: 14, borderTop: "1px solid rgba(128,150,180,0.22)" }}>
+              <div className="settings-subscription-card" style={{ display: "grid", gap: 12, paddingTop: 14, borderTop: "1px solid rgba(154,146,162,0.22)" }}>
                 <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                   <div>
                     <strong style={{ display: "block", fontSize: 15 }}>Резервная копия программ</strong>

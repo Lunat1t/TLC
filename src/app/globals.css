@@ -4,32 +4,37 @@
 
 @layer base {
   :root {
-    --background: 196 33% 97%;
-    --foreground: 199 43% 12%;
-    --card: 0 0% 100%;
-    --card-foreground: 199 43% 12%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 199 43% 12%;
-    --primary: 194 72% 13%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 195 29% 95%;
-    --secondary-foreground: 197 26% 32%;
-    --muted: 195 29% 95%;
-    --muted-foreground: 197 16% 46%;
-    --accent: 189 98% 46%;
-    --accent-foreground: 194 86% 11%;
-    --destructive: 4 56% 45%;
+    --background: 200 42% 93%;
+    --foreground: 15 5% 14%;
+    --card: 200 50% 98%;
+    --card-foreground: 15 5% 14%;
+    --popover: 200 50% 98%;
+    --popover-foreground: 15 5% 14%;
+    --primary: 15 5% 14%;
+    --primary-foreground: 200 50% 98%;
+    --secondary: 200 36% 89%;
+    --secondary-foreground: 270 10% 25%;
+    --muted: 200 36% 89%;
+    --muted-foreground: 270 8% 38%;
+    --accent: 268 42% 54%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 4 70% 38%;
     --destructive-foreground: 0 0% 98%;
-    --border: 196 31% 88%;
-    --input: 196 31% 84%;
-    --ring: 189 98% 46%;
-    --radius: 1rem;
-  }
-}
+    --border: 205 22% 72%;
+    --input: 15 5% 14%;
+    --ring: 268 42% 54%;
+    --radius: 0.375rem;
 
-@layer base {
-  :root {
-    --font-ui: var(--font-rubik), Rubik, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --ink: #262423;
+    --paper: #e4eff5;
+    --paper-card: #f4f9fc;
+    --signal: #8350c4;
+    --signal-deep: #6f3fb0;
+    --denim: #7392b5;
+    --sky: #c9e0eb;
+    --midnight: #402b47;
+    --font-ui: var(--font-onest), Onest, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-tech: var(--font-mono-tech), "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   }
 }
 
@@ -41,9 +46,34 @@
     font-family: var(--font-ui);
   }
   body {
-    @apply bg-[#f4f8fa] text-[#12242d] antialiased;
+    @apply text-[#262423] antialiased;
     font-family: var(--font-ui);
+    background-color: var(--paper);
+    background-image: radial-gradient(circle, rgba(38,36,35, 0.28) 1px, transparent 1.4px);
+  background-size: 16px 16px;
   }
+  h1, h2, h3 {
+    letter-spacing: -0.02em;
+  }
+}
+
+/* Миллиметровка: фон страниц-холстов. */
+.paper-grid {
+  background-color: var(--paper);
+  background-image: radial-gradient(circle, rgba(38,36,35, 0.28) 1px, transparent 1.4px);
+  background-size: 16px 16px;
+}
+
+/* Технические метки: порты A–F, номера деталей, значения. */
+.tech, code, kbd, samp {
+  font-family: var(--font-tech);
+  font-feature-settings: "zero" 1;
+}
+.tech {
+  font-size: 0.78em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 @keyframes legoBlockSpawn {
@@ -130,4 +160,4 @@ input, textarea, [contenteditable]:not([contenteditable="false"]),
 
 @media(max-width:767px){.editor-topbar{height:auto!important;min-height:104px;display:flex;flex-wrap:wrap;gap:8px!important;padding:8px 12px!important}.editor-topbar>div:first-of-type{flex:1;min-width:100px}.editor-topbar>button,.editor-topbar summary{min-height:44px}.editor-topbar>button{padding-inline:10px;font-size:12px}.editor-topbar>details{margin-left:auto}.tlc-editor [aria-label="Меню блоков"]{max-width:calc(100vw - 48px)}}
 
-.workspace-sync-status:empty{display:none}.workspace-sync-status{position:fixed;left:12px;top:12px;z-index:14000;max-width:calc(100vw - 24px);padding:10px 14px;border:1px solid #b5c9df;border-radius:12px;background:#fff;color:#193b68;box-shadow:0 4px 18px #1233;font-size:13px}.workspace-sync-status button{margin-left:12px;text-decoration:underline;min-height:36px}
+.workspace-sync-status:empty{display:none}.workspace-sync-status{position:fixed;left:12px;top:12px;z-index:14000;max-width:calc(100vw - 24px);padding:10px 14px;border:1.5px solid #262423;border-radius:6px;background:#ffffff;color:#353130;box-shadow:3px 3px 0 #262423;font-size:13px}.workspace-sync-status button{margin-left:12px;text-decoration:underline;min-height:36px}

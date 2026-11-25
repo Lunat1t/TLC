@@ -6,50 +6,21 @@ import { AccountWorkspaceProvider } from "@/components/lab/account-workspace"
 import { AccessProvider } from "@/components/auth/access-provider"
 import { AppStartup } from "@/components/auth/app-startup"
 
-const rubik = localFont({
+const onest = localFont({
   src: [
-    {
-      path: "./fonts/Rubik-Latin.woff2",
-      weight: "300 900",
-      style: "normal",
-    },
-    {
-      path: "./fonts/Rubik-Cyrillic.woff2",
-      weight: "300 900",
-      style: "normal",
-    },
-    {
-      path: "./fonts/Rubik-Latin-Ext.woff2",
-      weight: "300 900",
-      style: "normal",
-    },
-    {
-      path: "./fonts/Rubik-Cyrillic-Ext.woff2",
-      weight: "300 900",
-      style: "normal",
-    },
-    {
-      path: "./fonts/Rubik-Italic-Latin.woff2",
-      weight: "300 900",
-      style: "italic",
-    },
-    {
-      path: "./fonts/Rubik-Italic-Cyrillic.woff2",
-      weight: "300 900",
-      style: "italic",
-    },
-    {
-      path: "./fonts/Rubik-Italic-Latin-Ext.woff2",
-      weight: "300 900",
-      style: "italic",
-    },
-    {
-      path: "./fonts/Rubik-Italic-Cyrillic-Ext.woff2",
-      weight: "300 900",
-      style: "italic",
-    },
+    { path: "./fonts/onest-cyrillic-wght-normal.woff2", weight: "100 900", style: "normal" },
+    { path: "./fonts/onest-latin-wght-normal.woff2", weight: "100 900", style: "normal" },
   ],
-  variable: "--font-rubik",
+  variable: "--font-onest",
+  display: "swap",
+})
+
+const jetbrainsMono = localFont({
+  src: [
+    { path: "./fonts/jetbrains-mono-cyrillic-wght-normal.woff2", weight: "100 800", style: "normal" },
+    { path: "./fonts/jetbrains-mono-latin-wght-normal.woff2", weight: "100 800", style: "normal" },
+  ],
+  variable: "--font-mono-tech",
   display: "swap",
 })
 
@@ -63,7 +34,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: "#0d1015",
+  themeColor: "#402b47",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -75,8 +46,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="ru" className={rubik.variable}>
-      <body className="min-h-dvh flex flex-col bg-[#0d1015]">
+    <html lang="ru" className={`${onest.variable} ${jetbrainsMono.variable}`}>
+      <body className="min-h-dvh flex flex-col bg-[#402b47]">
         <AccessProvider>
           <AccountWorkspaceProvider>
             <AppStartup>

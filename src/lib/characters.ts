@@ -14,7 +14,7 @@ export const CHARACTER_CATALOG: {
   personality: string
   bodyColor: string
 }[] = [
-  { id: "cloud", label: "Облачко", personality: "Тихое, задумчивое, любит побыть в своём мире.", bodyColor: "#34BDF2" },
+  { id: "cloud", label: "Облачко", personality: "Тихое, задумчивое, любит побыть в своём мире.", bodyColor: "#8350c4" },
   { id: "rectangle", label: "Прямоугольник", personality: "Заботливый и добрый. Всегда готов помочь.", bodyColor: "#E2A2F6" },
   { id: "square", label: "Квадрат", personality: "Шумный и упрямый. Любит настоять на своём.", bodyColor: "#FF2D2D" },
   { id: "triangle", label: "Треугольник", personality: "Шустрый, легко отвлекается и всегда за игру.", bodyColor: "#FF6E1A" },
@@ -22,16 +22,16 @@ export const CHARACTER_CATALOG: {
 ]
 
 export const CHARACTER_COLORS = [
-  { name: "Голубой", color: "#43c5e4" },
+  { name: "Голубой", color: "#8350c4" },
   { name: "Красный", color: "#ef5b64" },
   { name: "Оранжевый", color: "#ff9b45" },
   { name: "Жёлтый", color: "#ffd34e" },
   { name: "Зелёный", color: "#57c785" },
-  { name: "Бирюзовый", color: "#35c8b0" },
-  { name: "Фиолетовый", color: "#9875ed" },
+  { name: "Бирюзовый", color: "#8350c4" },
+  { name: "Фиолетовый", color: "#8350c4" },
   { name: "Розовый", color: "#ee82b4" },
-  { name: "Белый", color: "#f2f5f7" },
-  { name: "Графитовый", color: "#414b5b" },
+  { name: "Белый", color: "#ebf3f7" },
+  { name: "Графитовый", color: "#534359" },
 ] as const
 
 export function isCharacterId(value: unknown): value is CharacterId {
@@ -48,7 +48,7 @@ export function normalizeCharacterLook(
   const eyeColor = value?.eyeColor || (id === "cloud" ? legacy?.characterEyeColor : undefined)
   return {
     bodyColor: isHexColor(bodyColor) ? bodyColor : character.bodyColor,
-    eyeColor: isHexColor(eyeColor) ? eyeColor : "#FFFFFF",
+    eyeColor: isHexColor(eyeColor) ? eyeColor : "#ffffff",
   }
 }
 

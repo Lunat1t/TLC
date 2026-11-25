@@ -32,7 +32,7 @@ export interface AvatarState {
   characters?: Partial<Record<CharacterId, CharacterLook>>
 }
 
-export const DEFAULT_AVATAR_COLORS = { bodyColor: "#43c5e4", characterEyeColor: "#ffffff" } as const
+export const DEFAULT_AVATAR_COLORS = { bodyColor: "#8350c4", characterEyeColor: "#ffffff" } as const
 
 export interface AuthState {
   user: UserSession | null

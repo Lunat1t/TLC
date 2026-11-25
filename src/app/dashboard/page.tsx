@@ -344,7 +344,7 @@ export default function HomePage() {
             <div
               role="region"
               aria-label="Перенос программ с этого устройства"
-              className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-slate-900"
+              className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-900"
             >
               <span>
                 На этом устройстве есть {countLabel(library.localCount)}. Перенести их в ваш аккаунт?
@@ -352,7 +352,7 @@ export default function HomePage() {
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  className="rounded-lg bg-[#087996] px-3.5 py-2 text-xs font-bold text-white hover:bg-[#055a70] disabled:opacity-50"
+                  className="rounded-lg bg-[#55445a] px-3.5 py-2 text-xs font-bold text-white hover:bg-[#302c2b] disabled:opacity-50"
                   disabled={copyingLocal}
                   onClick={() => void copyLocalPrograms()}
                 >
@@ -360,7 +360,7 @@ export default function HomePage() {
                 </button>
                 <button
                   type="button"
-                  className="rounded-lg border border-sky-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-sky-100 disabled:opacity-50"
+                  className="rounded-lg border border-stone-200 bg-white px-3.5 py-2 text-xs font-bold text-stone-700 hover:bg-stone-100 disabled:opacity-50"
                   disabled={copyingLocal}
                   onClick={() => void dismissLocalImport()}
                 >
@@ -369,7 +369,7 @@ export default function HomePage() {
               </div>
             </div>
           )}
-          {library.userId && library.drafts.length > 0 && <details id="drafts" ref={draftsRef} className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm">
+          {library.userId && library.drafts.length > 0 && <details id="drafts" ref={draftsRef} className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm">
             <summary>Несохранённые программы на этом устройстве ({library.drafts.length})</summary>
             <p className="my-2">Можно восстановить правки в аккаунте или скачать отдельную копию. При конфликте с другим устройством копия сохранится здесь.</p>
             {library.drafts.map(draft => {
@@ -481,18 +481,18 @@ export default function HomePage() {
 
       {selectedProject && !renameOpen && (
         <div className="fixed inset-0 z-[12100] bg-[var(--home-overlay)] backdrop-blur-xs grid place-items-center p-4">
-          <div className="w-full max-w-[480px] rounded-[23px] bg-white p-7 shadow-2xl">
+          <div className="w-full max-w-[480px] rounded-md bg-white p-7 shadow-2xl">
             <p className="text-xs font-bold text-[var(--home-blue)] mb-2">
               ПРОЕКТ
             </p>
-            <h2 className="text-[28px] font-black text-[var(--home-ink)] mb-2 break-words">
+            <h2 className="text-[28px] font-bold text-[var(--home-ink)] mb-2 break-words">
               {selectedProject.name}
             </h2>
             <p className="text-sm text-[var(--home-muted)] mb-4">
               {HUBS[selectedProject.hub]} · создан{" "}
               {formatDate(selectedProject.createdAt)}
             </p>
-            <p className="p-3.5 rounded-xl bg-[var(--home-rail)] text-[var(--home-muted)] text-sm">
+            <p className="p-3.5 rounded-md bg-[var(--home-rail)] text-[var(--home-muted)] text-sm">
               Откройте рабочую область, чтобы размещать блоки на доске.
             </p>
             <div className="flex flex-wrap gap-2 mt-5">
@@ -543,7 +543,7 @@ export default function HomePage() {
               </Button>
               <Link
                 href={`/editor?id=${encodeURIComponent(selectedProject.id)}`}
-                className="inline-flex items-center justify-center rounded-full bg-[var(--home-dark)] text-white min-h-[50px] px-6 py-3 text-sm font-extrabold hover:bg-[var(--home-blue)]"
+                className="inline-flex items-center justify-center rounded-md bg-[var(--home-dark)] text-white min-h-[50px] px-6 py-3 text-sm font-bold hover:bg-[var(--home-blue)]"
               >
                 Открыть редактор
               </Link>
@@ -554,12 +554,12 @@ export default function HomePage() {
 
       {selectedProject && renameOpen && (
         <div className="fixed inset-0 z-[12100] bg-[var(--home-overlay)] backdrop-blur-xs grid place-items-center p-4">
-          <div className="w-full max-w-[480px] rounded-[23px] bg-white p-7 shadow-2xl">
+          <div className="w-full max-w-[480px] rounded-md bg-white p-7 shadow-2xl">
             <form onSubmit={handleRenameProject}>
               <p className="text-xs font-bold text-[var(--home-blue)] mb-2">
                 ПРОЕКТ
               </p>
-              <h2 className="text-[28px] font-black text-[var(--home-ink)] mb-5">
+              <h2 className="text-[28px] font-bold text-[var(--home-ink)] mb-5">
                 Переименовать
               </h2>
               <div className="grid gap-2">

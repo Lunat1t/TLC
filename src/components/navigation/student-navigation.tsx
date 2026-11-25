@@ -103,7 +103,7 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
 
   const nickname = access.profile?.nickname || "Аккаунт"
   const roleLabel = getRoleLabel(access.role, access.isAdmin)
-  const avatarBg = access.profile?.avatar?.bodyColor || "#34bdf2"
+  const avatarBg = access.profile?.avatar?.bodyColor || "#8350c4"
   const avatarInitial = nickname.trim().slice(0, 1).toUpperCase() || "B"
 
   async function handleSignOut() {

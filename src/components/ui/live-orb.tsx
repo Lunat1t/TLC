@@ -72,10 +72,10 @@ export interface AvatarPreset {
   eyeColor: string
 }
 
-export const WHITE = { color: "#F4F4F5", eyeColor: "#09090B" } as const
-export const BLACK = { color: "#18181B", eyeColor: "#F4F4F5" } as const
-export const CUSTOM_DEFAULT = { color: "#7C5CFF", eyeColor: "#FAFAFA" } as const
-export const WEBGL_COLORS = ["#7C6AF7", "#7DD3C7", "#E8B4D4"]
+export const WHITE = { color: "#ebf3f7", eyeColor: "#0f0e0e" } as const
+export const BLACK = { color: "#191717", eyeColor: "#ebf3f7" } as const
+export const CUSTOM_DEFAULT = { color: "#8350c4", eyeColor: "#f1f7fa" } as const
+export const WEBGL_COLORS = ["#8350c4", "#a8a1af", "#E8B4D4"]
 
 export const AVATAR_PRESETS: AvatarPreset[] = [
   {
@@ -83,25 +83,25 @@ export const AVATAR_PRESETS: AvatarPreset[] = [
     name: "Aurora WebGL",
     badge: "21st.dev Original",
     variant: "webgl",
-    colors: ["#7C6AF7", "#7DD3C7", "#E8B4D4"],
-    color: "#7C6AF7",
-    eyeColor: "#09090B",
+    colors: ["#8350c4", "#a8a1af", "#E8B4D4"],
+    color: "#8350c4",
+    eyeColor: "#0f0e0e",
   },
   {
     id: "tlc-cyber",
     name: "Brick Studio Импульс",
     badge: "SPIKE Cyan",
     variant: "webgl",
-    colors: ["#02C7EA", "#38BDF8", "#7DD3C7"],
-    color: "#02C7EA",
-    eyeColor: "#06232D",
+    colors: ["#8350c4", "#8350c4", "#a8a1af"],
+    color: "#8350c4",
+    eyeColor: "#191717",
   },
   {
     id: "white",
     name: "Светлый Орб",
     badge: "White",
     variant: "white",
-    colors: ["#F4F4F5", "#E4E4E7", "#D4D4D8"],
+    colors: ["#ebf3f7", "#d6e6ee", "#bfd8e5"],
     color: WHITE.color,
     eyeColor: WHITE.eyeColor,
   },
@@ -110,7 +110,7 @@ export const AVATAR_PRESETS: AvatarPreset[] = [
     name: "Обсидиан",
     badge: "Black",
     variant: "black",
-    colors: ["#18181B", "#27272A", "#3F3F46"],
+    colors: ["#191717", "#242221", "#363231"],
     color: BLACK.color,
     eyeColor: BLACK.eyeColor,
   },
@@ -119,7 +119,7 @@ export const AVATAR_PRESETS: AvatarPreset[] = [
     name: "Неоновый Вектор",
     badge: "Custom",
     variant: "custom",
-    colors: ["#7C5CFF", "#A78BFA", "#C4B5FD"],
+    colors: ["#8350c4", "#8350c4", "#c3dbe7"],
     color: CUSTOM_DEFAULT.color,
     eyeColor: CUSTOM_DEFAULT.eyeColor,
   },
@@ -130,7 +130,7 @@ export const AVATAR_PRESETS: AvatarPreset[] = [
     variant: "webgl",
     colors: ["#FF6B35", "#F7931E", "#FFE66D"],
     color: "#FF6B35",
-    eyeColor: "#1F130B",
+    eyeColor: "#1a1817",
   },
 ]
 
@@ -193,7 +193,7 @@ export function resolveOrbConfig(options: {
     variant: "webgl" as const,
     mode: 1,
     color: options.color || stops[0],
-    eyeColor: options.eyeColor || "#09090B",
+    eyeColor: options.eyeColor || "#0f0e0e",
     colors: stops,
   }
 }

@@ -53,9 +53,9 @@ function DirectionButton({
 
   const arrow = <Icon size={Math.round(size * 0.5)} strokeWidth={3.5} aria-hidden="true" />
   const style = { width: size, height: size }
-  const base = "grid shrink-0 place-items-center rounded-full border-2 border-slate-500 text-white shadow-[inset_0_-3px_#25313c] select-none"
+  const base = "grid shrink-0 place-items-center rounded-full border-2 border-stone-500 text-white shadow-[0_3px_0_rgba(38,36,35,0.16)] select-none"
 
-  if (editing) return <span aria-hidden="true" className={`${base} bg-[#3a444d]`} style={style}>{arrow}</span>
+  if (editing) return <span aria-hidden="true" className={`${base} bg-[#363331]`} style={style}>{arrow}</span>
 
   return (
     <button
@@ -64,7 +64,7 @@ function DirectionButton({
       aria-pressed={pressed && enabled}
       title={error || label}
       disabled={!enabled}
-      className={`${base} cursor-pointer touch-none bg-[#3a444d] p-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 aria-pressed:border-[#56bdad] aria-pressed:bg-[#0e7668] aria-pressed:shadow-[inset_0_3px_#09594e] disabled:opacity-55`}
+      className={`${base} cursor-pointer touch-none bg-[#363331] p-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-700 aria-pressed:border-[#8a8093] aria-pressed:bg-[#353230] aria-pressed:shadow-[0_3px_0_rgba(38,36,35,0.16)] disabled:opacity-55`}
       style={style}
       onPointerDown={event => {
         if (event.button !== 0 || key.current !== null) return
@@ -145,7 +145,7 @@ export function DirectionPalettePreview({ kind }: { kind: DirectionControlKind }
         return (
           <span
             key={direction}
-            className={`grid ${btnSize} place-items-center rounded-full border-[1.5px] border-slate-500 bg-[#3a444d] text-white shadow-[inset_0_-2px_#25313c]`}
+            className={`grid ${btnSize} place-items-center rounded-full border-[1.5px] border-stone-500 bg-[#363331] text-white shadow-[0_3px_0_rgba(38,36,35,0.16)]`}
           >
             <Icon size={iconSize} strokeWidth={3.2} />
           </span>
@@ -157,17 +157,17 @@ export function DirectionPalettePreview({ kind }: { kind: DirectionControlKind }
 
 
 const PALETTE_MOTOR_DOTS = [
-  { face: "#1687b3", shade: "#0e688a" },
+  { face: "#6f3fb0", shade: "#382d3b" },
   { face: "#d9473d", shade: "#a92b26" },
   { face: "#32a66a", shade: "#21804e" },
-  { face: "#edc13d", shade: "#c59b24" },
+  { face: "#edc13d", shade: "#756b7e" },
 ] as const
 
 export function DistanceGaugePalettePreview() {
   return (
-    <span aria-hidden="true" className="flex items-center justify-center gap-1.5 text-[#312e81]">
+    <span aria-hidden="true" className="flex items-center justify-center gap-1.5 text-[#58505e]">
       <Waves size={16} strokeWidth={2.4} />
-      <span className="rounded-md bg-[#eef2ff] px-2 py-0.5 text-xs font-black tabular-nums">-- см</span>
+      <span className="rounded-md bg-[#ecf5f9] px-2 py-0.5 text-xs font-bold tabular-nums">-- см</span>
     </span>
   )
 }
@@ -212,7 +212,7 @@ export function DriveSettingsButton({ settings, onChange }: {
       >
         <Settings2 size={17} aria-hidden="true" />
       </summary>
-      <div className="absolute right-0 top-full grid w-max gap-2 rounded-lg border border-slate-200 bg-white p-2 text-xs font-semibold text-slate-800 shadow-lg">
+      <div className="absolute right-0 top-full grid w-max gap-2 rounded-lg border border-stone-200 bg-white p-2 text-xs font-semibold text-stone-800 shadow-lg">
         {([
           { label: "Левый мотор", port: "leftPort", reversed: "leftReversed" },
           { label: "Правый мотор", port: "rightPort", reversed: "rightReversed" },

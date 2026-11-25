@@ -64,18 +64,18 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="login-page min-h-dvh flex flex-col bg-[radial-gradient(circle_at_14%_18%,rgba(2,199,234,0.15)_0%,transparent_42%),radial-gradient(circle_at_86%_82%,rgba(124,106,247,0.12)_0%,transparent_45%),#f4f8fa]">
-      <header className="min-h-[74px] px-5 md:px-16 py-3.5 flex items-center justify-between gap-4 bg-[#02c7ea]">
+    <div className="login-page min-h-dvh flex flex-col paper-grid">
+      <header className="min-h-[74px] px-5 md:px-16 py-3.5 flex items-center justify-between gap-4 bg-[#f4f9fc] border-b-2 border-[#262423]">
         <Link
           href="/dashboard"
-          className="text-[19px] font-black tracking-wide text-[#002c39] inline-flex items-center gap-2.5"
+          className="text-[19px] font-bold tracking-wide text-[#1c1a19] inline-flex items-center gap-2.5"
         >
           Brick Studio
         </Link>
         <Link
           href="/dashboard"
           prefetch={false}
-          className="text-sm font-extrabold text-[#053543] px-4 py-2.5 rounded-full bg-white/85 hover:bg-white shadow-sm transition-transform hover:-translate-y-0.5"
+          className="text-sm font-bold text-[#211f1e] px-4 py-2.5 rounded-md bg-white/85 hover:bg-white shadow-sm transition-transform hover:-translate-y-0.5"
         >
           ← К проектам
         </Link>
@@ -84,7 +84,7 @@ export default function LoginPage() {
       <main className="flex-1 grid place-items-center px-4 py-10">
         <Card className="w-full max-w-[460px]">
           <CardHeader className="items-center text-center pb-2">
-            <p className="text-[11px] font-black tracking-[0.16em] uppercase text-[#008da9]">
+            <p className="text-[11px] font-bold tracking-[0.16em] uppercase text-[#544e5b]">
               АВТОРИЗАЦИЯ УЧЕНИКА
             </p>
             <CardTitle className="text-[28px] md:text-[32px]">
@@ -131,10 +131,10 @@ export default function LoginPage() {
               {status && (
                 <p
                   role="status"
-                  className={`rounded-xl px-3.5 py-2.5 text-[13px] font-bold ${
+                  className={`rounded-md px-3.5 py-2.5 text-[13px] font-bold ${
                     status.isError
                       ? "bg-[#fff1ee] text-[#a9352e]"
-                      : "bg-[#e3f9eb] text-[#165e36]"
+                      : "bg-[#e7eff5] text-[#2d4a68]"
                   }`}
                 >
                   {status.message}
@@ -149,16 +149,16 @@ export default function LoginPage() {
               </div>
             </form>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3.5 p-4 rounded-[18px] bg-gradient-to-br from-[#edfcff] to-[#f4f1ff] border border-[#ccebf2]">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3.5 p-4 rounded-md bg-gradient-to-br from-[#ecf5f9] to-[#eef6fa] border border-[#26242373]">
               <div className="text-center sm:text-left">
-                <strong className="block text-sm font-extrabold text-[#10303b]">
+                <strong className="block text-sm font-bold text-[#22201f]">
                   Ещё нет аккаунта?
                 </strong>
               </div>
               <Link
                 id="registerRedirect"
                 href="/register"
-                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-full bg-[#02c7ea] text-[#042b36] text-sm font-extrabold shadow-[0_8px_20px_rgba(2,199,234,0.25)] hover:bg-[#00b4d6] transition-transform hover:-translate-y-0.5 whitespace-nowrap"
+                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-md bg-[#f4f9fc] border-b-2 border-[#262423] text-[#262423] text-sm font-bold shadow-[0_3px_0_rgba(38,36,35,0.16)] hover:bg-[#6f3fb0] transition-transform hover:-translate-y-0.5 whitespace-nowrap"
               >
                 Регистрация <span aria-hidden="true">↗</span>
               </Link>

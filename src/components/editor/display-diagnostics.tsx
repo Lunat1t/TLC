@@ -108,14 +108,14 @@ export function DisplayDiagnostics({ peer, videoRef, track, signaling, lowDelayR
   }
   return (
     <div className="absolute bottom-1 left-1 z-20 max-w-[calc(100%-8px)] text-left text-white" onPointerDown={event => event.stopPropagation()}>
-      <button type="button" onClick={() => dialog.current?.showModal()} aria-label="Диагностика видео" title="Диагностика видео" className="grid size-8 cursor-pointer place-items-center rounded-md bg-slate-950/90 focus-visible:outline focus-visible:outline-2">
+      <button type="button" onClick={() => dialog.current?.showModal()} aria-label="Диагностика видео" title="Диагностика видео" className="grid size-8 cursor-pointer place-items-center rounded-md bg-stone-950/90 focus-visible:outline focus-visible:outline-2">
         <Activity size={17} aria-hidden="true" />
       </button>
-      <dialog ref={dialog} role="dialog" aria-label="Диагностика видеосвязи" className="m-auto max-h-[75vh] w-80 max-w-[calc(100vw-24px)] overflow-auto rounded-lg bg-slate-950 p-3 text-[11px] text-white shadow-lg backdrop:bg-black/50">
+      <dialog ref={dialog} role="dialog" aria-label="Диагностика видеосвязи" className="m-auto max-h-[75vh] w-80 max-w-[calc(100vw-24px)] overflow-auto rounded-lg bg-stone-950 p-3 text-[11px] text-white shadow-lg backdrop:bg-black/50">
         <button type="button" aria-label="Закрыть диагностику" className="float-right grid size-8 place-items-center rounded border border-white/30 focus-visible:outline" onClick={() => dialog.current?.close()}>×</button>
         <p className="mb-2 font-bold">Диагностика видео{unavailable ? " · статистика недоступна" : ""}</p>
-        <dl className="grid grid-cols-2 gap-x-2 gap-y-1">{fields.map(([label, text]) => <div key={label} className="contents"><dt className="text-slate-300">{label}</dt><dd>{text}</dd></div>)}</dl>
-        <p className="mt-2 text-slate-300">«—» — браузер не сообщил данные. Оценка захвата не заменяет замер камерой. На телефоне показ — только локальный предпросмотр. FPS и буфер обновляются раз в секунду.</p>
+        <dl className="grid grid-cols-2 gap-x-2 gap-y-1">{fields.map(([label, text]) => <div key={label} className="contents"><dt className="text-stone-300">{label}</dt><dd>{text}</dd></div>)}</dl>
+        <p className="mt-2 text-stone-300">«—» — браузер не сообщил данные. Оценка захвата не заменяет замер камерой. На телефоне показ — только локальный предпросмотр. FPS и буфер обновляются раз в секунду.</p>
         <button type="button" className="mt-2 rounded border border-white/30 px-2 py-1 focus-visible:outline" onClick={download}>Скачать замер</button>
       </dialog>
     </div>

@@ -37,7 +37,7 @@ async function imageData(file: File): Promise<string> {
     canvas.width = Math.max(1, Math.round(bitmap.width * scale)); canvas.height = Math.max(1, Math.round(bitmap.height * scale))
     const context = canvas.getContext("2d")
     if (!context) throw new Error("Не удалось обработать картинку.")
-    context.fillStyle = "#fff"; context.fillRect(0, 0, canvas.width, canvas.height); context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+    context.fillStyle = "#ffffff"; context.fillRect(0, 0, canvas.width, canvas.height); context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
     return canvas.toDataURL("image/jpeg", .8)
   } finally { bitmap.close() }
 }
