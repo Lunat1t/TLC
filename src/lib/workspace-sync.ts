@@ -44,8 +44,10 @@ export function mergeWorkspaceSection(section: WorkspaceSection, base: unknown, 
   return { value: arraySection(section) ? Object.values(merged) : merged, conflict: false }
 }
 
-export function createWorkspaceSync(options: { userId: string; tabId: string; fetch: Fetcher; storage: RecoveryStorage; sections?: WorkspaceSection[] }) {
-  const { userId, tabId, storage } = options
+export function createWorkspaceSync(options: { userId: string; tabId: string; fetch: Fetcher; storage: RecoveryStorage; sections?: WorkspaceSection[]; deferPush?: boolean }) {
+  const { userId, tabId, storage, deferPush = false } = options
+  // deferPush: edits stay in the browser until flush() (sign-out) sends them to the cloud.
+  let flushing = false
   const sections = options.sections ?? WORKSPACE_SECTIONS
   let snapshot: WorkspaceSnapshot = { values: {}, ready: false, saving: false, error: "", conflicts: [] }
   let confirmed: WorkspaceValues = {}, revisions: Partial<Record<WorkspaceSection, number>> = {}
@@ -68,7 +70,7 @@ export function createWorkspaceSync(options: { userId: string; tabId: string; fe
     // If this fails, refuse the edit rather than claiming an offline backup exists.
     const key = keyFor(section)
     const source = recoverySources.get(key)
-    if (source && storage.getItem(key) === source) {
+    if (!deferPush && source && storage.getItem(key) === source) {
       storage.setItem(`tlc-workspace-archive:${userId}:${section}:${crypto.randomUUID()}`, source)
     }
     storage.setItem(key, JSON.stringify({ ...draft, revision: revisions[section] || 0, conflict: snapshot.conflicts.includes(section) }))
@@ -176,7 +178,7 @@ export function createWorkspaceSync(options: { userId: string; tabId: string; fe
           if (requestRead) { requestRead = false; await read() }
           if (snapshot.conflicts.length) throw new Error("Изменения одной программы или карточки пересеклись на устройствах. Локальная копия сохранена.")
           const first = pending.entries().next().value as [WorkspaceSection, Pending] | undefined
-          if (!first) break
+          if (!first || (deferPush && !flushing)) break
           const [section, flight] = first
           const response = await options.fetch("/api/workspace", {
             method: "PUT", headers: { "Content-Type": "application/json" }, signal: controller.signal,
@@ -218,17 +220,21 @@ export function createWorkspaceSync(options: { userId: string; tabId: string; fe
     subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener) } },
     async refresh() { requestRead = true; await synchronize() },
     async flush() {
-      while (!disposed && (work || pending.size > 0)) {
-        await (work ?? synchronize())
-      }
+      flushing = true
+      try {
+        if (deferPush && !disposed) { requestRead = true; await (work ?? synchronize()) }
+        while (!disposed && (work || pending.size > 0)) {
+          await (work ?? synchronize())
+        }
+      } finally { flushing = false }
     },
     update(section: WorkspaceSection, value: unknown, expected?: unknown) {
-      try { stage(section, value, expected); void synchronize().catch(() => {}); return true }
+      try { stage(section, value, expected); if (!deferPush) void synchronize().catch(() => {}); return true }
       catch (error) { publish({ error: (error as Error).message }); return false }
     },
     async save(section: WorkspaceSection, value: unknown, expected?: unknown) {
       stage(section, value, expected)
-      await synchronize()
+      if (!deferPush) await synchronize()
       if (disposed) throw new Error("Аккаунт изменился.")
     },
     useCloud() {

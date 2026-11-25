@@ -111,7 +111,7 @@ export function StudentNavigation({ children }: { children: ReactNode }) {
     setAccountOpen(false)
     setSignOutBusy(true)
     try {
-      const flushed = await workspace.flush(5000)
+      const flushed = await workspace.flush(60_000)
       if (!flushed.ok) {
         const confirmed = window.confirm(
           `${flushed.message || "Не удалось сохранить все изменения в облако."}\n\nНеотправленные изменения останутся в этом браузере. Выйти из аккаунта?`

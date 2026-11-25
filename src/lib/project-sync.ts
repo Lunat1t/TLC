@@ -6,8 +6,10 @@ type LocalStorage = Pick<Storage, "getItem" | "setItem" | "removeItem" | "key" |
 type RecordValue = { id: string; value: RobotProject | null; revision: number }
 type Draft = { base: RobotProject | null; value: RobotProject | null; conflict?: boolean }
 export type ProjectSyncSnapshot = { projects: RobotProject[]; ready: boolean; saving: boolean; error: string; conflicts: string[] }
-export function createProjectSync(options: { userId: string; instanceId: string; storage: LocalStorage; fetch: typeof fetch; journal?: ProjectJournal }) {
-  const { userId, instanceId, storage } = options
+export function createProjectSync(options: { userId: string; instanceId: string; storage: LocalStorage; fetch: typeof fetch; journal?: ProjectJournal; deferPush?: boolean }) {
+  const { userId, instanceId, storage, deferPush = false } = options
+  // deferPush: edits stay in the browser until flush() (sign-out) sends them to the cloud.
+  let flushing = false
   const journal: ProjectJournal = options.journal ?? {
     async get(key) { return storage.getItem(key) }, async set(key, value) { storage.setItem(key, value) },
     async remove(key) { storage.removeItem(key) },
@@ -54,7 +56,7 @@ export function createProjectSync(options: { userId: string; instanceId: string;
     const raw = JSON.stringify({ id, ...draft, revision: confirmed.get(id)?.revision || 0 })
     const previous = persistence.get(id)?.promise ?? Promise.resolve()
     const promise = previous.catch(() => {}).then(async () => {
-      if (original && await journal.get(key) === original.raw) await archive(original.raw)
+      if (!deferPush && original && await journal.get(key) === original.raw) await archive(original.raw)
       await journal.set(key, raw)
     })
     // Start durability immediately but handle failures in synchronize before any PUT.
@@ -170,6 +172,13 @@ export function createProjectSync(options: { userId: string; instanceId: string;
     publish({ conflicts: [...pending].filter(([, draft]) => draft.conflict).map(([id]) => id) })
     for (const id of pending.keys()) await persist(id)
   }
+  function forget(id: string) {
+    pending.delete(id)
+    const previous = persistence.get(id)?.promise ?? Promise.resolve()
+    const promise = previous.catch(() => {}).then(async () => { await journal.remove(keyFor(id)); await consumeSources(id) })
+    void promise.catch(() => {})
+    persistence.set(id, { draft: { base: null, value: null }, promise })
+  }
   function stage(projects: RobotProject[], expected?: RobotProject[]) {
     if (!snapshot.ready) throw Error("Дождитесь загрузки программ.")
     const current = projectMap(snapshot.projects), base = projectMap(expected ?? snapshot.projects), next = projectMap(projects)
@@ -184,7 +193,11 @@ export function createProjectSync(options: { userId: string; instanceId: string;
       updates.set(id, { base: confirmed.get(id)?.value ?? null, value: result.value })
     }
     // Queue each program's durability separately; cloud writes wait for its journal transaction.
-    for (const [id, draft] of updates) { pending.set(id, draft); void persist(id) }
+    for (const [id, draft] of updates) {
+      // Created and deleted before it ever reached the cloud: there is nothing to send.
+      if (deferPush && draft.value === null && !confirmed.has(id)) { forget(id); continue }
+      pending.set(id, draft); void persist(id)
+    }
     publish()
   }
   function synchronize(): Promise<void> {
@@ -198,7 +211,7 @@ export function createProjectSync(options: { userId: string; instanceId: string;
           if (requestRead) { requestRead = false; await read() }
           if (snapshot.conflicts.length) throw Error("Программа изменена на двух устройствах. Локальная копия сохранена.")
           const first = pending.entries().next().value as [string, Draft] | undefined
-          if (!first) break
+          if (!first || (deferPush && !flushing)) break
           const [id, flight] = first
           const durability = persistence.get(id)
           if (durability?.draft === flight) await durability.promise
@@ -233,15 +246,25 @@ export function createProjectSync(options: { userId: string; instanceId: string;
     subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener) } },
     async refresh() { requestRead = true; await synchronize() },
     async flush() {
-      while (!disposed && (work || pending.size > 0)) {
-        await (work ?? synchronize())
-      }
+      flushing = true
+      try {
+        if (deferPush && !disposed) { requestRead = true; await (work ?? synchronize()) }
+        while (!disposed && (work || pending.size > 0)) {
+          await (work ?? synchronize())
+        }
+      } finally { flushing = false }
     },
     update(projects: RobotProject[], expected?: RobotProject[]) {
-      try { stage(projects, expected); void synchronize().catch(() => {}); return true }
+      try { stage(projects, expected); if (!deferPush) void synchronize().catch(() => {}); return true }
       catch (error) { publish({ error: error instanceof Error ? error.message : "Не удалось сохранить программу." }); return false }
     },
-    async save(projects: RobotProject[], expected?: RobotProject[]) { stage(projects, expected); await synchronize(); if (disposed) throw Error("Аккаунт изменился.") },
+    async save(projects: RobotProject[], expected?: RobotProject[]) {
+      stage(projects, expected)
+      // Deferred saves are done once the browser journal holds them.
+      if (deferPush) await Promise.all([...persistence.values()].map(entry => entry.promise))
+      else await synchronize()
+      if (disposed) throw Error("Аккаунт изменился.")
+    },
     async useCloud() {
       for (const source of sources.values()) await archive(source.raw)
       for (const [id, draft] of pending) {

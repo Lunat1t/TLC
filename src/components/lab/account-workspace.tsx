@@ -50,9 +50,10 @@ function AccountWorkspaceSession({ userId, accessReady, children }: { userId: st
       setState({ values: guest.current, ready: true, error: "", saving: false, conflicts: [] })
       return () => { guestReady.current = false }
     }
-    const tabId = crypto.randomUUID(), controller = new AbortController()
-    const sync = createWorkspaceSync({ userId, tabId, fetch: window.fetch.bind(window), storage: localStorage, sections: ["settings", "layout", "board"] })
-    const programSync = createProjectSync({ userId, instanceId: tabId, fetch: window.fetch.bind(window), storage: localStorage, journal: createBrowserProjectJournal() })
+    // One recovery slot per browser: unsent changes survive reloads until sign-out sends them.
+    const tabId = "device", controller = new AbortController()
+    const sync = createWorkspaceSync({ userId, tabId, fetch: window.fetch.bind(window), storage: localStorage, sections: ["settings", "layout", "board"], deferPush: true })
+    const programSync = createProjectSync({ userId, instanceId: tabId, fetch: window.fetch.bind(window), storage: localStorage, journal: createBrowserProjectJournal(), deferPush: true })
     engine.current = sync
     projects.current = programSync
     const unsubscribe = sync.subscribe(() => setState(sync.getSnapshot()))
@@ -168,9 +169,9 @@ function AccountWorkspaceSession({ userId, accessReady, children }: { userId: st
   const error = state.error || (userId ? programs.error || mediaError : "")
   return <Context.Provider value={{ userId, values: userId ? { ...state.values, projects: programs.projects } : state.values, ready: accessReady && state.ready && (!userId || (programs.ready && initialMediaReady)), error, saving: state.saving || (Boolean(userId) && programs.saving), update, save, refresh, flush }}>
     {children}
-    {userId && error && <div className="workspace-sync-status" role="alert">
+    {userId && (state.conflicts.length > 0 || programs.conflicts.length > 0) && <div className="workspace-sync-status" role="alert">
       {error}<button onClick={downloadRecovery}>Скачать копию</button>
-      {state.conflicts.length || programs.conflicts.length ? <button onClick={() => { void useCloud() }}>Открыть облачную версию</button> : <button onClick={() => { void refresh().catch(() => {}) }}>Повторить синхронизацию</button>}
+      <button onClick={() => { void useCloud() }}>Открыть облачную версию</button>
     </div>}
   </Context.Provider>
 }

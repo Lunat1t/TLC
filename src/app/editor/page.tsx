@@ -1472,7 +1472,7 @@ function EditorWorkspace() {
             (saveMessage.isError || library.error) ? "text-[#b1372c] max-sm:order-last max-sm:w-full" : "hidden whitespace-nowrap text-[#8b8276] sm:inline"
           }`}
         >
-          {library.error || (library.saving ? "Сохраняем…" : !library.ready ? "Загружаем программы…" : saveMessage.text)}
+          {library.error || (saveMessage.isError ? saveMessage.text : "")}
         </span>
 
         <div

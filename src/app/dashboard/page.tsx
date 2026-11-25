@@ -108,8 +108,6 @@ export default function HomePage() {
   React.useEffect(()=> { if (projectsOpen) projectsCloseRef.current?.focus() }, [projectsOpen])
   const library = useAccountProjects()
   const projects = library.projects
-  const [copyingLocal, setCopyingLocal] = React.useState(false)
-  const [autoImporting, setAutoImporting] = React.useState(false)
   const autoImportStartedRef = React.useRef<string | null>(null)
   const [notice, setNotice] = React.useState<{
     text: string
@@ -162,53 +160,15 @@ export default function HomePage() {
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
+  // Programs made on this device before signing in move into the account without asking.
   React.useEffect(() => {
-    if (!library.ready || !library.userId) return
-    const userId = library.userId
-    if (autoImportStartedRef.current === userId) return
-    let flagged = false
-    try {
-      flagged = sessionStorage.getItem("tlc.auto-import-local") === userId
-    } catch {
-      flagged = false
-    }
-    if (!flagged) return
-    autoImportStartedRef.current = userId
-    if (library.localCount === 0) {
-      try { sessionStorage.removeItem("tlc.auto-import-local") } catch {}
-      return
-    }
-    setAutoImporting(true)
-    void library.copyLocalPrograms({ clearLocal: true }).then((count) => {
-      try { sessionStorage.removeItem("tlc.auto-import-local") } catch {}
-      if (count > 0) {
-        setNotice({ text: `Перенесено в аккаунт: ${countLabel(count)}.`, isError: false })
-      }
-    }).catch((error) => {
+    if (!library.ready || !library.userId || library.localCount === 0) return
+    if (autoImportStartedRef.current === library.userId) return
+    autoImportStartedRef.current = library.userId
+    void library.copyLocalPrograms({ clearLocal: true }).catch((error) => {
       setNotice({ text: error instanceof Error ? error.message : "Не удалось перенести локальные программы.", isError: true })
-    }).finally(() => {
-      setAutoImporting(false)
     })
   }, [library.ready, library.userId, library.localCount, library.copyLocalPrograms])
-
-  async function copyLocalPrograms() {
-    if (copyingLocal) return
-    setCopyingLocal(true)
-    try {
-      const count = await library.copyLocalPrograms({ clearLocal: true })
-      setNotice({
-        text: count > 0 ? `Перенесено в аккаунт: ${countLabel(count)}.` : "Локальные программы уже есть в аккаунте.",
-        isError: false,
-      })
-    } catch (error) {
-      setNotice({ text: error instanceof Error ? error.message : "Не удалось перенести программы.", isError: true })
-    } finally { setCopyingLocal(false) }
-  }
-
-  async function dismissLocalImport() {
-    if (copyingLocal) return
-    await library.dismissLocalImport()
-  }
 
   const selectedProject = React.useMemo(
     () => projects.find((p) => p.id === selectedId) || null,
@@ -329,46 +289,7 @@ export default function HomePage() {
     <div className="home-shell">
       <div className="home-content">
         <main className="home-main">
-          {(library.error || !library.ready || (library.userId && (library.saving || autoImporting))) && (
-            <div className="mb-4 flex flex-wrap items-center gap-3 text-sm" aria-label="Хранилище программ">
-              {library.error ? (
-                <span role="status">{library.error}</span>
-              ) : !library.ready ? (
-                <span role="status">Загружаем программы…</span>
-              ) : (
-                <span role="status">Сохраняем в облако…</span>
-              )}
-            </div>
-          )}
-          {library.userId && library.ready && library.localCount > 0 && !autoImporting && (
-            <div
-              role="region"
-              aria-label="Перенос программ с этого устройства"
-              className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-900"
-            >
-              <span>
-                На этом устройстве есть {countLabel(library.localCount)}. Перенести их в ваш аккаунт?
-              </span>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  className="rounded-lg bg-[#555049] px-3.5 py-2 text-xs font-bold text-white hover:bg-[#302c2b] disabled:opacity-50"
-                  disabled={copyingLocal}
-                  onClick={() => void copyLocalPrograms()}
-                >
-                  {copyingLocal ? "Переносим…" : "Перенести"}
-                </button>
-                <button
-                  type="button"
-                  className="rounded-lg border border-stone-200 bg-white px-3.5 py-2 text-xs font-bold text-stone-700 hover:bg-stone-100 disabled:opacity-50"
-                  disabled={copyingLocal}
-                  onClick={() => void dismissLocalImport()}
-                >
-                  Пропустить
-                </button>
-              </div>
-            </div>
-          )}
+          {library.error && !library.ready && <p role="alert" className="home-notice home-notice-error">{library.error}</p>}
           {library.userId && library.drafts.length > 0 && <details id="drafts" ref={draftsRef} className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm">
             <summary>Несохранённые программы на этом устройстве ({library.drafts.length})</summary>
             <p className="my-2">Можно восстановить правки в аккаунте или скачать отдельную копию. При конфликте с другим устройством копия сохранится здесь.</p>
@@ -386,7 +307,7 @@ export default function HomePage() {
               </div>
             })}
           </details>}
-          {notice && <p role="status" className={`home-notice ${notice.isError ? "home-notice-error" : "home-notice-success"}`}>{notice.text}</p>}
+          {notice?.isError && <p role="status" className="home-notice home-notice-error">{notice.text}</p>}
           <LabBoard projects={projects} onProjects={openProjects} onNewProject={openNewModal} onProjectMenu={id=>{const p=projects.find(p=>p.id===id);if(p){setSelectedId(id);setRenameValue(p.name);setRenameError(null);setRenameOpen(true)}}}  onDeleteProject={async id=>{const project=projects.find(p=>p.id===id);if(!project||!window.confirm(`Удалить программу «${project.name}»?`))return;try{await commit(projects.filter(p=>p.id!==id))}catch(e){setNotice({text:e instanceof Error?e.message:"Не удалось удалить программу.",isError:true})}}} />
           {projectsOpen && <section className="desktop-project-window" aria-label="Мои проекты"><header><strong>Мои проекты</strong><button ref={projectsCloseRef} onClick={closeProjects} aria-label="Закрыть окно проектов"><X size={20}/></button></header>
           <div className="home-main-toolbar">

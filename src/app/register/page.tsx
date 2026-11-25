@@ -104,7 +104,6 @@ export default function RegisterPage() {
       }
       if (profile.role !== "parent") {
         try { localStorage.setItem("tlc.learning-interests", JSON.stringify(selectedCourses)) } catch {}
-        try { sessionStorage.setItem("tlc.auto-import-local", userId) } catch {}
       }
       // Reload the route tree after the session cookie and profile are ready.
       window.location.replace(profile.role === "parent" ? "/settings" : "/dashboard")
