@@ -1,0 +1,46 @@
+/* Временный чёрно-белый режим без стиля (см. scripts/postcss-mono.cjs). */
+:root:root {
+  color-scheme: light;
+  --background: 0 0% 100%;
+  --foreground: 0 0% 0%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 0%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 0%;
+  --primary: 0 0% 0%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 100%;
+  --secondary-foreground: 0 0% 0%;
+  --muted: 0 0% 100%;
+  --muted-foreground: 0 0% 0%;
+  --accent: 0 0% 100%;
+  --accent-foreground: 0 0% 0%;
+  --destructive: 0 0% 0%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 0%;
+  --input: 0 0% 0%;
+  --ring: 0 0% 0%;
+}
+
+html body { background: #fff !important; color: #000 !important; }
+
+/* Без фонов кнопкам и полям нужна рамка, чтобы их было видно. */
+html body :is(button, input, select, textarea) { border: 1px solid #000 !important; }
+html body :focus-visible { outline: 2px solid #000 !important; outline-offset: 2px; }
+html body :disabled { opacity: 0.4; }
+
+/* Выбранное состояние: инверсия. */
+html body :is([aria-pressed="true"], [aria-selected="true"], [aria-checked="true"], [aria-current="page"], [aria-current="date"], [data-active="true"]),
+html body :is([aria-pressed="true"], [aria-selected="true"], [aria-checked="true"], [aria-current="page"], [aria-current="date"], [data-active="true"]) * {
+  background-color: #000 !important;
+  color: #fff !important;
+}
+
+html body [role="progressbar"] { border: 1px solid #000; }
+html body [role="progressbar"] > * { background: #000 !important; }
+
+/* Декоративные «уголки» панелей без цвета выглядят как кляксы. */
+html body :is(.studio-tab-notch, .studio-create-shoulder) { display: none !important; }
+
+/* Настройки темы и фона временно скрыты. */
+[data-mono="hidden"] { display: none !important; }

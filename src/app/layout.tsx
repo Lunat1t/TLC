@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import localFont from "next/font/local"
 import "./globals.css"
+import "./mono.css"
 import { StudentNavigation } from "@/components/navigation/student-navigation"
 import { AccountWorkspaceProvider } from "@/components/lab/account-workspace"
 import { AccessProvider } from "@/components/auth/access-provider"
@@ -34,7 +35,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: "#1d1b1a",
+  themeColor: "#ffffff",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -47,7 +48,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" className={`${onest.variable} ${jetbrainsMono.variable}`}>
-      <body className="min-h-dvh flex flex-col bg-[#1d1b1a]">
+      <body className="min-h-dvh flex flex-col bg-white">
         <AccessProvider>
           <AccountWorkspaceProvider>
             <AppStartup>

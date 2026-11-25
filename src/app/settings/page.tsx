@@ -163,6 +163,8 @@ export default function SettingsPage() {
         </p>
 
         <section hidden={tab !== "appearance"}>
+          <p>Оформление временно чёрно-белое.</p>
+          <div data-mono="hidden">
           <fieldset className="settings-themes" disabled={!ready || wallpaperBusy}>
             <legend>Тема</legend>
             <div className="settings-theme-grid" role="radiogroup" aria-label="Тема">
@@ -200,6 +202,7 @@ export default function SettingsPage() {
             </select>
           </label>
           <WallpaperPicker onBusyChange={setWallpaperBusy} />
+          </div>
         </section>
 
         <section hidden={tab !== "account"} className="settings-account-section">
@@ -344,6 +347,7 @@ export default function SettingsPage() {
           disabled={!ready || wallpaperBusy}
           hidden={tab === "account"}
           className="settings-reset"
+          data-mono="hidden"
           onClick={() => update(defaults)}
         >
           Восстановить оформление
