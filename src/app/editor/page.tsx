@@ -5,33 +5,15 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import {
   AlertTriangle,
-  ArrowDownUp,
-  ArrowRight,
-  ArrowRightLeft,
-  Bluetooth,
   Check,
-  CircleDot,
   Cog,
-  Compass,
-  Gamepad2,
   Gauge,
   GitBranch,
   Link2,
-  LayoutGrid,
-  Monitor,
-  Navigation,
-  Palette,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Play,
-  RectangleHorizontal,
   RotateCw,
   Settings2,
-  Square,
   Trash2,
   Volume2,
-  Waves,
-  Workflow,
   Zap,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -43,7 +25,6 @@ import {
   type RobotProject,
 } from "@/lib/projects"
 import {
-  IF_FOOT_HEIGHT,
   IF_INDENT,
   IF_MID_HEIGHT,
   IF_TOP_HEIGHT,
@@ -68,7 +49,6 @@ import {
   MAX_PYTHON_CODE_CHARS,
   type SheetEditorMode,
   type SheetState,
-  type TravelUnit,
   type WorkspaceBlock,
 } from "@/lib/workspace"
 import {
@@ -87,104 +67,48 @@ import {
   nextTravelUnit,
 } from "@/lib/controller-block-ui"
 import {
-  DEFAULT_DRIVE_SETTINGS,
   compileControllerProgram,
   resolveProjectChassis,
-  type DrivePort,
   type DriveSettings,
 } from "@/lib/controller-program"
 import { ControlAreaView } from "@/components/editor/control-area"
 import { PybricksWorkspace } from "@/components/editor/pybricks-workspace"
-import { DirectionPalettePreview, DistanceGaugePalettePreview, MotorButtonsPalettePreview } from "@/components/editor/direction-control"
 import { useRobotSession } from "@/components/editor/robot-session"
-import {
-  enterEditorLandscape,
-  requestEditorLandscape,
-  shouldRequireEditorLandscape,
-} from "@/lib/editor-orientation"
 import { controllerRuntimeErrors } from "@/lib/controller-program"
 import {
   CONTROL_INPUTS,
   CONTROL_MIN,
   DIRECTION_CONTROLS,
-  type DirectionControlKind,
-  isDirectionControl,
-  isPlaceableControl,
   validateControlLayout,
-  type ControlArea,
   type ControlInstance,
   type ControlLayout,
   type PlaceableControlKind,
 } from "@/lib/control-workspace"
+import {
+  CONTROL_AREA_HEADER,
+  buildKeyTargets,
+  clampIntoArea,
+  controlInputs,
+  findAreaAt,
+  findFreeControlSpot,
+  inputControlsOnSheet,
+  mapInputErrors,
+  panelOverlapsControls,
+  stripLegacyAreaDrive,
+} from "@/lib/editor-layout"
+import {
+  BlockPalette,
+  DISPLAY_LABEL,
+  DISPLAY_SIZE,
+  GAUGE_LABEL,
+  PaletteDragGhost,
+  type PaletteControlKind,
+  type PaletteFilterId,
+} from "@/components/editor/block-palette"
+import { ChassisDialog, LandscapeGuard, PanelErrorDialog, RunPromptDialog } from "@/components/editor/editor-dialogs"
+import { RobotStatusBanner, RobotStatusMenu } from "@/components/editor/robot-status"
+import { useBleSupport, useDismissable, useLandscapeBlock, useMediaQueryMiss } from "@/components/editor/use-editor-environment"
 
-const ALL_BLOCKS = {
-  id: "all",
-  label: "Все блоки",
-  icon: LayoutGrid,
-  color: "#475569",
-} as const
-
-const DISPLAY_LABEL = "Дисплей"
-const DISPLAY_SIZE = [224, 160] as const
-const GAUGE_LABEL = "Дальномер"
-
-const BLOCK_CATEGORIES = [
-  {
-    id: "events",
-    label: "События",
-    icon: Play,
-    color: "#9a4b08",
-    blocks: [
-      { type: "start", label: "При запуске", icon: Play },
-      { type: "button", event: "hold", label: "Кнопка пульта", icon: Gamepad2 },
-    ],
-  },
-  {
-    id: "motion",
-    label: "Движение",
-    icon: ArrowRight,
-    color: "#087692",
-    blocks: [
-      { type: "chassis", label: "Ехать", icon: Navigation },
-      { type: "drive", label: "Движение мотора", icon: ArrowRight },
-      { type: "stop", label: "Стоп мотора", icon: Square },
-    ],
-  },
-  {
-    id: "sensors",
-    label: "Датчики",
-    icon: Waves,
-    color: "#4f46e5",
-    blocks: [
-      { type: "sensor", label: "Датчик", icon: Waves },
-    ],
-  },
-  {
-    id: "logic",
-    label: "Логика",
-    icon: Workflow,
-    color: "#6d35bf",
-    blocks: [
-      { type: "if", label: "Если / иначе", icon: Workflow },
-    ],
-  },
-  {
-    id: "controls",
-    label: "Пульт",
-    icon: Gamepad2,
-    color: "#147363",
-    blocks: [
-      { type: "area", label: "Область управления", icon: RectangleHorizontal },
-      { type: "motor-buttons", label: "Кнопки моторов", icon: Gamepad2 },
-      { type: "drive-turn", label: DIRECTION_CONTROLS["drive-turn"].label, icon: ArrowRightLeft },
-      { type: "drive-linear", label: DIRECTION_CONTROLS["drive-linear"].label, icon: ArrowDownUp },
-      { type: "display", label: DISPLAY_LABEL, icon: Monitor },
-      { type: "distance-gauge", label: GAUGE_LABEL, icon: Waves },
-    ],
-  },
-] as const
-
-const PALETTE_FILTERS = [ALL_BLOCKS, ...BLOCK_CATEGORIES]
 const COMPACT_PALETTE_QUERY = "(min-width: 768px)"
 
 function pointerOver(element: HTMLElement | null, x: number, y: number) {
@@ -196,20 +120,6 @@ function pointerInRect(element: HTMLElement | null, x: number, y: number) {
   const rect = element.getBoundingClientRect()
   if (rect.width === 0 || rect.height === 0) return false
   return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
-}
-
-function panelOverlapsControls(
-  area: ControlArea,
-  controls: readonly ControlInstance[],
-  panel: { x: number; y: number; width: number; height: number },
-) {
-  return controls.some(control => {
-    if (control.areaId !== area.id || !isPlaceableControl(control.kind)) return false
-    const left = area.x + control.x
-    const top = area.y + 44 + control.y
-    return panel.x < left + control.width && panel.x + panel.width > left
-      && panel.y < top + control.height && panel.y + panel.height > top
-  })
 }
 
 function newId() {
@@ -288,9 +198,9 @@ function EditorWorkspace() {
   const [pybricksError, setPybricksError] = React.useState("")
   const [pendingPybricksRun, setPendingPybricksRun] = React.useState(false)
   const pySaveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [compactPalette, setCompactPalette] = React.useState(false)
+  const compactPalette = useMediaQueryMiss(COMPACT_PALETTE_QUERY)
   const [paletteExpanded, setPaletteExpanded] = React.useState<boolean | null>(null)
-  const [blockCategory, setBlockCategory] = React.useState<(typeof PALETTE_FILTERS)[number]["id"]>("all")
+  const [blockCategory, setBlockCategory] = React.useState<PaletteFilterId>("all")
   const paletteOpen = paletteExpanded ?? !compactPalette
   const [libraryDropTarget, setLibraryDropTarget] = React.useState(false)
   const isOverPaletteDropZone = React.useCallback(
@@ -299,14 +209,6 @@ function EditorWorkspace() {
       (paletteOpen && pointerInRect(paletteDrawerRef.current, x, y)),
     [paletteOpen]
   )
-
-  React.useEffect(() => {
-    const media = window.matchMedia(COMPACT_PALETTE_QUERY)
-    const update = () => setCompactPalette(!media.matches)
-    update()
-    media.addEventListener("change", update)
-    return () => media.removeEventListener("change", update)
-  }, [])
 
   const [saveMessage, setSaveMessage] = React.useState<{
     text: string
@@ -342,64 +244,14 @@ function EditorWorkspace() {
   const [robotMenuOpen, setRobotMenuOpen] = React.useState(false)
   const [moreMenuOpen, setMoreMenuOpen] = React.useState(false)
   const [runPromptOpen, setRunPromptOpen] = React.useState(false)
-  const [bleSupport, setBleSupport] = React.useState<{ checked: boolean; available: boolean; reason: string }>({
-    checked: false,
-    available: true,
-    reason: "",
-  })
+  const bleSupport = useBleSupport()
   const robotMenuRef = React.useRef<HTMLDivElement | null>(null)
   const moreMenuRef = React.useRef<HTMLDivElement | null>(null)
   const runButtonRef = React.useRef<HTMLButtonElement | null>(null)
   const wasRunPromptOpen = React.useRef(false)
   const {state: robotState, ref: sessionRef} = useRobotSession()
   const editorRootRef = React.useRef<HTMLDivElement | null>(null)
-  const rotateButtonRef = React.useRef<HTMLButtonElement | null>(null)
-  const [landscapeBlocked, setLandscapeBlocked] = React.useState(false)
-  const [orientationManualHint, setOrientationManualHint] = React.useState(false)
-  React.useEffect(() => requestEditorLandscape(window.screen?.orientation, document), [])
-  React.useEffect(() => {
-    const pointerQuery = typeof window.matchMedia === "function" ? window.matchMedia("(pointer: coarse)") : null
-    const update = () => {
-      const blocked = shouldRequireEditorLandscape({
-        width: window.innerWidth,
-        height: window.innerHeight,
-        coarsePointer: Boolean(pointerQuery?.matches),
-      })
-      setLandscapeBlocked(blocked)
-      if (!blocked) setOrientationManualHint(false)
-    }
-    update()
-    window.addEventListener("resize", update)
-    window.addEventListener("orientationchange", update)
-    pointerQuery?.addEventListener?.("change", update)
-    window.screen?.orientation?.addEventListener?.("change", update)
-    return () => {
-      window.removeEventListener("resize", update)
-      window.removeEventListener("orientationchange", update)
-      pointerQuery?.removeEventListener?.("change", update)
-      window.screen?.orientation?.removeEventListener?.("change", update)
-    }
-  }, [])
-  React.useEffect(() => {
-    const el = editorRootRef.current
-    if (el) {
-      el.inert = landscapeBlocked
-    }
-    if (landscapeBlocked) {
-      rotateButtonRef.current?.focus()
-    }
-  }, [landscapeBlocked])
-  React.useEffect(() => {
-    const hasBluetooth = typeof navigator !== "undefined" && Boolean((navigator as Navigator & { bluetooth?: unknown }).bluetooth)
-    const isSecure = typeof window !== "undefined" && window.isSecureContext
-    if (!isSecure) {
-      setBleSupport({ checked: true, available: false, reason: "Для Bluetooth нужен адрес по HTTPS." })
-    } else if (!hasBluetooth) {
-      setBleSupport({ checked: true, available: false, reason: "Нужен Chrome или Edge на компьютере или Android." })
-    } else {
-      setBleSupport({ checked: true, available: true, reason: "" })
-    }
-  }, [])
+  const landscapeBlocked = useLandscapeBlock(editorRootRef)
 
   React.useEffect(() => {
     if (wasRunPromptOpen.current && !runPromptOpen) {
@@ -420,13 +272,7 @@ function EditorWorkspace() {
     const start=inputStarted.current;inputStarted.current=null
     requestAnimationFrame(()=>{performance.measure("tlc.control.input-to-frame",{start,end:performance.now()});if(performance.getEntriesByName("tlc.control.input-to-frame").length>100)performance.clearMeasures("tlc.control.input-to-frame")})
   },[robotState.log])
-  const [codeModal, setCodeModal] = React.useState<{
-    open: boolean
-    title: string
-    code: string
-  }>({ open: false, title: "", code: "" })
   const [chassisDialogOpen, setChassisDialogOpen] = React.useState(false)
-  const [chassisDraft, setChassisDraft] = React.useState<DriveSettings>({ ...DEFAULT_DRIVE_SETTINGS })
   const [panelErrorModal, setPanelErrorModal] = React.useState<string | null>(null)
 
   const latestSheetsRef = React.useRef<SheetState>(sheetState)
@@ -597,10 +443,7 @@ function EditorWorkspace() {
 
   const controlLayout = (project?.workspace?.controlLayout as ControlLayout | undefined) || {version:1 as const, areas:[], controls:[]}
   const projectChassis = React.useMemo(() => resolveProjectChassis(project), [project])
-  const openChassisDialog = React.useCallback(() => {
-    setChassisDraft({ ...projectChassis.settings, speed: projectChassis.settings.speed ?? 360 })
-    setChassisDialogOpen(true)
-  }, [projectChassis.settings])
+  const openChassisDialog = React.useCallback(() => setChassisDialogOpen(true), [])
   const motorPanelControls = React.useMemo<ControlInstance[]>(() => sheetState.sheets.flatMap(sheet => sheet.blocks).flatMap(block => {
     if (block.type !== "motor-buttons" || !block.controlAreaId) return []
     const area = controlLayout.areas.find(candidate => candidate.id === block.controlAreaId)
@@ -624,24 +467,22 @@ function EditorWorkspace() {
     }
     return errMap
   }, [controllerProgram])
-  const keyTargets = React.useMemo(() => {
-    const visible=new Set(controlLayout.areas.filter(a=>a.sheetId===currentSheet.id).map(a=>a.id))
-    const controls=controlLayout.controls.filter(c=>visible.has(c.areaId))
-    const first=controls.find(c=>c.kind==="drivetrain"||c.kind==="legacy-buttons")
-    const defaults:Record<string,string>={up:"ArrowUp",down:"ArrowDown",left:"ArrowLeft",right:"ArrowRight",a:"KeyJ",b:"KeyK",x:"KeyU",y:"KeyI",l:"KeyQ",r:"KeyE"}
-    const map:Record<string,{controlId:string;input:string}[]>={}
-    for(const c of controls){const bindings=c.keyBindings || (c.id===first?.id?defaults:{})
-      for(const [input,key] of Object.entries(bindings)) if(CONTROL_INPUTS[c.kind].includes(input)) (map[key] ||= []).push({controlId:c.id,input})
-    }
-    return map
-  },[controlLayout.areas,controlLayout.controls,currentSheet.id])
+  const keyTargets = React.useMemo(
+    () => buildKeyTargets({ areas: controlLayout.areas, controls: controlLayout.controls }, currentSheet.id),
+    [controlLayout.areas, controlLayout.controls, currentSheet.id]
+  )
   const inputErrors = React.useMemo(() => {
-    const errors = controllerProgram ? [...controllerProgram.errors,...controllerRuntimeErrors(controllerProgram,robotState.protocol,new Set(robotState.ports),robotState.sensorPortsKnown?new Set(robotState.sensorPorts):undefined,robotState.sensorPortsKnown?robotState.sensorTypes:undefined)] : []
-    const mapped:Record<string,string> = {}
-    for (const error of errors) if (error.severity !== "warning" && error.target?.controlId && error.target.input) mapped[`${error.target.controlId}:${error.target.input}`] = error.message
-    for(const [key,targets] of Object.entries(keyTargets)) if(targets.length>1) for(const target of targets) mapped[`${target.controlId}:${target.input}`]=`Клавиша ${key} назначена нескольким кнопкам.`
-    return mapped
-  },[controllerProgram,robotState.protocol,robotState.ports,keyTargets])
+    if (!controllerProgram) return mapInputErrors([], keyTargets)
+    const { protocol, ports, sensorPortsKnown, sensorPorts, sensorTypes } = robotState
+    const runtimeErrors = controllerRuntimeErrors(
+      controllerProgram,
+      protocol,
+      new Set(ports),
+      sensorPortsKnown ? new Set(sensorPorts) : undefined,
+      sensorPortsKnown ? sensorTypes : undefined,
+    )
+    return mapInputErrors([...controllerProgram.errors, ...runtimeErrors], keyTargets)
+  }, [controllerProgram, robotState.protocol, robotState.ports, robotState.sensorPortsKnown, robotState.sensorPorts, robotState.sensorTypes, keyTargets])
   function enterCheckView() {
     if (!editViewRef.current) editViewRef.current = {panX,panY,zoom}
     const area = controlLayout.areas.find(a=>a.sheetId===currentSheet.id)
@@ -807,23 +648,10 @@ function EditorWorkspace() {
     setChecking(false)
   }
 
-  React.useEffect(() => {
-    if (!robotMenuOpen && !moreMenuOpen) return
-    const onPointerDown = (e: PointerEvent) => {
-      const target = e.target as Node
-      if (robotMenuOpen && robotMenuRef.current && !robotMenuRef.current.contains(target)) setRobotMenuOpen(false)
-      if (moreMenuOpen && moreMenuRef.current && !moreMenuRef.current.contains(target)) setMoreMenuOpen(false)
-    }
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setRobotMenuOpen(false); setMoreMenuOpen(false) }
-    }
-    window.addEventListener('pointerdown', onPointerDown)
-    window.addEventListener('keydown', onKeyDown)
-    return () => {
-      window.removeEventListener('pointerdown', onPointerDown)
-      window.removeEventListener('keydown', onKeyDown)
-    }
-  }, [robotMenuOpen, moreMenuOpen])
+  useDismissable([
+    { open: robotMenuOpen, ref: robotMenuRef, close: () => setRobotMenuOpen(false) },
+    { open: moreMenuOpen, ref: moreMenuRef, close: () => setMoreMenuOpen(false) },
+  ])
 
   React.useEffect(() => {
     if (!runPromptOpen && !chassisDialogOpen && !panelErrorModal && !openMenuBlockId && !openDriveModule) return
@@ -895,9 +723,7 @@ function EditorWorkspace() {
 
   async function addControl(kind: PlaceableControlKind, location: { x: number; y: number }) {
     if (!project) return false
-    const area = controlLayout.areas.find(candidate => candidate.sheetId === currentSheet.id
-      && location.x >= candidate.x && location.x <= candidate.x + candidate.width
-      && location.y >= candidate.y + 44 && location.y <= candidate.y + candidate.height)
+    const area = findAreaAt(controlLayout.areas, currentSheet.id, location)
     if (!area) {
       setSaveMessage({ text: "Перетащите блок внутрь области «Управление».", isError: true })
       return false
@@ -909,22 +735,9 @@ function EditorWorkspace() {
       return false
     }
     const panels = blocks.filter(block => block.type === "motor-buttons" && block.controlAreaId === area.id)
-      .map(block => ({ x: block.x - area.x, y: block.y - area.y - 44, width: block.width || 180, height: block.height || 132 }))
-    const occupied = [...siblings, ...panels]
+      .map(block => ({ x: block.x - area.x, y: block.y - area.y - CONTROL_AREA_HEADER, width: block.width || 180, height: block.height || 132 }))
     const [width, height] = kind === "display" ? DISPLAY_SIZE : CONTROL_MIN[kind]
-    const maxX = area.width - width
-    const maxY = area.height - 44 - height
-    const x = Math.max(0, Math.min(maxX, location.x - area.x - width / 2))
-    const y = Math.max(0, Math.min(maxY, location.y - area.y - 44 - height / 2))
-    const fits = (x: number, y: number) => !occupied.some(control =>
-      x < control.x + control.width && x + width > control.x
-      && y < control.y + control.height && y + height > control.y)
-    let spot = fits(x, y) ? { x, y } : null
-    for (let top = 0; top <= maxY && !spot; top += 16) {
-      for (let left = 0; left <= maxX && !spot; left += 16) {
-        if (fits(left, top)) spot = { x: left, y: top }
-      }
-    }
+    const spot = findFreeControlSpot(area, [...siblings, ...panels], [width, height], location)
     if (!spot) {
       setSaveMessage({ text: "Увеличьте область: свободного места нет.", isError: true })
       return false
@@ -932,7 +745,7 @@ function EditorWorkspace() {
     const label = kind === "display" ? DISPLAY_LABEL : kind === "distance-gauge" ? GAUGE_LABEL : DIRECTION_CONTROLS[kind].label
     const control = { id: newId(), areaId: area.id, kind, label, ...spot, width, height, ...(kind === "distance-gauge" ? { port: "C" } : {}) }
     const nextLayout = { ...controlLayout, controls: [...controlLayout.controls, control] }
-    const existingInputControls = controllerControls.filter(c => sheetControlIds.has(c.id) && (c.inputs || CONTROL_INPUTS[c.kind]).length > 0)
+    const existingInputControls = inputControlsOnSheet(controllerControls, controlLayout.areas, currentSheet.id)
     const newInputs = CONTROL_INPUTS[kind]
     if (existingInputControls.length === 0 && newInputs.length > 0 && blocks.some(b => b.type === "button" && !b.target?.controlId)) {
       const boundBlocks = blocks.map(b => b.type === "button" && !b.target?.controlId ? { ...b, target: { controlId: control.id, input: newInputs[0] } } : b)
@@ -947,7 +760,7 @@ function EditorWorkspace() {
     return saveLayout(nextLayout)
   }
 
-  function dragControlFromPalette(e: React.PointerEvent<HTMLButtonElement>, kind: "area" | PlaceableControlKind) {
+  function dragControlFromPalette(e: React.PointerEvent<HTMLButtonElement>, kind: PaletteControlKind) {
     if(!project || e.button!==0)return
     e.preventDefault();const element=e.currentTarget,sx=e.clientX,sy=e.clientY;let moved=false
     element.setPointerCapture(e.pointerId)
@@ -975,9 +788,7 @@ function EditorWorkspace() {
   const autoBindSigRef = React.useRef<string>("")
   React.useEffect(() => {
     if (!project || saveBusyRef.current) return
-    const sheetButtonControls = controllerControls.filter(
-      (c) => sheetControlIds.has(c.id) && (c.inputs || CONTROL_INPUTS[c.kind]).length > 0
-    )
+    const sheetButtonControls = inputControlsOnSheet(controllerControls, controlLayout.areas, currentSheet.id)
     if (sheetButtonControls.length !== 1) return
     const single = sheetButtonControls[0]
     const unbound = blocks.filter((b) => b.type === "button" && !b.target?.controlId)
@@ -985,7 +796,7 @@ function EditorWorkspace() {
     const sig = `${project.id}:${currentSheet.id}:${single.id}:${unbound.map((b) => b.id).join(",")}`
     if (autoBindSigRef.current === sig) return
     autoBindSigRef.current = sig
-    const firstInput = (single.inputs || CONTROL_INPUTS[single.kind])[0] || ""
+    const firstInput = controlInputs(single)[0] || ""
     saveBlocks(
       blocks.map((b) =>
         b.type === "button" && !b.target?.controlId
@@ -993,7 +804,7 @@ function EditorWorkspace() {
           : b
       )
     )
-  }, [project, currentSheet.id, controllerControls, sheetControlIds, blocks, saveBlocks])
+  }, [project, currentSheet.id, controllerControls, controlLayout.areas, blocks, saveBlocks])
 
   const triggerSnapAnimation = React.useCallback(
     (nextBlocks: WorkspaceBlock[], headId: string) => {
@@ -1023,10 +834,9 @@ function EditorWorkspace() {
         const height = movingBlock.height || 132
         const area = movingBlock.controlAreaId
           ? controlLayout.areas.find((candidate) => candidate.id === movingBlock.controlAreaId && candidate.sheetId === currentSheet.id)
-          : controlLayout.areas.find((candidate) => candidate.sheetId === currentSheet.id && x + width / 2 >= candidate.x && x + width / 2 <= candidate.x + candidate.width && y + height / 2 >= candidate.y + 44 && y + height / 2 <= candidate.y + candidate.height)
+          : findAreaAt(controlLayout.areas, currentSheet.id, { x: x + width / 2, y: y + height / 2 })
         if (!area) return
-        x = Math.max(area.x, Math.min(area.x + area.width - width, x))
-        y = Math.max(area.y + 44, Math.min(area.y + area.height - height, y))
+        ;({ x, y } = clampIntoArea(area, { x, y, width, height }))
         if (panelOverlapsControls(area, controlLayout.controls, { x, y, width, height })) {
           setSaveMessage({ text: "Панель моторов перекрывает другой блок.", isError: true })
           return
@@ -1074,13 +884,12 @@ function EditorWorkspace() {
         if (type === "motor-buttons") {
           const width = initialOverrides?.width ?? 180
           const height = initialOverrides?.height ?? 132
-          const area = controlLayout.areas.find((candidate) => candidate.sheetId === currentSheet.id && point.x >= candidate.x && point.x <= candidate.x + candidate.width && point.y >= candidate.y + 44 && point.y <= candidate.y + candidate.height)
+          const area = findAreaAt(controlLayout.areas, currentSheet.id, point)
           if (!area) {
             setSaveMessage({text:"Панель моторов можно добавить только внутрь области «Управление».",isError:true})
             return
           }
-          x = Math.max(area.x, Math.min(area.x + area.width - width, point.x - width / 2))
-          y = Math.max(area.y + 44, Math.min(area.y + area.height - height, point.y - height / 2))
+          ;({ x, y } = clampIntoArea(area, { x: point.x - width / 2, y: point.y - height / 2, width, height }))
           if (panelOverlapsControls(area, controlLayout.controls, { x, y, width, height })) {
             setSaveMessage({ text: "Панель моторов перекрывает другой блок.", isError: true })
             return
@@ -1088,11 +897,10 @@ function EditorWorkspace() {
           initialOverrides = { ...initialOverrides, controlAreaId: area.id }
         }
         if (type === "button" && !initialOverrides?.target) {
-          const sheetAreaIds = new Set(controlLayout.areas.filter(a => a.sheetId === currentSheet.id).map(a => a.id))
-          const sheetControls = controllerControls.filter(c => sheetAreaIds.has(c.areaId) && (c.inputs || CONTROL_INPUTS[c.kind]).length > 0)
+          const sheetControls = inputControlsOnSheet(controllerControls, controlLayout.areas, currentSheet.id)
           if (sheetControls.length === 1) {
             const single = sheetControls[0]
-            const firstInput = (single.inputs || CONTROL_INPUTS[single.kind])[0] || ""
+            const firstInput = controlInputs(single)[0] || ""
             initialOverrides = { ...initialOverrides, target: { controlId: single.id, input: firstInput } }
           }
         }
@@ -1104,7 +912,7 @@ function EditorWorkspace() {
           )
         }
         if (type === "motor-buttons" && initialOverrides?.controlAreaId) {
-          const existingInputControls = controllerControls.filter(c => sheetControlIds.has(c.id) && (c.inputs || CONTROL_INPUTS[c.kind]).length > 0)
+          const existingInputControls = inputControlsOnSheet(controllerControls, controlLayout.areas, currentSheet.id)
           if (existingInputControls.length === 0) {
             next = next.map(b => b.type === "button" && !b.target?.controlId ? { ...b, target: { controlId: id, input: "blue" } } : b)
           }
@@ -1358,8 +1166,7 @@ function EditorWorkspace() {
     void switchEditorMode("pybricks")
   }
 
-  function handleDownloadPy(codeText?: string) {
-    const source = codeText ?? (editorMode === "pybricks" ? sheetPythonCode : codeModal.code)
+  function handleDownloadPy(source: string) {
     const blob = new Blob([source], {
       type: "text/x-python;charset=utf-8",
     })
@@ -1508,103 +1315,17 @@ function EditorWorkspace() {
           </button>
         </div>
 
-        <div ref={robotMenuRef} className="relative">
-          <button
-            type="button"
-            aria-expanded={robotMenuOpen}
-            aria-label={`Статус робота: ${robotState.message}`}
-            onClick={() => { setMoreMenuOpen(false); setRobotMenuOpen((prev) => !prev) }}
-            className="flex min-h-[40px] items-center gap-2 rounded-full border border-[#c6dce2] bg-[#f8fbfc] px-3 py-1.5 text-sm font-bold text-[#18313b] hover:bg-[#eff7fa]"
-          >
-            <span
-              aria-hidden="true"
-              className={`size-2.5 shrink-0 rounded-full ${
-                robotState.transport === "ready" || robotState.transport === "connected"
-                  ? "bg-emerald-500"
-                  : robotState.transport === "connecting"
-                    ? "bg-sky-500 animate-pulse"
-                    : robotState.transport === "uploading" || robotState.transport === "starting-hub"
-                      ? "bg-[#087996] animate-pulse"
-                      : robotState.transport === "fault"
-                        ? "bg-red-500"
-                        : "bg-slate-400"
-              }`}
-            />
-            <Bluetooth size={14} className="shrink-0 text-[#4c6b77] sm:hidden" aria-hidden="true" />
-            <span className="truncate max-w-[116px]">
-              {robotState.transport === "disconnected"
-                ? (<><span className="max-sm:hidden">Робот</span><span className="sm:hidden">Нет</span></>)
-                : robotState.transport === "connecting"
-                  ? "Поиск…"
-                  : robotState.transport === "uploading"
-                    ? `Загрузка ${robotState.uploadProgress ?? 0}%`
-                    : robotState.transport === "starting-hub"
-                      ? "Запуск…"
-                      : robotState.transport === "fault"
-                        ? "Нет связи"
-                        : robotState.hubName || (robotState.transport === "ready" ? "Готов" : "Подключён")}
-            </span>
-          </button>
-
-          {robotMenuOpen && (
-            <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-72 rounded-2xl border border-[#dce8ec] bg-white p-3.5 shadow-xl flex flex-col gap-2.5">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-xs font-extrabold uppercase tracking-wide text-[#57717d]">
-                    {robotState.hubName || (project?.hub === "ev3" ? "LEGO EV3" : "SPIKE Prime")}
-                  </p>
-                  <p role="status" className="mt-0.5 text-xs font-medium text-[#18313b]">{robotState.message}</p>
-                </div>
-              </div>
-              {robotState.ports.length > 0 && (
-                <p className="text-[11px] font-semibold text-[#57717d]">
-                  Порты моторов: {robotState.ports.join(", ")}
-                </p>
-              )}
-              {project?.hub === "ev3" ? (
-                <p className="rounded-lg bg-[#f4f8fa] px-2.5 py-2 text-xs font-semibold text-[#475569]">
-                  Bluetooth в браузере доступен только для SPIKE Prime. Для EV3 используйте «Код Pybricks».
-                </p>
-              ) : bleSupport.checked && !bleSupport.available ? (
-                <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-xs font-semibold text-amber-900">
-                  {bleSupport.reason} Доступны «Пробный режим» и «Код Pybricks».
-                </p>
-              ) : (
-                <div className="flex flex-col gap-1.5">
-                  {(robotState.transport === "disconnected" || robotState.transport === "fault") && (
-                    <button
-                      type="button"
-                      disabled={checking}
-                      onClick={() => { setRobotMenuOpen(false); void sessionRef.current?.connect() }}
-                      className="min-h-[40px] rounded-xl bg-[#087996] px-3 py-2 text-sm font-extrabold text-white hover:bg-[#06637a] disabled:opacity-40"
-                    >
-                      {robotState.transport === "fault" ? "Переподключить робота" : "Подключить робота"}
-                    </button>
-                  )}
-                  {robotState.transport !== "disconnected" && (
-                    <button
-                      type="button"
-                      disabled={checking && robotState.transport !== "connecting"}
-                      onClick={() => { setRobotMenuOpen(false); void sessionRef.current?.disconnect() }}
-                      className="min-h-[38px] rounded-xl border border-[#dce8ec] px-3 py-2 text-xs font-bold text-[#31525f] hover:bg-[#f4f8fa] disabled:opacity-40"
-                    >
-                      {robotState.transport === "connecting" ? "Отменить подключение" : "Отключить"}
-                    </button>
-                  )}
-                  {robotState.needsManualHubProgram && (
-                    <a
-                      className="mt-1 text-center text-xs font-semibold text-[#086985] underline"
-                      href="/hub_program.py"
-                      download="tlc_pybricks_controller.py"
-                    >
-                      На хабе не найден Pybricks: скачать программу вручную
-                    </a>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        <RobotStatusMenu
+          menuRef={robotMenuRef}
+          state={robotState}
+          hub={project?.hub}
+          bleSupport={bleSupport}
+          checking={checking}
+          open={robotMenuOpen}
+          onToggle={() => { setMoreMenuOpen(false); setRobotMenuOpen((prev) => !prev) }}
+          onConnect={() => { setRobotMenuOpen(false); void sessionRef.current?.connect() }}
+          onDisconnect={() => { setRobotMenuOpen(false); void sessionRef.current?.disconnect() }}
+        />
 
         {checking || starting || robotState.transport === "uploading" || robotState.transport === "starting-hub" || robotState.program === "custom-running" ? (
           <Button
@@ -1652,193 +1373,21 @@ function EditorWorkspace() {
         />
       ) : (
       <div className="flex flex-1 min-h-0 relative">
-        <aside
-          ref={paletteRef}
-          aria-label="Меню блоков"
-          inert={checking || undefined}
-          className={`relative z-20 flex shrink-0 ${checking ? "opacity-50 max-md:invisible" : ""}`}
-        >
-          <div className={`flex w-12 shrink-0 flex-col items-center gap-1 overflow-y-auto border-r border-[#dce8ec] py-2 transition-colors ${
-            libraryDropTarget
-              ? "bg-red-100 ring-2 ring-inset ring-red-400"
-              : gesture?.kind === "block" && gesture.moved
-                ? "bg-red-50/75"
-                : "bg-[#f4f8fa]"
-          }`}>
-            <div className="flex flex-col items-center gap-1" role="group" aria-label="Категории блоков">
-              {PALETTE_FILTERS.map(({ id, label, icon: Icon, color }) => (
-                <button
-                  key={id}
-                  type="button"
-                  title={label}
-                  aria-label={label}
-                  aria-controls="editor-block-palette"
-                  aria-pressed={blockCategory === id}
-                  style={{ color }}
-                  onClick={() => {
-                    setBlockCategory(id)
-                    setPaletteExpanded(true)
-                  }}
-                  className="grid size-10 shrink-0 place-items-center rounded-lg hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-current aria-pressed:bg-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-current"
-                >
-                  <Icon size={20} aria-hidden="true" />
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              title={paletteOpen ? "Свернуть каталог блоков" : "Развернуть каталог блоков"}
-              aria-label={paletteOpen ? "Свернуть каталог блоков" : "Развернуть каталог блоков"}
-              aria-controls="editor-block-palette"
-              aria-expanded={paletteOpen}
-              onClick={() => setPaletteExpanded(!paletteOpen)}
-              className="mt-1 grid size-10 shrink-0 place-items-center rounded-lg border border-[#dce8ec] text-[#475569] hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-current"
-            >
-              {paletteOpen ? <PanelLeftClose size={18} aria-hidden="true" /> : <PanelLeftOpen size={18} aria-hidden="true" />}
-            </button>
-            {(libraryDropTarget || (gesture?.kind === "block" && gesture.moved)) && (
-              <Trash2
-                size={libraryDropTarget ? 20 : 18}
-                className={`my-2 shrink-0 ${libraryDropTarget ? "text-red-700" : "text-red-500/75"}`}
-                aria-label={libraryDropTarget ? "Отпустите, чтобы удалить блок" : undefined}
-                aria-hidden={!libraryDropTarget || undefined}
-              />
-            )}
-          </div>
-
-          <div
-            ref={paletteDrawerRef}
-            id="editor-block-palette"
-            hidden={!paletteOpen}
-            className={`w-44 shrink-0 overflow-y-auto overscroll-contain border-r border-[#dce8ec] px-2.5 py-2 max-md:absolute max-md:inset-y-0 max-md:left-full max-md:shadow-md transition-colors ${libraryDropTarget ? "bg-red-50 ring-2 ring-inset ring-red-400" : "bg-white"}`}
-          >
-            {libraryDropTarget && (
-              <div className="mb-2 flex items-center gap-2 rounded-xl border border-red-300 bg-red-100 px-2.5 py-2 text-xs font-extrabold text-red-800 shadow-xs">
-                <Trash2 size={15} aria-hidden="true" className="shrink-0" />
-                <span>Отпустите для удаления</span>
-              </div>
-            )}
-            {BLOCK_CATEGORIES.filter(({ id }) => blockCategory === "all" || id === blockCategory).map(({ id, label, color, blocks: entries }) => (
-              <section key={id} aria-label={label} className="mb-3">
-                <h2 className="mb-1 px-1 text-xs font-extrabold" style={{ color }}>{label}</h2>
-                <div className="space-y-1">
-                  {entries.map((entry) => {
-                    if (entry.type === "motor-buttons") {
-                      return (
-                        <button
-                          key="motor-buttons"
-                          type="button"
-                          disabled={!project}
-                          aria-label={entry.label}
-                          title={entry.label}
-                          onPointerDown={(event) => {
-                            if (!project || event.button !== 0) return
-                            event.preventDefault()
-                            setGesture({
-                              kind: "palette",
-                              type: "motor-buttons",
-                              clientX: event.clientX,
-                              clientY: event.clientY,
-                            })
-                          }}
-                          className="grid h-12 w-full touch-none cursor-grab place-items-center rounded-xl border-2 border-[#b9d0da] bg-[#f4f8fa] p-1 hover:border-[#087996] hover:bg-[#e7f3f8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal-700 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <MotorButtonsPalettePreview />
-                        </button>
-                      )
-                    }
-                    if (entry.type === "distance-gauge") {
-                      return (
-                        <button
-                          key="distance-gauge"
-                          type="button"
-                          disabled={!project}
-                          aria-label={entry.label}
-                          title={entry.label}
-                          onPointerDown={(event) => {
-                            if (!project || event.button !== 0) return
-                            dragControlFromPalette(event, "distance-gauge")
-                          }}
-                          className="grid h-12 w-full touch-none cursor-grab place-items-center rounded-xl border-2 border-[#c7d2fe] bg-[#eef2ff]/60 p-1 hover:border-[#4f46e5] hover:bg-[#eef2ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal-700 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <DistanceGaugePalettePreview />
-                        </button>
-                      )
-                    }
-                    if (isDirectionControl(entry.type)) {
-                      if (entry.type === "drive-linear") return null
-                      const directionEntries = entries.filter((item) => isDirectionControl(item.type))
-                      return (
-                        <div key="direction-tiles" className="grid grid-cols-2 gap-1.5 pt-0.5">
-                          {directionEntries.map((dirEntry) => {
-                            const dirKind = dirEntry.type as DirectionControlKind
-                            return (
-                              <button
-                                key={dirKind}
-                                type="button"
-                                disabled={!project}
-                                aria-label={dirEntry.label}
-                                title={dirEntry.label}
-                                onPointerDown={(event) => {
-                                  if (!project || event.button !== 0) return
-                                  dragControlFromPalette(event, dirKind)
-                                }}
-                                className="grid h-14 w-full touch-none cursor-grab place-items-center rounded-xl border-2 border-[#dfae87] bg-white p-1 hover:border-[#c35117] hover:bg-[#fff8ef] focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal-700 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                <DirectionPalettePreview kind={dirKind} />
-                              </button>
-                            )
-                          })}
-                        </div>
-                      )
-                    }
-                    const { type, label, icon: Icon } = entry
-                    const buttonEvent = "event" in entry ? entry.event : undefined
-                    const areaAlreadyExists = type === "area" && controlLayout.areas.some((area) => area.sheetId === currentSheet.id)
-                    return (
-                      <button
-                        key={`${type}:${buttonEvent || ""}`}
-                        type="button"
-                        disabled={!project || areaAlreadyExists}
-                        title={areaAlreadyExists ? "На этом листе уже есть область управления" : undefined}
-                        onPointerDown={(event) => {
-                          if (!project || event.button !== 0) return
-                          if (type === "area" || isPlaceableControl(type)) {
-                            dragControlFromPalette(event, type)
-                            return
-                          }
-                          event.preventDefault()
-                          setGesture({
-                            kind: "palette",
-                            type,
-                            initialOverrides: buttonEvent ? { event: buttonEvent } : undefined,
-                            clientX: event.clientX,
-                            clientY: event.clientY,
-                          })
-                        }}
-                        className="flex min-h-10 w-full touch-none cursor-grab items-center gap-2 rounded-lg bg-[#f4f8fa] px-2 py-1.5 text-left text-xs font-bold leading-tight hover:bg-[#eaf2f6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-current active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <span className="grid size-6 shrink-0 place-items-center rounded-md text-white" style={{ backgroundColor: color }}>
-                          {type === "sensor" ? (
-                            <span className="grid grid-cols-2 gap-[1px] place-items-center" aria-hidden="true">
-                              <Waves size={9} />
-                              <Palette size={9} />
-                              <CircleDot size={9} />
-                              <Compass size={9} />
-                            </span>
-                          ) : (
-                            <Icon size={14} aria-hidden="true" />
-                          )}
-                        </span>
-                        {label}
-                      </button>
-                    )
-                  })}
-                </div>
-              </section>
-            ))}
-          </div>
-        </aside>
+        <BlockPalette
+          paletteRef={paletteRef}
+          drawerRef={paletteDrawerRef}
+          checking={checking}
+          disabled={!project}
+          open={paletteOpen}
+          onOpenChange={setPaletteExpanded}
+          category={blockCategory}
+          onCategoryChange={setBlockCategory}
+          dropToDelete={libraryDropTarget}
+          blockDragging={gesture?.kind === "block" && gesture.moved}
+          areaExists={controlLayout.areas.some((area) => area.sheetId === currentSheet.id)}
+          onBlockDragStart={(type, clientX, clientY, initialOverrides) => setGesture({ kind: "palette", type, clientX, clientY, initialOverrides })}
+          onControlDragStart={dragControlFromPalette}
+        />
 
         {/* Board Panel */}
         <main className="flex flex-col flex-1 min-w-0 min-h-0">
@@ -1910,70 +1459,17 @@ function EditorWorkspace() {
             </button>
           </div>
 
-          {(checking || robotState.transport === "uploading" || robotState.transport === "starting-hub" || robotState.transport === "fault" || startError) && (
-            <div
-              role={robotState.transport === "fault" ? "alert" : "status"}
-              className={`flex flex-wrap items-center justify-between gap-2 border-b px-4 py-1.5 text-xs font-semibold ${
-                robotState.transport === "fault"
-                  ? "border-red-200 bg-red-50 text-red-900"
-                  : "border-[#dce8ec] bg-[#f4fafc] text-[#31525f]"
-              }`}
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="truncate">{startError || robotState.message}</span>
-                {robotState.transport === "uploading" && (
-                  <div className="h-1.5 w-24 overflow-hidden rounded-full bg-[#d3e8ef]">
-                    <div
-                      className="h-full bg-[#087996] transition-all duration-150"
-                      style={{ width: `${Math.max(5, robotState.uploadProgress ?? 0)}%` }}
-                    />
-                  </div>
-                )}
-              </div>
-              {robotState.transport === "fault" && project?.hub === "spike" && (
-                <div className="flex items-center gap-2 shrink-0">
-                  {robotState.needsManualHubProgram && (
-                    <a
-                      href="/hub_program.py"
-                      download="tlc_pybricks_controller.py"
-                      className="underline text-[#086985]"
-                    >
-                      Скачать вручную
-                    </a>
-                  )}
-                  {bleSupport.available && (
-                    <button
-                      type="button"
-                      disabled={starting}
-                      onClick={() => checking ? void connectAndStart() : void sessionRef.current?.connect()}
-                      className="rounded-lg bg-red-700 px-2.5 py-1 text-xs font-extrabold text-white hover:bg-red-800 disabled:opacity-50"
-                    >
-                      Переподключить
-                    </button>
-                  )}
-                  {checking && (
-                    <button
-                      type="button"
-                      onClick={() => void stopProgram()}
-                      className="rounded-lg border border-red-300 bg-white px-2.5 py-1 text-xs font-bold text-red-900 hover:bg-red-100"
-                    >
-                      В редактор
-                    </button>
-                  )}
-                </div>
-              )}
-              {checking && robotState.program === "trial-running" && robotState.transport !== "fault" && project?.hub === "spike" && bleSupport.available && (
-                <button
-                  type="button"
-                  disabled={starting}
-                  onClick={() => void connectAndStart()}
-                  className="shrink-0 rounded-lg bg-[#087996] px-2.5 py-1 text-xs font-extrabold text-white hover:bg-[#06637a] disabled:opacity-50"
-                >
-                  Подключить робота
-                </button>
-              )}
-            </div>
-          )}
+          <RobotStatusBanner
+            state={robotState}
+            hub={project?.hub}
+            bleSupport={bleSupport}
+            checking={checking}
+            starting={starting}
+            startError={startError}
+            onReconnect={() => checking ? void connectAndStart() : void sessionRef.current?.connect()}
+            onConnectAndStart={() => void connectAndStart()}
+            onBackToEditor={() => void stopProgram()}
+          />
           {/* Infinite Canvas Board */}
           <div
             ref={boardRef}
@@ -3299,308 +2795,37 @@ function EditorWorkspace() {
       )}
 
       {/* Drag Ghost from Palette */}
-      {gesture?.kind === "palette" && (
-        <div
-          style={{
-            left: `${gesture.clientX}px`,
-            top: `${gesture.clientY}px`,
-          }}
-          className={`fixed z-50 pointer-events-none opacity-85 -translate-x-1/2 -translate-y-1/2 scale-90 px-4 flex items-center text-white font-extrabold text-xs ${
-            gesture.type === "start"
-              ? "w-[240px] h-[52px] rounded-t-[20px] rounded-b-[12px] bg-[#f59e0b] shadow-[inset_0_-6px_#d97706]"
-              : gesture.type === "if"
-                ? "w-[220px] h-[56px] rounded-[12px] bg-[#f1f4f5] shadow-[inset_0_-6px_#5b21b6]"
-              : gesture.type === "sensor"
-                ? "w-[200px] h-[48px] rounded-full bg-[#4f46e5] shadow-[inset_0_-6px_#3730a3]"
-                : gesture.type === "pair"
-                  ? "w-[220px] h-[56px] rounded-[12px] bg-[#107e79] shadow-[inset_0_-6px_#086560]"
-                  : gesture.type === "button"
-                    ? "w-[200px] h-[52px] rounded-t-[20px] rounded-b-[12px] bg-[#e85d2a] shadow-[inset_0_-6px_#c2410c]"
-                    : gesture.type === "motor-buttons"
-                      ? "w-[160px] h-[52px] rounded-[14px] border border-[#b9d0da] bg-[#f4f8fa] text-[#18313b] shadow-[inset_0_-4px_#d6e4e9]"
-                      : gesture.type === "stop"
-                        ? "w-[220px] h-[56px] rounded-[12px] bg-[#b1372c] shadow-[inset_0_-6px_#8f2a21]"
-                        : gesture.type === "chassis"
-                          ? "w-[220px] h-[56px] rounded-[12px] bg-[#0284c7] shadow-[inset_0_-6px_#0369a1]"
-                          : "w-[220px] h-[56px] rounded-[12px] bg-[#0589b1] shadow-[inset_0_-6px_#00759b]"
-          }`}
-        >
-          {gesture.type === "start"
-            ? "▶  Когда программа запускается"
-            : gesture.type === "if"
-              ? "Если … то (Что если)"
-            : gesture.type === "sensor"
-              ? "Датчик"
-              : gesture.type === "pair"
-                ? "⇉  Связанные моторы"
-                : gesture.type === "button"
-                  ? "Кнопка пульта"
-                  : gesture.type === "motor-buttons"
-                    ? "🔵 🔴 🟢 🟡"
-                    : gesture.type === "stop"
-                      ? "■  Стоп мотора"
-                      : gesture.type === "chassis"
-                        ? "↑  Ехать"
-                        : "↗  Движение мотора"}
-        </div>
-      )}
+      {gesture?.kind === "palette" && <PaletteDragGhost type={gesture.type} clientX={gesture.clientX} clientY={gesture.clientY} />}
 
       {runPromptOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Запуск программы"
-          onClick={(e) => { if (e.target === e.currentTarget) setRunPromptOpen(false) }}
-          className="fixed inset-0 z-50 bg-[#112a36]/50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-        >
-          <div className="w-full max-w-[420px] rounded-t-[24px] sm:rounded-[20px] bg-white p-5 pb-6 sm:pb-5 shadow-2xl border border-[#dce8ec]">
-            <h2 className="text-lg font-black text-[#18313b]">
-              {bleSupport.checked && !bleSupport.available
-                ? "Bluetooth недоступен в этом браузере"
-                : robotState.transport === "fault"
-                  ? "Связь с роботом потеряна"
-                  : "Робот ещё не подключён"}
-            </h2>
-            <p className="mt-1.5 text-sm text-[#475569]">
-              {bleSupport.checked && !bleSupport.available
-                ? pendingPybricksRun
-                  ? `${bleSupport.reason} Вы можете скачать файл .py и запустить его в Pybricks Code.`
-                  : `${bleSupport.reason} Можно проверить управление в пробном режиме или открыть код Pybricks.`
-                : robotState.transport === "fault"
-                  ? "Переподключите хаб по Bluetooth, и программа сразу запустится."
-                  : pendingPybricksRun
-                    ? "Подключите хаб по Bluetooth — код скомпилируется и сразу запустится на SPIKE Prime."
-                    : "IDE сама подготовит хаб по Bluetooth и сразу запустит ваше управление."}
-            </p>
-            <div className="mt-4 flex flex-col gap-2">
-              {(!bleSupport.checked || bleSupport.available) && (
-                <Button
-                  type="button"
-                  onClick={() => void connectAndStart()}
-                  className="min-h-[44px] w-full rounded-xl bg-emerald-700 hover:bg-emerald-800 text-sm font-extrabold text-white"
-                >
-                  {robotState.transport === "fault" ? "Переподключить и запустить" : "Подключить и запустить"}
-                </Button>
-              )}
-              {!pendingPybricksRun && (
-                <Button
-                  type="button"
-                  variant={bleSupport.checked && !bleSupport.available ? "default" : "outline"}
-                  onClick={() => { setRunPromptOpen(false); void startProgram() }}
-                  className={`min-h-[44px] w-full rounded-xl text-sm font-bold ${
-                    bleSupport.checked && !bleSupport.available
-                      ? "bg-[#087996] hover:bg-[#06637a] text-white font-extrabold"
-                      : "border-[#c6dce2] text-[#18313b]"
-                  }`}
-                >
-                  Пробный режим (без робота)
-                </Button>
-              )}
-              {bleSupport.checked && !bleSupport.available && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setRunPromptOpen(false)
-                    if (pendingPybricksRun) handleDownloadPy(sheetPythonCode)
-                    else handleExportCode()
-                  }}
-                  className="min-h-[44px] w-full rounded-xl border-[#c6dce2] text-sm font-bold text-[#086985]"
-                >
-                  {pendingPybricksRun ? "Скачать .py" : "Код Pybricks (.py)"}
-                </Button>
-              )}
-              <button
-                type="button"
-                onClick={() => setRunPromptOpen(false)}
-                className="mt-1 min-h-[40px] text-xs font-bold text-[#57717d] hover:text-[#18313b]"
-              >
-                Отмена
-              </button>
-            </div>
-          </div>
-        </div>
+        <RunPromptDialog
+          bleSupport={bleSupport}
+          connectionLost={robotState.transport === "fault"}
+          pybricksRun={pendingPybricksRun}
+          onConnectAndStart={() => void connectAndStart()}
+          onTrialRun={() => { setRunPromptOpen(false); void startProgram() }}
+          onDownloadCode={() => {
+            setRunPromptOpen(false)
+            if (pendingPybricksRun) handleDownloadPy(sheetPythonCode)
+            else handleExportCode()
+          }}
+          onClose={() => setRunPromptOpen(false)}
+        />
       )}
 
       {chassisDialogOpen && project && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Настройки шасси"
-          onClick={(e) => { if (e.target === e.currentTarget) setChassisDialogOpen(false) }}
-          className="fixed inset-0 z-50 bg-[#112a36]/50 grid place-items-center p-4"
-        >
-          <div className="w-full max-w-[380px] rounded-[20px] border border-[#dce8ec] bg-white p-5 text-[#18313b] shadow-2xl">
-            <h2 className="text-lg font-black mb-3">Настройки шасси</h2>
-            <div className="flex flex-col gap-3">
-              {([
-                { label: "Левый мотор", portKey: "leftPort", revKey: "leftReversed" },
-                { label: "Правый мотор", portKey: "rightPort", revKey: "rightReversed" },
-              ] as const).map(({ label, portKey, revKey }) => (
-                <div key={portKey} className="flex items-center justify-between gap-2 rounded-xl border border-[#e1eaee] bg-[#f8fbfc] px-3 py-2">
-                  <span className="text-sm font-bold">{label}</span>
-                  <div className="flex items-center gap-2">
-                    <select
-                      aria-label={label}
-                      value={chassisDraft[portKey]}
-                      onChange={(e) => {
-                        const port = e.target.value as DrivePort
-                        const otherKey = portKey === "leftPort" ? "rightPort" : "leftPort"
-                        setChassisDraft((prev) => ({
-                          ...prev,
-                          [portKey]: port,
-                          [otherKey]: prev[otherKey] === port ? prev[portKey] : prev[otherKey],
-                        }))
-                      }}
-                      className="min-h-[36px] h-[36px] rounded-lg border border-[#c6dce2] bg-white px-2.5 text-sm font-black"
-                    >
-                      {motorPorts.map((p) => <option key={p} value={p}>{p}</option>)}
-                    </select>
-                    <button
-                      type="button"
-                      aria-label={`Инверсия: ${label.toLowerCase()}`}
-                      aria-pressed={chassisDraft[revKey]}
-                      title={chassisDraft[revKey] ? "Реверс (↺)" : "Прямо (↻)"}
-                      onClick={() => setChassisDraft((prev) => ({ ...prev, [revKey]: !prev[revKey] }))}
-                      className={`min-h-[36px] min-w-[36px] h-[36px] px-2.5 rounded-lg border text-sm font-black flex items-center gap-1 ${
-                        chassisDraft[revKey]
-                          ? "border-[#087996] bg-[#e7f4f8] text-[#086985]"
-                          : "border-[#c6dce2] bg-white text-[#31525f]"
-                      }`}
-                    >
-                      <span>{chassisDraft[revKey] ? "↺" : "↻"}</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
-              <div className="flex items-center justify-between gap-2 rounded-xl border border-[#e1eaee] bg-[#f8fbfc] px-3 py-2">
-                <label htmlFor="chassis-speed-input" className="text-sm font-bold">Базовая скорость</label>
-                <div className="flex items-center gap-1.5">
-                  <input
-                    id="chassis-speed-input"
-                    type="number"
-                    min="1"
-                    max="1000"
-                    value={chassisDraft.speed ?? 360}
-                    onChange={(e) => {
-                      const val = Number(e.target.value)
-                      if (!Number.isFinite(val)) return
-                      setChassisDraft((prev) => ({ ...prev, speed: Math.max(1, Math.min(1000, Math.round(val))) }))
-                    }}
-                    className="w-[80px] min-h-[36px] h-[36px] rounded-lg border border-[#c6dce2] bg-white px-2 text-center text-sm font-black"
-                  />
-                  <span className="text-xs font-bold text-[#57717d]">°/с</span>
-                </div>
-              </div>
-            </div>
-            <div className="mt-4 flex justify-end gap-2">
-              <Button type="button" variant="outline" className="min-h-[40px]" onClick={() => setChassisDialogOpen(false)}>Отмена</Button>
-              <Button
-                type="button"
-                className="min-h-[40px] bg-[#087996] hover:bg-[#06637a] text-white font-extrabold"
-                onClick={async () => {
-                  const normalized: DriveSettings = {
-                    ...chassisDraft,
-                    speed: Math.max(1, Math.min(1000, Math.round(chassisDraft.speed ?? 360))),
-                  }
-                  const nextLayout = controlLayout.areas.some((a) => a.drive !== undefined)
-                    ? {
-                        ...controlLayout,
-                        areas: controlLayout.areas.map((a) => {
-                          if (a.drive === undefined) return a
-                          const { drive: _d, ...rest } = a
-                          return rest
-                        }),
-                      }
-                    : undefined
-                  const ok = await persistSheets(snapshotSheets(), nextLayout, normalized)
-                  if (ok) setChassisDialogOpen(false)
-                }}
-              >
-                Сохранить
-              </Button>
-            </div>
-          </div>
-        </div>
+        <ChassisDialog
+          initialSettings={projectChassis.settings}
+          motorPorts={motorPorts}
+          onCancel={() => setChassisDialogOpen(false)}
+          onSave={(settings) => persistSheets(snapshotSheets(), stripLegacyAreaDrive(controlLayout), settings)}
+        />
       )}
 
-      {panelErrorModal && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Кнопка недоступна"
-          onClick={(e) => { if (e.target === e.currentTarget) setPanelErrorModal(null) }}
-          className="fixed inset-0 z-50 bg-[#112a36]/50 grid place-items-center p-4"
-        >
-          <div className="w-full max-w-sm rounded-2xl border border-[#dfae87] bg-white p-5 text-[#18313b] shadow-xl">
-            <h2 className="mb-3 text-lg font-extrabold">Кнопка недоступна</h2>
-            <p className="whitespace-pre-line text-sm">{panelErrorModal}</p>
-            <div className="mt-4 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setPanelErrorModal(null)}
-                className="min-h-[40px] rounded-full bg-[#0e7668] px-4 py-2 font-bold text-white"
-              >
-                Понятно
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {codeModal.open && <div role="dialog" aria-modal="true" aria-label={codeModal.title} className="fixed inset-0 z-50 bg-[#112a36]/50 grid place-items-center p-4"><div className="w-full max-w-[600px] rounded-[18px] bg-white p-6 shadow-2xl"><h2 className="text-xl font-black mb-3">{codeModal.title}</h2><p className="text-sm mb-3">Загрузите файл в Pybricks Code и запустите на хабе.</p><textarea readOnly aria-label="Код программы Pybricks" value={codeModal.code} className="w-full h-[210px] p-3 border rounded-lg font-mono text-sm"/><div className="flex justify-end gap-3 mt-4"><Button type="button" variant="outline" onClick={() => handleDownloadPy()}>Скачать .py</Button><Button type="button" onClick={()=>setCodeModal(prev=>({...prev,open:false}))}>Закрыть</Button></div></div></div>}
+      {panelErrorModal && <PanelErrorDialog message={panelErrorModal} onClose={() => setPanelErrorModal(null)} />}
 
     </div>
-    {landscapeBlocked && (
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="editor-landscape-title"
-        className="fixed inset-0 z-[13000] grid place-items-center bg-[#0f2430]/92 p-6 text-white backdrop-blur-md"
-      >
-        <div className="w-full max-w-sm rounded-3xl border border-white/15 bg-[#163140] p-6 text-center shadow-2xl">
-          <div className="mx-auto mb-4 grid size-14 place-items-center rounded-2xl bg-[#087996]/25 text-[#5eead4]">
-            <RotateCw size={28} aria-hidden="true" />
-          </div>
-          <h2 id="editor-landscape-title" className="text-xl font-black tracking-tight">
-            Поверните экран горизонтально
-          </h2>
-          <p className="mt-2 text-sm text-[#c7dce4]">
-            Редактор работает только в альбомном режиме
-          </p>
-          {orientationManualHint && (
-            <p role="status" className="mt-3 rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold text-[#e0f2fe]">
-              Поверните устройство вручную
-            </p>
-          )}
-          <div className="mt-5 flex flex-col gap-2.5">
-            <button
-              ref={rotateButtonRef}
-              type="button"
-              onClick={async () => {
-                const outcome = await enterEditorLandscape({
-                  target: document.documentElement,
-                  doc: document,
-                  orientation: window.screen?.orientation,
-                })
-                if (outcome === "manual") {
-                  setOrientationManualHint(true)
-                }
-              }}
-              className="min-h-[44px] w-full rounded-xl bg-[#087996] px-4 py-2.5 text-sm font-extrabold text-white transition-colors hover:bg-[#06637a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5eead4]"
-            >
-              Перейти в горизонт
-            </button>
-            <Link
-              href="/dashboard"
-              className="grid min-h-[44px] w-full place-items-center rounded-xl border border-white/20 px-4 py-2.5 text-sm font-bold text-[#e2f1f6] transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5eead4]"
-            >
-              На главную
-            </Link>
-          </div>
-        </div>
-      </div>
-    )}
+    {landscapeBlocked && <LandscapeGuard />}
     </>
   )
 }
