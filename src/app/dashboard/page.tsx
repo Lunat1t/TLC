@@ -352,7 +352,7 @@ export default function HomePage() {
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  className="rounded-lg bg-[#55445a] px-3.5 py-2 text-xs font-bold text-white hover:bg-[#302c2b] disabled:opacity-50"
+                  className="rounded-lg bg-[#555049] px-3.5 py-2 text-xs font-bold text-white hover:bg-[#302c2b] disabled:opacity-50"
                   disabled={copyingLocal}
                   onClick={() => void copyLocalPrograms()}
                 >

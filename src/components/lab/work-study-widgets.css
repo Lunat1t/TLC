@@ -9,23 +9,23 @@
 
 .study-calendar, .study-summary {
   border-radius: 6px;
-  border: 1px solid #26242373;
+  border: 1px solid #1d1b1a73;
   background: #f9fcfd;
-  box-shadow: 0 3px 0 rgba(38,36,35,.16);
+  box-shadow: 0 3px 0 rgba(29,27,26,.16);
 }
 
 .study-calendar { width: min(100%, 390px); padding: 11px 12px; }
 .study-calendar header { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
 .study-widgets h2 { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 14px; font-weight:700; }
-.study-calendar header > span { font-size: 11px; color: #6a6273; }
+.study-calendar header > span { font-size: 11px; color: #736c62; }
 .study-calendar-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; margin: 0; padding: 0; list-style: none; }
-.study-calendar-days li { position: relative; display: grid; justify-items: center; min-width: 0; padding: 4px 1px; border-radius: 9px; background: #e9f2f6; }
+.study-calendar-days li { position: relative; display: grid; justify-items: center; min-width: 0; padding: 4px 1px; border-radius: 9px; background: #f8f2e7; }
 .study-calendar-days li > span:not(.sr-only) { font-size: 10px; }
 .study-calendar-days strong { font-size: 14px; font-variant-numeric: tabular-nums; }
-.study-calendar-days li.is-complete { background: #c1d7e6; color: #2b2827; }
-.study-calendar-days [aria-current="date"] { box-shadow: inset 0 0 0 2px #8350c4; }
+.study-calendar-days li.is-complete { background: #ebdabc; color: #2b2827; }
+.study-calendar-days [aria-current="date"] { box-shadow: inset 0 0 0 2px #d12f20; }
 .study-summary {
-  --accent: #6a6273;
+  --accent: #736c62;
   color: #2e2b2a;
   display: grid;
   grid-template-columns: clamp(64px, 18%, 96px) minmax(0, 1fr);
@@ -35,36 +35,36 @@
   padding: 12px;
   background: #ffffff;
 }
-.study-summary[data-rank="0"] { --accent: #2d4a68; }
+.study-summary[data-rank="0"] { --accent: #4a2e10; }
 .study-summary[data-rank="1"] { --accent: #2f2c2b; }
-.study-summary[data-rank="2"] { --accent: #6f3fb0; }
-.study-summary[data-rank="3"] { --accent: #7044a9; }
+.study-summary[data-rank="2"] { --accent: #a8211a; }
+.study-summary[data-rank="3"] { --accent: #c73123; }
 .study-summary[data-rank="4"] { --accent: #ac4721; }
 .study-summary[data-rank="5"] { --accent: #ad3062; }
-.study-summary[data-rank="6"] { --accent: #4a2a78; }
+.study-summary[data-rank="6"] { --accent: #821e17; }
 .study-series { display: grid; align-content: center; justify-items: center; border-radius: 6px; background: #ffffffad; text-align: center; }
 .study-series strong { font-size: 15px; }
 .study-series small { font-size: 11px; }
 .study-week { align-self: center; min-width: 0; }
 .study-level { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 2px 8px; font-size: 12px; }
 .study-level span { font-variant-numeric: tabular-nums; }
-.study-week progress { display: block; appearance: none; border: 0; border-radius: 8px; overflow: hidden; height: 7px; width: 100%; margin: 5px 0 10px; background: #e5f0f5; }
-.study-week progress::-webkit-progress-bar { background: #e5f0f5; }
+.study-week progress { display: block; appearance: none; border: 0; border-radius: 8px; overflow: hidden; height: 7px; width: 100%; margin: 5px 0 10px; background: #f7f0e3; }
+.study-week progress::-webkit-progress-bar { background: #f7f0e3; }
 .study-week progress::-webkit-progress-value { background: var(--accent); border-radius: 8px; }
 .study-week progress::-moz-progress-bar { background: var(--accent); border-radius: 8px; }
 .study-week button { text-decoration: underline; font-size: 12px; }
 .study-summary .study-calendar-days { gap: 2px; }
 .study-summary .study-calendar-days li { background: transparent; box-shadow: none; color: inherit; gap: 3px; }
-.study-summary .study-calendar-days strong { order: -1; display: grid; place-items: center; width: min(22px, 100%); aspect-ratio: 1; border-radius: 50%; background: #e5f0f5; }
+.study-summary .study-calendar-days strong { order: -1; display: grid; place-items: center; width: min(22px, 100%); aspect-ratio: 1; border-radius: 50%; background: #f7f0e3; }
 .study-summary .is-complete strong { background: var(--accent); color: white; }
 .study-summary [aria-current="date"] strong { outline: 1px solid currentColor; outline-offset: 1px; }
 
-[data-theme="dark"] .study-widgets { color: #ebf3f7; }
-[data-theme="dark"] .study-calendar { background: #2a2726; border-color: #58515f; }
-[data-theme="dark"] .study-calendar header > span { color: #cfcbd3; }
-[data-theme="dark"] .study-calendar .study-calendar-days li { background: #372c3a; }
-[data-theme="dark"] .study-calendar .study-calendar-days li.is-complete { background: #c1d7e6; }
-[data-theme="dark"] .study-calendar .study-calendar-days [aria-current="date"] { box-shadow: inset 0 0 0 2px #8350c4; }
+[data-theme="dark"] .study-widgets { color: #f9f3e9; }
+[data-theme="dark"] .study-calendar { background: #2a2726; border-color: #5f5951; }
+[data-theme="dark"] .study-calendar header > span { color: #d3d0cb; }
+[data-theme="dark"] .study-calendar .study-calendar-days li { background: #37342f; }
+[data-theme="dark"] .study-calendar .study-calendar-days li.is-complete { background: #ebdabc; }
+[data-theme="dark"] .study-calendar .study-calendar-days [aria-current="date"] { box-shadow: inset 0 0 0 2px #d12f20; }
 
 @media (max-width: 600px) {
   .study-widgets { display: grid; grid-template-columns: minmax(0, 1fr); }

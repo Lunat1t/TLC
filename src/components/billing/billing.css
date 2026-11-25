@@ -19,19 +19,19 @@
 .bs-card {
   background: var(--studio-surface, #ffffff);
   color: var(--studio-text, #22201f);
-  border: 2px solid #262423;
+  border: 2px solid #1d1b1a;
   border-radius: 6px;
   padding: 22px;
-  box-shadow: 3px 3px 0 #262423;
+  box-shadow: 3px 3px 0 #1d1b1a;
   display: grid;
   gap: 14px;
 }
 
 [data-theme="dark"] .bs-card {
   background: #242221;
-  color: #e8f1f5;
+  color: #f8f1e5;
   border-color: #3a3634;
-  box-shadow: 0 3px 0 rgba(38,36,35,.16);
+  box-shadow: 0 3px 0 rgba(29,27,26,.16);
 }
 
 .bs-eyebrow {
@@ -40,11 +40,11 @@
   font-weight:700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #6f3fb0;
+  color: #a8211a;
 }
 
 [data-theme="dark"] .bs-eyebrow {
-  color: #8350c4;
+  color: #d12f20;
 }
 
 .bs-title {
@@ -58,11 +58,11 @@
   margin: 0;
   font-size: 14px;
   line-height: 1.5;
-  color: #625a6a;
+  color: #6a635a;
 }
 
 [data-theme="dark"] .bs-muted {
-  color: #c9c5cd;
+  color: #cdcac5;
 }
 
 .bs-actions-row {
@@ -91,28 +91,28 @@
 }
 
 .bs-btn-primary {
-  background: #8350c4;
+  background: #d12f20;
   color:#ffffff;
 }
 
 .bs-btn-primary:hover:not(:disabled) {
-  background: #524b59;
+  background: #59534b;
 }
 
 .bs-btn-secondary {
-  background: #ebf3f7;
+  background: #f9f3e9;
   color: #2b2827;
-  border-color: #c1dae6;
+  border-color: #ebdabc;
 }
 
 .bs-btn-secondary:hover:not(:disabled) {
-  background: #e0edf3;
+  background: #f5edde;
 }
 
 [data-theme="dark"] .bs-btn-secondary {
   background: #2e2a29;
-  color: #e5f0f5;
-  border-color: #564f5d;
+  color: #f7f0e3;
+  border-color: #5d574f;
 }
 
 [data-theme="dark"] .bs-btn-secondary:hover:not(:disabled) {
@@ -156,8 +156,8 @@
 }
 
 .bs-plan-card.is-featured {
-  border-color: #262423;
-  box-shadow: 4px 4px 0 #8350c4;
+  border-color: #1d1b1a;
+  box-shadow: 4px 4px 0 #d12f20;
 }
 
 .bs-plan-price {
@@ -196,34 +196,34 @@
   border-radius:6px;
   font-size: 12px;
   font-weight:700;
-  background: #e3eef3;
-  color: #524b59;
+  background: #f6eee0;
+  color: #59534b;
   width: fit-content;
 }
 
 .bs-status-pill.is-active {
-  background: #e4edf4;
-  color: #2d4a68;
+  background: #f6efe2;
+  color: #4a2e10;
 }
 
 .bs-status-pill.is-warn {
-  background: #e1d1f4;
-  color: #4a2a78;
+  background: #f9eacc;
+  color: #821e17;
 }
 
 [data-theme="dark"] .bs-status-pill {
   background: #302c2b;
-  color: #8350c4;
+  color: #d12f20;
 }
 
 [data-theme="dark"] .bs-status-pill.is-active {
-  background: #1f3550;
-  color: #7392b5;
+  background: #33200a;
+  color: #f4b04c;
 }
 
 [data-theme="dark"] .bs-status-pill.is-warn {
   background: #302c2b;
-  color: #c4a6ec;
+  color: #f4b04c;
 }
 
 .bs-field {
@@ -241,12 +241,12 @@
   min-height: 44px;
   padding: 0 12px;
   border-radius: 6px;
-  border: 1.5px solid #262423;
+  border: 1.5px solid #1d1b1a;
   background: #ffffff;
   color: #22201f;
   font-size: 15px;
   width: 100%;
-  box-sizing: border-box;;box-shadow:3px 3px 0 #262423;}
+  box-sizing: border-box;;box-shadow:3px 3px 0 #1d1b1a;}
 
 .bs-input-code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -259,8 +259,8 @@
 [data-theme="dark"] .bs-input,
 [data-theme="dark"] .bs-select {
   background: #1d1b1a;
-  color: #ebf3f7;
-  border-color: #524258;
+  color: #f9f3e9;
+  border-color: #534e47;
 }
 
 .bs-alert {
@@ -279,15 +279,15 @@
 }
 
 .bs-alert.is-success {
-  background: #f3f7fa;
-  color: #2d4a68;
-  border: 1px solid #c9dce9;
+  background: #fbf8f2;
+  color: #4a2e10;
+  border: 1px solid #eedfc4;
 }
 
 .bs-alert.is-info {
-  background: #edf5f9;
-  color: #6f3fb0;
-  border: 1px solid #26242373;
+  background: #faf5ec;
+  color: #a8211a;
+  border: 1px solid #1d1b1a73;
 }
 
 [data-theme="dark"] .bs-alert.is-error {
@@ -297,15 +297,15 @@
 }
 
 [data-theme="dark"] .bs-alert.is-success {
-  background: #1f3550;
-  color: #7392b5;
-  border-color: #2d4a68;
+  background: #33200a;
+  color: #f4b04c;
+  border-color: #4a2e10;
 }
 
 [data-theme="dark"] .bs-alert.is-info {
   background: #2a2726;
-  color: #8350c4;
-  border-color: #57465c;
+  color: #d12f20;
+  border-color: #57524b;
 }
 
 .bs-school-grid {
@@ -330,8 +330,8 @@
   gap: 10px;
   padding: 12px;
   border-radius: 6px;
-  border: 1px solid #26242373;
-  background: #f4f9fb;
+  border: 1px solid #1d1b1a73;
+  background: #fcf9f3;
 }
 
 [data-theme="dark"] .bs-list-row {
@@ -346,13 +346,13 @@
   align-items: center;
   padding: 14px;
   border-radius: 6px;
-  border: 1.5px dashed #6f3fb0;
-  background: #eef6fa;
+  border: 1.5px dashed #a8211a;
+  background: #faf6ee;
 }
 
 [data-theme="dark"] .bs-invite-spotlight {
   background: #232120;
-  border-color: #8350c4;
+  border-color: #d12f20;
 }
 
 .bs-invite-code-big {

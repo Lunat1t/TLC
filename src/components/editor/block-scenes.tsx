@@ -83,34 +83,34 @@ export function LightsGlowScene({ size = 18 }: { size?: number }) {
 export function GuideIllustration({ kind }: { kind: "wall" | "color" | "button" | "beacon" }) {
   if (kind === "wall") {
     return (
-      <svg viewBox="0 0 140 68" className="w-full h-[64px] rounded-xl bg-[#eff6fa]" aria-hidden="true">
-        <rect x="14" y="24" width="36" height="24" rx="6" fill="#6f3fb0" />
-        <circle cx="24" cy="50" r="6" fill="#262423" />
-        <circle cx="42" cy="50" r="6" fill="#262423" />
+      <svg viewBox="0 0 140 68" className="w-full h-[64px] rounded-xl bg-[#faf6ef]" aria-hidden="true">
+        <rect x="14" y="24" width="36" height="24" rx="6" fill="#a8211a" />
+        <circle cx="24" cy="50" r="6" fill="#1d1b1a" />
+        <circle cx="42" cy="50" r="6" fill="#1d1b1a" />
         <circle cx="43" cy="33" r="3.5" fill="#fff" />
-        <circle cx="43" cy="33" r="1.5" fill="#262423" />
-        <path d="M56 30C60 33 60 39 56 42M63 26C69 31 69 41 63 46" stroke="#6f3fb0" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+        <circle cx="43" cy="33" r="1.5" fill="#1d1b1a" />
+        <path d="M56 30C60 33 60 39 56 42M63 26C69 31 69 41 63 46" stroke="#a8211a" strokeWidth="2.5" strokeLinecap="round" fill="none" />
         <rect x="98" y="14" width="18" height="42" rx="4" fill="#e85d2a" />
-        <path d="M74 36H94" stroke="#6f3fb0" strokeWidth="2" strokeDasharray="3 3" />
-        <text x="72" y="22" fontSize="10" fontWeight="800" fill="#262423">&lt; 20 см</text>
+        <path d="M74 36H94" stroke="#a8211a" strokeWidth="2" strokeDasharray="3 3" />
+        <text x="72" y="22" fontSize="10" fontWeight="800" fill="#1d1b1a">&lt; 20 см</text>
       </svg>
     )
   }
   if (kind === "color") {
     return (
-      <svg viewBox="0 0 140 68" className="w-full h-[64px] rounded-xl bg-[#f2f8fb]" aria-hidden="true">
-        <rect x="24" y="10" width="26" height="16" rx="4" fill="#8350c4" />
-        <path d="M31 26L22 44H52L43 26Z" fill="#ba9bde" fillOpacity="0.45" />
+      <svg viewBox="0 0 140 68" className="w-full h-[64px] rounded-xl bg-[#fbf8f2]" aria-hidden="true">
+        <rect x="24" y="10" width="26" height="16" rx="4" fill="#d12f20" />
+        <path d="M31 26L22 44H52L43 26Z" fill="#c73123" fillOpacity="0.45" />
         <rect x="12" y="45" width="38" height="11" rx="4" fill="#ef4444" />
         <rect x="54" y="45" width="38" height="11" rx="4" fill="#22c55e" />
-        <rect x="96" y="45" width="32" height="11" rx="4" fill="#8350c4" />
+        <rect x="96" y="45" width="32" height="11" rx="4" fill="#d12f20" />
       </svg>
     )
   }
   if (kind === "button") {
     return (
       <svg viewBox="0 0 140 68" className="w-full h-[64px] rounded-xl bg-[#fff7ed]" aria-hidden="true">
-        <rect x="44" y="30" width="52" height="24" rx="6" fill="#6f3fb0" />
+        <rect x="44" y="30" width="52" height="24" rx="6" fill="#a8211a" />
         <rect x="58" y="22" width="24" height="10" rx="4" fill="#e85d2a" />
         <path d="M70 6V18M70 18L64 12M70 18L76 12" stroke="#c2410c" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
@@ -118,9 +118,9 @@ export function GuideIllustration({ kind }: { kind: "wall" | "color" | "button" 
   }
   return (
     <svg viewBox="0 0 140 68" className="w-full h-[64px] rounded-xl bg-[#ecfdf5]" aria-hidden="true">
-      <rect x="46" y="14" width="48" height="40" rx="8" fill="#6f3fb0" />
+      <rect x="46" y="14" width="48" height="40" rx="8" fill="#a8211a" />
       <rect x="58" y="22" width="24" height="16" rx="4" fill="#fef08a" />
-      <path d="M36 24C30 29 30 39 36 44M104 24C110 29 110 39 104 44" stroke="#6f3fb0" strokeWidth="2.8" strokeLinecap="round" fill="none" />
+      <path d="M36 24C30 29 30 39 36 44M104 24C110 29 110 39 104 44" stroke="#a8211a" strokeWidth="2.8" strokeLinecap="round" fill="none" />
       <circle cx="70" cy="46" r="4" fill="#22c55e" />
     </svg>
   )

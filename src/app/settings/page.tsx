@@ -26,11 +26,7 @@ function downloadBackupFile(raw: string | null, filename: string) {
 }
 
 const WORKSPACE_THEMES = [
-  { id: "pale-sky", name: "Бледное небо", theme: "light", color: "#e4eff5", accent: "#8350c4" },
-  { id: "dusty-denim", name: "Пыльный деним", theme: "light", color: "#c3d3e4", accent: "#402b47" },
-  { id: "lilac", name: "Лиловая дымка", theme: "light", color: "#e6dcf4", accent: "#8350c4" },
-  { id: "midnight", name: "Полночный фиолет", theme: "dark", color: "#402b47", accent: "#c4a6ec" },
-  { id: "graphite", name: "Тёмный графит", theme: "dark", color: "#262423", accent: "#7392b5" },
+  { id: "workshop", name: "Мастерская", theme: "light", color: "#ecdcc1", accent: "#d12f20" },
 ] as const
 
 export default function SettingsPage() {
@@ -255,7 +251,7 @@ export default function SettingsPage() {
                 )}
               </form>
 
-              <div className="settings-subscription-card" style={{ display: "grid", gap: 12, paddingTop: 14, borderTop: "1px solid rgba(154,146,162,0.22)" }}>
+              <div className="settings-subscription-card" style={{ display: "grid", gap: 12, paddingTop: 14, borderTop: "1px solid rgba(162,155,146,0.22)" }}>
                 <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                   <div>
                     <strong style={{ display: "block", fontSize: 15 }}>Подписка и школа</strong>
@@ -281,7 +277,7 @@ export default function SettingsPage() {
                 {access.role !== "parent" && <JoinSchoolForm compact={true} />}
               </div>
 
-              <div className="settings-subscription-card" style={{ display: "grid", gap: 12, paddingTop: 14, borderTop: "1px solid rgba(154,146,162,0.22)" }}>
+              <div className="settings-subscription-card" style={{ display: "grid", gap: 12, paddingTop: 14, borderTop: "1px solid rgba(162,155,146,0.22)" }}>
                 <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                   <div>
                     <strong style={{ display: "block", fontSize: 15 }}>Резервная копия программ</strong>

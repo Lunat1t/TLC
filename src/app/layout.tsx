@@ -34,7 +34,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: "#402b47",
+  themeColor: "#1d1b1a",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -47,7 +47,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" className={`${onest.variable} ${jetbrainsMono.variable}`}>
-      <body className="min-h-dvh flex flex-col bg-[#402b47]">
+      <body className="min-h-dvh flex flex-col bg-[#1d1b1a]">
         <AccessProvider>
           <AccountWorkspaceProvider>
             <AppStartup>

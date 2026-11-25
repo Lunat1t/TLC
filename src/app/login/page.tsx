@@ -65,7 +65,7 @@ export default function LoginPage() {
 
   return (
     <div className="login-page min-h-dvh flex flex-col paper-grid">
-      <header className="min-h-[74px] px-5 md:px-16 py-3.5 flex items-center justify-between gap-4 bg-[#f4f9fc] border-b-2 border-[#262423]">
+      <header className="min-h-[74px] px-5 md:px-16 py-3.5 flex items-center justify-between gap-4 bg-[#f8eedb] border-b-2 border-[#1d1b1a]">
         <Link
           href="/dashboard"
           className="text-[19px] font-bold tracking-wide text-[#1c1a19] inline-flex items-center gap-2.5"
@@ -84,7 +84,7 @@ export default function LoginPage() {
       <main className="flex-1 grid place-items-center px-4 py-10">
         <Card className="w-full max-w-[460px]">
           <CardHeader className="items-center text-center pb-2">
-            <p className="text-[11px] font-bold tracking-[0.16em] uppercase text-[#544e5b]">
+            <p className="text-[11px] font-bold tracking-[0.16em] uppercase text-[#5b564e]">
               АВТОРИЗАЦИЯ УЧЕНИКА
             </p>
             <CardTitle className="text-[28px] md:text-[32px]">
@@ -134,7 +134,7 @@ export default function LoginPage() {
                   className={`rounded-md px-3.5 py-2.5 text-[13px] font-bold ${
                     status.isError
                       ? "bg-[#fff1ee] text-[#a9352e]"
-                      : "bg-[#e7eff5] text-[#2d4a68]"
+                      : "bg-[#f7f0e5] text-[#4a2e10]"
                   }`}
                 >
                   {status.message}
@@ -149,7 +149,7 @@ export default function LoginPage() {
               </div>
             </form>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3.5 p-4 rounded-md bg-gradient-to-br from-[#ecf5f9] to-[#eef6fa] border border-[#26242373]">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3.5 p-4 rounded-md bg-gradient-to-br from-[#f9f4ec] to-[#faf6ee] border border-[#1d1b1a73]">
               <div className="text-center sm:text-left">
                 <strong className="block text-sm font-bold text-[#22201f]">
                   Ещё нет аккаунта?
@@ -158,7 +158,7 @@ export default function LoginPage() {
               <Link
                 id="registerRedirect"
                 href="/register"
-                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-md bg-[#f4f9fc] border-b-2 border-[#262423] text-[#262423] text-sm font-bold shadow-[0_3px_0_rgba(38,36,35,0.16)] hover:bg-[#6f3fb0] transition-transform hover:-translate-y-0.5 whitespace-nowrap"
+                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-md bg-[#f8eedb] border-b-2 border-[#1d1b1a] text-[#1d1b1a] text-sm font-bold shadow-[0_3px_0_rgba(29,27,26,0.16)] hover:bg-[#a8211a] transition-transform hover:-translate-y-0.5 whitespace-nowrap"
               >
                 Регистрация <span aria-hidden="true">↗</span>
               </Link>

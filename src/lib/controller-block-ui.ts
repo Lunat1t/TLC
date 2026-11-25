@@ -56,10 +56,10 @@ export function nextControllerEvent(current?: ControllerEvent): ControllerEvent 
 
 export const COLOR_SWATCH_STYLES: Record<SensorColor, { hex: string; label: string }> = {
   red: { hex: "#ef4444", label: "Красный" },
-  yellow: { hex: "#c4a6ec", label: "Жёлтый" },
-  green: { hex: "#7392b5", label: "Зелёный" },
-  blue: { hex: "#8350c4", label: "Синий" },
-  white: { hex: "#f1f7fa", label: "Белый" },
+  yellow: { hex: "#f4b04c", label: "Жёлтый" },
+  green: { hex: "#f4b04c", label: "Зелёный" },
+  blue: { hex: "#d12f20", label: "Синий" },
+  white: { hex: "#fbf7f0", label: "Белый" },
   black: { hex: "#1c1a19", label: "Чёрный" },
   none: { hex: "transparent", label: "Нет цвета" },
 }
