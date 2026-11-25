@@ -8,7 +8,7 @@
 .lab-fixed { display:grid; grid-template-columns:230px 1fr 220px; align-items:center; gap:32px; padding:0 8px 30px; }
 .lab-avatar { display:flex; flex-direction:column; background:white; padding:10px 10px 16px; transform:rotate(-3deg); box-shadow:2px 5px 0 #786e8225; text-align:center; position:relative; }
 .lab-avatar:before,.lab-tape { content:""; position:absolute; width:86px; height:24px; top:-12px; left:calc(50% - 43px); background:#fff2aabf; transform:rotate(4deg); }
-.lab-avatar-art { background:#ffce43; height:184px; overflow:hidden; position:relative; }
+.lab-avatar-art { background:#c4a6ec; height:184px; overflow:hidden; position:relative; }
 .lab-character { height:205px; width:100%; padding-top:10px; }
 .lab-avatar-edit { display:flex; align-items:center; gap:5px; position:absolute; bottom:6px; right:6px; padding:5px 7px; border-radius:6px; background:white; color:#272423; font-size:10px; font-weight:700; }
 .lab-avatar strong { font-size:21px; margin-top:10px; overflow-wrap:anywhere; }
@@ -25,7 +25,7 @@
 .lab-board-title button,.lab-invitation button { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; padding:10px 16px; border-radius:10px; background:#ffffff; font-size:13px; font-weight:700; }
 .lab-board-title button { background:#8350c4; color:#ffffff; box-shadow:0 3px 0 #5d5664; }
 .lab-invitation { display:grid; grid-template-columns:1fr 1fr; gap:40px; align-items:center; max-width:760px; margin:12px auto 30px; }
-.lab-invitation>div:last-child { padding:28px; background:#fff3a7; transform:rotate(2deg); position:relative; box-shadow:3px 5px 0 #3632311a; }
+.lab-invitation>div:last-child { padding:28px; background:#d1b9ed; transform:rotate(2deg); position:relative; box-shadow:3px 5px 0 #3632311a; }
 .lab-invitation h3 { font-size:25px; font-weight:700; line-height:1.15; margin:0 0 14px; letter-spacing:-.03em; }
 .lab-invitation p { font-size:14px; line-height:1.6; margin:0 0 20px; }
 .lab-blueprint { background-color:#8350c4; background-image:linear-gradient(#ffffff18 1px,transparent 1px),linear-gradient(90deg,#ffffff18 1px,transparent 1px); background-size:20px 20px; color:#ffffff; padding:12px 14px 18px; transform:rotate(-4deg); box-shadow:5px 5px 0 #5e566530; }
@@ -34,7 +34,7 @@
 .lab-pin-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:28px 24px; align-items:start; }
 .lab-pin { position:relative; padding:26px 18px 12px; box-shadow:3px 5px 0 #3632311a; min-width:0; transform:rotate(-1.5deg); }
 .lab-pin:nth-child(even) { transform:rotate(1.5deg); }
-.lab-pin-yellow { background:#fff0a1; }
+.lab-pin-yellow { background:#ceb4ec; }
 .lab-pin-blue { background:#c7dde8; }
 .lab-pin-pink { background:#ffc6d1; }
 .lab-pin-image { background:#ffffff; padding:12px 12px 8px; }

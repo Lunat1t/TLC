@@ -13,9 +13,9 @@
 .instruction-card-dialog-actions>a,.instruction-card-dialog-actions>button{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 20px;border:0;border-radius:6px;background:#211f1e;color:white;font:inherit;font-weight:700;text-decoration:none;cursor:pointer}
 .instruction-card-dialog-actions .instruction-card-edit-action{background:#dbe9f0;color:#33302e}
 .instruction-card-dialog-actions>button:disabled{background:#dbe9f0;color:#7f758a;cursor:not-allowed}
-.instruction-card-dialog-close:focus-visible,.instruction-card-dialog-actions>a:focus-visible,.instruction-card-dialog-actions>button:focus-visible{outline:3px solid #f5bd35;outline-offset:2px}
+.instruction-card-dialog-close:focus-visible,.instruction-card-dialog-actions>a:focus-visible,.instruction-card-dialog-actions>button:focus-visible{outline:3px solid #c4a6ec;outline-offset:2px}
 .instruction-admin-notice,.instruction-admin-error{padding:12px 15px;border-radius:6px;margin:0 0 18px;font-weight:700}
-.instruction-admin-notice{background:#e8f8ed;color:#17643a}
+.instruction-admin-notice{background:#eaf1f6;color:#2d4a68}
 .instruction-admin-error{background:#fff0ee;color:#982f27}
 .instruction-admin-backdrop{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:20px;background:#1d1b1aa8;backdrop-filter:blur(4px)}
 .instruction-admin-dialog{width:min(100%,680px);max-height:min(92dvh,900px);overflow:auto;background:#f1f7fa;border:1px solid #26242373;border-radius:6px;box-shadow:0 3px 0 rgba(38,36,35,.16);color:#232120}
@@ -37,7 +37,7 @@
 .instruction-admin-form footer button{min-height:46px;padding:0 18px;border:0;border-radius:6px;background:#524257;color:white;font-weight:700;cursor:pointer}
 .instruction-admin-form footer .instruction-admin-cancel{background:#dbe9f0;color:#33302e}
 .instruction-admin-form footer button:disabled{opacity:.6;cursor:wait}
-.instruction-admin-form input:focus-visible,.instruction-admin-form textarea:focus-visible,.instruction-admin-form select:focus-visible,.instruction-admin-form button:focus-visible,.instruction-admin-edit:focus-visible{outline:3px solid #f5bd35;outline-offset:2px}
+.instruction-admin-form input:focus-visible,.instruction-admin-form textarea:focus-visible,.instruction-admin-form select:focus-visible,.instruction-admin-form button:focus-visible,.instruction-admin-edit:focus-visible{outline:3px solid #c4a6ec;outline-offset:2px}
 @media(max-width:600px){.instruction-admin-backdrop{padding:10px}.instruction-admin-dialog,.instruction-card-dialog{max-height:96dvh;border-radius:6px}.instruction-admin-dialog-heading,.instruction-admin-form{padding-left:18px;padding-right:18px}.instruction-admin-dialog-heading h2{font-size:21px}.instruction-admin-form footer{flex-direction:column-reverse}.instruction-admin-form footer button{width:100%}.instruction-card-dialog-cover{height:36dvh;min-height:180px}.instruction-card-dialog-content{padding:20px}.instruction-card-dialog-actions{flex-direction:column}.instruction-card-dialog-actions>a,.instruction-card-dialog-actions>button{width:100%}}
 
 /* Card images are optional. A visible placeholder is always present beneath them. */

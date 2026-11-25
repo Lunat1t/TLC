@@ -62,8 +62,8 @@
 .onboarding-footer > div { max-width: 920px; margin: auto; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
 .onboarding-footer p { margin: 0; font-size: 15px; font-weight:700; }
 .onboarding-footer p span { display: block; margin-top: 5px; color: var(--on-muted); font-size: 13px; font-weight: 400; }
-.onboarding-next { min-width: 186px; min-height: 52px; padding: 14px 28px; border-radius: 6px; background: var(--on-green); color: #304518; box-shadow: 0 4px 0 var(--on-green-shadow); font-size: 16px; font-weight:700; transition: transform 120ms ease, background-color 120ms ease; }
-.onboarding-next:hover:not(:disabled) { background: #b2ef45; }
+.onboarding-next { min-width: 186px; min-height: 52px; padding: 14px 28px; border-radius: 6px; background: var(--on-green); color: #1f3550; box-shadow: 0 4px 0 var(--on-green-shadow); font-size: 16px; font-weight:700; transition: transform 120ms ease, background-color 120ms ease; }
+.onboarding-next:hover:not(:disabled) { background: #7392b5; }
 .onboarding-next:active:not(:disabled) { transform: translateY(4px); box-shadow: none; }
 .onboarding-next:disabled { color: #a099a8; background: var(--on-line); box-shadow: 0 4px 0 #c3dae6; cursor: default; }
 .onboarding :is(a, button, input):focus-visible { outline: 3px solid var(--on-teal); outline-offset: 5px; }

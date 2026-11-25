@@ -408,13 +408,13 @@
 }
 
 .rm-card.is-completed {
-  border-color: #2ea877;
-  background: linear-gradient(180deg, #ffffff 0%, #eefaf4 100%);
+  border-color: #7392b5;
+  background: linear-gradient(180deg, #ffffff 0%, #eff5f9 100%);
 }
 
 [data-theme="dark"] .rm-card.is-completed {
   background: linear-gradient(180deg, #292625 0%, #221f1e 100%);
-  border-color: #34b582;
+  border-color: #7392b5;
 }
 
 .rm-card.is-locked {
@@ -468,8 +468,8 @@
 }
 
 .rm-card.is-completed .rm-card-status {
-  background: #d3f5e5;
-  color: #0e6b46;
+  background: #d9e6ef;
+  color: #2d4a68;
 }
 
 .rm-card.is-locked .rm-card-status {
@@ -623,13 +623,13 @@
 }
 
 .rm-step-row.is-done {
-  background: #e4f8ef;
-  color: #0b5d3d;
+  background: #e7eff5;
+  color: #2d4a68;
 }
 
 [data-theme="dark"] .rm-step-row.is-done {
   background: #252221;
-  color: #93ecc8;
+  color: #7392b5;
 }
 
 .rm-dialog {
@@ -685,9 +685,8 @@
   align-items: center;
   padding: 10px;
   border-radius: 6px;
-  border: 1px solid #26242373;
-  background: #f4f9fc;
-}
+  border: 1.5px solid #262423;
+  background: #f4f9fc;;box-shadow:3px 3px 0 #262423;}
 
 [data-theme="dark"] .rm-admin-card-row {
   background: #22201f;
@@ -809,9 +808,9 @@
   border-radius: 6px;
   font-size: 13px;
   font-weight: 700;
-  border: 1px solid #f5c678;
-  background: #fff9ec;
-  color: #714807;
+  border: 1px solid #c4a6ec;
+  background: #f5f0fb;
+  color: #4a2a78;
 }
 
 .rm-banner.is-error {
@@ -821,9 +820,9 @@
 }
 
 .rm-banner.is-ok {
-  border-color: #a9e5c9;
-  background: #edfaf3;
-  color: #0d623f;
+  border-color: #7392b5;
+  background: #eff4f8;
+  color: #2d4a68;
 }
 
 @media (max-width: 1023px) {

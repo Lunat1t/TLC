@@ -4,8 +4,8 @@ import { Sparkles, Map, Home } from "lucide-react"
 export default function BattlePassPage() {
   return (
     <main className="grid min-h-full place-items-center bg-[#edf5f9] p-5 sm:p-10 text-[#242221]">
-      <section className="battle-pass-card mx-auto grid max-w-xl gap-5 rounded-md border border-[#26242373] bg-white p-7 sm:p-9 shadow-sm text-center">
-        <div className="mx-auto grid h-14 w-14 place-items-center rounded-md bg-[#fef3c7] text-[#b45309]">
+      <section className="battle-pass-card mx-auto grid max-w-xl gap-5 rounded-md border border-2 border-[#262423] bg-white p-7 sm:p-9  text-center shadow-[3px_3px_0_#262423]">
+        <div className="mx-auto grid h-14 w-14 place-items-center rounded-md bg-[#e1d1f4] text-[#4a2a78]">
           <Sparkles size={28} aria-hidden="true" />
         </div>
         <span className="mx-auto inline-flex items-center rounded-md bg-[#e8f1f5] px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#8350c4]">

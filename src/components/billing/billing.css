@@ -19,10 +19,10 @@
 .bs-card {
   background: var(--studio-surface, #ffffff);
   color: var(--studio-text, #22201f);
-  border: 1.5px solid var(--studio-border, #cfe2ec);
+  border: 2px solid #262423;
   border-radius: 6px;
   padding: 22px;
-  box-shadow: 0 3px 0 rgba(38,36,35,.16);
+  box-shadow: 3px 3px 0 #262423;
   display: grid;
   gap: 14px;
 }
@@ -156,8 +156,8 @@
 }
 
 .bs-plan-card.is-featured {
-  border-color: #6f3fb0;
-  box-shadow: 0 3px 0 rgba(38,36,35,.16);
+  border-color: #262423;
+  box-shadow: 4px 4px 0 #8350c4;
 }
 
 .bs-plan-price {
@@ -202,13 +202,13 @@
 }
 
 .bs-status-pill.is-active {
-  background: #dcfce7;
-  color: #166534;
+  background: #e4edf4;
+  color: #2d4a68;
 }
 
 .bs-status-pill.is-warn {
-  background: #fef3c7;
-  color: #92400e;
+  background: #e1d1f4;
+  color: #4a2a78;
 }
 
 [data-theme="dark"] .bs-status-pill {
@@ -217,13 +217,13 @@
 }
 
 [data-theme="dark"] .bs-status-pill.is-active {
-  background: #143b27;
-  color: #86efac;
+  background: #1f3550;
+  color: #7392b5;
 }
 
 [data-theme="dark"] .bs-status-pill.is-warn {
   background: #302c2b;
-  color: #fcd34d;
+  color: #c4a6ec;
 }
 
 .bs-field {
@@ -279,9 +279,9 @@
 }
 
 .bs-alert.is-success {
-  background: #f0fdf4;
-  color: #166534;
-  border: 1px solid #bbf7d0;
+  background: #f3f7fa;
+  color: #2d4a68;
+  border: 1px solid #c9dce9;
 }
 
 .bs-alert.is-info {
@@ -297,9 +297,9 @@
 }
 
 [data-theme="dark"] .bs-alert.is-success {
-  background: #133622;
-  color: #86efac;
-  border-color: #215a39;
+  background: #1f3550;
+  color: #7392b5;
+  border-color: #2d4a68;
 }
 
 [data-theme="dark"] .bs-alert.is-info {

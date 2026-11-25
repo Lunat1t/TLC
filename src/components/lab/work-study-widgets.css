@@ -22,7 +22,7 @@
 .study-calendar-days li { position: relative; display: grid; justify-items: center; min-width: 0; padding: 4px 1px; border-radius: 9px; background: #e9f2f6; }
 .study-calendar-days li > span:not(.sr-only) { font-size: 10px; }
 .study-calendar-days strong { font-size: 14px; font-variant-numeric: tabular-nums; }
-.study-calendar-days li.is-complete { background: #b9eed6; color: #2b2827; }
+.study-calendar-days li.is-complete { background: #c1d7e6; color: #2b2827; }
 .study-calendar-days [aria-current="date"] { box-shadow: inset 0 0 0 2px #8350c4; }
 .study-summary {
   --accent: #6a6273;
@@ -35,13 +35,13 @@
   padding: 12px;
   background: #ffffff;
 }
-.study-summary[data-rank="0"] { --accent: #397337; }
+.study-summary[data-rank="0"] { --accent: #2d4a68; }
 .study-summary[data-rank="1"] { --accent: #2f2c2b; }
 .study-summary[data-rank="2"] { --accent: #6f3fb0; }
 .study-summary[data-rank="3"] { --accent: #7044a9; }
 .study-summary[data-rank="4"] { --accent: #ac4721; }
 .study-summary[data-rank="5"] { --accent: #ad3062; }
-.study-summary[data-rank="6"] { --accent: #805508; }
+.study-summary[data-rank="6"] { --accent: #4a2a78; }
 .study-series { display: grid; align-content: center; justify-items: center; border-radius: 6px; background: #ffffffad; text-align: center; }
 .study-series strong { font-size: 15px; }
 .study-series small { font-size: 11px; }
@@ -63,7 +63,7 @@
 [data-theme="dark"] .study-calendar { background: #2a2726; border-color: #58515f; }
 [data-theme="dark"] .study-calendar header > span { color: #cfcbd3; }
 [data-theme="dark"] .study-calendar .study-calendar-days li { background: #372c3a; }
-[data-theme="dark"] .study-calendar .study-calendar-days li.is-complete { background: #b9eed6; }
+[data-theme="dark"] .study-calendar .study-calendar-days li.is-complete { background: #c1d7e6; }
 [data-theme="dark"] .study-calendar .study-calendar-days [aria-current="date"] { box-shadow: inset 0 0 0 2px #8350c4; }
 
 @media (max-width: 600px) {

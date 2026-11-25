@@ -7,5 +7,5 @@ export const mapKits = [
 export const tokenSkills = [
   { id: "mechanics", label: "Механика", color: "#8350c4" },
   { id: "logic", label: "Логика", color: "#ee6767" },
-  { id: "creativity", label: "Творчество", color: "#6ac997" },
+  { id: "creativity", label: "Творчество", color: "#7392b5" },
 ] as const

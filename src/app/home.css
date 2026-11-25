@@ -6,7 +6,7 @@
   --home-line: #d2e4ed;
   --home-paper: #f9fcfd;
   --home-overlay: #201e1d8c;
-  --home-ev3-soft: #fff1df;
+  --home-ev3-soft: #eee5f9;
   --home-ev3: #655c6d;
   --home-canvas: #edf5f9;
   --home-rail: #e7f0f5;
@@ -16,8 +16,8 @@
   --home-blue-soft: #e1edf3;
   --home-dark: #1e1c1b;
   --home-focus: #353130;
-  --home-success-bg: #eaf9b8;
-  --home-success: #2f4a00;
+  --home-success-bg: #c8dbe9;
+  --home-success: #1f3550;
   --home-error-bg: #fff1ee;
   --home-error: #a9352e;
 }

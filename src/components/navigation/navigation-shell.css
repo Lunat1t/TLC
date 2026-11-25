@@ -126,7 +126,7 @@
   flex: 0 0 auto;
   border-radius: 8px;
   background: linear-gradient(135deg, #8350c4 0%, #8350c4 100%);
-  color:#262423;
+  color:#ffffff;
   font-size: 12px;
   font-weight:700;
   letter-spacing: -0.02em;
@@ -601,7 +601,7 @@
   padding: 4px 10px;
   border-radius:6px;
   background: rgba(251, 191, 36, 0.16);
-  color: #fde68a;
+  color: #c4a6ec;
   font-size: 11px;
   font-weight:700;
   white-space: nowrap;
@@ -1018,7 +1018,7 @@
 }
 
 .settings-feedback.is-success {
-  color: #15803d;
+  color: #2d4a68;
 }
 
 [data-theme="dark"] .workspace-settings {
@@ -1112,7 +1112,7 @@
 }
 
 [data-theme="dark"] .settings-feedback.is-success {
-  color: #86efac;
+  color: #7392b5;
 }
 
 .wallpaper-picker {
@@ -1447,3 +1447,18 @@
 [data-theme="dark"] .battle-pass-card p {
   color: #cbc6cf;
 }
+
+/* Выбор темы оформления: образцы вместо палитры цвета фона. */
+.settings-themes { border: 0; margin: 0; padding: 0; min-width: 0; }
+.settings-themes legend { padding: 0; margin-bottom: 10px; font-weight: 700; }
+.settings-theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 12px; }
+.settings-theme { display: grid; gap: 8px; padding: 8px; border: 2px solid #26242359; border-radius: 6px; background: #f4f9fc; color: #262423; text-align: left; cursor: pointer; transition: box-shadow 140ms, border-color 140ms; }
+.settings-theme:hover { border-color: #262423; }
+.settings-theme.is-selected { border-color: #262423; box-shadow: 3px 3px 0 #8350c4; }
+.settings-theme:focus-visible { outline: 3px solid #8350c4; outline-offset: 2px; }
+.settings-theme:disabled { opacity: .55; cursor: not-allowed; }
+.settings-theme-swatch { position: relative; display: block; height: 56px; border: 1px solid #26242333; border-radius: 4px; background-image: radial-gradient(circle, #26242340 1px, transparent 1.4px); background-size: 10px 10px; }
+.settings-theme-swatch i { position: absolute; right: 8px; bottom: 8px; width: 22px; height: 12px; border: 1px solid #262423; border-radius: 3px; }
+.settings-theme-name { font-size: 13px; font-weight: 700; line-height: 1.2; }
+[data-theme="dark"] .settings-theme { background: #33223a; color: #f4f9fc; border-color: #f4f9fc40; }
+[data-theme="dark"] .settings-theme:hover, [data-theme="dark"] .settings-theme.is-selected { border-color: #f4f9fc; }

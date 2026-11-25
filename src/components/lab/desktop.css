@@ -20,7 +20,7 @@
 .desktop-launch { display:flex; flex-direction:column; align-items:center; gap:8px; width:100%; color:#353130; }
 .desktop-app-icon { width:66px; height:66px; border-radius:6px; display:grid; place-items:center; box-shadow:inset 0 2px 0 #ffffff70,0 5px 10px #3a363423; border:1px solid #ffffff99; }
 .desktop-app-icon svg { width:33px; height:33px; }
-.desktop-app-icon.is-yellow{background:#ffce43;color:#93670b}.desktop-app-icon.is-blue{background:#8350c4;color:#ffffff}.desktop-app-icon.is-red{background:#fa6557;color:white}.desktop-app-icon.is-purple{background:#8350c4;color:#ffffff}.desktop-app-icon.is-project{background:#ffffff;color:#8350c4;border-bottom:5px solid #bed8e5}
+.desktop-app-icon.is-yellow{background:#c4a6ec;color:#4a2a78}.desktop-app-icon.is-blue{background:#8350c4;color:#ffffff}.desktop-app-icon.is-red{background:#fa6557;color:white}.desktop-app-icon.is-purple{background:#8350c4;color:#ffffff}.desktop-app-icon.is-project{background:#ffffff;color:#8350c4;border-bottom:5px solid #bed8e5}
 .desktop-launch strong { font-size:12px; font-weight:700; line-height:1.3; padding:3px 6px; max-width:120px; overflow-wrap:anywhere; background:#e4eff58c; border-radius:5px; }
 .desktop-launch:hover .desktop-app-icon { filter:brightness(1.06); }.desktop-launch:focus-visible{border-radius:10px}
 .desktop-note { width:230px; }.desktop-note .lab-pin{margin-top:6px}.desktop-note .lab-pin p{font-size:16px;max-height:270px;overflow:auto}.desktop-note .lab-pin img{max-height:220px}.desktop-note .lab-pin time{font-size:20px}
@@ -115,7 +115,7 @@
 .desktop-item.is-moving .desktop-app-icon { cursor:grabbing; }
 .desktop-item:focus-visible { outline:2px solid #8350c4; outline-offset:4px; border-radius:6px; }
 .desktop-app-icon.is-project-ev3 { background:#fa6557; color:#ffffff; border-bottom-color:#c73c35; }
-.desktop-app-icon.is-project-spike { background:#ffce43; color:#694900; border-bottom-color:#d49a13; }
+.desktop-app-icon.is-project-spike { background:#c4a6ec; color:#4a2a78; border-bottom-color:#c4a6ec; }
 
 .game-picker { width: min(300px, 92vw); margin: auto; padding: 16px; border-radius: 6px; background: white; color: #2a2726; }
 .game-picker::backdrop { background: #2a272655; }
@@ -128,7 +128,7 @@
 .tic-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
 .tic-grid button { min-height: 44px; border-radius: 8px; background: #e5f0f5; color: #5f5767; font: 800 25px/1 system-ui; opacity: 1; }
 .tic-grid button[data-mark=O] { color: #9b4322; }
-.tic-grid button[data-win] { background: #bef1d8; }
+.tic-grid button[data-win] { background: #c7dae8; }
 .tic-widget footer { font-size: 14px; }
 .tic-widget footer button { min-height: 44px; padding: 0 8px; font-weight: 700; color: #55445a; }
 

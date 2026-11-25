@@ -134,7 +134,7 @@ export default function LoginPage() {
                   className={`rounded-md px-3.5 py-2.5 text-[13px] font-bold ${
                     status.isError
                       ? "bg-[#fff1ee] text-[#a9352e]"
-                      : "bg-[#e3f9eb] text-[#165e36]"
+                      : "bg-[#e7eff5] text-[#2d4a68]"
                   }`}
                 >
                   {status.message}
