@@ -47,7 +47,7 @@ export function LabCompanion({userId,bodyColor='#d12f20',eyeColor='#ffffff'}:{us
     let surfaces: Set<string> | null = null
     function geometry(){
       const rect=container!.getBoundingClientRect()
-      const platforms:Platform[]=Array.from(container!.querySelectorAll<HTMLElement>('.desktop-app-icon, .lab-pin')).map((el,index)=>{
+      const platforms:Platform[]=Array.from(container!.querySelectorAll<HTMLElement>('.desktop-item:not([hidden]) .desktop-app-icon, .desktop-item:not([hidden]) .lab-pin')).map((el,index)=>{
         const r=el.getBoundingClientRect(),item=el.closest<HTMLElement>('[data-desktop-id]')
         return {id:item?.dataset.desktopId||`surface-${index}`,x:r.left-rect.left,y:r.top-rect.top,width:r.width,label:item?.dataset.desktopLabel||'Новая идея'}
       })
