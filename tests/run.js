@@ -4,6 +4,7 @@ import './controller-server.test.js';
 import './projects.test.js';
 import './workspace.test.js';
 import './block-modules.test.js';
+import './loop-block.test.js';
 import './controller-program.test.js';
 import './app.test.js';
 import './auth.test.js';

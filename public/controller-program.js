@@ -19,6 +19,7 @@ import {
   compileSensorBlock,
   expandActionBlock,
 } from './block-registry.js';
+import { DEFAULT_LOOP_TIMES, MAX_LOOP_TIMES } from './block-modules.js';
 
 export {
   CONTROLLER_BUTTONS,
@@ -83,6 +84,12 @@ function compileDriveControls(layout, result, usedPorts, projectChassis, directW
   return maxProtocol;
 }
 
+function describeChecksOrDistance(condition) {
+  const c = condition || {};
+  if (Array.isArray(c.checks) && c.checks.length > 0) return `${c.port || 'IMU'}: ${describeChecks(c.checks)}`;
+  return `${c.port || 'C'} ${c.op === 'gt' ? '>' : '<'} ${c.cm ?? 20} см`;
+}
+
 function describeChecks(checks) {
   return checks.map(c => {
     const op = c.op === 'gt' ? '>' : '<';
@@ -141,6 +148,12 @@ export function describeAction(action) {
     }
     case 'imuReset': {
       return 'Сброс гироскопа 0°';
+    }
+    case 'loop': {
+      const what = action.condition
+        ? `пока ${describeChecksOrDistance(action.condition)}`
+        : action.times !== undefined ? `×${action.times}` : 'всегда';
+      return `Повторять ${what}`;
     }
     case 'branch': {
       const c = action.condition || {};
@@ -201,6 +214,9 @@ function walkActions(actions, visit) {
       walkActions(action.thenActions, visit);
       walkActions(action.elseActions, visit);
     }
+    if (action.kind === 'loop') {
+      walkActions(action.bodyActions, visit);
+    }
   }
 }
 
@@ -238,7 +254,7 @@ export function controllerRuntimeErrors(program, protocol, availablePorts, avail
           if (action.sensorType) requiredTypes.set(action.port, action.sensorType);
         }
       }
-      if (action.kind === 'branch' && action.condition) {
+      if ((action.kind === 'branch' || action.kind === 'loop') && action.condition) {
         if (action.condition.port === 'IMU' || action.condition.sensorType === 'imu') {
           usesImu = true;
         } else if (action.condition.port) {
@@ -473,6 +489,44 @@ export function compileControllerProgram(project) {
           const elseActions = compileChain(child.id, 'else', depth + 1);
           if (condition) {
             out.push({ kind: 'branch', condition, thenActions, elseActions });
+          }
+          continue;
+        }
+
+        if (child.type === 'loop') {
+          const modules = Array.isArray(child.modules) ? child.modules : [];
+          let condition = null;
+          if (modules.includes('while')) {
+            const condBlock = blocks.find(b => b.parentId === child.id && b.branch === 'condition');
+            if (!condBlock || condBlock.type !== 'sensor') {
+              result.errors.push({
+                button: btn,
+                blockId: child.id,
+                code: 'missing-sensor',
+                message: 'Вставьте датчик',
+              });
+            } else {
+              visited.add(condBlock.id);
+              const compiled = compileSensorBlock(condBlock, { button: btn, inCondition: true });
+              result.errors.push(...compiled.errors);
+              for (const port of compiled.usedSensorPorts) allUsedSensorPorts.add(port);
+              if (compiled.condition) {
+                out.push(...compiled.preActions);
+                condition = compiled.condition;
+              }
+            }
+          }
+          const bodyActions = compileChain(child.id, 'body', depth + 1);
+          const times = modules.includes('times')
+            ? Math.max(1, Math.min(MAX_LOOP_TIMES, Math.round(Number(child.times) || DEFAULT_LOOP_TIMES)))
+            : undefined;
+          if (!modules.includes('while') || condition) {
+            out.push({
+              kind: 'loop',
+              ...(times !== undefined ? { times } : {}),
+              ...(condition ? { condition } : {}),
+              bodyActions,
+            });
           }
           continue;
         }

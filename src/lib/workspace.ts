@@ -1,4 +1,4 @@
-import { normalizeModules, validateModuleRules } from "./block-modules.ts"
+import { DEFAULT_LOOP_TIMES, MAX_LOOP_TIMES, normalizeModules, validateModuleRules } from "./block-modules.ts"
 import { HUB_PROGRAM_SOURCE } from "./hub-program-source.ts"
 import type { HubType } from "./projects"
 import {
@@ -57,11 +57,11 @@ export type ControllerEvent = "hold" | "pressed" | "released"
 export { isPairedBlock }
 export type { ChassisDirection, ImuAxis, SensorColor, SensorModule, SensorOp, SensorType }
 
-export type BlockType = "start" | "drive" | "pair" | "chassis" | "if" | "button" | "stop" | "motor-buttons" | "sensor"
+export type BlockType = "start" | "drive" | "pair" | "chassis" | "if" | "loop" | "button" | "stop" | "motor-buttons" | "sensor"
 const LIBRARY_BLOCK_TYPES = new Set<BlockType>(BLOCK_TYPES as readonly BlockType[])
 export type MotorDirection = "forward" | "backward"
 export type TravelUnit = "rotations" | "degrees" | "seconds"
-export type MotorModule = "pair" | "speed" | "power" | "travel"
+export type MotorModule = "pair" | "speed" | "power" | "travel" | "times" | "while"
 export type MotorButtonModule = "red" | "green" | "yellow"
 export type MotorPanelButton = "blue" | MotorButtonModule
 export type BranchSlot = "body" | "else" | "condition"
@@ -71,6 +71,37 @@ export const IF_MID_HEIGHT = 48
 export const IF_FOOT_HEIGHT = 28
 export const IF_INDENT = 28
 export const IF_EMPTY_MOUTH = 52
+export const LOOP_TOP_HEIGHT = IF_TOP_HEIGHT
+export const LOOP_FOOT_HEIGHT = IF_FOOT_HEIGHT
+
+/**
+ * Сдвиг овала для датчика от левого края блока: у цикла подпись
+ * «Повторять пока» длиннее, чем «Если».
+ */
+export function conditionSlotX(type: BlockType | undefined): number {
+  return type === "loop" ? 178 : 68
+}
+
+/** Блоки с «ртом», в который вставляются другие блоки. */
+export function isContainerType(type: BlockType | undefined): boolean {
+  return type === "if" || type === "loop"
+}
+
+/**
+ * Можно ли подключить блок к слоту `branch` родителя.
+ * «Если» принимает условие, тело и «иначе»; цикл — тело и (с модулем «Пока») условие.
+ */
+export function acceptsBranch(
+  parent: Pick<WorkspaceBlock, "type" | "modules"> | undefined,
+  branch: BranchSlot | undefined,
+  childType?: BlockType
+): boolean {
+  if (!parent || !branch) return false
+  if (branch === "body") return isContainerType(parent.type)
+  if (branch === "else") return parent.type === "if"
+  if (childType !== "sensor") return false
+  return parent.type === "if" || (parent.type === "loop" && Boolean(parent.modules?.includes("while")))
+}
 
 export interface WorkspaceBlock {
   id: string
@@ -95,6 +126,8 @@ export interface WorkspaceBlock {
   speed?: number
   power?: number
   value?: number
+  /** Сколько раз повторять цикл (модуль «Сколько раз»). */
+  times?: number
   unit?: TravelUnit
   button?: ControllerButton
   target?: { controlId: string; input: string }
@@ -154,6 +187,7 @@ function findChainRoot(blocks: WorkspaceBlock[], id: string): WorkspaceBlock | u
 }
 
 export function blockHeight(block: Pick<WorkspaceBlock, "type" | "height">): number {
+  if (block.type === "loop") return LOOP_TOP_HEIGHT + IF_EMPTY_MOUTH + LOOP_FOOT_HEIGHT
   if (block.type === "if")
     return (
       IF_TOP_HEIGHT +
@@ -200,6 +234,8 @@ export function blockTotalHeight(
 ): number {
   const block = blocks.find((b) => b.id === id)
   if (!block) return 64
+  if (block.type === "loop")
+    return LOOP_TOP_HEIGHT + ifInnerHeight(blocks, id, "body", visited) + LOOP_FOOT_HEIGHT
   if (block.type !== "if") return blockHeight(block)
   return (
     IF_TOP_HEIGHT +
@@ -221,8 +257,8 @@ export function cleanLinks(blocks: WorkspaceBlock[]): WorkspaceBlock[] {
       return next
     }
     const parent = next.parentId ? byId.get(next.parentId) : undefined
-    const invalidCondition = next.branch === "condition" && (parent?.type !== "if" || next.type !== "sensor")
-    if (next.branch && parent?.type !== "if") {
+    const invalidCondition = next.branch === "condition" && !acceptsBranch(parent, "condition", next.type)
+    if (next.branch && !acceptsBranch(parent, next.branch, next.type)) {
       delete next.branch
     }
     const slotKey = next.parentId
@@ -355,10 +391,10 @@ export function layoutChains(blocks: WorkspaceBlock[]): WorkspaceBlock[] {
     const next = map.get(b.id)
     const parent = b.parentId ? map.get(b.parentId) : undefined
     if (next && parent) {
-      if (next.branch === "condition" && parent.type === "if") {
-        next.x = parent.x + 68
+      if (next.branch === "condition" && isContainerType(parent.type)) {
+        next.x = parent.x + conditionSlotX(parent.type)
         next.y = parent.y + 11
-      } else if (next.branch === "body" && parent.type === "if") {
+      } else if (next.branch === "body" && isContainerType(parent.type)) {
         next.x = parent.x + IF_INDENT
         next.y = parent.y + IF_TOP_HEIGHT - 4
       } else if (next.branch === "else" && parent.type === "if") {
@@ -416,6 +452,18 @@ export function readBlocks(
         ...(branchVal ? { branch: branchVal } : {}),
       }
       if (type === "start" || type === "if") return base
+
+      if (type === "loop") {
+        const times = Number(block.times)
+        return {
+          ...base,
+          modules: normalizeModules("loop", block.modules) as MotorModule[],
+          times:
+            Number.isFinite(times) && times >= 1
+              ? Math.min(MAX_LOOP_TIMES, Math.round(times))
+              : DEFAULT_LOOP_TIMES,
+        }
+      }
 
       if (type === "sensor") {
         const sensorType: SensorType = (SENSOR_TYPES as readonly string[]).includes(String(block.sensorType))
@@ -684,6 +732,9 @@ export function addBlock(
   if (type === "chassis") {
     Object.assign(block, { chassisDirection: "forward", modules: [], speed: MOTOR_SPEED, value: 1, unit: "rotations" })
   }
+  if (type === "loop") {
+    Object.assign(block, { modules: [], times: DEFAULT_LOOP_TIMES })
+  }
   if (type === "motor-buttons") {
     Object.assign(block, { width: 180, height: 132, controlModules: [], hiddenControlButtons: [] })
   }
@@ -751,10 +802,25 @@ export function updateDrive(
   changes: Partial<WorkspaceBlock>,
   hub: HubType
 ): WorkspaceBlock[] {
+  // Без модуля «Пока» датчик в овале цикла не нужен: выносим его рядом, а не теряем.
+  const loop = blocks.find((b) => b.id === id && b.type === "loop")
+  const loseCondition =
+    Boolean(loop?.modules?.includes("while")) &&
+    Array.isArray(changes.modules) &&
+    !changes.modules.includes("while")
+  const source = loseCondition && loop
+    ? blocks.map((b) => {
+        if (b.parentId !== id || b.branch !== "condition") return b
+        const evicted: WorkspaceBlock = { ...b, x: loop.x + 280, y: loop.y }
+        delete evicted.parentId
+        delete evicted.branch
+        return evicted
+      })
+    : blocks
   return readBlocks(
     {
-      blocks: blocks.map((block) => {
-        if (block.id !== id || !["drive", "pair", "chassis", "if", "button", "stop", "sensor"].includes(block.type)) return block
+      blocks: source.map((block) => {
+        if (block.id !== id || !["drive", "pair", "chassis", "if", "loop", "button", "stop", "sensor"].includes(block.type)) return block
         const merged: WorkspaceBlock = { ...block, ...changes }
         if (block.type === "pair" && changes.type === "drive") {
           merged.type = "drive"
@@ -870,11 +936,7 @@ export function attachChain(
   }
 
   if (parent.branch === "condition") return blocks
-  const effectiveBranch =
-    ((branch === "body" || branch === "else") && parent.type === "if") ||
-    (branch === "condition" && parent.type === "if" && movingBlock?.type === "sensor")
-      ? branch
-      : undefined
+  const effectiveBranch = acceptsBranch(parent, branch, movingBlock?.type) ? branch : undefined
   const outerMoving = outerChainIds(blocks, id)
   const tail = outerMoving[outerMoving.length - 1]
   const detached = detachChain(blocks, id)
@@ -945,10 +1007,10 @@ export function snapTargetInfo(
       }
     }
 
-    if (b.type === "if") {
-      if (resolvedType === "sensor") {
+    if (isContainerType(b.type)) {
+      if (resolvedType === "sensor" && acceptsBranch(b, "condition", "sensor")) {
         const condThreshold = Math.max(threshold, 56)
-        const condDx = Math.abs(b.x + 68 - x)
+        const condDx = Math.abs(b.x + conditionSlotX(b.type) - x)
         const condDy = Math.abs(b.y + 11 - y)
         if (
           condDx <= condThreshold &&
@@ -974,6 +1036,7 @@ export function snapTargetInfo(
         b.y + IF_TOP_HEIGHT + bodyH + IF_MID_HEIGHT - 4 - y
       )
       if (
+        b.type === "if" &&
         innerDx <= threshold &&
         elseDy <= threshold &&
         innerDx + elseDy < distance
@@ -1117,6 +1180,14 @@ export function generatePybricks(
       }
       return
     }
+    const branchChain = (parentId: string, branch: BranchSlot): WorkspaceBlock[] => {
+      const first = clean.find((b) => b.parentId === parentId && b.branch === branch)
+      return first
+        ? outerChainIds(clean, first.id)
+            .map((id) => clean.find((b) => b.id === id))
+            .filter((b): b is WorkspaceBlock => b !== undefined && b.type !== "start")
+        : []
+    }
     const sensorExprs = (s: WorkspaceBlock): string[] => {
       const st: SensorType = s.sensorType || "ultrasonic"
       const p = (s.sensorPort || "C").toLowerCase()
@@ -1219,6 +1290,42 @@ export function generatePybricks(
       }
       return
     }
+    if (block.type === "loop") {
+      const mods = block.modules || []
+      if (options?.comments) {
+        lines.push(
+          `${indent}# Цикл: ${
+            mods.includes("while") ? "пока условие верно" : mods.includes("times") ? "повторить заданное число раз" : "повторять всегда"
+          }`
+        )
+      }
+      let endless = true
+      if (mods.includes("while")) {
+        const cond = clean.find((b) => b.parentId === block.id && b.branch === "condition")
+        const condExprs = cond && cond.type === "sensor" ? sensorExprs(cond) : []
+        if (!cond || condExprs.length === 0)
+          throw new Error("Вставьте датчик в цикл «Пока».")
+        const st: SensorType = cond.sensorType || "ultrasonic"
+        const p = (cond.sensorPort || "C").toLowerCase()
+        const condMods = cond.sensorModules || [DEFAULT_SENSOR_MODULE[st]]
+        if ((st === "ultrasonic" || st === "color") && condMods.includes("lights")) {
+          const light = cond.sensorLight ?? DEFAULT_SENSOR_LIGHT
+          lines.push(`${indent}sensor_${p}.lights.${light < 0 ? "off()" : `on(${light})`}`)
+        }
+        lines.push(`${indent}while ${condExprs.join(" and ")}:`)
+      } else if (mods.includes("times")) {
+        endless = false
+        const count = Math.max(1, Math.min(MAX_LOOP_TIMES, Math.round(Number(block.times) || DEFAULT_LOOP_TIMES)))
+        lines.push(`${indent}for _ in range(${count}):`)
+      } else {
+        lines.push(`${indent}while True:`)
+      }
+      const bodyChain = branchChain(block.id, "body")
+      for (const inner of bodyChain) emitBlock(inner, `${indent}    `)
+      // Короткая пауза не даёт пустому или быстрому телу цикла занять хаб целиком.
+      if (endless || !bodyChain.length) lines.push(`${indent}    wait(10)`)
+      return
+    }
     if (block.type === "if") {
       const cond = clean.find(
         (b) => b.parentId === block.id && b.branch === "condition"
@@ -1237,16 +1344,7 @@ export function generatePybricks(
       } else {
         lines.push(`${indent}if True:`)
       }
-      const firstBody = clean.find(
-        (b) => b.parentId === block.id && b.branch === "body"
-      )
-      const bodyChain = firstBody
-        ? outerChainIds(clean, firstBody.id)
-            .map((id) => clean.find((b) => b.id === id))
-            .filter(
-              (b): b is WorkspaceBlock => b !== undefined && b.type !== "start"
-            )
-        : []
+      const bodyChain = branchChain(block.id, "body")
       if (!bodyChain.length) {
         lines.push(`${indent}    pass`)
       } else {
@@ -1256,16 +1354,7 @@ export function generatePybricks(
       }
 
       lines.push(`${indent}else:`)
-      const firstElse = clean.find(
-        (b) => b.parentId === block.id && b.branch === "else"
-      )
-      const elseChain = firstElse
-        ? outerChainIds(clean, firstElse.id)
-            .map((id) => clean.find((b) => b.id === id))
-            .filter(
-              (b): b is WorkspaceBlock => b !== undefined && b.type !== "start"
-            )
-        : []
+      const elseChain = branchChain(block.id, "else")
       if (!elseChain.length) {
         lines.push(`${indent}    pass`)
       } else {

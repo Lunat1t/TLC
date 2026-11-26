@@ -3,6 +3,8 @@ import { Check, Gauge, Trash2, Zap } from "lucide-react"
 import type { WorkspaceBlock, TravelUnit } from "@/lib/workspace"
 import { isPairedBlock } from "@/lib/block-registry"
 import {
+  DEFAULT_LOOP_TIMES,
+  MAX_LOOP_TIMES,
   activeModules,
   moduleAddPatch,
   moduleInfo,
@@ -213,6 +215,27 @@ export function ModuleBar({
         </>
       )
     }
+    if (def.id === "times") {
+      return (
+        <>
+          <input
+            type="number"
+            min="1"
+            max={MAX_LOOP_TIMES}
+            step="1"
+            aria-label="Сколько раз повторить"
+            value={block.times ?? DEFAULT_LOOP_TIMES}
+            onChange={(e) => {
+              const val = Math.round(Number(e.target.value))
+              if (!Number.isFinite(val) || val < 1 || val > MAX_LOOP_TIMES) return
+              onChange({ times: val })
+            }}
+            className={FIELD_CLASS}
+          />
+          <span className="text-[16px] font-bold tracking-tight">{def.chip?.unit}</span>
+        </>
+      )
+    }
     const isSpeed = def.id === "speed"
     return (
       <>
@@ -254,7 +277,9 @@ export function ModuleBar({
                 onRemove={() => removeModule(def.id)}
               />
             )}
-            <span className="whitespace-nowrap text-[16px] font-bold tracking-tight">{def.chip?.prefix}</span>
+            {def.chip?.prefix && (
+              <span className="whitespace-nowrap text-[16px] font-bold tracking-tight">{def.chip.prefix}</span>
+            )}
             {renderFields(def)}
           </div>
         )

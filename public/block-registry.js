@@ -48,6 +48,7 @@ export const BLOCK_TYPES = Object.freeze([
   'pair',
   'chassis',
   'if',
+  'loop',
   'button',
   'stop',
   'motor-buttons',
