@@ -1198,13 +1198,6 @@ function EditorWorkspace() {
     setZoom(clamped)
   }
 
-  function handleResetView() {
-    const board = boardRef.current
-    setZoom(1)
-    setPanX(board ? Math.round(board.clientWidth / 2) : 360)
-    setPanY(board ? Math.round(board.clientHeight / 2) : 240)
-  }
-
   function generateSheetPybricksCode(): { ok: true; code: string } | { ok: false; error: string } {
     if (!project) return { ok: false, error: "Проект ещё не загружен." }
     try {
@@ -1842,9 +1835,6 @@ function EditorWorkspace() {
         <main className="flex flex-col flex-1 min-w-0 min-h-0">
           {/* Board Toolbar */}
           <div inert={checking || undefined} className="h-[54px] shrink-0 flex items-center gap-2 px-4 bg-white border-b border-[#1d1b1a73]">
-            <span className="text-[13px] font-bold text-[#726b62] hidden sm:inline">
-              Рабочая область
-            </span>
             <button
               type="button"
               disabled={!project}
@@ -1882,13 +1872,6 @@ function EditorWorkspace() {
               className="grid place-items-center h-[34px] min-w-[34px] px-2 rounded-[9px] border border-[#1d1b1a73] bg-white hover:bg-[#f9f4ec] text-[#3a3634] font-bold"
             >
               +
-            </button>
-            <button
-              type="button"
-              onClick={handleResetView}
-              className="h-[34px] px-3 rounded-[9px] border border-[#1d1b1a73] bg-white hover:bg-[#f9f4ec] text-xs font-bold text-[#3a3634]"
-            >
-              По центру
             </button>
           </div>
 
