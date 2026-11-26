@@ -141,13 +141,3 @@
 .rps-dialog::backdrop { background: #201e1da8; }
 .rps-dialog header { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; gap: 8px; }
 .rps-dialog iframe { width: 100%; flex: 1; min-height: 0; border: 0; }
-
-.desktop-item[hidden]{display:none!important}
-.desktop-board-surface{position:relative}
-.desktop-pager{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:1100;display:flex;align-items:center;gap:8px;padding:5px 10px;border-radius:999px;background:#ffffffb8;backdrop-filter:blur(6px);box-shadow:0 1px 0 #1d1b1a26}
-.desktop-pager button{border:0;padding:0;cursor:pointer;font:inherit;color:#1d1b1a}
-.desktop-pager-dot{width:10px;height:10px;border-radius:50%;background:#1d1b1a40}
-.desktop-pager-dot.is-current{background:#1d1b1a;transform:scale(1.25)}
-.desktop-pager-arrow,.desktop-pager-add{width:22px;height:22px;border-radius:50%;background:transparent;font-size:18px;line-height:1}
-.desktop-pager-arrow:disabled{opacity:.3;cursor:default}
-.desktop-pager button:focus-visible{outline:2px solid #d12f20;outline-offset:2px}
