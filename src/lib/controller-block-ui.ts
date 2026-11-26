@@ -281,7 +281,7 @@ export const SENSOR_MODULE_INFO: Record<SensorModule, ModuleDescription> = {
 
 export const DRIVE_MODULE_INFO: Record<"pair" | "speed" | "power" | "travel", ModuleDescription> = {
   pair: { title: "Второй мотор", description: "Крутит два мотора вместе в одном шаге." },
-  speed: { title: "Скорость (°/с)", description: "Задаёт скорость вращения мотора." },
+  speed: { title: "Скорость (%)", description: "Скорость мотора в процентах от максимальной." },
   power: { title: "Мощность (%)", description: "Задаёт силу мотора в процентах." },
   travel: { title: "Сколько ехать", description: "Через сколько оборотов, градусов или секунд остановиться." },
 }
