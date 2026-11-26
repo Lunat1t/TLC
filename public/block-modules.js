@@ -25,7 +25,8 @@ export function percentToSpeed(percent) {
  * placement: 'base'  — модуль меняет базовую строку блока (второй мотор);
  *            'chip'  — модуль показывается отдельной «таблеткой» справа.
  * icon:      ключ значка для интерфейса или null, если у модуля только имя.
- * chip:      как рисуется таблетка: подпись перед полем и единица после него.
+ * chip:      как рисуется таблетка: подпись перед полем и единица после него;
+ *            `badge: false` — без кнопки-значка, убрать модуль можно через меню «+».
  * conflicts: модули, которые убираются при добавлении этого.
  */
 export const MODULE_DEFS = Object.freeze({
@@ -71,7 +72,7 @@ export const MODULE_DEFS = Object.freeze({
     icon: null,
     title: 'Ход',
     description: 'Через сколько оборотов, градусов или секунд остановиться.',
-    chip: Object.freeze({ prefix: 'на', unit: null }),
+    chip: Object.freeze({ prefix: 'на', unit: null, badge: false }),
     conflicts: Object.freeze([]),
   }),
 });

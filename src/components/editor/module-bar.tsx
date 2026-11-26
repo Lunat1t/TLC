@@ -241,17 +241,19 @@ export function ModuleBar({
         const Icon = def.icon ? ICONS[def.icon] : null
         return (
           <div key={def.id} className="shrink-0 flex items-center gap-2 rounded-md bg-black/20 px-2 py-1">
-            <ModuleCapsuleIconPopover
-              title={info?.title ?? def.title}
-              description={info?.description ?? def.description}
-              ariaLabel={`Модуль ${subject}: ${info?.title ?? def.title}`}
-              icon={Icon ? <Icon size={16} aria-hidden="true" /> : def.label}
-              wide={!Icon}
-              canRemove
-              iconClassName="text-white/95"
-              onWillOpen={() => setMenuOpen(false)}
-              onRemove={() => removeModule(def.id)}
-            />
+            {def.chip?.badge !== false && (
+              <ModuleCapsuleIconPopover
+                title={info?.title ?? def.title}
+                description={info?.description ?? def.description}
+                ariaLabel={`Модуль ${subject}: ${info?.title ?? def.title}`}
+                icon={Icon ? <Icon size={16} aria-hidden="true" /> : def.label}
+                wide={!Icon}
+                canRemove
+                iconClassName="text-white/95"
+                onWillOpen={() => setMenuOpen(false)}
+                onRemove={() => removeModule(def.id)}
+              />
+            )}
             <span className="whitespace-nowrap text-[16px] font-bold tracking-tight">{def.chip?.prefix}</span>
             {renderFields(def)}
           </div>

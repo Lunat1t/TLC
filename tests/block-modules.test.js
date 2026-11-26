@@ -77,6 +77,14 @@ test('active modules keep menu order, then legacy ones, and filter by placement'
   assert.deepEqual(activeModules('drive', undefined), []);
 });
 
+test('the travel chip has no badge button, so it is removed through the + menu', () => {
+  assert.equal(MODULE_DEFS.travel.chip.badge, false);
+  assert.notEqual(MODULE_DEFS.speed.chip.badge, false);
+  assert.ok(moduleMenu('drive').some(m => m.id === 'travel'));
+  assert.ok(moduleMenu('chassis').some(m => m.id === 'travel'));
+  assert.deepEqual(toggleModule('drive', ['speed', 'travel'], 'travel'), {modules: ['speed'], active: false});
+});
+
 test('chassis overrides the speed text but shares everything else', () => {
   assert.equal(moduleInfo('chassis', 'speed').title, 'Скорость шасси (%)');
   assert.equal(moduleInfo('drive', 'speed').title, 'Скорость (%)');

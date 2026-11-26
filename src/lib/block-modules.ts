@@ -11,7 +11,7 @@ export interface ModuleDef {
   icon: ModuleIconKey
   title: string
   description: string
-  chip?: { prefix: string; unit: string | null }
+  chip?: { prefix: string; unit: string | null; badge?: boolean }
   conflicts: readonly ModuleId[]
 }
 
