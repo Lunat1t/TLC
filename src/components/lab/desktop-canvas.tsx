@@ -51,7 +51,7 @@ export function DesktopCanvas({ userId, minPages = 1, onPageChange, children }: 
       const clean:Positions={}
       for(const [id,value] of Object.entries(data)){
         const p=value as Point
-        if(p&&typeof p==='object'&&[p.x,p.y,p.z].every(Number.isFinite))clean[id]={desktop:Number.isInteger(p.desktop)?Math.max(0,Math.min(5,p.desktop!)):0,x:Math.min(1,Math.max(0,p.x)),y:Math.min(2,Math.max(0,p.y)),z:Math.min(999,Math.max(1,p.z)),locked:p.locked===true,title:typeof p.title==='string'?p.title.slice(0,64):undefined}
+        if(p&&typeof p==='object'&&[p.x,p.y,p.z].every(Number.isFinite))clean[id]={desktop:Number.isInteger(p.desktop)?Math.max(0,Math.min(5,p.desktop!)):0,x:Math.min(1,Math.max(0,p.x)),y:Math.min(1,Math.max(0,p.y)),z:Math.min(999,Math.max(1,p.z)),locked:p.locked===true,title:typeof p.title==='string'?p.title.slice(0,64):undefined}
       }
       setPositions(clean);setActive(true);setError('')
     }catch{setError('Не удалось загрузить расстановку аккаунта.')}
@@ -95,7 +95,7 @@ export function DesktopItem({ id, label, initial, desktop: defaultDesktop = 0, c
     const observer=new ResizeObserver(measure);observer.observe(element);observer.observe(parent);measure()
     return ()=>observer.disconnect()
   }, [])
-  const clamp=(x:number,y:number):Point=>({...p,desktop:pageRef.current,x:Math.min(1,Math.max(0,x)),y:Math.min(2,Math.max(0,y)),z:Math.min(999,Math.max(1,...Object.values(positions).map(v=>v.z))+1)})
+  const clamp=(x:number,y:number):Point=>({...p,desktop:pageRef.current,x:Math.min(1,Math.max(0,x)),y:Math.min(1,Math.max(0,y)),z:Math.min(999,Math.max(1,...Object.values(positions).map(v=>v.z))+1)})
   const frame = useRef(0)
   useEffect(() => () => cancelAnimationFrame(frame.current), [])
   function followDrag() {
@@ -103,11 +103,6 @@ export function DesktopItem({ id, label, initial, desktop: defaultDesktop = 0, c
     const canvas = node.current?.parentElement
     if (!canvas || !d?.moved) return
     const bounds = canvas.getBoundingClientRect()
-    const bottom = Math.min(bounds.bottom, window.innerHeight - 58)
-    const edge = 44
-    const speed = d.pointerY > bottom - edge ? (d.pointerY - bottom + edge) / edge
-      : d.pointerY < bounds.top + edge ? (d.pointerY - bounds.top - edge) / edge : 0
-    if (speed) canvas.scrollTop += Math.round(Math.min(1, Math.max(-1, speed)) * 12)
     const side = d.pointerX < bounds.left + 36 ? -1 : d.pointerX > bounds.right - 36 ? 1 : 0
     if (!side) edgeSince.current = null
     else if (edgeSince.current?.side !== side) edgeSince.current = { side, at: performance.now() }

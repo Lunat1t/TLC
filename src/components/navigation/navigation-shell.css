@@ -668,8 +668,7 @@
   .tlc-os.is-app.is-desktop .desktop-board-surface > .desktop-canvas {
     flex: 1 1 auto;
     min-height: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: hidden;
     touch-action: pan-y;
     scrollbar-width: none;
   }
