@@ -6,6 +6,7 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
   ChevronDown,
+  FolderOpen,
   Home,
   LogIn,
   LogOut,
@@ -34,6 +35,7 @@ import "./navigation-shell.css"
 
 const MAIN_ICONS: Partial<Record<NavIconKey, LucideIcon>> = {
   home: Home,
+  projects: FolderOpen,
   map: Map,
   "battle-pass": Sparkles,
   settings: Settings,
