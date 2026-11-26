@@ -291,6 +291,8 @@ function EditorWorkspace() {
   const [blockCategory, setBlockCategory] = React.useState<(typeof PALETTE_FILTERS)[number]["id"]>("all")
   const paletteOpen = paletteExpanded ?? false
   const [libraryDropTarget, setLibraryDropTarget] = React.useState(false)
+  const trashRef = React.useRef<HTMLDivElement | null>(null)
+  const [trashHot, setTrashHot] = React.useState(false)
   const isOverPaletteDropZone = React.useCallback(
     (x: number, y: number) =>
       pointerInRect(paletteRef.current, x, y) ||
@@ -1186,6 +1188,10 @@ function EditorWorkspace() {
     }
   }, [gesture, blocks, worldFromClient, addBlockAtClient])
 
+  React.useEffect(() => {
+    if (!gesture) setTrashHot(false)
+  }, [gesture])
+
   function handleZoom(nextZoom: number) {
     const clamped = Math.min(2, Math.max(0.5, nextZoom))
     const board = boardRef.current
@@ -1991,6 +1997,7 @@ function EditorWorkspace() {
                 )
                 setSnapTargetSlot(target)
                 setLibraryDropTarget(isOverPaletteDropZone(e.clientX, e.clientY))
+                setTrashHot(pointerInRect(trashRef.current, e.clientX, e.clientY))
               }
             }}
             onPointerUp={(e) => {
@@ -2000,8 +2007,10 @@ function EditorWorkspace() {
                 setGesture(null)
                 setSnapTargetSlot(null)
                 setLibraryDropTarget(false)
+                setTrashHot(false)
                 if (moved) {
-                  const droppedInLibrary = isOverPaletteDropZone(e.clientX, e.clientY)
+                  const droppedInLibrary =
+                    isOverPaletteDropZone(e.clientX, e.clientY) || pointerInRect(trashRef.current, e.clientX, e.clientY)
                   if (droppedInLibrary) {
                     setSelectedId(null)
                     saveBlocks(removeBlock(blocks, id))
@@ -3210,6 +3219,21 @@ function EditorWorkspace() {
                 )
               })}
               </div>
+            </div>
+
+            <div
+              ref={trashRef}
+              aria-hidden="true"
+              data-trash-zone={trashHot ? "hot" : gesture?.kind === "block" && gesture.moved ? "ready" : "idle"}
+              className={`pointer-events-none absolute bottom-3 right-3 z-30 grid place-items-center rounded-full transition-all duration-150 ${
+                trashHot
+                  ? "size-16 bg-[var(--bs-danger)] text-white shadow-md"
+                  : gesture?.kind === "block" && gesture.moved
+                    ? "size-14 bg-[var(--bs-danger-bg)] text-[var(--bs-danger)]"
+                    : "size-12 bg-white/80 text-[#8a7157]"
+              }`}
+            >
+              <Trash2 size={trashHot ? 26 : 22} />
             </div>
 
             {loadError && !project && <div className="absolute inset-0 z-30 overflow-y-auto bg-white p-6"><h2 className="text-lg font-bold">{loadError}</h2><div className="flex flex-col gap-2 mt-4">{projects.map(p=><Link key={p.id} className="rounded-lg border p-3 text-[#393533]" href={`/editor?id=${encodeURIComponent(p.id)}`}>{p.name}</Link>)}{projects.length===0&&<Link href="/dashboard" className="text-[#393533] underline">К списку проектов</Link>}</div></div>}
