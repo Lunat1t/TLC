@@ -1,4 +1,4 @@
-.tlc-install-button{position:fixed;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));z-index:20;border:1px solid #1b2033;border-radius:6px;background:#1b2033;color:white;padding:10px 15px;font:600 13px system-ui;box-shadow:none;cursor:pointer}
+.tlc-install-button{position:fixed;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));z-index:20;border:0;border-radius:999px;background:#f59a3b;color:#4a2a08;padding:10px 18px;font:800 13px system-ui;box-shadow:0 3px 0 #d9791a;cursor:pointer}
 @media (display-mode: standalone){.tlc-install-button{display:none}}
 
-.tlc-install-inline{position:static;box-shadow:none}
+.tlc-install-inline{position:static}

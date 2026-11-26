@@ -143,7 +143,7 @@ const BLOCK_CATEGORIES = [
     id: "motion",
     label: "Движение",
     icon: ArrowRight,
-    color: "#2556d9",
+    color: "#1c6c8c",
     blocks: [
       { type: "chassis", label: "Ехать", icon: Navigation },
       { type: "drive", label: "Движение мотора", icon: ArrowRight },
@@ -154,7 +154,7 @@ const BLOCK_CATEGORIES = [
     id: "sensors",
     label: "Датчики",
     icon: Waves,
-    color: "#0f7561",
+    color: "#3e7a2c",
     blocks: [
       { type: "sensor", label: "Датчик", icon: Waves },
     ],
@@ -163,7 +163,7 @@ const BLOCK_CATEGORIES = [
     id: "logic",
     label: "Логика",
     icon: Workflow,
-    color: "#a8480a",
+    color: "#b4570a",
     blocks: [
       { type: "if", label: "Если / иначе", icon: Workflow },
     ],
@@ -172,7 +172,7 @@ const BLOCK_CATEGORIES = [
     id: "controls",
     label: "Пульт",
     icon: Gamepad2,
-    color: "#1b2033",
+    color: "#4b3420",
     blocks: [
       { type: "area", label: "Область управления", icon: RectangleHorizontal },
       { type: "motor-buttons", label: "Кнопки моторов", icon: Gamepad2 },
@@ -1610,7 +1610,7 @@ function EditorWorkspace() {
           <Button
             type="button"
             onClick={() => void stopProgram()}
-            className="rounded-md min-h-[40px] px-4 font-bold bg-red-700 hover:bg-red-800 text-white"
+            className="rounded-full min-h-[40px] px-5 font-extrabold bg-[var(--bs-danger)] text-white shadow-[0_4px_0_#8f2a1f] hover:brightness-105"
           >
             ■ Стоп
           </Button>
@@ -1620,7 +1620,7 @@ function EditorWorkspace() {
             type="button"
             disabled={!project || robotState.transport === "connecting"}
             onClick={handleRunClick}
-            className="rounded-md min-h-[40px] px-4 font-bold bg-stone-700 hover:bg-stone-800 text-white"
+            className="rounded-full min-h-[40px] px-5 font-extrabold bg-[var(--bs-action)] text-[var(--bs-on-action)] shadow-[0_4px_0_var(--bs-lip-action)] hover:brightness-105"
           >
             ▶ Запуск
           </Button>
@@ -1946,7 +1946,7 @@ function EditorWorkspace() {
                       type="button"
                       disabled={starting}
                       onClick={() => checking ? void connectAndStart() : void sessionRef.current?.connect()}
-                      className="rounded-lg bg-red-700 px-2.5 py-1 text-xs font-bold text-white hover:bg-red-800 disabled:opacity-50"
+                      className="rounded-full bg-[var(--bs-danger)] px-3 py-1 text-xs font-extrabold text-white hover:brightness-105 disabled:opacity-50"
                     >
                       Переподключить
                     </button>
@@ -2052,7 +2052,7 @@ function EditorWorkspace() {
                 setGesture(null)
               }
             }}
-            className={`relative flex-1 min-h-0 overflow-hidden touch-none bg-[#fbf7f0] ${
+            data-pocket-canvas="" className={`relative flex-1 min-h-0 overflow-hidden touch-none bg-[#fbf7f0] ${
               gesture?.kind === "pan" ? "cursor-grabbing" : "cursor-grab"
             }`}
           >
@@ -3375,7 +3375,7 @@ function EditorWorkspace() {
                 <Button
                   type="button"
                   onClick={() => void connectAndStart()}
-                  className="min-h-[44px] w-full rounded-md bg-stone-700 hover:bg-stone-800 text-sm font-bold text-white"
+                  className="min-h-[44px] w-full rounded-full bg-[var(--bs-action)] text-sm font-extrabold text-[var(--bs-on-action)] shadow-[0_4px_0_var(--bs-lip-action)] hover:brightness-105"
                 >
                   {robotState.transport === "fault" ? "Переподключить и запустить" : "Подключить и запустить"}
                 </Button>
@@ -3585,7 +3585,7 @@ function EditorWorkspace() {
                   setOrientationManualHint(true)
                 }
               }}
-              className="min-h-[44px] w-full rounded-md bg-[#d12f20] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#a8211a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d12f20]"
+              className="min-h-[44px] w-full rounded-full bg-[var(--bs-action)] px-4 py-2.5 text-sm font-extrabold text-[var(--bs-on-action)] shadow-[0_4px_0_var(--bs-lip-action)] transition-[filter] hover:brightness-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--bs-text)]"
             >
               Перейти в горизонт
             </button>

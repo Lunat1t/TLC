@@ -1,5 +1,5 @@
-// Тема «Конструктор»: цвета прежней бежево-чёрной темы в CSS проекта
-// заменяются переменными --bs-* из src/app/theme.css, тени убираются.
+// Тема «Pocket Lab»: цвета прежних тем в CSS проекта заменяются переменными --bs-*
+// из src/app/theme.css, скругления становятся мягче, жёсткие тени — «губкой» снизу.
 
 const COLOR = /#[0-9a-f]{3,8}\b|rgba?\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\)|(?<![-\w.])(?:white|black)(?![-\w])/gi
 
@@ -40,7 +40,7 @@ function traits([r, g, b]) {
 function token({ rgb }, role) {
   const key = rgb.join(",")
   const { chroma, light, hue } = traits(rgb)
-  if (BRAND.has(key)) return "action"
+  if (BRAND.has(key)) return role === "text" ? "action-text" : "action"
   if (DANGER_TINT.has(key)) return role === "bg" ? "danger-bg" : "danger"
   if (chroma >= 0.45 && hue >= 28 && hue <= 55 && light > 0.4 && light < 0.8) return "reward"
   if (chroma < 0.26) {
@@ -71,6 +71,47 @@ function replace(value, role, used) {
   })
 }
 
+// Скругления: всё мельче 24px увеличиваем, круги и «таблетки» не трогаем.
+const RADIUS_SCALE = 1.9
+const RADIUS_PROPS = /^border(?:-(?:top|bottom|start|end)-(?:left|right|start|end))?-radius$/
+function softenRadius(value) {
+  if (/var\(|calc\(|%|\b\d{3,}/.test(value)) return value
+  return value.replace(/(?<![\w.-])(\d*\.?\d+)(px|rem)\b/g, (m, n, unit) => {
+    const px = unit === "rem" ? parseFloat(n) * 16 : parseFloat(n)
+    if (px < 2 || px >= 24) return m
+    return `${Math.min(24, Math.round(px * RADIUS_SCALE * 2) / 2)}px`
+  })
+}
+
+// Тени: жёсткая со смещением → «губка» цвета --bs-lip; мягкая → тёплая размытая.
+// Кольца (0 0 0 Npx), inset и уже тематические тени остаются как есть.
+const SOFT_SHADOW = "0 8px 22px color-mix(in srgb, var(--bs-shadow) 20%, transparent)"
+function splitLayers(value) {
+  const out = []
+  let depth = 0, cur = ""
+  for (const ch of value) {
+    if (ch === "(") depth++
+    if (ch === ")") depth--
+    if (ch === "," && depth === 0) { out.push(cur.trim()); cur = "" } else cur += ch
+  }
+  if (cur.trim()) out.push(cur.trim())
+  return out
+}
+function softenShadow(value) {
+  if (/var\(--bs-|var\(--tw-ring|var\(--tw-shadow|^\s*(?:none|inherit|initial|unset)\s*$/.test(value)) return value
+  const seen = new Set()
+  const layers = splitLayers(value).map((layer) => {
+    if (/\binset\b/.test(layer)) return layer
+    const nums = [...layer.replace(COLOR, " ").matchAll(/(-?\d*\.?\d+)(?:px)?(?![\w.])/g)].map((m) => parseFloat(m[1]))
+    const [x = 0, y = 0, blur = 0, spread = 0] = nums
+    if (!x && !y && !blur) return layer
+    if (blur > 0) return SOFT_SHADOW
+    if (!x && !y) return layer
+    return `0 ${Math.min(5, Math.max(2, Math.round(Math.max(Math.abs(x), Math.abs(y)))))}px 0 var(--bs-lip)`
+  }).filter((l) => (seen.has(l) ? false : seen.add(l)))
+  return layers.join(", ")
+}
+
 function roleOf(prop) {
   if (prop.startsWith("--")) {
     if (/^--(?:bs|tw-(?:shadow|ring))/.test(prop)) return null
@@ -97,8 +138,16 @@ module.exports = () => ({
       rule.each((decl) => {
         if (decl.type !== "decl") return
         const prop = decl.prop.toLowerCase()
-        if (prop === "text-shadow" || (prop === "box-shadow" && !keepsRing)) {
+        if (prop === "text-shadow") {
           decl.value = "none"
+          return
+        }
+        if ((prop === "box-shadow" && !keepsRing) || prop === "--tw-shadow") {
+          decl.value = softenShadow(decl.value)
+          return
+        }
+        if (RADIUS_PROPS.test(prop)) {
+          decl.value = softenRadius(decl.value)
           return
         }
         if (prop === "filter" && /drop-shadow/.test(decl.value)) {
@@ -116,6 +165,12 @@ module.exports = () => ({
         }
       })
       if (!fill) return
+      // «Губка» кнопки в цвет её заливки.
+      rule.walkDecls((d) => {
+        if ((d.prop === "box-shadow" || d.prop === "--tw-shadow") && d.value.includes("var(--bs-lip)")) {
+          d.value = d.value.replace(/var\(--bs-lip\)/g, `var(--bs-lip-${fill})`)
+        }
+      })
       // Цвет подписи на цветной заливке задаётся темой.
       const value = `var(--bs-on-${fill})`
       if (hasColor) rule.each((d) => { if (d.type === "decl" && d.prop === "color") d.value = value })

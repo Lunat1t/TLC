@@ -152,7 +152,7 @@ export default function SettingsPage() {
         </h2>
 
         <section hidden={tab !== "appearance"}>
-          <p>Включена тема «Конструктор».</p>
+          <p>Включена тема «Pocket Lab».</p>
         </section>
 
         <section hidden={tab !== "account"} className="settings-account-section">

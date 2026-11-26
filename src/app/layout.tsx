@@ -7,12 +7,21 @@ import { AccountWorkspaceProvider } from "@/components/lab/account-workspace"
 import { AccessProvider } from "@/components/auth/access-provider"
 import { AppStartup } from "@/components/auth/app-startup"
 
-const onest = localFont({
+const nunito = localFont({
   src: [
-    { path: "./fonts/onest-cyrillic-wght-normal.woff2", weight: "100 900", style: "normal" },
-    { path: "./fonts/onest-latin-wght-normal.woff2", weight: "100 900", style: "normal" },
+    { path: "./fonts/nunito-cyrillic-wght-normal.woff2", weight: "200 1000", style: "normal" },
+    { path: "./fonts/nunito-latin-wght-normal.woff2", weight: "200 1000", style: "normal" },
   ],
-  variable: "--font-onest",
+  variable: "--font-nunito",
+  display: "swap",
+})
+
+const lora = localFont({
+  src: [
+    { path: "./fonts/lora-cyrillic-wght-normal.woff2", weight: "400 700", style: "normal" },
+    { path: "./fonts/lora-latin-wght-normal.woff2", weight: "400 700", style: "normal" },
+  ],
+  variable: "--font-lora",
   display: "swap",
 })
 
@@ -35,7 +44,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: "#2556d9",
+  themeColor: "#d9a566",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -47,7 +56,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="ru" className={`${onest.variable} ${jetbrainsMono.variable}`}>
+    <html lang="ru" className={`${nunito.variable} ${lora.variable} ${jetbrainsMono.variable}`}>
       <body className="min-h-dvh flex flex-col">
         <AccessProvider>
           <AccountWorkspaceProvider>

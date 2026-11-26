@@ -1,6 +1,6 @@
 /* TLC local project workspace home screen. */
 :root {
-  --home-font: var(--font-onest), Onest, ui-sans-serif, system-ui, sans-serif;
+  --home-font: var(--font-nunito), Nunito, ui-sans-serif, system-ui, sans-serif;
   --home-ink: #201e1d;
   --home-muted: #716a61;
   --home-line: #f1e4ce;

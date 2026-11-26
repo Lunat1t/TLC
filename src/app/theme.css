@@ -1,31 +1,191 @@
-/* Тема «Конструктор» без теней. Палитра меняется здесь; перенос старых цветов — scripts/postcss-brick.cjs. */
+/* Тема «Pocket Lab»: уютный карманный блокнот-лаборатория.
+   Бумага, коричневые чернила, обложка цвета кожи, оранжевая главная кнопка,
+   мягкие скругления и «губка» вместо тени. Палитра меняется здесь;
+   перенос старых цветов и скругления — scripts/postcss-brick.cjs. */
 :root {
-  --bs-bg: #ffffff;
-  --bs-card: #ffffff;
-  --bs-deep: #1b2033;
-  --bs-line: #cdd3e4;
-  --bs-text: #1b2033;
-  --bs-muted: #555d75;
-  --bs-on-dark: #ffffff;
-  --bs-action: #2556d9;
-  --bs-on-action: #ffffff;
-  --bs-reward: #ffcb3d;
-  --bs-on-reward: #3d2c00;
-  --bs-danger: #b3261e;
-  --bs-danger-bg: #fdecec;
+  --bs-bg: #fbf5e8;          /* страница блокнота */
+  --bs-card: #fffdf7;        /* карточка, лист поверх страницы */
+  --bs-deep: #7a5230;        /* тёмная заливка: переплёт, плашки */
+  --bs-line: #e7d6b6;        /* линии и рамки */
+  --bs-text: #4b3420;        /* чернила */
+  --bs-muted: #7a634a;       /* вторичный текст */
+  --bs-on-dark: #fff8ea;
+  --bs-action: #f59a3b;      /* главная кнопка */
+  --bs-action-text: #a94f08;  /* оранжевый для текста на бумаге */
+  --bs-on-action: #4a2a08;
+  --bs-reward: #ffd45e;
+  --bs-on-reward: #4a3300;
+  --bs-danger: #c0392b;
+  --bs-danger-bg: #fde9e1;
+
+  --bs-cover: #dcab6c;       /* обложка: рамка, верхняя панель, док */
+  --bs-cover-deep: #b9824a;
+  --bs-cover-ink: #4a2f14;
+  --bs-lip: #e2cfa9;         /* «губка» карточек */
+  --bs-lip-action: #d9791a;
+  --bs-lip-reward: #e3b232;
+  --bs-shadow: #6b4a2b;
+  --bs-sky: #79c3dc;
+  --bs-leaf: #9fcf86;
+  --bs-berry: #ee9a9a;
+  --bs-tint: #f5ead3;        /* фон полей и неактивных кнопок */
   color-scheme: light;
 }
 
-/* Тени, заданные прямо в разметке. */
-html body [style*="box-shadow"]:not(:focus-visible) { box-shadow: none !important; }
+html body :focus-visible { outline-color: var(--bs-action); }
 
-/* Блоки редактора: свой цвет у каждой категории. */
-html body [data-block-cat="events"] { --block: #ffcb3d; --block-ink: #3d2c00; }
-html body [data-block-cat="motion"] { --block: #2556d9; --block-ink: #ffffff; }
-html body [data-block-cat="sensors"] { --block: #0f7561; --block-ink: #ffffff; }
-html body [data-block-cat="logic"] { --block: #ff9b45; --block-ink: #3d2000; }
+/* ───────── Мир за блокнотом: небо и луг (вход, регистрация) ───────── */
+html body .tlc-os.is-public > .os-content { background: transparent; }
+html body .paper-grid {
+  background-color: #e7f5ee;
+  background-image:
+    radial-gradient(130% 42% at 12% 104%, #b3d99b 0 58%, transparent 59%),
+    radial-gradient(120% 40% at 92% 108%, #94c783 0 58%, transparent 59%),
+    linear-gradient(#c6e8ef 0%, #e7f5ee 62%, #fbf5e8 100%);
+  background-attachment: fixed;
+}
 
-/* У «Если» красятся только части С-образной формы, у остальных — весь блок. */
+/* ───────── Обложка: рамка вокруг страницы ───────── */
+html body .tlc-os.is-app {
+  --frame-x: 12px;
+  --frame-b: 12px;
+  background: var(--bs-cover);
+}
+@media (min-width: 900px) {
+  /* Корешок с кольцами переплёта. */
+  html body .tlc-os.is-app {
+    padding-left: 34px;
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='40'%3E%3Crect x='6' y='15' width='24' height='11' rx='5.5' fill='%23b9824a'/%3E%3Crect x='6' y='13' width='24' height='11' rx='5.5' fill='%23fff8ea'/%3E%3Crect x='9' y='16' width='10' height='3' rx='1.5' fill='%23ffffff' opacity='.9'/%3E%3C/svg%3E")
+        left top / 34px 40px repeat-y,
+      var(--bs-cover);
+  }
+}
+
+/* Страница: бумага в точечную клетку. */
+html body .tlc-os.is-app > .os-content {
+  border-radius: 22px;
+  background-color: var(--bs-bg);
+  background-image: radial-gradient(circle at center, rgba(185, 130, 74, .26) 1.2px, transparent 1.7px);
+  background-size: 24px 24px;
+  box-shadow: 0 0 0 2px var(--bs-cover-deep), 0 4px 0 2px var(--bs-cover-deep);
+}
+html body .tlc-os.is-app > .os-content:has(.pdf-reader) { background-image: none; }
+
+/* ───────── Верхняя панель: вкладки блокнота ───────── */
+html body .studio-topbar {
+  --bar-bg: var(--bs-cover);
+  --bar-ink: var(--bs-cover-ink);
+  --bar-muted: #6b4a28;
+  --bar-surface: rgba(255, 255, 255, .3);
+  --bar-surface-hover: rgba(255, 255, 255, .5);
+  --bar-active: var(--bs-bg);
+  --bar-border: rgba(75, 52, 32, .18);
+  align-items: end;
+  min-height: calc(62px + env(safe-area-inset-top));
+}
+html body .studio-topbar > * { align-self: end; }
+html body .studio-brand { padding-bottom: 10px; color: var(--bs-cover-ink); font-family: var(--font-display); font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+html body .studio-brand-mark {
+  background: var(--bs-card); background-image: none; color: var(--bs-text);
+  width: 32px; height: 32px; border-radius: 12px; font-size: 13px; font-weight: 800;
+  box-shadow: 0 3px 0 var(--bs-cover-deep);
+}
+html body .studio-nav-center, html body .studio-tabs { align-items: end; }
+html body .studio-nav-center { align-self: end; }
+html body .studio-tab {
+  height: 40px; border-radius: 16px 16px 0 0; padding: 0 14px;
+  background: rgba(255, 255, 255, .3); color: var(--bs-cover-ink); font-weight: 800;
+}
+html body .studio-tab:hover { background: rgba(255, 255, 255, .52); color: var(--bs-cover-ink); }
+html body .studio-tab[data-active="true"] { height: 48px; padding: 0 18px; background: var(--bs-bg); color: var(--bs-text); }
+html body .studio-tab[data-active="true"], html body .studio-tab[data-active="true"] * { color: var(--bs-text); }
+html body .studio-tab[data-active="true"] svg { color: var(--bs-cover-deep); }
+html body .studio-tab-notch { display: none; }
+
+html body .studio-topbar :is(.studio-guest-register) { color: var(--bs-cover-ink); font-weight: 800; border-radius: 999px; }
+html body .studio-topbar .studio-guest-login {
+  background: var(--bs-action); background-image: none; color: var(--bs-on-action);
+  border-radius: 999px; font-weight: 800; box-shadow: 0 3px 0 var(--bs-lip-action);
+}
+html body .studio-topbar .studio-guest-login svg { background: transparent; color: var(--bs-on-action); }
+html body .studio-account { padding-bottom: 8px; }
+html body .studio-guest-actions { padding-bottom: 8px; }
+html body .studio-account-trigger { border-radius: 999px; color: var(--bs-cover-ink); }
+html body .studio-account-avatar { border-radius: 50%; border: 2px solid var(--bs-card); color: var(--bs-cover-ink); font-weight: 800; }
+html body .studio-account-meta small, html body .studio-account-chevron { color: #6b4a28; }
+html body .studio-quick-signout { border-radius: 999px; background: rgba(255, 255, 255, .3); color: #8a2f1f; font-weight: 800; }
+html body .studio-quick-signout:hover { background: rgba(255, 255, 255, .55); color: #7a2415; }
+html body .studio-plus-btn { border-radius: 14px; background: rgba(255, 255, 255, .3); color: var(--bs-cover-ink); }
+html body .studio-plus-btn[data-route-active="true"] { border-color: transparent; background: var(--bs-bg); color: var(--bs-text); }
+html body :is(.studio-topbar, .studio-create-dock) :is(a, button):focus-visible { outline-color: var(--bs-text); }
+
+/* Меню: листочки бумаги. */
+html body :is(.studio-account-menu, .studio-plus-menu) {
+  background: var(--bs-card); color: var(--bs-text);
+  border: 2px solid var(--bs-line); border-radius: 20px; box-shadow: 0 4px 0 var(--bs-lip);
+}
+html body :is(.studio-account-menu, .studio-plus-menu) :is(a, button, strong, span, small, svg) { color: var(--bs-text); }
+html body :is(.studio-account-menu, .studio-plus-menu) :is(a, button) { border-radius: 14px; }
+html body :is(.studio-account-menu, .studio-plus-menu) :is(a, button):hover,
+html body :is(.studio-account-menu, .studio-plus-menu) [aria-current="page"] { background: var(--bs-tint); }
+html body .studio-plus-heading { color: var(--bs-muted); letter-spacing: .02em; text-transform: none; font-size: 12px; }
+html body .studio-account-menu .studio-account-item.is-danger, html body .studio-account-menu .studio-account-item.is-danger * { color: var(--bs-danger); }
+
+/* ───────── Нижний док: карман с инструментами ───────── */
+html body .studio-create-dock { background: var(--bs-cover); box-shadow: none; border-radius: 26px 26px 0 0; padding: 10px 16px 9px; }
+html body .studio-create-shoulder { color: var(--bs-cover); }
+html body .studio-create-dock .studio-create-btn {
+  border: 0 !important; border-radius: 16px; background: var(--bs-card);
+  box-shadow: 0 4px 0 var(--bs-cover-deep) !important;
+}
+html body .studio-create-dock .studio-create-btn:not(:disabled):hover { transform: translateY(-3px); filter: none; }
+html body .studio-create-dock .studio-create-btn:not(:disabled):active { transform: translateY(2px); box-shadow: 0 1px 0 var(--bs-cover-deep) !important; }
+html body .studio-create-dock .studio-create-btn[data-tone="note"] { background: #fff3c4; color: #a86d00; }
+html body .studio-create-dock .studio-create-btn[data-tone="image"] { background: #dcf1d2; color: #2d7a4a; }
+html body .studio-create-dock .studio-create-btn[data-tone="program"] { background: #ffe0bd; color: #c4600a; }
+html body .studio-create-dock .studio-create-btn[data-tone="shortcut"] { background: #e7def7; color: #6f4cc0; }
+html body .studio-create-dock .studio-create-btn[data-tone="widget"] { background: #ffdde0; color: #c0405a; }
+html body .studio-create-dock .studio-create-btn > svg { width: 26px; height: 26px; stroke-width: 2.3; }
+html body .studio-create-tooltip { background: var(--bs-text); color: var(--bs-card); border-radius: 12px; }
+
+/* ───────── Рабочий стол ───────── */
+html body .tlc-os.is-desktop .os-content :is(.tlc-page-frame, .home-shell, .home-content, .home-main, .desktop-lab, .desktop-board-surface, .desktop-canvas) { background: transparent !important; }
+html body .tlc-os.is-desktop .desktop-app-icon {
+  width: 72px; height: 72px; border-radius: 24px;
+  background: var(--bs-card) !important; color: var(--bs-cover-deep) !important;
+  border: 0 !important; box-shadow: 0 5px 0 var(--bs-lip) !important;
+}
+html body .tlc-os.is-desktop .desktop-app-icon svg { color: inherit !important; }
+html body .tlc-os.is-desktop .desktop-launch { background: transparent !important; border: 0 !important; }
+html body .tlc-os.is-desktop .desktop-launch:hover .desktop-app-icon { transform: translateY(-3px); filter: none; }
+html body .tlc-os.is-desktop .desktop-launch:active .desktop-app-icon { transform: translateY(2px); box-shadow: 0 1px 0 var(--bs-lip) !important; }
+html body .tlc-os.is-desktop .desktop-app-icon { transition: transform 140ms ease, box-shadow 140ms ease; }
+html body .tlc-os.is-desktop .desktop-launch strong {
+  background: rgba(255, 253, 247, .92) !important; color: var(--bs-text) !important;
+  border-radius: 12px; padding: 3px 9px; font-weight: 800; text-shadow: none !important;
+}
+/* Ярлыки программ по роботу: SPIKE — солнечный, EV3 — коралловый. */
+html body .tlc-os.is-desktop .desktop-app-icon.is-project-spike { background: var(--bs-reward) !important; box-shadow: 0 5px 0 var(--bs-lip-reward) !important; }
+html body .tlc-os.is-desktop .desktop-app-icon.is-project-spike, html body .tlc-os.is-desktop .desktop-app-icon.is-project-spike svg { color: var(--bs-on-reward) !important; }
+html body .tlc-os.is-desktop .desktop-app-icon.is-project-ev3 { background: #ef8566 !important; box-shadow: 0 5px 0 #cf6342 !important; }
+html body .tlc-os.is-desktop .desktop-app-icon.is-project-ev3, html body .tlc-os.is-desktop .desktop-app-icon.is-project-ev3 svg { color: #3b1708 !important; }
+
+/* Окна и диалоги — листы бумаги. */
+html body :is(.desktop-project-window, .picture-picker, .program-picker, .shortcut-actions) {
+  border: 2px solid var(--bs-line); border-radius: 24px; background: var(--bs-card); color: var(--bs-text);
+  box-shadow: 0 6px 0 var(--bs-lip);
+}
+html body .program-picker-card { border: 2px solid var(--bs-line); border-radius: 20px; box-shadow: 0 4px 0 var(--bs-lip); }
+html body .program-picker-card:hover:not(:disabled) { border-color: var(--bs-action); }
+html body .program-picker-stage { border: 0; border-radius: 16px; background: var(--bs-tint); }
+
+/* ───────── Редактор: блоки как мягкие пластилиновые детали ───────── */
+html body [data-block-cat="events"] { --block: #ffd45e; --block-ink: #4a3300; }
+html body [data-block-cat="motion"] { --block: #79c3dc; --block-ink: #12384a; }
+html body [data-block-cat="sensors"] { --block: #9fcf86; --block-ink: #21421a; }
+html body [data-block-cat="logic"] { --block: #ffaa63; --block-ink: #4a2400; }
+
 html body [data-block-cat]:not([data-block-cat="logic"]),
 html body [data-block-cat="logic"] .block-fill,
 html body [data-block-cat="logic"][class*="fixed"],
@@ -34,100 +194,74 @@ html body [data-block-cat] .block-fill { border-color: var(--block) !important; 
 html body [data-block-cat]:not([data-block-cat="logic"]) { border-color: var(--block) !important; color: var(--block-ink) !important; }
 html body [data-block-cat="logic"][class*="fixed"] { color: var(--block-ink) !important; }
 
-/* Подписи прямо на блоке. Поля, кнопки и меню остаются светлыми с тёмным текстом. */
 html body [data-block-cat] :not(:is(button, select, input, .bg-white, [role="alert"], [class*="z-50"]), [data-block-cat] :is(button, .bg-white, [role="alert"], [class*="z-50"]) *) { color: var(--block-ink) !important; }
-html body [data-block-cat] :is(button, select, input):not([data-block-cat] [class*="z-50"] *) { background-color: #fff !important; color: #1b2033 !important; }
-html body [data-block-cat] button:not([data-block-cat] [class*="z-50"] *) * { color: #1b2033 !important; }
+html body [data-block-cat] :is(button, select, input):not([data-block-cat] [class*="z-50"] *) { background-color: var(--bs-card) !important; color: var(--bs-text) !important; border-radius: 12px; }
+html body [data-block-cat] button:not([data-block-cat] [class*="z-50"] *) * { color: var(--bs-text) !important; }
 html body [data-block-cat] button[aria-pressed]:not([data-block-cat] [class*="z-50"] *) *:not([style]) { background-color: transparent !important; }
 
-/* Значки в каталоге. */
-html body [data-catalog-icon], html body [data-catalog-icon] * { color: #fff !important; }
-html body [data-catalog-icon="events"] { background-color: #ffcb3d !important; }
-html body [data-catalog-icon="logic"] { background-color: #ff9b45 !important; }
-html body [data-catalog-icon="events"], html body [data-catalog-icon="events"] *,
-html body [data-catalog-icon="logic"], html body [data-catalog-icon="logic"] * { color: #3d2c00 !important; }
-
-/* Рабочий стол: ровный фон без обоев и узоров. */
-html body .tlc-os.is-desktop > .os-content { background: var(--bs-bg) !important; }
-html body .tlc-os.is-desktop .os-content :is(.tlc-page-frame, .home-shell, .home-content, .home-main, .desktop-lab, .desktop-board-surface, .desktop-canvas) { background: transparent !important; }
-html body .tlc-os.is-desktop .desktop-app-icon { background: var(--bs-card) !important; color: var(--bs-action) !important; border: 1px solid var(--bs-line) !important; }
-html body .tlc-os.is-desktop .desktop-app-icon svg { color: var(--bs-action) !important; }
-html body .tlc-os.is-desktop .desktop-launch { background: transparent !important; border: 0 !important; }
-html body .tlc-os.is-desktop .desktop-launch strong { background: transparent !important; color: var(--bs-text) !important; text-shadow: none !important; }
-
-/* Синяя рамка: верхняя панель, края и нижний док — одна деталь. Меню белые. */
-html body .tlc-os.is-app { background: var(--bs-action); }
-html body .studio-topbar {
-  --bar-bg: var(--bs-action);
-  --bar-ink: #ffffff;
-  --bar-muted: #dbe4ff;
-  --bar-surface: rgba(255,255,255, .14);
-  --bar-surface-hover: rgba(255,255,255, .22);
-  --bar-active: transparent;
-  --bar-border: rgba(255,255,255, .24);
+/* Рабочая область редактора: бумага в точку. */
+html body [data-pocket-canvas] {
+  background-color: var(--bs-bg);
+  background-image: radial-gradient(circle at center, rgba(185, 130, 74, .3) 1.3px, transparent 1.8px);
+  background-size: 26px 26px;
 }
-html body .studio-topbar .studio-tab[data-active="true"], html body .studio-topbar .studio-tab[data-active="true"] * { color: #ffffff; }
-html body .studio-topbar .studio-tab[data-active="true"] .studio-tab-notch, html body .studio-topbar .studio-tab[data-active="true"] .studio-tab-notch * { color: var(--bs-action); }
 
-html body .studio-topbar :is(.studio-brand, .studio-guest-register) { color: #ffffff; }
-html body .studio-topbar :is(.studio-brand-mark, .studio-guest-login), html body .studio-topbar .studio-guest-login svg { background-color: #ffffff; background-image: none; color: var(--bs-action); }
-html body :is(.studio-topbar, .studio-create-dock) :is(a, button):focus-visible { outline-color: #ffffff; }
-html body :is(.studio-account-menu, .studio-plus-menu) { background: var(--bs-card); color: var(--bs-text); border: 1px solid var(--bs-line); }
-html body :is(.studio-account-menu, .studio-plus-menu) :is(a, button, strong, span, small, svg) { color: var(--bs-text); }
-html body :is(.studio-account-menu, .studio-plus-menu) :is(a, button):hover,
-html body :is(.studio-account-menu, .studio-plus-menu) [aria-current="page"] { background: #eef1f8; }
-html body .studio-account-menu .studio-account-item.is-danger, html body .studio-account-menu .studio-account-item.is-danger * { color: var(--bs-danger); }
-html body .studio-account-menu :is(a, button):focus-visible, html body .studio-plus-menu :is(a, button):focus-visible { outline-color: var(--bs-action); }
-html body .studio-create-dock { background: var(--bs-action); }
-html body .studio-create-shoulder { color: var(--bs-action); }
+/* Значки категорий в каталоге блоков. */
+html body [data-catalog-icon], html body [data-catalog-icon] * { color: #12384a !important; }
+html body [data-catalog-icon="events"] { background-color: #ffd45e !important; }
+html body [data-catalog-icon="motion"] { background-color: #79c3dc !important; }
+html body [data-catalog-icon="sensors"] { background-color: #9fcf86 !important; }
+html body [data-catalog-icon="logic"] { background-color: #ffaa63 !important; }
+html body [data-catalog-icon="controls"] { background-color: #e8d9bd !important; }
+html body [data-catalog-icon="events"], html body [data-catalog-icon="events"] * { color: #4a3300 !important; }
+html body [data-catalog-icon="sensors"], html body [data-catalog-icon="sensors"] * { color: #21421a !important; }
+html body [data-catalog-icon="logic"], html body [data-catalog-icon="logic"] * { color: #4a2400 !important; }
+html body [data-catalog-icon="controls"], html body [data-catalog-icon="controls"] * { color: #4b3420 !important; }
+html body [data-catalog-icon] { border-radius: 10px; }
 
-/* Кнопки нижнего дока: белые, у каждой значок своего цвета. */
-html body .studio-create-dock .studio-create-btn { border: 0 !important; }
-html body .studio-create-dock .studio-create-btn[data-tone="note"] { background: #ffffff; color: #c98a00; }
-html body .studio-create-dock .studio-create-btn[data-tone="image"] { background: #ffffff; color: #0f8a66; }
-html body .studio-create-dock .studio-create-btn[data-tone="program"] { background: #ffffff; color: #e2620a; }
-html body .studio-create-dock .studio-create-btn[data-tone="shortcut"] { background: #ffffff; color: #7c4dcc; }
-html body .studio-create-dock .studio-create-btn[data-tone="widget"] { background: #ffffff; color: #c92a6d; }
-html body .studio-create-dock .studio-create-btn > svg { width: 26px; height: 26px; stroke-width: 2.4; }
-
-/* Ярлыки программ по роботу: SPIKE — жёлтый, EV3 — красный. */
-html body .tlc-os.is-desktop .desktop-app-icon.is-project-spike { background: #ffcb3d !important; border-color: #ffcb3d !important; }
-html body .tlc-os.is-desktop .desktop-app-icon.is-project-spike, html body .tlc-os.is-desktop .desktop-app-icon.is-project-spike svg { color: #3d2c00 !important; }
-html body .tlc-os.is-desktop .desktop-app-icon.is-project-ev3 { background: #d92d20 !important; border-color: #d92d20 !important; }
-html body .tlc-os.is-desktop .desktop-app-icon.is-project-ev3, html body .tlc-os.is-desktop .desktop-app-icon.is-project-ev3 svg { color: #ffffff !important; }
-
-/* Роадмап: меньше текста, значки вместо подписей. */
+/* ───────── Роадмап: тетрадь с карточками-наклейками ───────── */
 html body .rm-top-row { flex-wrap: nowrap; }
-html body .rm-kit-btn { border: 0; background: #eef1f8; color: var(--bs-muted); }
-html body .rm-kit-btn[aria-pressed="true"] { background: var(--bs-action); color: #fff; }
-html body .rm-kit-btn[data-kit="spike"][aria-pressed="true"] { background: #ffcb3d; color: #3d2c00; }
-html body .rm-kit-btn[data-kit="ev3"][aria-pressed="true"] { background: #d92d20; color: #fff; }
-html body .rm-icon-link { display: grid; place-items: center; flex: 0 0 44px; height: 44px; border: 1px solid var(--bs-line); border-radius: 8px; color: var(--bs-text); }
+html body .rm-kit-btn { border: 0; border-radius: 999px; background: var(--bs-tint); color: var(--bs-muted); font-weight: 800; }
+html body .rm-kit-btn[aria-pressed="true"] { background: var(--bs-action); color: var(--bs-on-action); box-shadow: 0 3px 0 var(--bs-lip-action); }
+html body .rm-kit-btn[data-kit="spike"][aria-pressed="true"] { background: var(--bs-reward); color: var(--bs-on-reward); box-shadow: 0 3px 0 var(--bs-lip-reward); }
+html body .rm-kit-btn[data-kit="ev3"][aria-pressed="true"] { background: #ef8566; color: #3b1708; box-shadow: 0 3px 0 #cf6342; }
+html body .rm-icon-link { display: grid; place-items: center; flex: 0 0 44px; height: 44px; border: 2px solid var(--bs-line); border-radius: 16px; background: var(--bs-card); color: var(--bs-text); }
 html body .rm-rank-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 0; border: 0; background: transparent; }
-html body .rm-rank-button { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; border: 0; background: transparent; color: var(--bs-text); font-size: 20px; cursor: pointer; }
-html body .rm-rank-bar .rm-meter { flex: 1 1 120px; height: 12px; background: #e3e8f5; }
+html body .rm-rank-button { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; border: 0; background: transparent; color: var(--bs-text); font-family: var(--font-display); font-size: 20px; font-weight: 700; cursor: pointer; }
+html body .rm-rank-bar .rm-meter { flex: 1 1 120px; height: 14px; border-radius: 999px; background: var(--bs-line); }
 html body .rm-skills-row { flex-wrap: nowrap; gap: 4px; }
-html body .rm-skill-count { display: inline-flex; align-items: center; gap: 5px; min-width: 44px; min-height: 44px; justify-content: center; border: 0; background: transparent; color: var(--bs-text); font-weight: 700; cursor: pointer; }
+html body .rm-skill-count { display: inline-flex; align-items: center; gap: 5px; min-width: 44px; min-height: 44px; justify-content: center; border: 0; background: transparent; color: var(--bs-text); font-weight: 800; cursor: pointer; }
 html body .rm-tier { border: 0; padding: 4px 0; background: transparent; }
 html body .rm-tier-head { justify-content: flex-start; gap: 10px; }
-html body .rm-tier-head h2 { margin: 0; font-size: 20px; font-weight: 700; }
-html body .rm-tier-lock { display: inline-flex; align-items: center; gap: 4px; color: var(--bs-muted); font-weight: 700; }
+html body .rm-tier-head h2 { margin: 0; font-size: 22px; font-weight: 700; }
+html body .rm-tier-lock { display: inline-flex; align-items: center; gap: 4px; color: var(--bs-muted); font-weight: 800; }
 html body .rm-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); }
-html body .rm-card { width: auto; min-height: 0; align-items: center; text-align: center; border: 2px solid transparent; border-radius: 14px; background: #f3f5fb; }
-html body .rm-card:hover, html body .rm-card:focus-visible, html body .rm-card.is-selected { transform: none; border-color: var(--bs-action); }
-html body .rm-card.is-completed { background: #e5f6ee; }
+html body .rm-card {
+  width: auto; min-height: 0; align-items: center; text-align: center;
+  border: 2px solid var(--bs-line); border-radius: 24px; background: var(--bs-card);
+  box-shadow: 0 5px 0 var(--bs-lip);
+}
+html body .rm-card:hover, html body .rm-card:focus-visible, html body .rm-card.is-selected { transform: translateY(-2px); border-color: var(--bs-action); }
+html body .rm-card.is-completed { background: #eaf6df; border-color: #c4e2b0; box-shadow: 0 5px 0 #c4e2b0; }
+html body .rm-card.is-locked { background: var(--bs-tint); box-shadow: none; }
 html body .rm-card.is-locked .rm-card-cover, html body .rm-card.is-locked .rm-card-chips { opacity: .5; }
-html body .rm-card-cover { width: 100%; height: 150px; }
-html body .rm-card-mark { position: absolute; top: 8px; right: 8px; z-index: 1; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #fff; color: var(--bs-muted); }
-html body .rm-card.is-completed .rm-card-mark { background: #0f7561; color: #fff; }
+html body .rm-card-cover { width: 100%; height: 150px; border-radius: 18px; }
+html body .rm-card-mark { position: absolute; top: 10px; right: 10px; z-index: 1; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--bs-card); color: var(--bs-muted); }
+html body .rm-card.is-completed .rm-card-mark { background: #5aa84a; color: #fff; }
 html body .rm-card-chips { justify-content: center; gap: 12px; }
-html body .rm-chip { display: inline-flex; align-items: center; gap: 4px; padding: 0; background: transparent; color: var(--bs-text); font-size: 14px; }
+html body .rm-chip { display: inline-flex; align-items: center; gap: 4px; padding: 0; background: transparent; color: var(--bs-text); font-size: 14px; font-weight: 700; }
 html body .rm-skill-levels { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 6px; }
 html body .rm-skill-levels li { display: grid; grid-template-columns: 20px 1fr auto 64px; align-items: center; gap: 8px; font-size: 13px; }
-html body .rm-card.is-completed:not(.is-selected), html body .rm-card.is-locked:not(.is-selected) { border: 2px solid transparent; }
-html body .rm-card.is-completed:hover, html body .rm-card.is-completed:focus-visible { border-color: var(--bs-action); }
+html body .rm-card.is-completed:hover, html body .rm-card.is-completed:focus-visible { border-color: #5aa84a; }
 @media (max-width: 640px) {
   html body .rm-cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   html body .rm-card-cover { height: 110px; }
 }
-html body .rm-card.is-locked { background: #f3f5fb; }
+
+/* Подписи капсом — слишком строго для уютного блокнота. */
+html body .uppercase { text-transform: none; letter-spacing: normal; }
+
+/* ───────── Мелочи: поля, подсказки, выделение ───────── */
+html body :is(input, textarea, select):not([type="checkbox"], [type="radio"], [type="range"], [type="color"]) { border-radius: 14px; }
+html body ::selection { background: #ffd45e; color: var(--bs-text); }
+html body ::placeholder { color: #a08a6e; opacity: 1; }
