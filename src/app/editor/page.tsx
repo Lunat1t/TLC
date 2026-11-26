@@ -16,7 +16,6 @@ import {
   Gamepad2,
   Gauge,
   GitBranch,
-  Link2,
   LayoutGrid,
   Monitor,
   Navigation,
@@ -2291,20 +2290,20 @@ function EditorWorkspace() {
                       isIfBlock
                         ? "pointer-events-none text-[#252221]"
                         : isMotorButtons
-                          ? `${buttonDrag?.blockId === block.id ? "overflow-visible" : "overflow-hidden"} rounded-md border border-[#1d1b1a73] bg-[#faf5ec] text-[#252221] shadow-[0_3px_0_rgba(29,27,26,0.16)]`
+                          ? `${buttonDrag?.blockId === block.id ? "overflow-visible" : "overflow-hidden"} rounded-md border border-[#1d1b1a73] bg-[#faf5ec] text-[#252221]`
                         : isButtonBlock
-                          ? "w-max min-h-[58px] bg-[#f8f2e7] text-[#252221] border-l-4 border-[#e85d2a] shadow-sm"
+                          ? "w-max min-h-[58px] bg-[#f8f2e7] text-[#252221] border-l-4 border-[#e85d2a]"
                           : isSensorBlock
-                            ? "w-max min-h-[64px] bg-[#f8f2e7] text-[#252221] border-l-4 border-[#d12f20] shadow-sm"
+                            ? "w-max min-h-[64px] bg-[#f8f2e7] text-[#252221] border-l-4 border-[#d12f20]"
                           : isStopBlock
-                            ? "w-max min-h-[64px] bg-[#f8f2e7] text-[#252221] border-l-4 border-[#b1372c] shadow-sm"
+                            ? "w-max min-h-[64px] bg-[#f8f2e7] text-[#252221] border-l-4 border-[#b1372c]"
                             : isChassisBlock
-                              ? "w-max min-h-[64px] bg-[#f8f2e7] text-[#252221] border-l-4 border-[#a8211a] shadow-sm"
+                              ? "w-max min-h-[64px] bg-[#f8f2e7] text-[#252221] border-l-4 border-[#a8211a]"
                               : motorBlock
                                 ? paired
-                                  ? "w-max min-h-[64px] bg-[#393533] text-white shadow-[0_3px_0_rgba(29,27,26,0.16)]"
-                                  : "w-max min-h-[64px] bg-[#625c54] text-white shadow-[0_3px_0_rgba(29,27,26,0.16)]"
-                                : "w-[320px] min-h-[58px] bg-[#f59e0b] text-white px-5 flex items-center shadow-[0_3px_0_rgba(29,27,26,0.16)]"
+                                  ? "w-max min-h-[64px] bg-[#393533] text-white"
+                                  : "w-max min-h-[64px] bg-[#625c54] text-white"
+                                : "w-[320px] min-h-[58px] bg-[#f59e0b] text-white px-5 flex items-center"
                     } ${
                       isJustAdded ? "animate-lego-spawn" : ""
                     } ${
@@ -2436,7 +2435,7 @@ function EditorWorkspace() {
                               e.stopPropagation()
                               setPanelErrorModal(panelErrors.join("\n"))
                             }}
-                            className="pointer-events-auto absolute left-1 top-1 z-20 grid size-5 place-items-center rounded-full bg-[#dc2626] text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-700"
+                            className="pointer-events-auto absolute left-1 top-1 z-20 grid size-5 place-items-center rounded-full bg-[#dc2626] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-700"
                           >
                             <AlertTriangle size={12} strokeWidth={2.6} aria-hidden="true" />
                           </button>
@@ -2550,7 +2549,7 @@ function EditorWorkspace() {
                       <div className="flex flex-col items-start">
                         {/* 1. Top Header Bar of E-shaped If/Else block */}
                         <div
-                          className={`block-fill pointer-events-auto relative flex flex-nowrap items-center min-h-[58px] h-[58px] w-max min-w-[220px] px-5 gap-3 bg-[#f8f2e7] border-l-4 border-[#837b70] shadow-sm ${
+                          className={`block-fill pointer-events-auto relative flex flex-nowrap items-center min-h-[58px] h-[58px] w-max min-w-[220px] px-5 gap-3 bg-[#f8f2e7] border-l-4 border-[#837b70] ${
                             isConnected
                               ? "rounded-tl-[5px] rounded-tr-md"
                               : "rounded-t-md"
@@ -2631,11 +2630,11 @@ function EditorWorkspace() {
                           style={{ height: `${bodySpineHeight}px` }}
                           className="relative flex items-center"
                         >
-                          <div className="block-fill pointer-events-auto w-[28px] h-full bg-[#f8f2e7] shadow-[0_3px_0_rgba(29,27,26,0.16)]" />
+                          <div className="block-fill pointer-events-auto w-[28px] h-full bg-[#f8f2e7]" />
                         </div>
 
                         {/* 3. Middle Bar ("Иначе") */}
-                        <div className="block-fill pointer-events-auto relative flex items-center w-[220px] h-[48px] px-5 bg-[#f8f2e7] shadow-[0_3px_0_rgba(29,27,26,0.16)] rounded-r-md">
+                        <div className="block-fill pointer-events-auto relative flex items-center w-[220px] h-[48px] px-5 bg-[#f8f2e7] rounded-r-md">
                           {/* Top LEGO stud to lock with last block in "Если" branch */}
                           <span
                             aria-hidden="true"
@@ -2656,12 +2655,12 @@ function EditorWorkspace() {
                           style={{ height: `${elseSpineHeight}px` }}
                           className="relative flex items-center"
                         >
-                          <div className="block-fill pointer-events-auto w-[28px] h-full bg-[#f8f2e7] shadow-[0_3px_0_rgba(29,27,26,0.16)]" />
+                          <div className="block-fill pointer-events-auto w-[28px] h-full bg-[#f8f2e7]" />
                         </div>
 
                         {/* 5. Bottom C-Foot */}
                         <div
-                          className={`block-fill pointer-events-auto relative w-[220px] h-[28px] bg-[#f8f2e7] shadow-[0_3px_0_rgba(29,27,26,0.16)] rounded-r-md ${
+                          className={`block-fill pointer-events-auto relative w-[220px] h-[28px] bg-[#f8f2e7] rounded-r-md ${
                             hasChild ? "rounded-bl-[5px]" : "rounded-bl-md"
                           }`}
                         >
@@ -2803,60 +2802,7 @@ function EditorWorkspace() {
                           </button>
 
                           {paired && (
-                            <div className="shrink-0 flex flex-nowrap items-center gap-1.5 rounded-md bg-black/20 px-1.5 py-1 min-h-[36px]">
-                              <div data-module-picker="true" className="relative shrink-0">
-                                <button
-                                  type="button"
-                                  aria-label={`Модуль мотора: ${DRIVE_MODULE_INFO.pair.title}`}
-                                  aria-expanded={openDriveModule?.blockId === block.id && openDriveModule.module === "pair"}
-                                  title={DRIVE_MODULE_INFO.pair.title}
-                                  onClick={(e) => {
-                                    setOpenMenuBlockId(null)
-                                    if (openDriveModule?.blockId === block.id && openDriveModule.module === "pair") {
-                                      setOpenDriveModule(null)
-                                      return
-                                    }
-                                    const rect = e.currentTarget.getBoundingClientRect()
-                                    const placement = computePopoverPlacement(rect, { width: window.innerWidth, height: window.innerHeight })
-                                    setDriveModAlignLeft(placement.alignLeft)
-                                    setDriveModOpenUp(placement.openUp)
-                                    setOpenDriveModule({ blockId: block.id, module: "pair" })
-                                  }}
-                                  className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-white/15 hover:bg-white/25 text-white/95 flex items-center justify-center shrink-0 cursor-pointer"
-                                >
-                                  <Link2 size={16} aria-hidden="true" />
-                                </button>
-                                {openDriveModule?.blockId === block.id && openDriveModule.module === "pair" && (
-                                  <div className={`absolute ${driveModOpenUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${driveModAlignLeft ? "left-0" : "right-0"} z-50 w-[216px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-2.5 rounded-md border border-[#1d1b1a73] bg-white text-[#252221] shadow-xl flex flex-col gap-2`}>
-                                    <div>
-                                      <p className="text-xs font-bold text-[#252221] leading-snug">{DRIVE_MODULE_INFO.pair.title}</p>
-                                      <p className="mt-0.5 text-[11px] font-semibold text-[#726b62] leading-snug">{DRIVE_MODULE_INFO.pair.description}</p>
-                                    </div>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        if (!project) return
-                                        setOpenDriveModule(null)
-                                        saveBlocks(
-                                          updateDrive(
-                                            blocks,
-                                            block.id,
-                                            {
-                                              ...(block.type === "pair" ? { type: "drive" as BlockType } : {}),
-                                              modules: modules.filter((m) => m !== "pair"),
-                                            },
-                                            project.hub
-                                          )
-                                        )
-                                      }}
-                                      className="min-h-[36px] w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#fef2f2] hover:bg-[#fee2e2] text-xs font-bold text-[#991b1b] cursor-pointer"
-                                    >
-                                      <Trash2 size={14} aria-hidden="true" className="shrink-0" />
-                                      <span>Убрать</span>
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
+                            <div className="shrink-0 flex flex-nowrap items-center gap-2.5">
                               <span className="text-[16px] font-bold opacity-95 whitespace-nowrap">
                                 и
                               </span>
@@ -2935,10 +2881,10 @@ function EditorWorkspace() {
                                     setDriveModOpenUp(placement.openUp)
                                     setOpenDriveModule({ blockId: block.id, module: mod })
                                   }}
-                                  className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-white/15 hover:bg-white/25 text-white/95 flex items-center justify-center shrink-0 cursor-pointer"
+                                  className={`min-h-[36px] min-w-[36px] h-[36px] ${mod === "travel" ? "px-2" : "w-[36px]"} rounded-[9px] bg-white/15 hover:bg-white/25 text-white/95 flex items-center justify-center shrink-0 cursor-pointer`}
                                 >
                                   {mod === "travel" ? (
-                                    <RotateCw size={16} aria-hidden="true" />
+                                    <span className="text-[14px] font-bold whitespace-nowrap">Ход</span>
                                   ) : mod === "speed" ? (
                                     <Gauge size={16} aria-hidden="true" />
                                   ) : (
@@ -3036,15 +2982,15 @@ function EditorWorkspace() {
                                   <input
                                     type="number"
                                     min="1"
-                                    max={mod === "speed" ? "1000" : "100"}
+                                    max="100"
                                     aria-label={
                                       mod === "speed"
-                                        ? "Скорость, градусов в секунду"
+                                        ? "Скорость, процентов"
                                         : "Мощность, процентов"
                                     }
                                     value={
                                       mod === "speed"
-                                        ? (block.speed ?? 360)
+                                        ? Math.max(1, Math.min(100, Math.round((block.speed ?? 360) / SPEED_PERCENT_STEP)))
                                         : (block.power ?? 50)
                                     }
                                     onChange={(e) => {
@@ -3055,7 +3001,11 @@ function EditorWorkspace() {
                                         updateDrive(
                                           blocks,
                                           block.id,
-                                          { [mod]: val },
+                                          {
+                                            [mod]: mod === "speed"
+                                              ? Math.max(1, Math.min(100, Math.round(val))) * SPEED_PERCENT_STEP
+                                              : val,
+                                          },
                                           project.hub
                                         )
                                       )
@@ -3063,7 +3013,7 @@ function EditorWorkspace() {
                                     className="w-[80px] h-[38px] rounded-md px-3 text-center bg-white text-[#272423] font-bold text-[15px] shadow-xs"
                                   />
                                   <span className="text-[14px] font-bold text-white/95">
-                                    {mod === "speed" ? "°/с" : "%"}
+%
                                   </span>
                                 </>
                               )}
@@ -3103,10 +3053,9 @@ function EditorWorkspace() {
                             <div className={`absolute ${openMenuOpenUp ? "bottom-[calc(100%+8px)]" : "top-[calc(100%+8px)]"} ${openMenuAlignLeft ? "left-0" : "right-0"} z-50 w-[176px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-1.5 rounded-md border border-[#1d1b1a73] bg-white text-[#252221] shadow-xl flex flex-col gap-1`}>
                               {(
                                 [
-                                  ["pair", "Мотор 2", Link2],
-                                  ["speed", "°/с", Gauge],
-                                  ["power", "% мощн.", Zap],
-                                  ["travel", "Ход", RotateCw],
+                                  ["pair", "Мотор 2", null],
+                                  ["speed", "Скорость %", Gauge],
+                                  ["travel", "Ход", null],
                                 ] as const
                               ).map(([modName, label, Icon]) => {
                                 const isActive = modName === "pair" ? paired : modules.includes(modName)
@@ -3135,9 +3084,7 @@ function EditorWorkspace() {
                                         return
                                       }
                                       const filtered = modules.filter(
-                                        (m) =>
-                                          !(modName === "speed" && m === "power") &&
-                                          !(modName === "power" && m === "speed")
+                                        (m) => !(modName === "speed" && m === "power")
                                       )
                                       saveBlocks(
                                         updateDrive(
@@ -3154,8 +3101,8 @@ function EditorWorkspace() {
                                                   direction2: "backward",
                                                 }
                                               : {}),
-                                            ...(modName === "power"
-                                              ? { unit: "seconds" }
+                                            ...(modName === "speed"
+                                              ? { speed: 50 * SPEED_PERCENT_STEP }
                                               : {}),
                                           },
                                           project.hub
@@ -3170,7 +3117,7 @@ function EditorWorkspace() {
                                     }`}
                                   >
                                     <Check size={14} aria-hidden={true} className={isActive ? "opacity-100 shrink-0" : "opacity-0 shrink-0"} />
-                                    <Icon size={15} aria-hidden={true} className="shrink-0" />
+                                    {Icon && <Icon size={15} aria-hidden={true} className="shrink-0" />}
                                     <span>{label}</span>
                                   </button>
                                 )
@@ -3517,6 +3464,8 @@ function EditorWorkspace() {
     </>
   )
 }
+
+const SPEED_PERCENT_STEP = 10 // 100% скорости = 1000°/с
 
 export default function EditorPage() {
   return (
