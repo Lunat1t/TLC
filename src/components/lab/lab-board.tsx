@@ -93,6 +93,7 @@ function InlineNote({userId,noteId,text,focus,onSave}:{userId:string;noteId:stri
 }
 export function PersonalBoard({ userId, projects = [], onProjects, onNewProject, onProjectMenu, onDeleteProject }: { userId: string } & BoardProps) {
   const [focusNote,setFocusNote]=useState<string|null>(null)
+  const [desktopPage,setDesktopPage]=useState(0)
   const [pictureOpen,setPictureOpen]=useState(false),[pictureUrl,setPictureUrl]=useState("")
   const pictureDialog=useRef<HTMLDialogElement>(null)
   const widgetsDialog=useRef<HTMLDialogElement>(null)
@@ -129,11 +130,11 @@ export function PersonalBoard({ userId, projects = [], onProjects, onNewProject,
   function save(next:PinItem[]){if(!loaded)return false;if(JSON.stringify(next).length>3_000_000){showError('Доска слишком большая. Выберите картинку поменьше.');return false}if(!store.update('board',next,items))return false;setItems(next);showError('');return true}
   function addGame(kind: "tic-tac-toe" | "camera-rps") {
     if (loaded && items.length < LIMIT) save([...items, {
-      id: crypto.randomUUID(), kind, text: kind === "camera-rps" ? "Камень, ножницы, бумага" : "Крестики-нолики", color: "blue"
+      id: crypto.randomUUID(), desktop: desktopPage, kind, text: kind === "camera-rps" ? "Камень, ножницы, бумага" : "Крестики-нолики", color: "blue"
     }])
   }
-  function createNote(){const id=crypto.randomUUID();if(save([...items,{id,kind:'note',text:'',color:'yellow'}]))setFocusNote(id)}
-  async function insertPicture(file?:File){setBusy(true);showError('');try{const image=file?await storeWorkspaceImage(await imageData(file),store.userId):safeUrl(pictureUrl.trim());if(!image||(!file&&!image.startsWith('https://')))throw Error('Укажите HTTPS-ссылку на картинку.');if(save([...items,{id:crypto.randomUUID(),kind:'image',text:'',color:'blue',image}])){setPictureOpen(false);setPictureUrl('')}}catch(e){showError(e instanceof Error?e.message:'Не удалось открыть картинку.')}finally{setBusy(false);if(pictureRef.current)pictureRef.current.value=''}}
+  function createNote(){const id=crypto.randomUUID();if(save([...items,{id,desktop:desktopPage,kind:'note',text:'',color:'yellow'}]))setFocusNote(id)}
+  async function insertPicture(file?:File){setBusy(true);showError('');try{const image=file?await storeWorkspaceImage(await imageData(file),store.userId):safeUrl(pictureUrl.trim());if(!image||(!file&&!image.startsWith('https://')))throw Error('Укажите HTTPS-ссылку на картинку.');if(save([...items,{id:crypto.randomUUID(),desktop:desktopPage,kind:'image',text:'',color:'blue',image}])){setPictureOpen(false);setPictureUrl('')}}catch(e){showError(e instanceof Error?e.message:'Не удалось открыть картинку.')}finally{setBusy(false);if(pictureRef.current)pictureRef.current.value=''}}
   function open(type: PinItem["kind"] = "note") { setEditing(null); setText(""); setUrl(""); setDate(""); setFile(null); setKind(type); setDialog(true) }
   async function add(event: React.FormEvent) {
     event.preventDefault(); setBusy(true); showError("")
@@ -144,7 +145,7 @@ export function PersonalBoard({ userId, projects = [], onProjects, onNewProject,
       if (!editing && items.length >= LIMIT) throw Error("На доске помещается до 18 материалов.")
       if (kind === "shortcut" && !safeUrl(url.trim())) throw Error("Укажите адрес сайта с https:// или путь страницы Brick Studio, например /instructions.")
       if(editing && !workspaceValuesEqual(items.find(p=>p.id===editing),editingBase.current))throw Error('Этот ярлык изменён на другом устройстве. Скопируйте введённый текст и откройте редактирование заново.')
-      const item: PinItem = { id: editing || crypto.randomUUID(), kind, text: text.trim(), color, ...(kind === "shortcut" ? {url:safeUrl(url.trim())!} : {}), ...(kind === "event" ? { date } : {}), ...(kind === "image" && file ? { image: await storeWorkspaceImage(await imageData(file),store.userId) } : {}) }
+      const item: PinItem = { id: editing || crypto.randomUUID(), desktop: editing ? items.find(p=>p.id===editing)?.desktop : desktopPage, kind, text: text.trim(), color, ...(kind === "shortcut" ? {url:safeUrl(url.trim())!} : {}), ...(kind === "event" ? { date } : {}), ...(kind === "image" && file ? { image: await storeWorkspaceImage(await imageData(file),store.userId) } : {}) }
       if (save(editing?items.map(p=>p.id===editing?item:p):[...items, item])) setDialog(false)
     } catch (e) { showError(e instanceof Error ? e.message : "Не удалось добавить материал.") } finally { setBusy(false) }
   }
@@ -154,9 +155,9 @@ export function PersonalBoard({ userId, projects = [], onProjects, onNewProject,
 
   return <>
   <div className="desktop-board-surface">
-    <DesktopCanvas userId={userId}>
+    <DesktopCanvas userId={userId} minPages={Math.max(0,...items.map(i=>i.desktop??0))+1} onPageChange={setDesktopPage}>
     {projects.map((project,index)=><DesktopItem key={project.id} id={`project:${project.id}`} label={project.name} onEdit={()=>onProjectMenu?.(project.id)} onDelete={()=>onDeleteProject?.(project.id)} initial={[.5+(index%3)*.17, .48+index/(projects.length+1)*.46]} mobileInitial={[(index%3)*.5,.36+Math.floor(index/3)/(Math.ceil(projects.length/3)+1)*.2]} className="desktop-shortcut"><Link className="desktop-launch" href={`/editor?id=${encodeURIComponent(project.id)}`}><span className={`desktop-app-icon is-project is-project-${project.hub}`} title={project.hub === "ev3" ? "LEGO EV3" : "SPIKE Prime"}><FileCode2 aria-label={project.hub === "ev3" ? "Программа EV3" : "Программа SPIKE"}/></span><strong>{project.name}</strong></Link><button className="desktop-project-menu" onClick={()=>onProjectMenu?.(project.id)} aria-label={`Действия с проектом ${project.name}`}>•••</button></DesktopItem>)}
-    {items.map((item,index)=><DesktopItem id={`pin:${item.id}`} key={item.id} label={item.kind==="shortcut" || item.kind==="tic-tac-toe" || item.kind==="camera-rps" ? item.text : "Карточка"} initial={[.08+(index%4)*.22, .23+Math.floor(index/4)*.15]} mobileInitial={[(index%2)*.98,.58+index/(items.length+1)*.4]} onEdit={item.kind==="shortcut"?()=>{editingBase.current=item;setEditing(item.id);setKind(item.kind);setText(item.text);setUrl(item.url||"");setColor(item.color);setDialog(true)}:undefined} onDelete={()=>{if(window.confirm(`Удалить «${item.text||"карточку"}»?`))save(items.filter(p=>p.id!==item.id))}} className={item.kind==="shortcut"?"desktop-shortcut":"desktop-note"}>
+    {items.map((item,index)=><DesktopItem id={`pin:${item.id}`} desktop={item.desktop} key={item.id} label={item.kind==="shortcut" || item.kind==="tic-tac-toe" || item.kind==="camera-rps" ? item.text : "Карточка"} initial={[.08+(index%4)*.22, .23+Math.floor(index/4)*.15]} mobileInitial={[(index%2)*.98,.58+index/(items.length+1)*.4]} onEdit={item.kind==="shortcut"?()=>{editingBase.current=item;setEditing(item.id);setKind(item.kind);setText(item.text);setUrl(item.url||"");setColor(item.color);setDialog(true)}:undefined} onDelete={()=>{if(window.confirm(`Удалить «${item.text||"карточку"}»?`))save(items.filter(p=>p.id!==item.id))}} className={item.kind==="shortcut"?"desktop-shortcut":"desktop-note"}>
       {item.kind==="camera-rps" ? <CameraGame /> : item.kind==="tic-tac-toe" ? <TicTacToe /> : item.kind==="shortcut" ? <><a className="desktop-launch" href={item.url} target={item.url?.startsWith("/")?undefined:"_blank"} rel="noopener noreferrer"><span className="desktop-app-icon is-purple"><Globe/></span><strong>{item.text}</strong></a><button className="desktop-unpin" onClick={()=>save(items.filter(p=>p.id!==item.id))} aria-label={`Убрать ярлык ${item.text}`}><X size={14}/></button></> : <article className={`lab-pin lab-pin-${item.kind} lab-pin-${item.color}`}><span className="lab-pin-head" aria-hidden="true"/>{item.image?<img src={item.image} referrerPolicy="no-referrer" alt={item.text||"Закреплённая картинка"}/>:null}{item.kind==="event"&&item.date?<time dateTime={item.date}>{new Date(`${item.date}T12:00:00`).toLocaleDateString("ru-RU",{day:"numeric",month:"long",year:"numeric"})}</time>:null}{item.kind==='note'?<InlineNote userId={userId} noteId={item.id} text={item.text} focus={focusNote===item.id} onSave={(value,base)=>{if(item.text!==base){showError('Заметка изменена на другом устройстве. Скачайте свой текст перед открытием облачной версии.',{noteId:item.id,text:value});return false}return save(items.map(p=>p.id===item.id?{...p,text:value}:p))}}/>:<p>{item.text}</p>}<button className="desktop-remove" onClick={()=>save(items.filter(p=>p.id!==item.id))} aria-label={`Открепить ${item.text||"картинку"}`}><X size={16}/></button></article>}
     </DesktopItem>)}
   </DesktopCanvas></div>
