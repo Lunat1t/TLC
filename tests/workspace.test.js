@@ -46,8 +46,8 @@ test('drive blocks persist settings and generate ordered Pybricks commands for b
 test('motor modules preserve settings and reject unsafe combinations', async () => {
   const {updateDrive, generatePybricks} = await import('../src/lib/workspace.ts');
   let b = addBlock([], 'motor', 0, 0, 'drive');
-  assert.deepEqual(b[0].modules, []);
-  assert.throws(() => generatePybricks(b, 'spike'), /остановку/);
+  assert.deepEqual(b[0].modules, ['travel']);
+  assert.doesNotThrow(() => generatePybricks(b, 'spike'));
   b = updateDrive(b, 'motor', {modules:['speed','travel'], speed:500, value:2}, 'spike');
   assert.match(generatePybricks(b,'spike'), /run_angle\(500, 720/);
   b = updateDrive(b,'motor',{modules:['power','travel'],power:40,unit:'seconds',value:3},'spike');
@@ -80,7 +80,7 @@ test('paired motors restore both ports, directions and module order', async () =
   assert.match(code,/motor_b.run_angle\(420, 720, then=Stop.BRAKE, wait=False\)/);
   assert.equal(code,generatePybricks([{...b[0],modules:['speed','travel']}],'spike'));
   assert.throws(()=>generatePybricks([{...b[0],motor2:'D'}],'spike'),/разных порта/);
-  assert.throws(()=>generatePybricks([{...b[0],modules:[]}],'spike'),/остановку/);
+  assert.match(generatePybricks([{...b[0],modules:[]}],'spike'),/run_angle/);
   assert.throws(()=>generatePybricks([{...b[0],modules:['power','travel']}],'spike'),/секунды/);
   const ev3=readBlocks({blocks:[{...b[0],motor:'F',motor2:'E'}]},'ev3');
   assert.equal(ev3[0].motor,'A'); assert.equal(ev3[0].motor2,'B');
