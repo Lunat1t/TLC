@@ -326,7 +326,7 @@ export function PybricksWorkspace({
             <button
               type="button"
               onClick={onStop}
-              className="min-h-[36px] h-[36px] px-3 rounded-[10px] bg-red-700 hover:bg-red-800 text-white text-xs font-bold flex items-center gap-1.5 whitespace-nowrap cursor-pointer sm:hidden"
+              className="min-h-[36px] h-[36px] px-3 rounded-full bg-[var(--bs-danger)] hover:brightness-105 text-white text-xs font-bold flex items-center gap-1.5 whitespace-nowrap cursor-pointer sm:hidden"
             >
               <span>■ Стоп</span>
             </button>
@@ -334,7 +334,7 @@ export function PybricksWorkspace({
             <button
               type="button"
               onClick={onRun}
-              className="min-h-[36px] h-[36px] px-3 rounded-[10px] bg-stone-700 hover:bg-stone-800 text-white text-xs font-bold flex items-center gap-1.5 whitespace-nowrap cursor-pointer sm:hidden"
+              className="min-h-[36px] h-[36px] px-3 rounded-full bg-[var(--bs-action)] hover:brightness-105 text-[var(--bs-on-action)] shadow-[0_3px_0_var(--bs-lip-action)] text-xs font-bold flex items-center gap-1.5 whitespace-nowrap cursor-pointer sm:hidden"
             >
               <Play size={13} aria-hidden="true" />
               <span>Запустить</span>

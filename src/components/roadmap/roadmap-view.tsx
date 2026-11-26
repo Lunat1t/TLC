@@ -57,7 +57,7 @@ function RankIcon({ index }: { index: number }) {
 
 const SKILL_MARKS = {
   mechanics: { icon: Cog, color: "#b35300" },
-  logic: { icon: Code2, color: "#2556d9" },
+  logic: { icon: Code2, color: "#1c6c8c" },
   creativity: { icon: Star, color: "#c92a6d" },
 } as const
 
