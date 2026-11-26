@@ -138,6 +138,15 @@ module.exports = () => ({
       rule.each((decl) => {
         if (decl.type !== "decl") return
         const prop = decl.prop.toLowerCase()
+        // Размытие фона сильно грузит слабые телефоны и планшеты.
+        if (prop === "backdrop-filter" || prop === "-webkit-backdrop-filter") {
+          decl.remove()
+          return
+        }
+        if (prop === "background-attachment" && decl.value.trim() === "fixed") {
+          decl.value = "scroll"
+          return
+        }
         if (prop === "text-shadow") {
           decl.value = "none"
           return
