@@ -1,3 +1,4 @@
+import { validateModuleRules } from './block-modules.js';
 export const HUB_PORTS = Object.freeze({
   spike: Object.freeze(['A', 'B', 'C', 'D', 'E', 'F']),
   ev3: Object.freeze(['A', 'B', 'C', 'D']),
@@ -490,15 +491,6 @@ export function expandActionBlock(child, context = {}) {
 
   if (child.type === 'drive' || child.type === 'pair') {
     const modules = Array.isArray(child.modules) ? child.modules : [];
-    if (modules.includes('speed') && modules.includes('power')) {
-      errors.push({
-        button: btn,
-        blockId: child.id,
-        code: 'speed-and-power',
-        message: 'Выберите скорость или мощность',
-      });
-    }
-
     const isPair = isPairedBlock(child);
     const portA = String(child.motor || 'A');
     const portB = isPair ? String(child.motor2 || 'B') : null;
@@ -541,13 +533,8 @@ export function expandActionBlock(child, context = {}) {
       });
     }
 
-    if (powered && hasTravel && unit !== 'seconds') {
-      errors.push({
-        button: btn,
-        blockId: child.id,
-        code: 'power-travel',
-        message: 'Для мощности выберите секунды',
-      });
+    for (const problem of validateModuleRules('drive', { ...child, unit }, { target: 'runtime' })) {
+      errors.push({ button: btn, blockId: child.id, code: problem.code, message: problem.short });
     }
 
     const rawSpeed = modules.includes('speed') && Number.isFinite(child.speed) ? Number(child.speed) : DEFAULT_SPEED;

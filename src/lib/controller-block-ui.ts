@@ -279,18 +279,6 @@ export const SENSOR_MODULE_INFO: Record<SensorModule, ModuleDescription> = {
   reset: { title: "Сброс курса в 0°", description: "Запоминает текущее направление как 0 градусов." },
 }
 
-export const DRIVE_MODULE_INFO: Record<"pair" | "speed" | "power" | "travel", ModuleDescription> = {
-  pair: { title: "Второй мотор", description: "Крутит два мотора вместе в одном шаге." },
-  speed: { title: "Скорость (%)", description: "Скорость мотора в процентах от максимальной." },
-  power: { title: "Мощность (%)", description: "Задаёт силу мотора в процентах." },
-  travel: { title: "Сколько ехать", description: "Через сколько оборотов, градусов или секунд остановиться." },
-}
-
-export const CHASSIS_MODULE_INFO: Record<"speed" | "travel", ModuleDescription> = {
-  speed: { title: "Скорость шасси", description: "Меняет скорость обоих колёс только для этого блока." },
-  travel: { title: "Сколько ехать", description: "Через сколько оборотов, градусов или секунд остановиться." },
-}
-
 export function getSensorComparisonWord(
   kind: "threshold" | "reflection" | "force" | "heading" | "tilt",
   op: SensorOp

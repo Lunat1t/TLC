@@ -1,3 +1,4 @@
+import { normalizeModules, validateModuleRules } from "./block-modules.ts"
 import { HUB_PROGRAM_SOURCE } from "./hub-program-source.ts"
 import type { HubType } from "./projects"
 import {
@@ -572,9 +573,7 @@ export function readBlocks(
         const chassisDirection = CHASSIS_DIRECTIONS.includes(block.chassisDirection as ChassisDirection)
           ? (block.chassisDirection as ChassisDirection)
           : "forward"
-        const rawModules = Array.isArray(block.modules)
-          ? ([...new Set(block.modules.filter((m): m is MotorModule => ["speed", "travel"].includes(String(m))))] as MotorModule[])
-          : ([] as MotorModule[])
+        const rawModules = normalizeModules("chassis", block.modules) as MotorModule[]
         return {
           ...base,
           chassisDirection,
@@ -597,15 +596,7 @@ export function readBlocks(
         }
       }
 
-      const rawModules = Array.isArray(block.modules)
-        ? ([
-            ...new Set(
-              block.modules.filter((m): m is MotorModule =>
-                ["pair", "speed", "power", "travel"].includes(String(m))
-              )
-            ),
-          ] as MotorModule[])
-        : (["travel"] as MotorModule[])
+      const rawModules = normalizeModules(type, block.modules) as MotorModule[]
 
       const paired = type === "pair" || (type === "drive" && rawModules.includes("pair"))
       const defaultMotor2 = base.motor === "B" ? "A" : "B"
@@ -1286,18 +1277,9 @@ export function generatePybricks(
     }
 
     const modules = block.modules || []
-    if (modules.includes("speed") && modules.includes("power"))
-      throw new Error("Выберите скорость или мощность, а не оба режима.")
+    const [problem] = validateModuleRules(block.type, block, { target: "export" })
+    if (problem) throw new Error(problem.message)
     const powered = modules.includes("power")
-    const hasTravel = modules.includes("travel")
-    if (!hasTravel)
-      throw new Error(
-        "Добавьте модуль «Величина движения», чтобы задать остановку мотора."
-      )
-    if (powered && block.unit !== "seconds")
-      throw new Error(
-        "Для мощности выберите секунды. Для точных оборотов и градусов используйте скорость."
-      )
     const speed = modules.includes("speed")
       ? block.speed || MOTOR_SPEED
       : MOTOR_SPEED

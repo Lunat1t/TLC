@@ -1,6 +1,6 @@
 import React from "react"
-import { Activity, AlertTriangle, Check, ChevronDown, Compass, Gamepad2, Gauge, Hourglass, Lightbulb, RotateCcw, RotateCw, Settings2, Trash2 } from "lucide-react"
-import type { WorkspaceBlock, ControllerButton, ControllerEvent, ChassisDirection, ImuAxis, MotorModule, SensorColor, SensorModule, SensorOp, SensorType, TravelUnit } from "@/lib/workspace"
+import { Activity, AlertTriangle, Check, ChevronDown, Compass, Gamepad2, Hourglass, Lightbulb, RotateCcw, Settings2, Trash2 } from "lucide-react"
+import type { WorkspaceBlock, ControllerButton, ControllerEvent, ChassisDirection, ImuAxis, SensorColor, SensorModule, SensorOp, SensorType } from "@/lib/workspace"
 import { CONTROLLER_BUTTONS, BUTTON_LABELS } from "@/lib/controller-program"
 import {
   DEFAULT_SENSOR_ANGLE,
@@ -19,22 +19,18 @@ import {
   formatControlOptionLabel,
   getStopPorts,
 } from "@/lib/block-registry"
+import { ModuleBar, ModuleCapsuleIconPopover, usePopoverDismiss } from "@/components/editor/module-bar"
 import { CONTROL_INPUTS, type ControlInstance } from "@/lib/control-workspace"
 import type { SensorTelemetry } from "@/lib/controller-runtime"
 import {
-  CHASSIS_MODULE_INFO,
   COLOR_SWATCH_STYLES,
   CONTROLLER_EVENT_LABELS,
   SENSOR_MODULE_INFO,
-  TRAVEL_UNIT_ARIA_LABELS,
-  TRAVEL_UNIT_LABELS,
-  computePopoverPlacement,
   formatSensorLightLabel,
   formatSensorLiveBadge,
   getSensorComparisonWord,
   nextControllerEvent,
   nextSensorLight,
-  nextTravelUnit,
 } from "@/lib/controller-block-ui"
 import {
   ColorBeamScene,
@@ -362,111 +358,6 @@ const CHASSIS_DIR_OPTIONS: readonly { value: ChassisDirection; icon: string; lab
   { value: "right", icon: "↷", label: "Направо" },
 ]
 
-function usePopoverDismiss(open: boolean, ref: React.RefObject<HTMLDivElement | null>, onClose: () => void) {
-  const [placement, setPlacement] = React.useState<{ alignLeft: boolean; openUp: boolean }>({
-    alignLeft: false,
-    openUp: false,
-  })
-
-  React.useEffect(() => {
-    if (!open) return
-    if (ref.current && typeof window !== "undefined") {
-      const rect = ref.current.getBoundingClientRect()
-      setPlacement(
-        computePopoverPlacement(rect, { width: window.innerWidth, height: window.innerHeight })
-      )
-    }
-    const onPointer = (e: PointerEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
-    }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose()
-    }
-    window.addEventListener("pointerdown", onPointer)
-    window.addEventListener("keydown", onKey)
-    return () => {
-      window.removeEventListener("pointerdown", onPointer)
-      window.removeEventListener("keydown", onKey)
-    }
-  }, [open, ref, onClose])
-
-  return placement
-}
-
-function ModuleCapsuleIconPopover({
-  title,
-  description,
-  icon,
-  iconClassName = "text-[#1d1b1a]",
-  canRemove,
-  mandatoryLabel = "Обязательный модуль",
-  ariaLabel,
-  onRemove,
-  onWillOpen,
-}: {
-  title: string
-  description: string
-  icon: React.ReactNode
-  iconClassName?: string
-  canRemove: boolean
-  mandatoryLabel?: string
-  ariaLabel: string
-  onRemove: () => void
-  onWillOpen?: () => void
-}) {
-  const [open, setOpen] = React.useState(false)
-  const ref = React.useRef<HTMLDivElement>(null)
-  const close = React.useCallback(() => setOpen(false), [])
-  const { alignLeft, openUp } = usePopoverDismiss(open, ref, close)
-
-  return (
-    <div ref={ref} data-module-picker="true" className="relative shrink-0">
-      <button
-        type="button"
-        aria-label={ariaLabel}
-        aria-expanded={open}
-        title={title}
-        onClick={() => {
-          if (!open) onWillOpen?.()
-          setOpen((prev) => !prev)
-        }}
-        className={`min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-white/15 hover:bg-white/25 flex items-center justify-center shrink-0 cursor-pointer transition-colors ${iconClassName}`}
-      >
-        {icon}
-      </button>
-      {open && (
-        <div
-          className={`absolute ${openUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${
-            alignLeft ? "left-0" : "right-0"
-          } z-50 w-[216px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-2.5 rounded-[12px] border border-[#f3e8d5] bg-white text-[#1d1b1a] shadow-xl flex flex-col gap-2`}
-        >
-          <div>
-            <p className="text-xs font-black text-[#1d1b1a] leading-snug">{title}</p>
-            <p className="mt-0.5 text-[11px] font-semibold text-[#726b62] leading-snug">{description}</p>
-          </div>
-          {canRemove ? (
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false)
-                onRemove()
-              }}
-              className="min-h-[36px] w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#fef2f2] hover:bg-[#fee2e2] text-xs font-extrabold text-[#991b1b] cursor-pointer"
-            >
-              <Trash2 size={14} aria-hidden="true" className="shrink-0" />
-              <span>Убрать</span>
-            </button>
-          ) : (
-            <div className="rounded-lg bg-[#fbf8f3] px-2.5 py-1.5 text-[11px] font-bold text-[#5f5951] text-center">
-              {mandatoryLabel}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
 export function ChassisBlock({
   block,
   chassisConfigured,
@@ -480,16 +371,7 @@ export function ChassisBlock({
   onChange: (changes: Partial<WorkspaceBlock>) => void
   onOpenChassis: () => void
 }) {
-  const [menuOpen, setMenuOpen] = React.useState(false)
-  const menuRef = React.useRef<HTMLDivElement>(null)
-  const closeMenu = React.useCallback(() => setMenuOpen(false), [])
-  const { alignLeft, openUp } = usePopoverDismiss(menuOpen, menuRef, closeMenu)
-
   const dir: ChassisDirection = block.chassisDirection || "forward"
-  const modules: MotorModule[] = Array.isArray(block.modules) ? block.modules : []
-  const hasSpeed = modules.includes("speed")
-  const hasTravel = modules.includes("travel")
-  const unit: TravelUnit = block.unit || "rotations"
 
   return (
     <div className="flex flex-col">
@@ -533,129 +415,7 @@ export function ChassisBlock({
           })}
         </div>
 
-        {hasSpeed && (
-          <div className="flex flex-nowrap items-center gap-1.5 rounded-[12px] bg-black/20 px-1.5 py-1 shrink-0">
-            <ModuleCapsuleIconPopover
-              title={CHASSIS_MODULE_INFO.speed.title}
-              description={CHASSIS_MODULE_INFO.speed.description}
-              ariaLabel="Модуль скорости шасси"
-              icon={<Gauge size={16} aria-hidden="true" />}
-              canRemove
-              onWillOpen={() => setMenuOpen(false)}
-              onRemove={() => onChange({ modules: modules.filter((m) => m !== "speed") })}
-            />
-            <input
-              type="number"
-              min="1"
-              max="1000"
-              aria-label="Скорость шасси, градусов в секунду"
-              value={block.speed ?? 360}
-              onChange={(e) => {
-                const val = Number(e.target.value)
-                if (!Number.isFinite(val)) return
-                onChange({ speed: val })
-              }}
-              className="w-[70px] min-h-[36px] h-[36px] rounded-full px-2 text-center bg-white text-[#1d1b1a] font-extrabold text-sm shadow-xs"
-            />
-            <span className="text-xs font-extrabold whitespace-nowrap">°/с</span>
-          </div>
-        )}
-
-        {hasTravel && (
-          <div className="flex flex-nowrap items-center gap-1.5 rounded-[12px] bg-black/20 px-1.5 py-1 shrink-0">
-            <ModuleCapsuleIconPopover
-              title={CHASSIS_MODULE_INFO.travel.title}
-              description={CHASSIS_MODULE_INFO.travel.description}
-              ariaLabel="Модуль длительности шасси"
-              icon={<RotateCw size={16} aria-hidden="true" />}
-              canRemove
-              onWillOpen={() => setMenuOpen(false)}
-              onRemove={() => onChange({ modules: modules.filter((m) => m !== "travel") })}
-            />
-            <input
-              type="number"
-              min="0.01"
-              max="10000"
-              step="any"
-              aria-label="Величина движения шасси"
-              value={block.value ?? 1}
-              onChange={(e) => {
-                const val = Number(e.target.value)
-                if (!Number.isFinite(val) || val < 0.01 || val > 10000) return
-                onChange({ value: val })
-              }}
-              className="w-[68px] min-h-[36px] h-[36px] rounded-full px-2 text-center bg-white text-[#1d1b1a] font-extrabold text-sm shadow-xs"
-            />
-            <button
-              type="button"
-              aria-label={`Единица измерения шасси: ${TRAVEL_UNIT_ARIA_LABELS[unit]}`}
-              title={`Единица: ${TRAVEL_UNIT_ARIA_LABELS[unit]}`}
-              onClick={() => onChange({ unit: nextTravelUnit(unit) })}
-              className="min-h-[36px] min-w-[36px] h-[36px] px-2.5 rounded-full bg-white text-[#1d1b1a] hover:bg-[#f8f2e7] font-extrabold text-sm shadow-xs cursor-pointer flex items-center justify-center shrink-0"
-            >
-              {TRAVEL_UNIT_LABELS[unit]}
-            </button>
-          </div>
-        )}
-
-        <div ref={menuRef} data-module-picker="true" className="relative shrink-0">
-          <button
-            type="button"
-            aria-label="Добавить модуль шасси"
-            aria-expanded={menuOpen}
-            title="Настроить модули"
-            onClick={() => setMenuOpen((prev) => !prev)}
-            className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-full border border-white/55 bg-white/15 hover:bg-white/30 text-[#1d1b1a] text-lg leading-none font-black grid place-items-center"
-          >
-            +
-          </button>
-          {menuOpen && (
-            <div className={`absolute ${openUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${alignLeft ? "left-0" : "right-0"} z-50 w-[164px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-1.5 rounded-[12px] border border-[#f3e8d5] bg-white text-[#1d1b1a] shadow-xl flex flex-col gap-1`}>
-              <button
-                type="button"
-                aria-pressed={hasSpeed}
-                onClick={() => {
-                  setMenuOpen(false)
-                  onChange({
-                    modules: hasSpeed
-                      ? modules.filter((m) => m !== "speed")
-                      : [...modules, "speed"],
-                  })
-                }}
-                className={`min-h-[36px] flex items-center gap-2 text-left px-3 py-1.5 rounded-lg text-xs font-extrabold ${
-                  hasSpeed
-                    ? "bg-[#f4ebda] hover:bg-[#efe1c8] text-[#a8211a]"
-                    : "bg-[#faf6ef] hover:bg-[#f6eee1] text-[#1d1b1a]"
-                }`}
-              >
-                <Check size={14} aria-hidden="true" className={hasSpeed ? "opacity-100 shrink-0" : "opacity-0 shrink-0"} />
-                <Gauge size={15} aria-hidden="true" className="shrink-0" />
-                <span>°/с</span>
-              </button>
-              <button
-                type="button"
-                aria-pressed={hasTravel}
-                onClick={() => {
-                  setMenuOpen(false)
-                  onChange({
-                    modules: hasTravel
-                      ? modules.filter((m) => m !== "travel")
-                      : [...modules, "travel"],
-                  })
-                }}
-                className={`min-h-[36px] flex items-center gap-2 text-left px-3 py-1.5 rounded-lg text-xs font-extrabold ${
-                  hasTravel
-                    ? "bg-[#f4ebda] hover:bg-[#efe1c8] text-[#a8211a]"
-                    : "bg-[#faf6ef] hover:bg-[#f6eee1] text-[#1d1b1a]"
-                }`}
-              >
-                <Check size={14} aria-hidden="true" className={hasTravel ? "opacity-100 shrink-0" : "opacity-0 shrink-0"} />
-                <RotateCw size={15} aria-hidden="true" className="shrink-0" />
-                <span>Ход</span>
-              </button>
-            </div>
-          )}
-        </div>
+        <ModuleBar blockType="chassis" block={block} subject="шасси" onChange={onChange} />
       </div>
 
       <BlockErrorBar errorMessage={errorMessage} />
