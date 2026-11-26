@@ -50,6 +50,14 @@ html body .tlc-os.is-app {
   --frame-b: 12px;
   background: var(--bs-cover);
 }
+/* Установленное приложение: рамка занимает весь экран до самого низа, как и док
+   (fixed), а не 100dvh, который на Android бывает меньше; за краем — цвет рамки. */
+html body .tlc-os.is-app {
+  position: fixed;
+  inset: 0;
+  height: auto;
+}
+html:has(.tlc-os.is-app), html:has(.tlc-os.is-app) body { background: var(--bs-cover); }
 /* Страница: бумага в точечную клетку. */
 html body .tlc-os.is-app > .os-content {
   border-radius: 22px;
