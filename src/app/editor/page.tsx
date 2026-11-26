@@ -258,7 +258,6 @@ function EditorWorkspace() {
 
   const boardRef = React.useRef<HTMLDivElement | null>(null)
   const paletteRef = React.useRef<HTMLElement | null>(null)
-  const paletteDrawerRef = React.useRef<HTMLDivElement | null>(null)
   const storageRawRef = React.useRef<string | null>(null)
   const saveBusyRef = React.useRef(false)
   const [renaming,setRenaming]=React.useState(false),[nameDraft,setNameDraft]=React.useState("")
@@ -290,15 +289,8 @@ function EditorWorkspace() {
   const [paletteExpanded, setPaletteExpanded] = React.useState<boolean | null>(null)
   const [blockCategory, setBlockCategory] = React.useState<(typeof PALETTE_FILTERS)[number]["id"]>("all")
   const paletteOpen = paletteExpanded ?? false
-  const [libraryDropTarget, setLibraryDropTarget] = React.useState(false)
   const trashRef = React.useRef<HTMLDivElement | null>(null)
   const [trashHot, setTrashHot] = React.useState(false)
-  const isOverPaletteDropZone = React.useCallback(
-    (x: number, y: number) =>
-      pointerInRect(paletteRef.current, x, y) ||
-      (paletteOpen && pointerInRect(paletteDrawerRef.current, x, y)),
-    [paletteOpen]
-  )
 
   React.useEffect(() => {
     const media = window.matchMedia(COMPACT_PALETTE_QUERY)
@@ -1655,13 +1647,7 @@ function EditorWorkspace() {
           inert={checking || undefined}
           className={`relative z-50 flex shrink-0 ${checking ? "opacity-50 max-md:invisible" : ""}`}
         >
-          <div className={`flex w-12 shrink-0 flex-col items-center gap-1 overflow-y-auto border-r border-[#1d1b1a73] py-2 transition-colors ${
-            libraryDropTarget
-              ? "bg-red-100 ring-2 ring-inset ring-red-400"
-              : gesture?.kind === "block" && gesture.moved
-                ? "bg-red-50/75"
-                : "bg-[#faf5ec]"
-          }`}>
+          <div className="flex w-12 shrink-0 flex-col items-center gap-1 overflow-y-auto border-r border-[#1d1b1a73] bg-[#faf5ec] py-2">
             <div className="flex flex-col items-center gap-1" role="group" aria-label="Категории блоков">
               {PALETTE_FILTERS.map(({ id, label, icon: Icon, color }) => (
                 <button
@@ -1693,28 +1679,13 @@ function EditorWorkspace() {
             >
               {paletteOpen ? <PanelLeftClose size={18} aria-hidden="true" /> : <PanelLeftOpen size={18} aria-hidden="true" />}
             </button>
-            {(libraryDropTarget || (gesture?.kind === "block" && gesture.moved)) && (
-              <Trash2
-                size={libraryDropTarget ? 20 : 18}
-                className={`my-2 shrink-0 ${libraryDropTarget ? "text-red-700" : "text-red-500/75"}`}
-                aria-label={libraryDropTarget ? "Отпустите, чтобы удалить блок" : undefined}
-                aria-hidden={!libraryDropTarget || undefined}
-              />
-            )}
           </div>
 
           <div
-            ref={paletteDrawerRef}
             id="editor-block-palette"
             hidden={!paletteOpen}
-            className={`absolute inset-y-0 left-full z-30 w-44 touch-pan-y overflow-y-auto overscroll-contain border-r border-[#1d1b1a73] px-2.5 py-2 shadow-md ${libraryDropTarget ? "bg-red-50 ring-2 ring-inset ring-red-400" : "bg-white"}`}
+            className={`absolute inset-y-0 left-full z-30 w-44 touch-pan-y overflow-y-auto overscroll-contain border-r border-[#1d1b1a73] px-2.5 py-2 bg-white shadow-md`}
           >
-            {libraryDropTarget && (
-              <div className="mb-2 flex items-center gap-2 rounded-md border border-red-300 bg-red-100 px-2.5 py-2 text-xs font-bold text-red-800 shadow-xs">
-                <Trash2 size={15} aria-hidden="true" className="shrink-0" />
-                <span>Отпустите для удаления</span>
-              </div>
-            )}
             {BLOCK_CATEGORIES.filter(({ id }) => blockCategory === "all" || id === blockCategory).map(({ id, label, color, blocks: entries }) => (
               <section key={id} aria-label={label} className="mb-3">
                 <h2 className="mb-1 px-1 text-xs font-bold" style={{ color }}>{label}</h2>
@@ -1996,7 +1967,6 @@ function EditorWorkspace() {
                   gesture.originY + dy
                 )
                 setSnapTargetSlot(target)
-                setLibraryDropTarget(isOverPaletteDropZone(e.clientX, e.clientY))
                 setTrashHot(pointerInRect(trashRef.current, e.clientX, e.clientY))
               }
             }}
@@ -2006,12 +1976,9 @@ function EditorWorkspace() {
                 const { id, originX, originY, startX, startY, moved } = gesture
                 setGesture(null)
                 setSnapTargetSlot(null)
-                setLibraryDropTarget(false)
                 setTrashHot(false)
                 if (moved) {
-                  const droppedInLibrary =
-                    isOverPaletteDropZone(e.clientX, e.clientY) || pointerInRect(trashRef.current, e.clientX, e.clientY)
-                  if (droppedInLibrary) {
+                  if (pointerInRect(trashRef.current, e.clientX, e.clientY)) {
                     setSelectedId(null)
                     saveBlocks(removeBlock(blocks, id))
                   } else {
