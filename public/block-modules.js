@@ -10,6 +10,8 @@
 /** 100 % скорости = 1000 °/с. В блоке хранится °/с, ученик видит проценты. */
 export const SPEED_PERCENT_STEP = 10;
 export const DEFAULT_SPEED_PERCENT = 50;
+export const DEFAULT_LOOP_TIMES = 4;
+export const MAX_LOOP_TIMES = 999;
 
 export function speedToPercent(speed) {
   const value = Number.isFinite(Number(speed)) ? Number(speed) : 360;
@@ -65,6 +67,25 @@ export const MODULE_DEFS = Object.freeze({
     chip: Object.freeze({ prefix: 'с мощностью', unit: '%' }),
     conflicts: Object.freeze(['speed']),
   }),
+  times: Object.freeze({
+    id: 'times',
+    label: 'Сколько раз',
+    placement: 'chip',
+    icon: null,
+    title: 'Сколько раз',
+    description: 'Повторить столько раз и пойти дальше. Без этого модуля цикл повторяется всегда.',
+    chip: Object.freeze({ prefix: '', unit: 'раз', badge: false }),
+    conflicts: Object.freeze(['while']),
+  }),
+  while: Object.freeze({
+    id: 'while',
+    label: 'Пока датчик',
+    placement: 'base',
+    icon: null,
+    title: 'Пока датчик',
+    description: 'Повторять, пока условие верно. Датчик вставляется в овал после слова «Пока».',
+    conflicts: Object.freeze(['times']),
+  }),
   travel: Object.freeze({
     id: 'travel',
     label: 'Ход',
@@ -97,6 +118,12 @@ export const BLOCK_MODULES = Object.freeze({
     legacy: Object.freeze(['power']),
     required: Object.freeze(['travel']),
     fallback: Object.freeze(['travel']),
+  }),
+  loop: Object.freeze({
+    menu: Object.freeze(['times', 'while']),
+    legacy: Object.freeze([]),
+    required: Object.freeze([]),
+    fallback: Object.freeze([]),
   }),
   chassis: Object.freeze({
     menu: Object.freeze(['speed', 'travel']),
@@ -162,6 +189,8 @@ export function moduleAddPatch(blockType, id, block = {}) {
       return { speed: percentToSpeed(DEFAULT_SPEED_PERCENT) };
     case 'power':
       return { unit: 'seconds' };
+    case 'times':
+      return { times: DEFAULT_LOOP_TIMES };
     default:
       return {};
   }

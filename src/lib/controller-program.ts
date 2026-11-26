@@ -62,6 +62,7 @@ export type ControllerAction =
   | { kind: "sensorLights"; port: string; brightness: number }
   | { kind: "imuReset" }
   | { kind: "branch"; condition: SensorCondition; thenActions: ControllerAction[]; elseActions: ControllerAction[] }
+  | { kind: "loop"; times?: number; condition?: SensorCondition; bodyActions: ControllerAction[] }
 
 export interface ControllerHandler {
   target?: { controlId: string; input: string }

@@ -62,6 +62,9 @@ type SessionOptions={
 }
 type Clock={now:()=>number;setTimeout:(fn:()=>void,ms:number)=>ReturnType<typeof setTimeout>;clearTimeout:(id:ReturnType<typeof setTimeout>)=>void;setInterval:(fn:()=>void,ms:number)=>ReturnType<typeof setInterval>;clearInterval:(id:ReturnType<typeof setInterval>)=>void}
 const systemClock:Clock={now:()=>Date.now(),setTimeout:(fn,ms)=>setTimeout(fn,ms),clearTimeout:id=>clearTimeout(id),setInterval:(fn,ms)=>setInterval(fn,ms),clearInterval:id=>clearInterval(id)}
+const LOOP_TICK_MS=10
+/** Есть ли в списке то, что зависит от датчиков: тогда программа идёт и в пробном режиме. */
+const hasSensorFlow=(list:ControllerAction[]):boolean=>list.some(a=>a.kind==='branch'||a.kind==='waitSensor'||(a.kind==='loop'&&(Boolean(a.condition)||hasSensorFlow(a.bodyActions))))
 const sleep=(ms:number,signal?:AbortSignal,clock:Clock=systemClock)=>new Promise<void>((resolve,reject)=>{
   if(signal?.aborted)return reject(abortError('Отменено'))
   const timer=clock.setTimeout(()=>{signal?.removeEventListener('abort',abort);resolve()},ms)
@@ -190,6 +193,7 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
       if(a.kind==='stopAll') for(const port of stopAllPorts()) acc.add(port)
       if((a.kind==='stop'||a.kind==='run'||a.kind==='dc'||a.kind==='angle'||a.kind==='time'||a.kind==='dcTime')&&a.port)acc.add(a.port)
       if(a.kind==='branch'){collectDrivenPorts(a.thenActions,acc);collectDrivenPorts(a.elseActions,acc)}
+      if(a.kind==='loop')collectDrivenPorts(a.bodyActions,acc)
     }
     return [...acc]
   }
@@ -200,6 +204,10 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
       else if(a.kind==='branch'){
         const chosen=evalCondition(a.condition)?a.thenActions:a.elseActions
         const nested=findContinuousForPort(chosen,port)
+        if(nested)found=nested
+      }
+      else if(a.kind==='loop'){
+        const nested=findContinuousForPort(a.bodyActions,port)
         if(nested)found=nested
       }
     }
@@ -376,6 +384,20 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
               runner.signal.addEventListener('abort',wake,{once:true})
               timer=clock.setTimeout(wake,100)
             })
+          }
+          continue
+        }
+        if(action.kind==='loop'){
+          log(describeAction(action))
+          claimMotorOwners(action.bodyActions)
+          let round=0
+          while(!runner.signal.aborted&&epoch===generation){
+            if(action.times!==undefined&&round>=action.times)break
+            if(action.condition&&!evalCondition(action.condition))break
+            await runList(action.bodyActions)
+            round++
+            // Короткая пауза: пустое или быстрое тело не должно занимать всё время.
+            await sleep(LOOP_TICK_MS,runner.signal,clock)
           }
           continue
         }
@@ -608,7 +630,6 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
       }
       clear();snapshot=structuredClone(program);const generation=epoch
       publish({program:live?'live-running':'trial-running',uploadProgress:null,message:live?'Программа запущена':'Пробный режим: команды роботу не отправляются'})
-      const hasSensorFlow=(list:ControllerAction[]):boolean=>list.some(a=>a.kind==='branch'||a.kind==='waitSensor')
       if(program.startup.length){log('Запуск → '+program.startup.map(describeAction).filter(Boolean).join(' · '));if(live||hasSensorFlow(program.startup))void runActions('startup',program.startup,generation,live)}
       if(live)beginHeartbeat()
     },
@@ -663,8 +684,8 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
       const runnerKey = handler?.driveAreaId ? `drive-area:${handler.driveAreaId}` : `input:${key}`
       log(`${target.input} ${event==='pressed'?'нажата':'отпущена'} → ${actions.map(describeAction).filter(Boolean).join(' · ')||'нет действий'}`)
       let startedRunner:AbortController|null=null
-      const hasSensorFlow=actions.some(a=>a.kind==='branch'||a.kind==='waitSensor')
-      if(actions.length&&(state.program==='live-running'||hasSensorFlow))startedRunner=startActions(runnerKey,actions,epoch,state.program==='live-running')
+      const hasSensorFlowNow=hasSensorFlow(actions)
+      if(actions.length&&(state.program==='live-running'||hasSensorFlowNow))startedRunner=startActions(runnerKey,actions,epoch,state.program==='live-running')
       if(event==='pressed' && handler?.event==='hold'){
         const drivenPorts=collectDrivenPorts(actions)
         const ownedRunners=new Set<AbortController>()

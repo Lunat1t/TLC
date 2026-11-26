@@ -1,7 +1,7 @@
 import * as Raw from "../../public/block-modules.js"
 
-export type ModuleId = "pair" | "speed" | "power" | "travel"
-export type ModuleBlockType = "drive" | "pair" | "chassis"
+export type ModuleId = "pair" | "speed" | "power" | "travel" | "times" | "while"
+export type ModuleBlockType = "drive" | "pair" | "chassis" | "loop"
 export type ModuleIconKey = "gauge" | "zap" | null
 
 export interface ModuleDef {
@@ -23,6 +23,8 @@ export interface ModuleProblem {
 
 export const SPEED_PERCENT_STEP = Raw.SPEED_PERCENT_STEP as number
 export const DEFAULT_SPEED_PERCENT = Raw.DEFAULT_SPEED_PERCENT as number
+export const DEFAULT_LOOP_TIMES = Raw.DEFAULT_LOOP_TIMES as number
+export const MAX_LOOP_TIMES = Raw.MAX_LOOP_TIMES as number
 export const MODULE_DEFS = Raw.MODULE_DEFS as Readonly<Record<ModuleId, ModuleDef>>
 export const speedToPercent = Raw.speedToPercent as (speed: unknown) => number
 export const percentToSpeed = Raw.percentToSpeed as (percent: unknown) => number

@@ -27,6 +27,7 @@ import {
   Square,
   Trash2,
   Waves,
+  Repeat,
   Workflow,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -40,6 +41,8 @@ import {
 import {
   IF_FOOT_HEIGHT,
   IF_INDENT,
+  conditionSlotX,
+  isContainerType,
   IF_MID_HEIGHT,
   IF_TOP_HEIGHT,
   addBlock,
@@ -73,8 +76,8 @@ import {
   SensorBlock,
 } from "@/components/editor/controller-blocks"
 import { ModuleBar } from "@/components/editor/module-bar"
-import {
-} from "@/lib/controller-block-ui"
+import { ConditionSlot } from "@/components/editor/condition-slot"
+import { LoopBlock } from "@/components/editor/loop-block"
 import {
   DEFAULT_DRIVE_SETTINGS,
   compileControllerProgram,
@@ -154,6 +157,7 @@ const BLOCK_CATEGORIES = [
     icon: Workflow,
     color: "#b4570a",
     blocks: [
+      { type: "loop", label: "Повторять", icon: Repeat },
       { type: "if", label: "Если / иначе", icon: Workflow },
     ],
   },
@@ -2005,10 +2009,10 @@ function EditorWorkspace() {
                   if (!targetBlock) return null
                   const isCondBranch =
                     snapTargetSlot.branch === "condition" &&
-                    targetBlock.type === "if"
+                    isContainerType(targetBlock.type)
                   const isBodyBranch =
                     snapTargetSlot.branch === "body" &&
-                    targetBlock.type === "if"
+                    isContainerType(targetBlock.type)
                   const isElseBranch =
                     snapTargetSlot.branch === "else" &&
                     targetBlock.type === "if"
@@ -2017,7 +2021,7 @@ function EditorWorkspace() {
                       <div
                         aria-hidden="true"
                         style={{
-                          left: `${targetBlock.x + 68}px`,
+                          left: `${targetBlock.x + conditionSlotX(targetBlock.type)}px`,
                           top: `${targetBlock.y + 11}px`,
                         }}
                         className="absolute z-30 w-[132px] h-[36px] rounded-full border-2 border-dashed border-[#fbbf24] bg-[#fef3c7]/65 shadow-[0_3px_0_rgba(29,27,26,0.16)] pointer-events-none animate-lego-magnet"
@@ -2074,15 +2078,15 @@ function EditorWorkspace() {
                     const rawRootY = draggedRoot.y + gesture.dy
                     const isCondBranch =
                       snapTargetSlot.branch === "condition" &&
-                      targetBlock.type === "if"
+                      isContainerType(targetBlock.type)
                     const isBodyBranch =
                       snapTargetSlot.branch === "body" &&
-                      targetBlock.type === "if"
+                      isContainerType(targetBlock.type)
                     const isElseBranch =
                       snapTargetSlot.branch === "else" &&
                       targetBlock.type === "if"
                     const snapX = isCondBranch
-                      ? targetBlock.x + 68
+                      ? targetBlock.x + conditionSlotX(targetBlock.type)
                       : isBodyBranch || isElseBranch
                         ? targetBlock.x + IF_INDENT
                         : targetBlock.x
@@ -2126,6 +2130,8 @@ function EditorWorkspace() {
                   return null
                 }
                 const isIfBlock = block.type === "if"
+                const isLoopBlock = block.type === "loop"
+                const isContainerBlock = isIfBlock || isLoopBlock
                 const isSensorBlock = block.type === "sensor"
                 const isChassisBlock = block.type === "chassis"
                 const motorBlock = block.type === "drive" || paired
@@ -2143,14 +2149,14 @@ function EditorWorkspace() {
                 const isJustSnapped = justSnappedIds.includes(block.id)
                 const isJustSnappedHead = justSnappedHeadId === block.id
                 const modules = block.modules || []
-                const bodySpineHeight = isIfBlock
+                const bodySpineHeight = isContainerBlock
                   ? ifInnerHeight(blocks, block.id, "body")
                   : 0
                 const elseSpineHeight = isIfBlock
                   ? ifInnerHeight(blocks, block.id, "else")
                   : 0
 
-                const radiusClass = isIfBlock
+                const radiusClass = isContainerBlock
                   ? ""
                   : isButtonBlock
                     ? `rounded-t-md ${
@@ -2171,9 +2177,11 @@ function EditorWorkspace() {
                     data-block-id={block.id}
                     inert={checking && !isMotorButtons ? true : undefined}
                     tabIndex={checking && isMotorButtons ? -1 : 0}
-                    role={motorBlock || isChassisBlock || isIfBlock || isStopBlock || isSensorBlock || isMotorButtons ? "group" : "button"}
+                    role={motorBlock || isChassisBlock || isContainerBlock || isStopBlock || isSensorBlock || isMotorButtons ? "group" : "button"}
                     aria-label={
-                      isIfBlock
+                      isLoopBlock
+                        ? "Блок цикла Повторять. Перетащите за заголовок"
+                        : isIfBlock
                         ? "Блок условия Если Иначе. Перетащите за заголовок"
                         : isButtonBlock
                           ? "Кнопка пульта. Перетащите за заголовок"
@@ -2248,7 +2256,7 @@ function EditorWorkspace() {
                       setSelectedId(block.id)
                       finishBlockMove(block.id, block.x + dx, block.y + dy)
                     }}
-                    data-block-cat={isMotorButtons ? undefined : isIfBlock ? "logic" : isSensorBlock ? "sensors" : isStopBlock || isChassisBlock || motorBlock ? "motion" : "events"}
+                    data-block-cat={isMotorButtons ? undefined : isContainerBlock ? "logic" : isSensorBlock ? "sensors" : isStopBlock || isChassisBlock || motorBlock ? "motion" : "events"}
                     className={`absolute touch-none select-none ${checking && isMotorButtons ? "cursor-default" : "cursor-grab"} ${
                       isMoving
                         ? "z-30 cursor-grabbing scale-[1.02] shadow-2xl"
@@ -2256,7 +2264,7 @@ function EditorWorkspace() {
                           ? "z-40 transition-[left,top,box-shadow] duration-200 ease-out"
                           : "z-10 transition-[left,top,box-shadow] duration-200 ease-out"
                     } has-[[aria-expanded="true"]]:z-40 ${radiusClass} ${
-                      isIfBlock
+                      isContainerBlock
                         ? "pointer-events-none text-[#252221]"
                         : isMotorButtons
                           ? `${buttonDrag?.blockId === block.id ? "overflow-visible" : "overflow-hidden"} rounded-md border border-[#1d1b1a73] bg-[#faf5ec] text-[#252221]`
@@ -2278,25 +2286,25 @@ function EditorWorkspace() {
                     } ${
                       isJustSnapped ? "animate-lego-snap" : ""
                     } ${
-                      !isIfBlock && !isMotorButtons && blockError
+                      !isContainerBlock && !isMotorButtons && blockError
                         ? "ring-2 ring-[#dc2626]"
                         : ""
                     } ${
-                      !isIfBlock && isSelected
+                      !isContainerBlock && isSelected
                         ? "outline outline-2 outline-[#252221]"
                         : ""
                     } ${
-                      !isIfBlock && isSnapTarget
+                      !isContainerBlock && isSnapTarget
                         ? "ring-4 ring-[#fbbf24] shadow-[0_3px_0_rgba(29,27,26,0.16)]"
                         : ""
                     }`}
                   >
                     {/* Top LEGO connector stud for motor, chassis, if, and stop blocks */}
-                    {(motorBlock || isChassisBlock || isIfBlock || isStopBlock || isSensorBlock) && (
+                    {(motorBlock || isChassisBlock || isContainerBlock || isStopBlock || isSensorBlock) && (
                       <span
                         aria-hidden="true"
                         className={`block-fill absolute -top-[8px] left-[32px] w-[44px] h-[11px] rounded-t-[6px] pointer-events-auto ${
-                          isIfBlock
+                          isContainerBlock
                             ? "bg-[#f8f2e7]"
                             : isSensorBlock
                               ? "bg-[#d12f20]"
@@ -2498,7 +2506,7 @@ function EditorWorkspace() {
                         })()}
                         {!checking && <button type="button" aria-label="Изменить размер панели кнопок" onPointerDown={e=>resizeMotorPanel(e,block)} className="absolute bottom-0 right-0 z-20 grid h-6 w-6 cursor-nwse-resize place-items-center rounded-tl bg-white/80 text-sm text-[#3a3634]">◢</button>}
                       </div>
-                    ) : isIfBlock ? (
+                    ) : isContainerBlock ? (
                       (() => {
                         const conditionBlock = blocks.find(
                           (b) => b.parentId === block.id && b.branch === "condition"
@@ -2514,6 +2522,66 @@ function EditorWorkspace() {
                         const condError = conditionBlock
                           ? controllerErrorsByBlockId.get(conditionBlock.id)
                           : undefined
+                        const conditionSlot = (
+                          <ConditionSlot
+                            conditionBlock={conditionBlock}
+                            dragging={Boolean(isDraggingCondition)}
+                            snapping={isConditionSnap}
+                            errorMessage={condError}
+                            liveReady={robotState.transport === "ready"}
+                            sensorDistances={robotState.sensorDistances}
+                            sensorTelemetry={robotState.sensorTelemetry}
+                            onChange={(changes) => {
+                              if (!project || !conditionBlock) return
+                              saveBlocks(
+                                updateDrive(blocks, conditionBlock.id, changes, project.hub)
+                              )
+                            }}
+                            onRemove={() => {
+                              if (!conditionBlock) return
+                              setSelectedId(null)
+                              saveBlocks(removeBlock(blocks, conditionBlock.id))
+                            }}
+                            onStartDrag={(e) => {
+                              if (!conditionBlock) return
+                              e.preventDefault()
+                              e.stopPropagation()
+                              e.currentTarget.setPointerCapture(e.pointerId)
+                              setSelectedId(conditionBlock.id)
+                              setGesture({
+                                kind: "block",
+                                id: conditionBlock.id,
+                                startX: e.clientX,
+                                startY: e.clientY,
+                                originX: conditionBlock.x,
+                                originY: conditionBlock.y,
+                                moving: chainIds(blocks, conditionBlock.id),
+                                moved: false,
+                                dx: 0,
+                                dy: 0,
+                              })
+                            }}
+                          />
+                        )
+                        if (isLoopBlock) {
+                          return (
+                            <LoopBlock
+                              block={block}
+                              bodyHeight={bodySpineHeight}
+                              isConnected={isConnected}
+                              hasChild={hasChild}
+                              isSelected={isSelected}
+                              isSnapTarget={isSnapTarget}
+                              hasError={Boolean(blockError || condError)}
+                              errorMessage={blockError || condError}
+                              conditionSlot={conditionSlot}
+                              onChange={(changes) => {
+                                if (!project) return
+                                saveBlocks(updateDrive(blocks, block.id, changes, project.hub))
+                              }}
+                            />
+                          )
+                        }
                         return (
                       <div className="flex flex-col items-start">
                         {/* 1. Top Header Bar of E-shaped If/Else block */}
@@ -2542,56 +2610,7 @@ function EditorWorkspace() {
                             <GitBranch size={16} aria-hidden="true" className="shrink-0 text-[#837b70]" />
                             <span>Если</span>
                           </span>
-                          {conditionBlock && !isDraggingCondition ? (
-                            <div className="relative flex items-center shrink-0">
-                              <SensorBlock
-                                block={conditionBlock}
-                                slotted
-                                liveReady={robotState.transport === "ready"}
-                                sensorDistances={robotState.sensorDistances}
-                                sensorTelemetry={robotState.sensorTelemetry}
-                                errorMessage={condError}
-                                onChange={(changes) => {
-                                  if (!project) return
-                                  saveBlocks(
-                                    updateDrive(blocks, conditionBlock.id, changes, project.hub)
-                                  )
-                                }}
-                                onRemoveFromCondition={() => {
-                                  setSelectedId(null)
-                                  saveBlocks(removeBlock(blocks, conditionBlock.id))
-                                }}
-                                onStartDrag={(e) => {
-                                  e.preventDefault()
-                                  e.stopPropagation()
-                                  e.currentTarget.setPointerCapture(e.pointerId)
-                                  setSelectedId(conditionBlock.id)
-                                  setGesture({
-                                    kind: "block",
-                                    id: conditionBlock.id,
-                                    startX: e.clientX,
-                                    startY: e.clientY,
-                                    originX: conditionBlock.x,
-                                    originY: conditionBlock.y,
-                                    moving: chainIds(blocks, conditionBlock.id),
-                                    moved: false,
-                                    dx: 0,
-                                    dy: 0,
-                                  })
-                                }}
-                              />
-                            </div>
-                          ) : (
-                            <span
-                              role="region"
-                              aria-label="Слот для датчика"
-                              className={`w-[88px] h-[32px] shrink-0 rounded-full border shadow-inner transition-colors ${
-                                isConditionSnap
-                                  ? "border-2 border-dashed border-[#fbbf24] bg-[#fef3c7]/45"
-                                  : "bg-[#605a52]/55 border-white/25"
-                              }`}
-                            />
-                          )}
+                          {conditionSlot}
                         </div>
 
                         {/* 2. First Left Vertical Spine ("Если" branch mouth) */}
@@ -2873,11 +2892,11 @@ function EditorWorkspace() {
             left: `${gesture.clientX}px`,
             top: `${gesture.clientY}px`,
           }}
-          data-block-cat={gesture.type === "if" ? "logic" : gesture.type === "sensor" ? "sensors" : gesture.type === "button" || gesture.type === "start" ? "events" : gesture.type === "motor-buttons" ? undefined : "motion"}
+          data-block-cat={gesture.type === "if" || gesture.type === "loop" ? "logic" : gesture.type === "sensor" ? "sensors" : gesture.type === "button" || gesture.type === "start" ? "events" : gesture.type === "motor-buttons" ? undefined : "motion"}
           className={`fixed z-50 pointer-events-none opacity-85 -translate-x-1/2 -translate-y-1/2 scale-90 px-4 flex items-center text-white font-bold text-xs ${
             gesture.type === "start"
               ? "w-[240px] h-[52px] rounded-t-md rounded-b-md bg-[#f59e0b] shadow-[0_3px_0_rgba(29,27,26,0.16)]"
-              : gesture.type === "if"
+              : gesture.type === "if" || gesture.type === "loop"
                 ? "w-[220px] h-[56px] rounded-md bg-[#f8f2e7] shadow-[0_3px_0_rgba(29,27,26,0.16)]"
               : gesture.type === "sensor"
                 ? "w-[200px] h-[48px] rounded-full bg-[#d12f20] shadow-[0_3px_0_rgba(29,27,26,0.16)]"
@@ -2896,6 +2915,8 @@ function EditorWorkspace() {
         >
           {gesture.type === "start"
             ? "▶  Когда программа запускается"
+            : gesture.type === "loop"
+              ? "↻  Повторять всегда"
             : gesture.type === "if"
               ? "Если … то (Что если)"
             : gesture.type === "sensor"
