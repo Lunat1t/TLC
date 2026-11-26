@@ -9,12 +9,10 @@ import {
   ArrowRight,
   ArrowRightLeft,
   Bluetooth,
-  Check,
   CircleDot,
   Cog,
   Compass,
   Gamepad2,
-  Gauge,
   GitBranch,
   LayoutGrid,
   Monitor,
@@ -30,7 +28,6 @@ import {
   Trash2,
   Waves,
   Workflow,
-  Zap,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -61,7 +58,6 @@ import {
   type BlockType,
   type BranchSlot,
   type MotorDirection,
-  type MotorModule,
   type MotorPanelButton,
   MAX_PYTHON_CODE_CHARS,
   type SheetEditorMode,
@@ -76,12 +72,8 @@ import {
   ControllerStopBlock,
   SensorBlock,
 } from "@/components/editor/controller-blocks"
+import { ModuleBar } from "@/components/editor/module-bar"
 import {
-  DRIVE_MODULE_INFO,
-  TRAVEL_UNIT_ARIA_LABELS,
-  computePopoverPlacement,
-  TRAVEL_UNIT_LABELS,
-  nextTravelUnit,
 } from "@/lib/controller-block-ui"
 import {
   DEFAULT_DRIVE_SETTINGS,
@@ -270,17 +262,6 @@ function EditorWorkspace() {
   const [panY, setPanY] = React.useState(220)
   const [zoom, setZoom] = React.useState(1)
   const [selectedId, setSelectedId] = React.useState<string | null>(null)
-  const [openMenuBlockId, setOpenMenuBlockId] = React.useState<string | null>(
-    null
-  )
-  const [openMenuAlignLeft, setOpenMenuAlignLeft] = React.useState(false)
-  const [openMenuOpenUp, setOpenMenuOpenUp] = React.useState(false)
-  const [openDriveModule, setOpenDriveModule] = React.useState<{
-    blockId: string
-    module: "pair" | "speed" | "power" | "travel"
-  } | null>(null)
-  const [driveModAlignLeft, setDriveModAlignLeft] = React.useState(false)
-  const [driveModOpenUp, setDriveModOpenUp] = React.useState(false)
   const [pybricksError, setPybricksError] = React.useState("")
   const [pendingPybricksRun, setPendingPybricksRun] = React.useState(false)
   const pySaveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -826,20 +807,18 @@ function EditorWorkspace() {
   }, [robotMenuOpen, moreMenuOpen])
 
   React.useEffect(() => {
-    if (!runPromptOpen && !chassisDialogOpen && !panelErrorModal && !openMenuBlockId && !openDriveModule) return
+    if (!runPromptOpen && !chassisDialogOpen && !panelErrorModal) return
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setRunPromptOpen(false)
         setPendingPybricksRun(false)
         setChassisDialogOpen(false)
         setPanelErrorModal(null)
-        setOpenMenuBlockId(null)
-        setOpenDriveModule(null)
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [runPromptOpen, chassisDialogOpen, panelErrorModal, openMenuBlockId, openDriveModule])
+  }, [runPromptOpen, chassisDialogOpen, panelErrorModal])
 
   React.useEffect(() => {
     return () => {
@@ -1221,8 +1200,6 @@ function EditorWorkspace() {
       clearTimeout(pySaveTimerRef.current)
       pySaveTimerRef.current = null
     }
-    setOpenMenuBlockId(null)
-    setOpenDriveModule(null)
     setSelectedId(null)
 
     const base = snapshotSheets()
@@ -1409,12 +1386,6 @@ function EditorWorkspace() {
       ref={editorRootRef}
       aria-hidden={landscapeBlocked || undefined}
       className="tlc-editor flex flex-col h-dvh bg-[#faf6ee] text-[#252221] select-none overflow-hidden"
-      onPointerDown={(e) => {
-        if (!(e.target as HTMLElement).closest("[data-module-picker]")) {
-          setOpenMenuBlockId(null)
-          setOpenDriveModule(null)
-        }
-      }}
     >
       {/* Topbar */}
       <header className="editor-topbar h-[68px] shrink-0 flex items-center gap-4 px-4 md:px-6 bg-white border-b border-[#1d1b1a73] z-10">
@@ -2284,9 +2255,7 @@ function EditorWorkspace() {
                         : checking && isMotorButtons
                           ? "z-40 transition-[left,top,box-shadow] duration-200 ease-out"
                           : "z-10 transition-[left,top,box-shadow] duration-200 ease-out"
-                    } has-[[aria-expanded="true"]]:z-40 ${
-                      openMenuBlockId === block.id || openDriveModule?.blockId === block.id ? "z-40" : ""
-                    } ${radiusClass} ${
+                    } has-[[aria-expanded="true"]]:z-40 ${radiusClass} ${
                       isIfBlock
                         ? "pointer-events-none text-[#252221]"
                         : isMotorButtons
@@ -2855,276 +2824,16 @@ function EditorWorkspace() {
                           )}
                         </div>
 
-                        {/* Attached Modules Inline in natural reading order */}
-                        {(["speed", "power", "travel"] as const)
-                          .filter((mod) => modules.includes(mod))
-                          .map((mod) => (
-                            <div
-                              key={mod}
-                              className="shrink-0 flex items-center gap-2 rounded-md bg-black/20 px-2 py-1"
-                            >
-                              <div data-module-picker="true" className="relative shrink-0">
-                                <button
-                                  type="button"
-                                  aria-label={`Модуль мотора: ${DRIVE_MODULE_INFO[mod].title}`}
-                                  aria-expanded={openDriveModule?.blockId === block.id && openDriveModule.module === mod}
-                                  title={DRIVE_MODULE_INFO[mod].title}
-                                  onClick={(e) => {
-                                    setOpenMenuBlockId(null)
-                                    if (openDriveModule?.blockId === block.id && openDriveModule.module === mod) {
-                                      setOpenDriveModule(null)
-                                      return
-                                    }
-                                    const rect = e.currentTarget.getBoundingClientRect()
-                                    const placement = computePopoverPlacement(rect, { width: window.innerWidth, height: window.innerHeight })
-                                    setDriveModAlignLeft(placement.alignLeft)
-                                    setDriveModOpenUp(placement.openUp)
-                                    setOpenDriveModule({ blockId: block.id, module: mod })
-                                  }}
-                                  className={`min-h-[36px] min-w-[36px] h-[36px] ${mod === "travel" ? "px-2" : "w-[36px]"} rounded-[9px] bg-white/15 hover:bg-white/25 text-white/95 flex items-center justify-center shrink-0 cursor-pointer`}
-                                >
-                                  {mod === "travel" ? (
-                                    <span className="text-[14px] font-bold whitespace-nowrap">Ход</span>
-                                  ) : mod === "speed" ? (
-                                    <Gauge size={16} aria-hidden="true" />
-                                  ) : (
-                                    <Zap size={16} aria-hidden="true" />
-                                  )}
-                                </button>
-                                {openDriveModule?.blockId === block.id && openDriveModule.module === mod && (
-                                  <div className={`absolute ${driveModOpenUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"} ${driveModAlignLeft ? "left-0" : "right-0"} z-50 w-[216px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-2.5 rounded-md border border-[#1d1b1a73] bg-white text-[#252221] shadow-xl flex flex-col gap-2`}>
-                                    <div>
-                                      <p className="text-xs font-bold text-[#252221] leading-snug">{DRIVE_MODULE_INFO[mod].title}</p>
-                                      <p className="mt-0.5 text-[11px] font-semibold text-[#726b62] leading-snug">{DRIVE_MODULE_INFO[mod].description}</p>
-                                    </div>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        if (!project) return
-                                        setOpenDriveModule(null)
-                                        saveBlocks(
-                                          updateDrive(
-                                            blocks,
-                                            block.id,
-                                            { modules: modules.filter((m) => m !== mod) },
-                                            project.hub
-                                          )
-                                        )
-                                      }}
-                                      className="min-h-[36px] w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#fef2f2] hover:bg-[#fee2e2] text-xs font-bold text-[#991b1b] cursor-pointer"
-                                    >
-                                      <Trash2 size={14} aria-hidden="true" className="shrink-0" />
-                                      <span>Убрать</span>
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                              <span className="whitespace-nowrap text-[16px] font-bold tracking-tight">
-                                {mod === "travel"
-                                  ? "на"
-                                  : mod === "speed"
-                                    ? "со скоростью"
-                                    : "с мощностью"}
-                              </span>
-                              {mod === "travel" ? (
-                                <>
-                                  <input
-                                    type="number"
-                                    min="0.01"
-                                    max="10000"
-                                    step="any"
-                                    aria-label="Значение движения"
-                                    value={block.value ?? 1}
-                                    onChange={(e) => {
-                                      const val = Number(e.target.value)
-                                      if (
-                                        !project ||
-                                        !Number.isFinite(val) ||
-                                        val < 0.01 ||
-                                        val > 10000
-                                      )
-                                        return
-                                      saveBlocks(
-                                        updateDrive(
-                                          blocks,
-                                          block.id,
-                                          { value: val },
-                                          project.hub
-                                        )
-                                      )
-                                    }}
-                                    className="w-[78px] h-[38px] rounded-md px-3 text-center bg-white text-[#272423] font-bold text-[15px] shadow-xs"
-                                  />
-                                  <button
-                                    type="button"
-                                    aria-label={`Единица измерения: ${TRAVEL_UNIT_ARIA_LABELS[block.unit || "rotations"]}`}
-                                    title={`Единица: ${TRAVEL_UNIT_ARIA_LABELS[block.unit || "rotations"]}`}
-                                    onClick={() =>
-                                      project &&
-                                      saveBlocks(
-                                        updateDrive(
-                                          blocks,
-                                          block.id,
-                                          {
-                                            unit: nextTravelUnit(block.unit || "rotations"),
-                                          },
-                                          project.hub
-                                        )
-                                      )
-                                    }
-                                    className="min-h-[36px] min-w-[36px] h-[38px] rounded-md px-3 bg-white text-[#272423] hover:bg-[#f6eee1] font-bold text-[15px] shadow-xs cursor-pointer flex items-center justify-center shrink-0"
-                                  >
-                                    {TRAVEL_UNIT_LABELS[block.unit || "rotations"]}
-                                  </button>
-                                </>
-                              ) : (
-                                <>
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    max="100"
-                                    aria-label={
-                                      mod === "speed"
-                                        ? "Скорость, процентов"
-                                        : "Мощность, процентов"
-                                    }
-                                    value={
-                                      mod === "speed"
-                                        ? Math.max(1, Math.min(100, Math.round((block.speed ?? 360) / SPEED_PERCENT_STEP)))
-                                        : (block.power ?? 50)
-                                    }
-                                    onChange={(e) => {
-                                      const val = Number(e.target.value)
-                                      if (!project || !Number.isFinite(val))
-                                        return
-                                      saveBlocks(
-                                        updateDrive(
-                                          blocks,
-                                          block.id,
-                                          {
-                                            [mod]: mod === "speed"
-                                              ? Math.max(1, Math.min(100, Math.round(val))) * SPEED_PERCENT_STEP
-                                              : val,
-                                          },
-                                          project.hub
-                                        )
-                                      )
-                                    }}
-                                    className="w-[80px] h-[38px] rounded-md px-3 text-center bg-white text-[#272423] font-bold text-[15px] shadow-xs"
-                                  />
-                                  <span className="text-[14px] font-bold text-white/95">
-%
-                                  </span>
-                                </>
-                              )}
-
-                            </div>
-                          ))}
-
-                        {/* Module Picker (+) */}
-                        <div
-                          data-module-picker="true"
-                          className="relative shrink-0 flex items-center ml-1"
-                        >
-                          <button
-                            type="button"
-                            aria-label="Добавить модуль мотора"
-                            aria-expanded={openMenuBlockId === block.id}
-                            onClick={(e) => {
-                              if (openMenuBlockId === block.id) {
-                                setOpenMenuBlockId(null)
-                                return
-                              }
-                              const rect = e.currentTarget.getBoundingClientRect()
-                              const placement = computePopoverPlacement(rect, {
-                                width: window.innerWidth,
-                                height: window.innerHeight,
-                              })
-                              setOpenMenuAlignLeft(placement.alignLeft)
-                              setOpenMenuOpenUp(placement.openUp)
-                              setOpenMenuBlockId(block.id)
-                            }}
-                            className="min-h-[36px] min-w-[36px] w-[36px] h-[36px] rounded-md border border-white/55 bg-white/15 hover:bg-white/30 text-white text-xl leading-none font-bold grid place-items-center"
-                          >
-                            +
-                          </button>
-
-                          {openMenuBlockId === block.id && (
-                            <div className={`absolute ${openMenuOpenUp ? "bottom-[calc(100%+8px)]" : "top-[calc(100%+8px)]"} ${openMenuAlignLeft ? "left-0" : "right-0"} z-50 w-[176px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-24px)] overflow-y-auto p-1.5 rounded-md border border-[#1d1b1a73] bg-white text-[#252221] shadow-xl flex flex-col gap-1`}>
-                              {(
-                                [
-                                  ["pair", "Мотор 2", null],
-                                  ["speed", "Скорость %", Gauge],
-                                  ["travel", "Ход", null],
-                                ] as const
-                              ).map(([modName, label, Icon]) => {
-                                const isActive = modName === "pair" ? paired : modules.includes(modName)
-                                return (
-                                  <button
-                                    key={modName}
-                                    type="button"
-                                    aria-pressed={isActive}
-                                    onClick={() => {
-                                      if (!project) return
-                                      if (isActive) {
-                                        saveBlocks(
-                                          updateDrive(
-                                            blocks,
-                                            block.id,
-                                            {
-                                              ...(modName === "pair" && block.type === "pair"
-                                                ? { type: "drive" as BlockType }
-                                                : {}),
-                                              modules: modules.filter((m) => m !== modName),
-                                            },
-                                            project.hub
-                                          )
-                                        )
-                                        setOpenMenuBlockId(null)
-                                        return
-                                      }
-                                      const filtered = modules.filter(
-                                        (m) => !(modName === "speed" && m === "power")
-                                      )
-                                      saveBlocks(
-                                        updateDrive(
-                                          blocks,
-                                          block.id,
-                                          {
-                                            modules: [
-                                              ...filtered,
-                                              modName as MotorModule,
-                                            ],
-                                            ...(modName === "pair"
-                                              ? {
-                                                  motor2: (block.motor || "A") === "B" ? "A" : "B",
-                                                  direction2: "backward",
-                                                }
-                                              : {}),
-                                            ...(modName === "speed"
-                                              ? { speed: 50 * SPEED_PERCENT_STEP }
-                                              : {}),
-                                          },
-                                          project.hub
-                                        )
-                                      )
-                                      setOpenMenuBlockId(null)
-                                    }}
-                                    className={`min-h-[36px] flex items-center gap-2 text-left px-3 py-1.5 rounded-lg text-xs font-bold ${
-                                      isActive
-                                        ? "bg-[#f3e8d4] hover:bg-[#edddc2] text-[#393533]"
-                                        : "bg-[#f9f3e9] hover:bg-[#f5ebdb] text-[#252221]"
-                                    }`}
-                                  >
-                                    <Check size={14} aria-hidden={true} className={isActive ? "opacity-100 shrink-0" : "opacity-0 shrink-0"} />
-                                    {Icon && <Icon size={15} aria-hidden={true} className="shrink-0" />}
-                                    <span>{label}</span>
-                                  </button>
-                                )
-                              })}
-                            </div>
-                          )}
-                        </div>
+                        {/* Модули: таблетки и меню «+» — из общего реестра */}
+                        <ModuleBar
+                          blockType={block.type === "pair" ? "pair" : "drive"}
+                          block={block}
+                          subject="мотора"
+                          onChange={(changes) => {
+                            if (!project) return
+                            saveBlocks(updateDrive(blocks, block.id, changes, project.hub))
+                          }}
+                        />
                       </div>
                       <BlockErrorBar errorMessage={blockError} />
                       </div>

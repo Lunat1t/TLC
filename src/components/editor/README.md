@@ -7,6 +7,7 @@
 ## Interface
 
 - `ControllerButtonBlock` задаёт кнопку и событие `pressed` или `released`. `ControllerStopBlock` задаёт порт мотора для остановки. Оба принимают блок и передают изменения через `onChange`. [controller-blocks.tsx](./controller-blocks.tsx)
+- `ModuleBar` рисует «таблетки» включённых модулей блока и меню «+». Один компонент обслуживает блоки «Мотор» и «Шасси»; набор модулей и правила берёт из реестра `@/lib/block-modules`. `ModuleCapsuleIconPopover` и `usePopoverDismiss` из того же файла используют и другие блоки. [module-bar.tsx](./module-bar.tsx)
 - `ControlAreaView` отображает и редактирует область пульта и её элементы. При работе пульта передаёт события через `onInput` и `onCancel`. [control-area.tsx](./control-area.tsx)
 - `useRobotSession` возвращает наблюдаемое состояние `state` и ссылку `ref` на сессию контроллера. [robot-session.tsx](./robot-session.tsx)
 
