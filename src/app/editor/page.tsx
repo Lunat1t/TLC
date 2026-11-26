@@ -289,7 +289,7 @@ function EditorWorkspace() {
   const [compactPalette, setCompactPalette] = React.useState(false)
   const [paletteExpanded, setPaletteExpanded] = React.useState<boolean | null>(null)
   const [blockCategory, setBlockCategory] = React.useState<(typeof PALETTE_FILTERS)[number]["id"]>("all")
-  const paletteOpen = paletteExpanded ?? !compactPalette
+  const paletteOpen = paletteExpanded ?? false
   const [libraryDropTarget, setLibraryDropTarget] = React.useState(false)
   const isOverPaletteDropZone = React.useCallback(
     (x: number, y: number) =>
@@ -652,7 +652,7 @@ function EditorWorkspace() {
     }
     setGesture(null)
     setSelectedId(null)
-    if (compactPalette) setPaletteExpanded(false)
+    setPaletteExpanded(false)
     setChecking(true)
   }
 
@@ -806,6 +806,15 @@ function EditorWorkspace() {
   }
 
   React.useEffect(() => {
+    if (!paletteOpen) return
+    const onPointerDown = (e: PointerEvent) => {
+      if (paletteRef.current && !paletteRef.current.contains(e.target as Node)) setPaletteExpanded(false)
+    }
+    window.addEventListener("pointerdown", onPointerDown)
+    return () => window.removeEventListener("pointerdown", onPointerDown)
+  }, [paletteOpen])
+
+  React.useEffect(() => {
     if (!robotMenuOpen && !moreMenuOpen) return
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target as Node
@@ -948,7 +957,7 @@ function EditorWorkspace() {
       if (!moved || !pointerOver(boardRef.current, event.clientX, event.clientY)) return
       const world = worldFromClient(event.clientX, event.clientY)
       const added = await (kind === "area" ? addControlArea(world) : addControl(kind, world))
-      if (added && compactPalette) setPaletteExpanded(false)
+      if (added) setPaletteExpanded(false)
     }
     element.addEventListener("pointermove",move);element.addEventListener("pointerup",up);element.addEventListener("pointercancel",cancel)
   }
@@ -1107,7 +1116,7 @@ function EditorWorkspace() {
         }
         setSelectedId(id)
         saveBlocks(next)
-        if (compactPalette) setPaletteExpanded(false)
+        setPaletteExpanded(false)
       } catch (err) {
         setSaveMessage({
           text:
@@ -1645,7 +1654,7 @@ function EditorWorkspace() {
           ref={paletteRef}
           aria-label="Меню блоков"
           inert={checking || undefined}
-          className={`relative z-20 flex shrink-0 ${checking ? "opacity-50 max-md:invisible" : ""}`}
+          className={`relative z-50 flex shrink-0 ${checking ? "opacity-50 max-md:invisible" : ""}`}
         >
           <div className={`flex w-12 shrink-0 flex-col items-center gap-1 overflow-y-auto border-r border-[#1d1b1a73] py-2 transition-colors ${
             libraryDropTarget
@@ -1699,7 +1708,7 @@ function EditorWorkspace() {
             ref={paletteDrawerRef}
             id="editor-block-palette"
             hidden={!paletteOpen}
-            className={`w-44 shrink-0 overflow-y-auto overscroll-contain border-r border-[#1d1b1a73] px-2.5 py-2 max-md:absolute max-md:inset-y-0 max-md:left-full max-md:shadow-md transition-colors ${libraryDropTarget ? "bg-red-50 ring-2 ring-inset ring-red-400" : "bg-white"}`}
+            className={`absolute inset-y-0 left-full z-30 w-44 touch-pan-y overflow-y-auto overscroll-contain border-r border-[#1d1b1a73] px-2.5 py-2 shadow-md ${libraryDropTarget ? "bg-red-50 ring-2 ring-inset ring-red-400" : "bg-white"}`}
           >
             {libraryDropTarget && (
               <div className="mb-2 flex items-center gap-2 rounded-md border border-red-300 bg-red-100 px-2.5 py-2 text-xs font-bold text-red-800 shadow-xs">
@@ -1730,7 +1739,7 @@ function EditorWorkspace() {
                               clientY: event.clientY,
                             })
                           }}
-                          className="grid h-12 w-full touch-none cursor-grab place-items-center rounded-md border-2 border-[#1d1b1a73] bg-[#faf5ec] p-1 hover:border-[#555049] hover:bg-[#f6eee1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-stone-700 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+                          className="grid h-12 w-full touch-pan-y cursor-grab place-items-center rounded-md border-2 border-[#1d1b1a73] bg-[#faf5ec] p-1 hover:border-[#555049] hover:bg-[#f6eee1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-stone-700 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <MotorButtonsPalettePreview />
                         </button>
@@ -1748,7 +1757,7 @@ function EditorWorkspace() {
                             if (!project || event.button !== 0) return
                             dragControlFromPalette(event, "distance-gauge")
                           }}
-                          className="grid h-12 w-full touch-none cursor-grab place-items-center rounded-md border-2 border-[#1d1b1a73] bg-[#f9f4ec]/60 p-1 hover:border-[#d12f20] hover:bg-[#f9f4ec] focus-visible:outline focus-visible:outline-2 focus-visible:outline-stone-700 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+                          className="grid h-12 w-full touch-pan-y cursor-grab place-items-center rounded-md border-2 border-[#1d1b1a73] bg-[#f9f4ec]/60 p-1 hover:border-[#d12f20] hover:bg-[#f9f4ec] focus-visible:outline focus-visible:outline-2 focus-visible:outline-stone-700 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <DistanceGaugePalettePreview />
                         </button>
@@ -1772,7 +1781,7 @@ function EditorWorkspace() {
                                   if (!project || event.button !== 0) return
                                   dragControlFromPalette(event, dirKind)
                                 }}
-                                className="grid h-14 w-full touch-none cursor-grab place-items-center rounded-md border-2 border-[#b9b4ad] bg-white p-1 hover:border-[#c35117] hover:bg-[#fff8ef] focus-visible:outline focus-visible:outline-2 focus-visible:outline-stone-700 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+                                className="grid h-14 w-full touch-pan-y cursor-grab place-items-center rounded-md border-2 border-[#b9b4ad] bg-white p-1 hover:border-[#c35117] hover:bg-[#fff8ef] focus-visible:outline focus-visible:outline-2 focus-visible:outline-stone-700 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 <DirectionPalettePreview kind={dirKind} />
                               </button>
@@ -1805,7 +1814,7 @@ function EditorWorkspace() {
                             clientY: event.clientY,
                           })
                         }}
-                        className="flex min-h-10 w-full touch-none cursor-grab items-center gap-2 rounded-lg bg-[#faf5ec] px-2 py-1.5 text-left text-xs font-bold leading-tight hover:bg-[#ecdcc1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-current active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex min-h-10 w-full touch-pan-y cursor-grab items-center gap-2 rounded-lg bg-[#faf5ec] px-2 py-1.5 text-left text-xs font-bold leading-tight hover:bg-[#ecdcc1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-current active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <span data-catalog-icon={id} className="grid size-6 shrink-0 place-items-center rounded-md text-white" style={{ backgroundColor: color }}>
                           {type === "sensor" ? (
