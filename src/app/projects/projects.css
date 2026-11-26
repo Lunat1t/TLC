@@ -1,0 +1,41 @@
+.projects-main { padding-top: clamp(24px, 4vw, 48px); }
+.projects-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+.projects-head h1 { margin: 0; font-size: clamp(26px, 3.4vw, 36px); line-height: 1.15; font-weight: 800; letter-spacing: -0.03em; }
+.projects-head p { margin: 4px 0 0; color: var(--home-muted); font-size: 14px; }
+.projects-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.projects-actions .home-new-button { width: auto; padding: 0 18px; }
+.projects-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; }
+.projects-search { display: flex; align-items: center; gap: 8px; flex: 1 1 220px; min-height: 44px; padding: 0 12px; border: 1.5px solid var(--home-line); border-radius: 12px; background: #fff; color: var(--home-muted); }
+.projects-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; font-size: 15px; color: var(--home-ink); }
+.projects-search:focus-within { border-color: var(--home-focus); }
+.projects-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.projects-chip { min-height: 40px; padding: 0 14px; border: 1.5px solid var(--home-line); border-radius: 999px; background: #fff; font: inherit; font-size: 13px; font-weight: 700; color: var(--home-ink); cursor: pointer; }
+.projects-chip[aria-pressed="true"] { background: var(--home-dark); border-color: var(--home-dark); color: #fff; }
+.projects-sort { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--home-muted); }
+.projects-sort select { min-height: 40px; padding: 0 10px; border: 1.5px solid var(--home-line); border-radius: 10px; background: #fff; font: inherit; font-size: 14px; color: var(--home-ink); }
+.projects-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 14px; }
+.projects-card { position: relative; display: flex; border: 1.5px solid var(--home-line); border-radius: 14px; background: #fff; transition: border-color 150ms, box-shadow 150ms; }
+.projects-card:hover, .projects-card:focus-within { border-color: #d0ccc7; box-shadow: 0 3px 0 rgba(29,27,26,.16); }
+.projects-card-link { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; padding: 16px; color: var(--home-ink); border-radius: 14px; }
+.projects-card-icon { display: grid; place-items: center; flex: none; width: 54px; height: 54px; border-radius: 16px; color: #3a2a00; }
+.projects-card-icon.is-spike { background: #f6d34c; box-shadow: 0 4px 0 #d4ae1f; }
+.projects-card-icon.is-ev3 { background: #ef8566; box-shadow: 0 4px 0 #cf6342; color: #4a1608; }
+.projects-card-copy { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.projects-card-copy strong { font-size: 15px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.projects-card-copy small { font-size: 12px; color: var(--home-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.projects-card-menu { position: relative; display: flex; align-items: flex-start; padding: 8px 8px 0 0; }
+.projects-card-menu .home-project-menu { margin: 0; }
+.projects-menu { position: absolute; top: 44px; right: 8px; z-index: 20; display: flex; flex-direction: column; min-width: 190px; padding: 6px; border: 1.5px solid var(--home-line); border-radius: 12px; background: #fff; box-shadow: 0 8px 24px rgba(29,27,26,.18); }
+.projects-menu button { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 10px; border-radius: 8px; font: inherit; font-size: 14px; font-weight: 600; text-align: left; color: var(--home-ink); cursor: pointer; }
+.projects-menu button:hover { background: var(--home-blue-soft); }
+.projects-menu .is-danger { color: var(--home-error); }
+.projects-rename { display: flex; flex-direction: column; gap: 14px; }
+.projects-rename h2 { margin: 0; font-size: 20px; }
+.projects-rename input { min-height: 46px; padding: 0 12px; border: 1.5px solid var(--home-line); border-radius: 10px; font: inherit; font-size: 16px; }
+@media (max-width: 600px) {
+  .projects-head { align-items: stretch; }
+  .projects-actions .home-new-button { flex: 1; }
+  .projects-grid { grid-template-columns: 1fr; gap: 10px; }
+  .projects-sort span { display: none; }
+}
+.projects-search input:focus-visible { outline: none; }

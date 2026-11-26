@@ -1,6 +1,7 @@
 export type NavIconKey =
   | "home"
   | "map"
+  | "projects"
   | "battle-pass"
   | "settings"
   | "instructions"
@@ -17,11 +18,13 @@ export interface NavItem {
 
 export const MAIN_NAV_TABS: readonly NavItem[] = [
   { path: "/dashboard", label: "Рабочий стол", iconKey: "home" },
+  { path: "/projects", label: "Проекты", iconKey: "projects" },
   { path: "/map", label: "Роадмап", iconKey: "map" },
 ]
 
 const TRANSITION_ROUTE_ORDER: readonly string[] = [
   "/dashboard",
+  "/projects",
   "/map",
   "/battle-pass",
   "/settings",
@@ -36,6 +39,7 @@ const TRANSITION_ROUTE_ORDER: readonly string[] = [
 
 const APP_PAGE_PREFIXES: readonly string[] = [
   "/dashboard",
+  "/projects",
   "/map",
   "/battle-pass",
   "/settings",

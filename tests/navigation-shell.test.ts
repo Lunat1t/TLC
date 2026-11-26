@@ -17,6 +17,7 @@ test('main top bar tabs match agreed routes and labels without battle-pass', () 
     MAIN_NAV_TABS.map((t) => [t.path, t.label]),
     [
       ['/dashboard', 'Рабочий стол'],
+      ['/projects', 'Проекты'],
       ['/map', 'Роадмап'],
     ]
   )
@@ -25,6 +26,7 @@ test('main top bar tabs match agreed routes and labels without battle-pass', () 
 test('top bar visibility covers app pages and excludes editor/auth/public', () => {
   for (const path of [
     '/dashboard',
+    '/projects',
     '/map',
     '/battle-pass',
     '/settings',
@@ -101,15 +103,15 @@ test('topbar filters workspace tabs and brand target for guest, parent, and stud
 
   assert.deepEqual(
     getVisibleMainNavTabs({ userId: null, role: null }).map((t) => t.path),
-    ['/dashboard']
+    ['/dashboard', '/projects']
   )
   assert.deepEqual(
     getVisibleMainNavTabs({ userId: 'u1', role: 'student' }).map((t) => t.path),
-    ['/dashboard', '/map']
+    ['/dashboard', '/projects', '/map']
   )
   assert.deepEqual(
     getVisibleMainNavTabs({ userId: 'u2', role: 'teacher' }).map((t) => t.path),
-    ['/dashboard', '/map']
+    ['/dashboard', '/projects', '/map']
   )
   assert.deepEqual(
     getVisibleMainNavTabs({ userId: 'u3', role: 'parent' }).map((t) => t.path),
