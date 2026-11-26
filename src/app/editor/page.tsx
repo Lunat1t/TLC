@@ -29,7 +29,6 @@ import {
   Settings2,
   Square,
   Trash2,
-  Volume2,
   Waves,
   Workflow,
   Zap,
@@ -844,17 +843,8 @@ function EditorWorkspace() {
   React.useEffect(() => {
     return () => {
       if (pySaveTimerRef.current) clearTimeout(pySaveTimerRef.current)
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        try { window.speechSynthesis.cancel() } catch {}
-      }
     }
   }, [])
-
-  React.useEffect(() => {
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      try { window.speechSynthesis.cancel() } catch {}
-    }
-  }, [selectedId, checking, editorMode])
 
   React.useEffect(() => () => {void sessionRef.current?.stop("Проект изменён. Запустите программу снова.")}, [projectId,sessionRef])
   React.useEffect(() => {
@@ -3265,24 +3255,6 @@ function EditorWorkspace() {
                     <span className="text-xs sm:text-[13px] font-bold text-[#252221] leading-snug">
                       {sentence}
                     </span>
-                    <button
-                      type="button"
-                      aria-label="Озвучить блок"
-                      title="Озвучить блок"
-                      onClick={() => {
-                        if (typeof window === "undefined" || !("speechSynthesis" in window)) return
-                        try {
-                          window.speechSynthesis.cancel()
-                          const utterance = new SpeechSynthesisUtterance(sentence)
-                          utterance.lang = "ru-RU"
-                          utterance.rate = 0.95
-                          window.speechSynthesis.speak(utterance)
-                        } catch {}
-                      }}
-                      className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-[#f9f3e9] hover:bg-[#f4ebda] text-[#393533] grid place-items-center shrink-0 cursor-pointer"
-                    >
-                      <Volume2 size={17} aria-hidden="true" />
-                    </button>
                   </div>
                 </div>
               )
