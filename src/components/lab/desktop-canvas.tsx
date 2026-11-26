@@ -7,38 +7,9 @@ import { workspaceValuesEqual } from "@/lib/workspace-sync"
 
 type Point = { desktop?:number; x: number; y: number; z: number; locked?: boolean; title?: string }
 type Positions = Record<string, Point>
-export const MAX_DESKTOPS = 6
-type Pages = { page: number; pageRef: { current: number }; goto: (page: number) => void }
-const CanvasContext = createContext<{ positions: Positions; place: (id: string, point: Point, expected?: { point?: Point }) => void; active: boolean } & Pages>({ positions: {}, place: () => {}, active: false, page: 0, pageRef: { current: 0 }, goto: () => {} })
-export function DesktopCanvas({ userId, minPages = 1, onPageChange, children }: { userId: string; minPages?: number; onPageChange?: (page: number) => void; children: ReactNode }) {
+const CanvasContext = createContext<{ positions: Positions; place: (id: string, point: Point, expected?: { point?: Point }) => void; active: boolean }>({ positions: {}, place: () => {}, active: false })
+export function DesktopCanvas({ userId, children }: { userId: string; children: ReactNode }) {
   const [positions, setPositions] = useState<Positions>({})
-  const [page, setPage] = useState(0)
-  const [added, setAdded] = useState(1)
-  const pageRef = useRef(0)
-  const lastUsed = Math.max(0, ...Object.values(positions).map(v => v.desktop ?? 0))
-  const count = Math.min(MAX_DESKTOPS, Math.max(1, minPages, lastUsed + 1, added))
-  const countRef = useRef(count)
-  countRef.current = count
-  function goto(next: number) {
-    const target = Math.min(MAX_DESKTOPS - 1, Math.max(0, next))
-    if (target >= countRef.current) setAdded(target + 1)
-    pageRef.current = target
-    setPage(target)
-  }
-  const current = Math.min(page, count - 1)
-  pageRef.current = current
-  useEffect(() => { onPageChange?.(current) }, [current])
-  useEffect(() => {
-    function keys(e: KeyboardEvent) {
-      if (!e.altKey || e.ctrlKey || e.metaKey || (e.key !== "ArrowLeft" && e.key !== "ArrowRight")) return
-      if ((e.target as Element | null)?.closest?.("input,textarea,select,[contenteditable]")) return
-      e.preventDefault()
-      goto(pageRef.current + (e.key === "ArrowRight" ? 1 : -1))
-    }
-    window.addEventListener("keydown", keys)
-    return () => window.removeEventListener("keydown", keys)
-  }, [])
-  const wheelAt = useRef(0)
   const [active, setActive] = useState(false)
   const [error, setError] = useState("")
   const store=useAccountWorkspace()
@@ -57,21 +28,10 @@ export function DesktopCanvas({ userId, minPages = 1, onPageChange, children }: 
     }catch{setError('Не удалось загрузить расстановку аккаунта.')}
   },[store.ready,store.values.layout])
   function place(id:string,point:Point,expected?:{point?:Point}){if(!active)return;if(expected&&!workspaceValuesEqual(expected.point,positions[id])){setError('Положение изменено на другом устройстве. Повторите перемещение из новой позиции.');return}const next={...positions,[id]:point};if(store.update('layout',next,store.values.layout||{})){setPositions(next);setError('')}}
-  return <CanvasContext.Provider value={{positions,place,active,page:current,pageRef,goto}}><div className="desktop-canvas" data-swipe-ignore onWheel={e=>{
-    if(Math.abs(e.deltaX)<=Math.abs(e.deltaY)||Math.abs(e.deltaX)<30||Date.now()-wheelAt.current<500)return
-    wheelAt.current=Date.now();goto(current+(e.deltaX>0?1:-1))
-  }}>{children}</div>
-  <nav className="desktop-pager" aria-label="Рабочие столы">
-    <button type="button" className="desktop-pager-arrow" disabled={current===0} onClick={()=>goto(current-1)} aria-label="Предыдущий рабочий стол">‹</button>
-    {Array.from({length:count},(_,i)=><button key={i} type="button" className={`desktop-pager-dot${i===current?" is-current":""}`} aria-label={`Рабочий стол ${i+1} из ${count}`} aria-current={i===current?"page":undefined} onClick={()=>goto(i)}/>)}
-    {count<MAX_DESKTOPS&&<button type="button" className="desktop-pager-add" onClick={()=>goto(count)} aria-label="Добавить рабочий стол">+</button>}
-    <button type="button" className="desktop-pager-arrow" disabled={current===count-1} onClick={()=>goto(current+1)} aria-label="Следующий рабочий стол">›</button>
-  </nav>
-  {error && <p className="desktop-save-error" role="alert">{error}</p>}</CanvasContext.Provider>
+  return <CanvasContext.Provider value={{positions,place,active}}><div className="desktop-canvas" data-swipe-ignore>{children}</div>{error && <p className="desktop-save-error" role="alert">{error}</p>}</CanvasContext.Provider>
 }
-export function DesktopItem({ id, label, initial, desktop: defaultDesktop = 0, children, className = "", mobileInitial, movable = true, onEdit, onDelete }: { onEdit?:()=>void; onDelete?:()=>void; mobileInitial?: [number,number]; desktop?: number; movable?: boolean; id: string; label: string; initial: [number,number]; children: ReactNode; className?: string }) {
-  const {positions,place,active,page,pageRef,goto} = useContext(CanvasContext)
-  const edgeSince=useRef<{side:number;at:number}|null>(null)
+export function DesktopItem({ id, label, initial, children, className = "", mobileInitial, movable = true, onEdit, onDelete }: { onEdit?:()=>void; onDelete?:()=>void; mobileInitial?: [number,number]; movable?: boolean; id: string; label: string; initial: [number,number]; children: ReactNode; className?: string }) {
+  const {positions,place,active} = useContext(CanvasContext)
   const [menuOpen,setMenuOpen]=useState(false)
   const hold=useRef<ReturnType<typeof setTimeout>|null>(null)
   const suppressed=useRef(false)
@@ -85,9 +45,7 @@ export function DesktopItem({ id, label, initial, desktop: defaultDesktop = 0, c
   const [moving, setMoving] = useState<Point | null>(null)
   const systemMobile: Record<string,[number,number]> = {clock:[.98,.02],projects:[0,.42],instructions:[.5,.42],profile:[1,.42]}
   const origin = size.mobile ? mobileInitial || systemMobile[id] || initial : initial
-  const home = positions[id]?.desktop ?? defaultDesktop
-  const p: Point = movable ? moving || positions[id] || {desktop:home,x:origin[0],y:origin[1],z:1} : {x:origin[0],y:origin[1],z:1}
-  const visible = !!moving || (movable ? home : 0) === page
+  const p: Point = movable ? moving || positions[id] || {x:origin[0],y:origin[1],z:1} : {x:origin[0],y:origin[1],z:1}
   useEffect(() => {
     const element=node.current, parent=element?.parentElement
     if (!element || !parent) return
@@ -95,7 +53,7 @@ export function DesktopItem({ id, label, initial, desktop: defaultDesktop = 0, c
     const observer=new ResizeObserver(measure);observer.observe(element);observer.observe(parent);measure()
     return ()=>observer.disconnect()
   }, [])
-  const clamp=(x:number,y:number):Point=>({...p,desktop:pageRef.current,x:Math.min(1,Math.max(0,x)),y:Math.min(1,Math.max(0,y)),z:Math.min(999,Math.max(1,...Object.values(positions).map(v=>v.z))+1)})
+  const clamp=(x:number,y:number):Point=>({...p,x:Math.min(1,Math.max(0,x)),y:Math.min(1,Math.max(0,y)),z:Math.min(999,Math.max(1,...Object.values(positions).map(v=>v.z))+1)})
   const frame = useRef(0)
   useEffect(() => () => cancelAnimationFrame(frame.current), [])
   function followDrag() {
@@ -103,16 +61,12 @@ export function DesktopItem({ id, label, initial, desktop: defaultDesktop = 0, c
     const canvas = node.current?.parentElement
     if (!canvas || !d?.moved) return
     const bounds = canvas.getBoundingClientRect()
-    const side = d.pointerX < bounds.left + 36 ? -1 : d.pointerX > bounds.right - 36 ? 1 : 0
-    if (!side) edgeSince.current = null
-    else if (edgeSince.current?.side !== side) edgeSince.current = { side, at: performance.now() }
-    else if (performance.now() - edgeSince.current.at > 600) { goto(pageRef.current + side); edgeSince.current = { side, at: performance.now() + 400 } }
     d.point = clamp((d.startX + d.pointerX - d.x) / (size.w || 1),
       (d.startY + d.pointerY - d.y + canvas.scrollTop - d.scrollTop) / (size.h || 1))
     setMoving(d.point)
     frame.current = requestAnimationFrame(followDrag)
   }
-  return <div ref={node} tabIndex={movable?0:undefined} aria-label={label} data-desktop-id={id} data-desktop-label={label} className={`desktop-item ${className}${moving ? " is-moving" : ""}`} hidden={!visible} style={{left:p.x*size.w,top:p.y*size.h,zIndex:menuOpen?1000:p.z}}
+  return <div ref={node} tabIndex={movable?0:undefined} aria-label={label} data-desktop-id={id} data-desktop-label={label} className={`desktop-item ${className}${moving ? " is-moving" : ""}`} style={{left:p.x*size.w,top:p.y*size.h,zIndex:menuOpen?1000:p.z}}
     onDragStart={e=>e.preventDefault()}
     onContextMenu={e=>{if(!movable)return;e.preventDefault();e.stopPropagation();cancelHold();setMenuOpen(true)}}
     onPointerDown={e=>{
