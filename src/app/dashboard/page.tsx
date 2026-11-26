@@ -401,7 +401,7 @@ export default function HomePage() {
       </dialog>
 
       {selectedProject && !renameOpen && (
-        <div className="fixed inset-0 z-[12100] bg-[var(--home-overlay)] backdrop-blur-xs grid place-items-center p-4">
+        <div className="fixed inset-0 z-[12100] bg-[var(--home-overlay)] grid place-items-center p-4">
           <div className="w-full max-w-[480px] rounded-md bg-white p-7 shadow-2xl">
             <p className="text-xs font-bold text-[var(--home-blue)] mb-2">
               ПРОЕКТ
@@ -474,7 +474,7 @@ export default function HomePage() {
       )}
 
       {selectedProject && renameOpen && (
-        <div className="fixed inset-0 z-[12100] bg-[var(--home-overlay)] backdrop-blur-xs grid place-items-center p-4">
+        <div className="fixed inset-0 z-[12100] bg-[var(--home-overlay)] grid place-items-center p-4">
           <div className="w-full max-w-[480px] rounded-md bg-white p-7 shadow-2xl">
             <form onSubmit={handleRenameProject}>
               <p className="text-xs font-bold text-[var(--home-blue)] mb-2">

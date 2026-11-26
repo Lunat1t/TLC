@@ -42,7 +42,6 @@ html body .paper-grid {
     radial-gradient(130% 42% at 12% 104%, #b3d99b 0 58%, transparent 59%),
     radial-gradient(120% 40% at 92% 108%, #94c783 0 58%, transparent 59%),
     linear-gradient(#c6e8ef 0%, #e7f5ee 62%, #fbf5e8 100%);
-  background-attachment: fixed;
 }
 
 /* ───────── Обложка: рамка вокруг страницы ───────── */
@@ -265,3 +264,19 @@ html body .uppercase { text-transform: none; letter-spacing: normal; }
 html body :is(input, textarea, select):not([type="checkbox"], [type="radio"], [type="range"], [type="color"]) { border-radius: 14px; }
 html body ::selection { background: #ffd45e; color: var(--bs-text); }
 html body ::placeholder { color: #a08a6e; opacity: 1; }
+
+/* ───────── Слабые устройства ─────────
+   Скрипт в layout.tsx ставит html[data-lite], если мало ядер или памяти,
+   включена экономия трафика или просят меньше анимации. */
+html[data-lite] *, html[data-lite] *::before, html[data-lite] *::after {
+  animation-duration: .01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: .01ms !important;
+  scroll-behavior: auto !important;
+}
+html[data-lite] .tlc-os.is-app > .os-content, html[data-lite] [data-pocket-canvas] { background-image: none; }
+html[data-lite] * { filter: none !important; text-shadow: none !important; }
+html[data-lite] .paper-grid { background-attachment: scroll; }
+@media (prefers-reduced-motion: reduce) {
+  html *, html *::before, html *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}

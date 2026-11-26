@@ -81,7 +81,6 @@ import {
   DRIVE_MODULE_INFO,
   TRAVEL_UNIT_ARIA_LABELS,
   computePopoverPlacement,
-  describeBlockForKid,
   TRAVEL_UNIT_LABELS,
   nextTravelUnit,
 } from "@/lib/controller-block-ui"
@@ -1855,22 +1854,6 @@ function EditorWorkspace() {
                 <AlertTriangle size={14} className="text-amber-600" aria-hidden="true" />
               )}
             </button>
-            {!checking && selectedId && blocks.some((b) => b.id === selectedId) && (
-              <button
-                type="button"
-                onClick={() => {
-                  const idToRemove = selectedId
-                  setSelectedId(null)
-                  if (idToRemove) saveBlocks(removeBlock(blocks, idToRemove))
-                }}
-                aria-label="Удалить выбранный блок"
-                title="Удалить выбранный блок (Delete)"
-                className="min-h-[38px] min-w-[38px] h-[38px] px-2.5 rounded-[10px] border border-[#fecaca] bg-[#fef2f2] hover:bg-[#fee2e2] text-[#b91c1c] text-xs font-bold flex items-center gap-1.5 transition-colors"
-              >
-                <Trash2 size={16} aria-hidden="true" />
-                <span className="hidden sm:inline">Удалить</span>
-              </button>
-            )}
             <span className="flex-1" />
             <button
               type="button"
@@ -3237,29 +3220,6 @@ function EditorWorkspace() {
               </div>
             </div>
 
-            {!checking && selectedId && (() => {
-              const selectedBlock = blocks.find((b) => b.id === selectedId)
-              const sentence = describeBlockForKid(
-                selectedBlock,
-                blocks,
-                projectChassis.configured ? projectChassis.settings : undefined
-              )
-              if (!selectedBlock || !sentence) return null
-              return (
-                <div
-                  data-kid-translation="true"
-                  onPointerDown={(e) => e.stopPropagation()}
-                  className="pointer-events-none absolute inset-x-3 top-2 z-30 flex justify-center"
-                >
-                  <div className="pointer-events-auto max-w-[680px] rounded-md border border-[#1d1b1a73] bg-white/95 backdrop-blur-xs px-3 py-1.5 shadow-lg flex items-center gap-2.5">
-                    <span className="text-xs sm:text-[13px] font-bold text-[#252221] leading-snug">
-                      {sentence}
-                    </span>
-                  </div>
-                </div>
-              )
-            })()}
-
             {loadError && !project && <div className="absolute inset-0 z-30 overflow-y-auto bg-white p-6"><h2 className="text-lg font-bold">{loadError}</h2><div className="flex flex-col gap-2 mt-4">{projects.map(p=><Link key={p.id} className="rounded-lg border p-3 text-[#393533]" href={`/editor?id=${encodeURIComponent(p.id)}`}>{p.name}</Link>)}{projects.length===0&&<Link href="/dashboard" className="text-[#393533] underline">К списку проектов</Link>}</div></div>}
           </div>
 
@@ -3526,7 +3486,7 @@ function EditorWorkspace() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="editor-landscape-title"
-        className="fixed inset-0 z-[13000] grid place-items-center bg-[#1e1c1b]/92 p-6 text-white backdrop-blur-md"
+        className="fixed inset-0 z-[13000] grid place-items-center bg-[#1e1c1b]/92 p-6 text-white-md"
       >
         <div className="w-full max-w-sm rounded-md border border-white/15 bg-[#262322] p-6 text-center shadow-2xl">
           <div className="mx-auto mb-4 grid size-14 place-items-center rounded-md bg-[#555049]/25 text-[#d12f20]">

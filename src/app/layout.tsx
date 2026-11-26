@@ -57,6 +57,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" className={`${nunito.variable} ${lora.variable} ${jetbrainsMono.variable}`}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var n=navigator,c=n.connection||{};if((n.hardwareConcurrency&&n.hardwareConcurrency<=4)||(n.deviceMemory&&n.deviceMemory<=4)||c.saveData)document.documentElement.setAttribute('data-lite','')}catch(e){}",
+          }}
+        />
+      </head>
       <body className="min-h-dvh flex flex-col">
         <AccessProvider>
           <AccountWorkspaceProvider>
