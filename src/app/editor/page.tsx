@@ -2910,14 +2910,13 @@ function EditorWorkspace() {
                         </div>
 
                         {/* Attached Modules Inline in natural reading order */}
-                        {(["travel", "speed", "power"] as const)
-                          .filter((mod) => mod === "travel" || modules.includes(mod))
+                        {(["speed", "power", "travel"] as const)
+                          .filter((mod) => modules.includes(mod))
                           .map((mod) => (
                             <div
                               key={mod}
                               className="shrink-0 flex items-center gap-2 rounded-md bg-black/20 px-2 py-1"
                             >
-                              {mod !== "travel" && (
                               <div data-module-picker="true" className="relative shrink-0">
                                 <button
                                   type="button"
@@ -2938,7 +2937,9 @@ function EditorWorkspace() {
                                   }}
                                   className="min-h-[36px] min-w-[36px] h-[36px] w-[36px] rounded-[9px] bg-white/15 hover:bg-white/25 text-white/95 flex items-center justify-center shrink-0 cursor-pointer"
                                 >
-                                  {mod === "speed" ? (
+                                  {mod === "travel" ? (
+                                    <RotateCw size={16} aria-hidden="true" />
+                                  ) : mod === "speed" ? (
                                     <Gauge size={16} aria-hidden="true" />
                                   ) : (
                                     <Zap size={16} aria-hidden="true" />
@@ -2972,7 +2973,6 @@ function EditorWorkspace() {
                                   </div>
                                 )}
                               </div>
-                              )}
                               <span className="whitespace-nowrap text-[16px] font-bold tracking-tight">
                                 {mod === "travel"
                                   ? "на"
@@ -3078,7 +3078,7 @@ function EditorWorkspace() {
                         >
                           <button
                             type="button"
-                            aria-label="Дополнительные параметры мотора"
+                            aria-label="Добавить модуль мотора"
                             aria-expanded={openMenuBlockId === block.id}
                             onClick={(e) => {
                               if (openMenuBlockId === block.id) {
@@ -3094,9 +3094,9 @@ function EditorWorkspace() {
                               setOpenMenuOpenUp(placement.openUp)
                               setOpenMenuBlockId(block.id)
                             }}
-                            className="min-h-[36px] min-w-[36px] h-[36px] px-3 rounded-md border border-white/55 bg-white/15 hover:bg-white/30 text-white text-sm leading-none font-bold grid place-items-center"
+                            className="min-h-[36px] min-w-[36px] w-[36px] h-[36px] rounded-md border border-white/55 bg-white/15 hover:bg-white/30 text-white text-xl leading-none font-bold grid place-items-center"
                           >
-                            Ещё ▾
+                            +
                           </button>
 
                           {openMenuBlockId === block.id && (
@@ -3106,6 +3106,7 @@ function EditorWorkspace() {
                                   ["pair", "Мотор 2", Link2],
                                   ["speed", "°/с", Gauge],
                                   ["power", "% мощн.", Zap],
+                                  ["travel", "Ход", RotateCw],
                                 ] as const
                               ).map(([modName, label, Icon]) => {
                                 const isActive = modName === "pair" ? paired : modules.includes(modName)

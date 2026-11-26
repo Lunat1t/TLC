@@ -606,7 +606,6 @@ export function readBlocks(
             ),
           ] as MotorModule[])
         : (["travel"] as MotorModule[])
-      if (!rawModules.includes("travel")) rawModules.push("travel")
 
       const paired = type === "pair" || (type === "drive" && rawModules.includes("pair"))
       const defaultMotor2 = base.motor === "B" ? "A" : "B"
@@ -675,7 +674,7 @@ export function addBlock(
     Object.assign(block, {
       motor: "A",
       direction: "forward",
-      modules: ["travel"],
+      modules: [],
       speed: MOTOR_SPEED,
       power: 50,
       value: 1,
