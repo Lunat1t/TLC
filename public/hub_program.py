@@ -16,11 +16,20 @@ except ImportError:
     Color = None
 from pybricks.tools import StopWatch, wait, read_input_byte
 
+try:
+    from uerrno import ENODEV
+except ImportError:
+    ENODEV = 19
+
 MAX_SPEED = 1000
-PROGRAM_VERSION = "6"
+PROGRAM_VERSION = "7"
 LINK_TIMEOUT_MS = 2000
 SENSOR_POLL_MS = 150
 SENSOR_HEARTBEAT_MS = 500
+# Hot-plug: one port is checked every SCAN_MS, so a full pass over A-F takes
+# about 0.6 s. Empty ports are probed for a new device, occupied ports are
+# checked that the device is still there.
+SCAN_MS = 100
 PORT_NAMES = ("A", "B", "C", "D", "E", "F")
 
 COLOR_NAMES = ()
@@ -50,28 +59,66 @@ imu = getattr(hub, "imu", None) if hub is not None else None
 motors = {}
 sensors = {}
 sensor_types = {}
-for name in PORT_NAMES:
+SENSOR_CLASSES = (
+    ("ultrasonic", UltrasonicSensor),
+    ("color", ColorSensor),
+    ("force", ForceSensor),
+)
+
+
+def attach(name):
+    """Try to find a device on port `name`; True if one was registered."""
     port = getattr(Port, name, None)
     if port is None:
-        continue
+        return False
     try:
         motors[name] = Motor(port)
-        continue
+        return True
     except (AttributeError, OSError):
         pass
-    for stype, scls in (
-        ("ultrasonic", UltrasonicSensor),
-        ("color", ColorSensor),
-        ("force", ForceSensor),
-    ):
+    for stype, scls in SENSOR_CLASSES:
         if scls is None:
             continue
         try:
             sensors[name] = scls(port)
             sensor_types[name] = stype
-            break
+            return True
         except (AttributeError, OSError):
             pass
+    return False
+
+
+def is_unplugged(name):
+    """True only when the hub reports that the device on `name` is gone."""
+    try:
+        if name in motors:
+            motors[name].angle()
+        else:
+            stype = sensor_types.get(name)
+            if stype == "ultrasonic":
+                sensors[name].distance()
+            elif stype == "color":
+                sensors[name].reflection()
+            elif stype == "force":
+                sensors[name].force()
+    except OSError as error:
+        return bool(error.args) and error.args[0] == ENODEV
+    except AttributeError:
+        return False
+    return False
+
+
+def detach(name):
+    motors.pop(name, None)
+    speeds.pop(name, None)
+    sensors.pop(name, None)
+    sensor_types.pop(name, None)
+    last_distances.pop(name, None)
+    last_sns.pop(name, None)
+
+
+for name in PORT_NAMES:
+    attach(name)
 
 clock = StopWatch()
 buffer = ""
@@ -84,6 +131,9 @@ link_active = False
 speeds = {}
 last_distances = {}
 last_sns = {}
+last_scan = clock.time()
+scan_index = 0
+last_ports_report = ""
 
 
 def _color_name(val):
@@ -118,6 +168,42 @@ def ready():
     if imu is not None:
         entries.append("IMU:imu")
     print("SOCER_SENSORS|" + ",".join(entries))
+    report_ports(True)
+
+
+def port_summary():
+    entries = []
+    for name in PORT_NAMES:
+        if name in motors:
+            entries.append(name + ":motor")
+        elif name in sensors:
+            entries.append(name + ":" + sensor_types[name])
+    return ",".join(entries)
+
+
+def report_ports(force=False):
+    """Tell the app which devices sit on which ports; only when it changed."""
+    global last_ports_report
+    summary = port_summary()
+    if force or summary != last_ports_report:
+        last_ports_report = summary
+        print("SOCER_PORTS|" + summary)
+
+
+def scan_ports(now):
+    """Check one port per call and report plugged/unplugged devices."""
+    global last_scan, scan_index
+    if now - last_scan < SCAN_MS:
+        return
+    last_scan = now
+    name = PORT_NAMES[scan_index]
+    scan_index = (scan_index + 1) % len(PORT_NAMES)
+    if name in motors or name in sensors:
+        if is_unplugged(name):
+            detach(name)
+    else:
+        attach(name)
+    report_ports()
 
 
 def poll_sensors(now):
@@ -330,6 +416,7 @@ try:
         if link_active and now - last_ack >= 250:
             print("SOCER2_ACK")
             last_ack = now
+        scan_ports(now)
         if link_active:
             poll_sensors(now)
         wait(10)

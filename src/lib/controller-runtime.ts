@@ -72,6 +72,23 @@ const sleep=(ms:number,signal?:AbortSignal,clock:Clock=systemClock)=>new Promise
   signal?.addEventListener('abort',abort,{once:true})
 })
 
+/** Разбор строки «A:motor,C:ultrasonic,…» из SOCER_PORTS: моторы отдельно, датчики с типами отдельно. */
+export function parsePortsReport(body:string){
+  const ports:string[]=[]
+  const sensorPorts:string[]=[]
+  const sensorTypes:Record<string,string>={}
+  for(const token of body.split(',').filter(Boolean)){
+    const sep=token.indexOf(':')
+    if(sep<=0)continue
+    const port=token.slice(0,sep).trim()
+    const kind=token.slice(sep+1).trim()
+    if(!port||!kind)continue
+    if(kind==='motor')ports.push(port)
+    else{sensorPorts.push(port);sensorTypes[port]=kind}
+  }
+  return {ports,sensorPorts,sensorTypes}
+}
+
 export class ProbeNeedsUploadError extends Error {}
 class UnsupportedFirmwareError extends Error {
   code='UNSUPPORTED_FIRMWARE'
@@ -245,6 +262,15 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
         if(port!=='IMU')sensorPorts.push(port)
       }
       publish({sensorPorts,sensorTypes,sensorPortsKnown:true})
+      return
+    }
+    if(text.startsWith('SOCER_PORTS|')){
+      // Живой список устройств на портах A–F: приходит при запуске и при каждом подключении/отключении.
+      const parsed=parsePortsReport(text.slice('SOCER_PORTS|'.length))
+      const sensorTypes:Record<string,string>={...parsed.sensorTypes}
+      if(state.sensorTypes.IMU)sensorTypes.IMU=state.sensorTypes.IMU
+      const keep=<T>(source:Record<string,T>)=>Object.fromEntries(Object.entries(source).filter(([port])=>port==='IMU'||parsed.sensorPorts.includes(port))) as Record<string,T>
+      publish({ports:parsed.ports,sensorPorts:parsed.sensorPorts,sensorTypes,sensorPortsKnown:true,sensorDistances:keep(state.sensorDistances),sensorTelemetry:keep(state.sensorTelemetry)})
       return
     }
     if(text.startsWith('SOCER_SNS|')){

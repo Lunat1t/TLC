@@ -89,6 +89,8 @@ import { ControlAreaView } from "@/components/editor/control-area"
 import { PybricksWorkspace } from "@/components/editor/pybricks-workspace"
 import { DirectionPalettePreview, DistanceGaugePalettePreview, MotorButtonsPalettePreview } from "@/components/editor/direction-control"
 import { useRobotSession } from "@/components/editor/robot-session"
+import { HubPortsPanel } from "@/components/editor/hub-ports"
+import { describeHubPorts, isMissingMotor } from "@/lib/hub-ports"
 import {
   enterEditorLandscape,
   requestEditorLandscape,
@@ -1346,6 +1348,7 @@ function EditorWorkspace() {
     () => (project?.hub === "ev3" ? ["A", "B", "C", "D"] : ["A", "B", "C", "D", "E", "F"]),
     [project?.hub]
   )
+  const chassisPortsView = React.useMemo(() => describeHubPorts(robotState, motorPorts), [robotState, motorPorts])
 
   function resizeMotorPanel(e: React.PointerEvent<HTMLButtonElement>, block: WorkspaceBlock) {
     if (!project || !block.controlAreaId) return
@@ -1519,10 +1522,8 @@ function EditorWorkspace() {
                   <p role="status" className="mt-0.5 text-xs font-medium text-[#252221]">{robotState.message}</p>
                 </div>
               </div>
-              {robotState.ports.length > 0 && (
-                <p className="text-[11px] font-semibold text-[#726b62]">
-                  Порты моторов: {robotState.ports.join(", ")}
-                </p>
+              {project?.hub !== "ev3" && (
+                <HubPortsPanel state={robotState} portList={motorPorts} />
               )}
               {project?.hub === "ev3" ? (
                 <p className="rounded-lg bg-[#faf5ec] px-2.5 py-2 text-xs font-semibold text-[#5f5951]">
@@ -3022,13 +3023,23 @@ function EditorWorkspace() {
         >
           <div className="w-full max-w-[380px] rounded-md border border-[#1d1b1a73] bg-white p-5 text-[#252221] shadow-2xl">
             <h2 className="text-lg font-bold mb-3">Настройки шасси</h2>
+            {project.hub !== "ev3" && (
+              <HubPortsPanel state={robotState} portList={motorPorts} className="mb-3" />
+            )}
             <div className="flex flex-col gap-3">
               {([
                 { label: "Левый мотор", portKey: "leftPort", revKey: "leftReversed" },
                 { label: "Правый мотор", portKey: "rightPort", revKey: "rightReversed" },
               ] as const).map(({ label, portKey, revKey }) => (
                 <div key={portKey} className="flex items-center justify-between gap-2 rounded-md border border-[#1d1b1a73] bg-[#fbf7f0] px-3 py-2">
-                  <span className="text-sm font-bold">{label}</span>
+                  <span className="text-sm font-bold">
+                    {label}
+                    {isMissingMotor(chassisPortsView, chassisDraft[portKey]) && (
+                      <span role="alert" className="block text-[11px] font-semibold text-red-700">
+                        На порту {chassisDraft[portKey]} нет мотора
+                      </span>
+                    )}
+                  </span>
                   <div className="flex items-center gap-2">
                     <select
                       aria-label={label}
