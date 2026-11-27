@@ -10,7 +10,13 @@ class EndSimulation(Exception):
     pass
 
 
+unplug_log = []
+
+
+ENODEV = 19
 now = 0
+# What is physically plugged in right now; the schedule in wait() changes it.
+present = {"A": "motor", "B": "color", "C": "ultrasonic", "D": "motor", "E": "ultrasonic", "F": "force"}
 motors = {}
 sensors = {}
 imu_calls = []
@@ -34,13 +40,21 @@ input_bytes = list(
 )
 
 
+def require(port, kind):
+    if present.get(port) != kind:
+        raise OSError(ENODEV, "No device")
+
+
 class Motor:
     def __init__(self, port):
-        if port not in ("A", "D"):
-            raise OSError("No motor")
+        require(port, "motor")
         self.port = port
         self.calls = []
         motors[port] = self
+
+    def angle(self):
+        require(self.port, "motor")
+        return 0
 
     def run(self, speed):
         self.calls.append(("run", speed))
@@ -71,23 +85,23 @@ class SensorLights:
 
 class UltrasonicSensor:
     def __init__(self, port):
-        if port not in ("C", "E"):
-            raise OSError("No sensor")
+        require(port, "ultrasonic")
         self.port = port
         self.light_calls = []
         self.lights = SensorLights(self)
         sensors[port] = self
 
     def distance(self):
+        require(self.port, "ultrasonic")
         if self.port == "E":
+            # A read error that is not "no device" must NOT drop the sensor.
             raise OSError("Sensor read error")
         return 180
 
 
 class ColorSensor:
     def __init__(self, port):
-        if port != "B":
-            raise OSError("No color sensor")
+        require(port, "color")
         self.port = port
         self.light_calls = []
         self.lights = SensorLights(self)
@@ -97,13 +111,13 @@ class ColorSensor:
         return "COLOR_RED"
 
     def reflection(self):
+        require(self.port, "color")
         return 42
 
 
 class ForceSensor:
     def __init__(self, port):
-        if port != "F":
-            raise OSError("No force sensor")
+        require(port, "force")
         self.port = port
         sensors[port] = self
 
@@ -111,6 +125,7 @@ class ForceSensor:
         return True
 
     def force(self):
+        require(self.port, "force")
         return 3.5
 
 
@@ -143,6 +158,15 @@ def read_input_byte():
 def wait(ms):
     global now
     now += ms
+    # Hot-plug schedule: motor D is pulled out, later the force sensor F is
+    # pulled out and a motor is put on D again.
+    if now >= 900 and unplug_log == []:
+        present.pop("D")
+        unplug_log.append("D out")
+    if now >= 1400 and len(unplug_log) == 1:
+        present.pop("F")
+        present["D"] = "motor"
+        unplug_log.append("F out, D motor in")
     if now > 2100:
         raise EndSimulation
 
@@ -168,6 +192,8 @@ parameters.Color = type("Color", (), {
     "BLACK": "COLOR_BLACK",
     "NONE": "COLOR_NONE",
 })
+uerrno = types.ModuleType("uerrno")
+uerrno.ENODEV = ENODEV
 tools = types.ModuleType("pybricks.tools")
 tools.StopWatch = StopWatch
 tools.wait = wait
@@ -178,6 +204,7 @@ sys.modules.update({
     "pybricks.hubs": hubs,
     "pybricks.parameters": parameters,
     "pybricks.tools": tools,
+    "uerrno": uerrno,
 })
 output = io.StringIO()
 with contextlib.redirect_stdout(output):
@@ -187,9 +214,20 @@ with contextlib.redirect_stdout(output):
         pass
 
 out = output.getvalue()
-assert "SOCER_VER|6" in out, f"Unexpected version output: {out}"
+assert "SOCER_VER|7" in out, f"Unexpected version output: {out}"
 assert "SOCER3_READY|A,D" in out, f"Unexpected ready output: {out}"
 assert "SOCER_SENSORS|B:color,C:ultrasonic,E:ultrasonic,F:force,IMU:imu" in out, f"Unexpected sensors output: {out}"
+ports_lines = [line for line in out.splitlines() if line.startswith("SOCER_PORTS|")]
+assert ports_lines[0] == "SOCER_PORTS|A:motor,B:color,C:ultrasonic,D:motor,E:ultrasonic,F:force", ports_lines
+# Hot-plug: D is unplugged, then D is plugged back, then F is unplugged; each
+# change is reported once, in the order the hub noticed it.
+assert ports_lines[1:] == [
+    "SOCER_PORTS|A:motor,B:color,C:ultrasonic,E:ultrasonic,F:force",
+    "SOCER_PORTS|A:motor,B:color,C:ultrasonic,D:motor,E:ultrasonic,F:force",
+    "SOCER_PORTS|A:motor,B:color,C:ultrasonic,D:motor,E:ultrasonic",
+], ports_lines
+# A sensor read error that is not ENODEV (port E) must not make E disappear.
+assert all("E:ultrasonic" in line for line in ports_lines), ports_lines
 assert "SOCER_DIST|C:180" in out, f"Unexpected distance output: {out}"
 assert "SOCER_SNS|B:c=red&r=42,F:p=1&f=35,IMU:h=0&p=5&r=-2" in out, f"Unexpected SNS output: {out}"
 assert "SOCER2_ACK" in out
