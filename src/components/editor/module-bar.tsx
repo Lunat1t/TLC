@@ -1,5 +1,5 @@
 import React from "react"
-import { Check, Gauge, Trash2, Zap } from "lucide-react"
+import { Check, Gauge, Trash2, Volume2, Zap } from "lucide-react"
 import type { WorkspaceBlock, TravelUnit } from "@/lib/workspace"
 import { isPairedBlock } from "@/lib/block-registry"
 import {
@@ -22,6 +22,7 @@ import {
   computePopoverPlacement,
   nextTravelUnit,
 } from "@/lib/controller-block-ui"
+import { DEFAULT_SOUND_VOLUME } from "@/lib/sound/presets"
 
 /** Закрывает всплывающее окно по клику снаружи и Esc, подбирает сторону раскрытия. */
 export function usePopoverDismiss(open: boolean, ref: React.RefObject<HTMLDivElement | null>, onClose: () => void) {
@@ -136,6 +137,7 @@ export function ModuleCapsuleIconPopover({
 const ICONS: Record<Exclude<ModuleIconKey, null>, React.ComponentType<{ size?: number; "aria-hidden"?: boolean | "true" | "false"; className?: string }>> = {
   gauge: Gauge,
   zap: Zap,
+  volume: Volume2,
 }
 
 const FIELD_CLASS =
@@ -233,6 +235,27 @@ export function ModuleBar({
             className={FIELD_CLASS}
           />
           <span className="text-[16px] font-bold tracking-tight">{def.chip?.unit}</span>
+        </>
+      )
+    }
+    if (def.id === "volume") {
+      return (
+        <>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="1"
+            aria-label="Громкость звука, процентов"
+            value={block.volume ?? DEFAULT_SOUND_VOLUME}
+            onChange={(e) => {
+              const val = Math.round(Number(e.target.value))
+              if (!Number.isFinite(val) || val < 0 || val > 100) return
+              onChange({ volume: val })
+            }}
+            className={FIELD_CLASS}
+          />
+          <span className="text-[14px] font-bold">{def.chip?.unit}</span>
         </>
       )
     }

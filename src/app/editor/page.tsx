@@ -4,6 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import {
+  Volume2,
   AlertTriangle,
   ArrowDownUp,
   ArrowRight,
@@ -78,6 +79,8 @@ import {
 import { ModuleBar } from "@/components/editor/module-bar"
 import { ConditionSlot } from "@/components/editor/condition-slot"
 import { LoopBlock } from "@/components/editor/loop-block"
+import { SoundBlock } from "@/components/editor/sound-block"
+import { soundPlayer } from "@/lib/sound/player"
 import {
   DEFAULT_DRIVE_SETTINGS,
   compileControllerProgram,
@@ -151,6 +154,15 @@ const BLOCK_CATEGORIES = [
     color: "#3e7a2c",
     blocks: [
       { type: "sensor", label: "Датчик", icon: Waves },
+    ],
+  },
+  {
+    id: "sound",
+    label: "Звук",
+    icon: Volume2,
+    color: "#7a3e8c",
+    blocks: [
+      { type: "sound", label: "Играть звук", icon: Volume2 },
     ],
   },
   {
@@ -685,6 +697,8 @@ function EditorWorkspace() {
   }
 
   async function startProgram() {
+    // Браузер разрешает звук только после нажатия, поэтому включаем его сразу.
+    soundPlayer.unlock()
     const session = sessionRef.current
     if (!session || starting || checking) return
     if (editorMode === "pybricks") {
@@ -711,6 +725,7 @@ function EditorWorkspace() {
   }
 
   async function connectAndStart() {
+    soundPlayer.unlock()
     const session = sessionRef.current
     if (!session || starting) return
     const runPybricks = pendingPybricksRun || editorMode === "pybricks"
@@ -2138,6 +2153,7 @@ function EditorWorkspace() {
                 const motorBlock = block.type === "drive" || paired
                 const isButtonBlock = block.type === "button"
                 const isStopBlock = block.type === "stop"
+                const isSoundBlock = block.type === "sound"
                 const isMotorButtons = block.type === "motor-buttons"
                 const blockError = controllerErrorsByBlockId.get(block.id)
                 const isSelected = block.id === selectedId
@@ -2163,7 +2179,7 @@ function EditorWorkspace() {
                     ? `rounded-t-md ${
                         hasChild ? "rounded-b-[5px]" : "rounded-b-md"
                       }`
-                    : motorBlock || isStopBlock || isChassisBlock || isSensorBlock
+                    : motorBlock || isStopBlock || isChassisBlock || isSensorBlock || isSoundBlock
                       ? `${isConnected ? "rounded-t-[5px]" : "rounded-t-md"} ${
                           hasChild ? "rounded-b-[5px]" : "rounded-b-md"
                         }`
@@ -2178,7 +2194,7 @@ function EditorWorkspace() {
                     data-block-id={block.id}
                     inert={checking && !isMotorButtons ? true : undefined}
                     tabIndex={checking && isMotorButtons ? -1 : 0}
-                    role={motorBlock || isChassisBlock || isContainerBlock || isStopBlock || isSensorBlock || isMotorButtons ? "group" : "button"}
+                    role={motorBlock || isChassisBlock || isContainerBlock || isStopBlock || isSensorBlock || isSoundBlock || isMotorButtons ? "group" : "button"}
                     aria-label={
                       isLoopBlock
                         ? "Блок цикла Повторять. Перетащите за заголовок"
@@ -2190,6 +2206,8 @@ function EditorWorkspace() {
                           ? checking ? "Панель цветных кнопок" : "Панель цветных кнопок. Перетащите за фон"
                           : isSensorBlock
                             ? "Блок датчика. Перетащите за заголовок"
+                          : isSoundBlock
+                            ? "Блок звука. Перетащите за заголовок"
                           : isStopBlock
                             ? "Стоп мотора. Перетащите за заголовок"
                             : isChassisBlock
@@ -2257,7 +2275,7 @@ function EditorWorkspace() {
                       setSelectedId(block.id)
                       finishBlockMove(block.id, block.x + dx, block.y + dy)
                     }}
-                    data-block-cat={isMotorButtons ? undefined : isContainerBlock ? "logic" : isSensorBlock ? "sensors" : isStopBlock || isChassisBlock || motorBlock ? "motion" : "events"}
+                    data-block-cat={isMotorButtons ? undefined : isContainerBlock ? "logic" : isSensorBlock ? "sensors" : isSoundBlock ? "sound" : isStopBlock || isChassisBlock || motorBlock ? "motion" : "events"}
                     className={`absolute touch-none select-none ${checking && isMotorButtons ? "cursor-default" : "cursor-grab"} ${
                       isMoving
                         ? "z-30 cursor-grabbing scale-[1.02] shadow-2xl"
@@ -2273,6 +2291,8 @@ function EditorWorkspace() {
                           ? "w-max min-h-[58px] bg-[#f8f2e7] text-[#252221] border-l-4 border-[#e85d2a]"
                           : isSensorBlock
                             ? "w-max min-h-[64px] bg-[#f8f2e7] text-[#252221] border-l-4 border-[#d12f20]"
+                          : isSoundBlock
+                            ? "w-max min-h-[64px] bg-[#f8f2e7] text-[#252221] border-l-4 border-[#7a3e8c]"
                           : isStopBlock
                             ? "w-max min-h-[64px] bg-[#f8f2e7] text-[#252221] border-l-4 border-[#b1372c]"
                             : isChassisBlock
@@ -2301,7 +2321,7 @@ function EditorWorkspace() {
                     }`}
                   >
                     {/* Top LEGO connector stud for motor, chassis, if, and stop blocks */}
-                    {(motorBlock || isChassisBlock || isContainerBlock || isStopBlock || isSensorBlock) && (
+                    {(motorBlock || isChassisBlock || isContainerBlock || isStopBlock || isSensorBlock || isSoundBlock) && (
                       <span
                         aria-hidden="true"
                         className={`block-fill absolute -top-[8px] left-[32px] w-[44px] h-[11px] rounded-t-[6px] pointer-events-auto ${
@@ -2309,6 +2329,8 @@ function EditorWorkspace() {
                             ? "bg-[#f8f2e7]"
                             : isSensorBlock
                               ? "bg-[#d12f20]"
+                            : isSoundBlock
+                              ? "bg-[#7a3e8c]"
                             : isStopBlock
                               ? "bg-[#b1372c]"
                               : isChassisBlock
@@ -2699,6 +2721,15 @@ function EditorWorkspace() {
                           )
                         }}
                       />
+                    ) : isSoundBlock ? (
+                      <SoundBlock
+                        block={block}
+                        errorMessage={blockError}
+                        onChange={(changes) => {
+                          if (!project) return
+                          saveBlocks(updateDrive(blocks, block.id, changes, project.hub))
+                        }}
+                      />
                     ) : isStopBlock ? (
                       <ControllerStopBlock
                         block={block}
@@ -2893,12 +2924,14 @@ function EditorWorkspace() {
             left: `${gesture.clientX}px`,
             top: `${gesture.clientY}px`,
           }}
-          data-block-cat={gesture.type === "if" || gesture.type === "loop" ? "logic" : gesture.type === "sensor" ? "sensors" : gesture.type === "button" || gesture.type === "start" ? "events" : gesture.type === "motor-buttons" ? undefined : "motion"}
+          data-block-cat={gesture.type === "if" || gesture.type === "loop" ? "logic" : gesture.type === "sensor" ? "sensors" : gesture.type === "sound" ? "sound" : gesture.type === "button" || gesture.type === "start" ? "events" : gesture.type === "motor-buttons" ? undefined : "motion"}
           className={`fixed z-50 pointer-events-none opacity-85 -translate-x-1/2 -translate-y-1/2 scale-90 px-4 flex items-center text-white font-bold text-xs ${
             gesture.type === "start"
               ? "w-[240px] h-[52px] rounded-t-md rounded-b-md bg-[#f59e0b] shadow-[0_3px_0_rgba(29,27,26,0.16)]"
               : gesture.type === "if" || gesture.type === "loop"
                 ? "w-[220px] h-[56px] rounded-md bg-[#f8f2e7] shadow-[0_3px_0_rgba(29,27,26,0.16)]"
+              : gesture.type === "sound"
+                ? "w-[220px] h-[56px] rounded-md shadow-[0_3px_0_rgba(29,27,26,0.16)]"
               : gesture.type === "sensor"
                 ? "w-[200px] h-[48px] rounded-full bg-[#d12f20] shadow-[0_3px_0_rgba(29,27,26,0.16)]"
                 : gesture.type === "pair"
@@ -2920,6 +2953,8 @@ function EditorWorkspace() {
               ? "↻  Повторять всегда"
             : gesture.type === "if"
               ? "Если … то (Что если)"
+            : gesture.type === "sound"
+              ? "🔊 Играть звук"
             : gesture.type === "sensor"
               ? "Датчик"
               : gesture.type === "pair"

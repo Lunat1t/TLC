@@ -20,6 +20,7 @@ import {
   expandActionBlock,
 } from './block-registry.js';
 import { DEFAULT_LOOP_TIMES, MAX_LOOP_TIMES } from './block-modules.js';
+import { DEFAULT_SOUND_ID, DEFAULT_SOUND_VOLUME, findSoundPreset } from './sound-presets.js';
 
 export {
   CONTROLLER_BUTTONS,
@@ -148,6 +149,11 @@ export function describeAction(action) {
     }
     case 'imuReset': {
       return 'Сброс гироскопа 0°';
+    }
+    case 'sound': {
+      const name = findSoundPreset(action.soundId)?.name || 'своя запись';
+      const times = action.times > 1 ? ` ×${action.times}` : '';
+      return `Звук «${name}»${times}${action.wait ? ' до конца' : ''}`;
     }
     case 'loop': {
       const what = action.condition
@@ -352,6 +358,23 @@ function buildKnownControls(project, blocks) {
   return merged;
 }
 
+function compileSound(block) {
+  const modules = Array.isArray(block.modules) ? block.modules : [];
+  const volume = Number(block.volume);
+  return {
+    kind: 'sound',
+    soundId: typeof block.soundId === 'string' && block.soundId ? block.soundId : DEFAULT_SOUND_ID,
+    // Без модуля поле блока не действует: звук играет с обычной громкостью один раз.
+    volume: modules.includes('volume') && Number.isFinite(volume)
+      ? Math.max(0, Math.min(100, Math.round(volume)))
+      : DEFAULT_SOUND_VOLUME,
+    times: modules.includes('times')
+      ? Math.max(1, Math.min(MAX_LOOP_TIMES, Math.round(Number(block.times) || DEFAULT_LOOP_TIMES)))
+      : 1,
+    wait: modules.includes('wait'),
+  };
+}
+
 function eventsConflict(a, b) {
   return a === b || a === 'hold' || b === 'hold';
 }
@@ -528,6 +551,11 @@ export function compileControllerProgram(project) {
               bodyActions,
             });
           }
+          continue;
+        }
+
+        if (child.type === 'sound') {
+          out.push(compileSound(child));
           continue;
         }
 

@@ -1,6 +1,7 @@
 "use client"
 import * as React from 'react'
 import {createBluetoothTransport,createControllerSession,type SessionState} from '@/lib/controller-runtime'
+import {soundPlayer} from '@/lib/sound/player'
 
 const initial:SessionState={
   viewMode:'edit',
@@ -23,7 +24,10 @@ export function useRobotSession(){
   const [state,setState]=React.useState(initial)
   const ref=React.useRef<ReturnType<typeof createControllerSession>|null>(null)
   React.useEffect(()=>{
-    const session=createControllerSession(createBluetoothTransport());ref.current=session
+    const session=createControllerSession(createBluetoothTransport(),undefined,{
+      playSound:(action,signal)=>soundPlayer.play(action,signal),
+      stopSounds:soundPlayer.stopAll,
+    });ref.current=session
     const unsubscribe=session.subscribe(setState)
     return ()=>{unsubscribe();if(ref.current===session)ref.current=null;void session.dispose()}
   },[])

@@ -181,6 +181,7 @@ html body [data-block-cat="events"] { --block: #ffd45e; --block-ink: #4a3300; }
 html body [data-block-cat="motion"] { --block: #79c3dc; --block-ink: #12384a; }
 html body [data-block-cat="sensors"] { --block: #9fcf86; --block-ink: #21421a; }
 html body [data-block-cat="logic"] { --block: #ffaa63; --block-ink: #4a2400; }
+html body [data-block-cat="sound"] { --block: #d9b3ea; --block-ink: #3d1450; }
 
 html body [data-block-cat]:not([data-block-cat="logic"]),
 html body [data-block-cat="logic"] .block-fill,
@@ -209,10 +210,12 @@ html body [data-catalog-icon="motion"] { background-color: #79c3dc !important; }
 html body [data-catalog-icon="sensors"] { background-color: #9fcf86 !important; }
 html body [data-catalog-icon="logic"] { background-color: #ffaa63 !important; }
 html body [data-catalog-icon="controls"] { background-color: #e8d9bd !important; }
+html body [data-catalog-icon="sound"] { background-color: #d9b3ea !important; }
 html body [data-catalog-icon="events"], html body [data-catalog-icon="events"] * { color: #4a3300 !important; }
 html body [data-catalog-icon="sensors"], html body [data-catalog-icon="sensors"] * { color: #21421a !important; }
 html body [data-catalog-icon="logic"], html body [data-catalog-icon="logic"] * { color: #4a2400 !important; }
 html body [data-catalog-icon="controls"], html body [data-catalog-icon="controls"] * { color: #4b3420 !important; }
+html body [data-catalog-icon="sound"], html body [data-catalog-icon="sound"] * { color: #3d1450 !important; }
 html body [data-catalog-icon] { border-radius: 10px; }
 
 /* ───────── Роадмап: тетрадь с карточками-наклейками ───────── */

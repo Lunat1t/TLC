@@ -1,3 +1,5 @@
+import { DEFAULT_SOUND_VOLUME } from './sound-presets.js';
+
 // Единый реестр модулей блоков.
 //
 // Блок — это база («Мотор A ↻»), а модули — необязательные детали, из которых
@@ -76,6 +78,12 @@ export const MODULE_DEFS = Object.freeze({
     description: 'Повторить столько раз и пойти дальше. Без этого модуля цикл повторяется всегда.',
     chip: Object.freeze({ prefix: '', unit: 'раз', badge: false }),
     conflicts: Object.freeze(['while']),
+    overrides: Object.freeze({
+      sound: Object.freeze({
+        title: 'Сколько раз',
+        description: 'Сыграть звук столько раз подряд.',
+      }),
+    }),
   }),
   while: Object.freeze({
     id: 'while',
@@ -85,6 +93,25 @@ export const MODULE_DEFS = Object.freeze({
     title: 'Пока датчик',
     description: 'Повторять, пока условие верно. Датчик вставляется в овал после слова «Пока».',
     conflicts: Object.freeze(['times']),
+  }),
+  volume: Object.freeze({
+    id: 'volume',
+    label: 'Громкость %',
+    placement: 'chip',
+    icon: 'volume',
+    title: 'Громкость (%)',
+    description: 'Насколько громко играет этот звук.',
+    chip: Object.freeze({ prefix: 'громкость', unit: '%' }),
+    conflicts: Object.freeze([]),
+  }),
+  wait: Object.freeze({
+    id: 'wait',
+    label: 'До конца',
+    placement: 'base',
+    icon: null,
+    title: 'Ждать до конца',
+    description: 'Следующий блок начнётся, когда звук доиграет. Без этого модуля программа идёт дальше сразу.',
+    conflicts: Object.freeze([]),
   }),
   travel: Object.freeze({
     id: 'travel',
@@ -121,6 +148,12 @@ export const BLOCK_MODULES = Object.freeze({
   }),
   loop: Object.freeze({
     menu: Object.freeze(['times', 'while']),
+    legacy: Object.freeze([]),
+    required: Object.freeze([]),
+    fallback: Object.freeze([]),
+  }),
+  sound: Object.freeze({
+    menu: Object.freeze(['volume', 'times', 'wait']),
     legacy: Object.freeze([]),
     required: Object.freeze([]),
     fallback: Object.freeze([]),
@@ -191,6 +224,8 @@ export function moduleAddPatch(blockType, id, block = {}) {
       return { unit: 'seconds' };
     case 'times':
       return { times: DEFAULT_LOOP_TIMES };
+    case 'volume':
+      return { volume: DEFAULT_SOUND_VOLUME };
     default:
       return {};
   }

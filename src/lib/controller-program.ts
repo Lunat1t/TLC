@@ -61,6 +61,7 @@ export type ControllerAction =
   | { kind: "waitSensor"; port: string; op?: "lt" | "gt"; cm?: number; sensorType?: "color" | "force" | "imu"; checks?: SensorCheck[] }
   | { kind: "sensorLights"; port: string; brightness: number }
   | { kind: "imuReset" }
+  | { kind: "sound"; soundId: string; volume: number; times: number; wait: boolean }
   | { kind: "branch"; condition: SensorCondition; thenActions: ControllerAction[]; elseActions: ControllerAction[] }
   | { kind: "loop"; times?: number; condition?: SensorCondition; bodyActions: ControllerAction[] }
 

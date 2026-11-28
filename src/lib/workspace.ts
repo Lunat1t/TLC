@@ -1,4 +1,5 @@
 import { DEFAULT_LOOP_TIMES, MAX_LOOP_TIMES, normalizeModules, validateModuleRules } from "./block-modules.ts"
+import { DEFAULT_SOUND_ID, DEFAULT_SOUND_VOLUME } from "./sound/presets.ts"
 import { HUB_PROGRAM_SOURCE } from "./hub-program-source.ts"
 import type { HubType } from "./projects"
 import {
@@ -57,11 +58,11 @@ export type ControllerEvent = "hold" | "pressed" | "released"
 export { isPairedBlock }
 export type { ChassisDirection, ImuAxis, SensorColor, SensorModule, SensorOp, SensorType }
 
-export type BlockType = "start" | "drive" | "pair" | "chassis" | "if" | "loop" | "button" | "stop" | "motor-buttons" | "sensor"
+export type BlockType = "start" | "drive" | "pair" | "chassis" | "if" | "loop" | "button" | "stop" | "motor-buttons" | "sensor" | "sound"
 const LIBRARY_BLOCK_TYPES = new Set<BlockType>(BLOCK_TYPES as readonly BlockType[])
 export type MotorDirection = "forward" | "backward"
 export type TravelUnit = "rotations" | "degrees" | "seconds"
-export type MotorModule = "pair" | "speed" | "power" | "travel" | "times" | "while"
+export type MotorModule = "pair" | "speed" | "power" | "travel" | "times" | "while" | "volume" | "wait"
 export type MotorButtonModule = "red" | "green" | "yellow"
 export type MotorPanelButton = "blue" | MotorButtonModule
 export type BranchSlot = "body" | "else" | "condition"
@@ -126,7 +127,11 @@ export interface WorkspaceBlock {
   speed?: number
   power?: number
   value?: number
-  /** Сколько раз повторять цикл (модуль «Сколько раз»). */
+  /** Звук из библиотеки (блок «Звук»). */
+  soundId?: string
+  /** Громкость 0–100 % (модуль «Громкость»). */
+  volume?: number
+  /** Сколько раз повторять цикл или звук (модуль «Сколько раз»). */
   times?: number
   unit?: TravelUnit
   button?: ControllerButton
@@ -197,7 +202,7 @@ export function blockHeight(block: Pick<WorkspaceBlock, "type" | "height">): num
       IF_FOOT_HEIGHT
     )
   if (block.type === "button") return 58
-  if (block.type === "stop" || block.type === "sensor") return 64
+  if (block.type === "stop" || block.type === "sensor" || block.type === "sound") return 64
   if (block.type === "motor-buttons") return block.height ?? 132
   return block.type === "pair" || block.type === "drive" || block.type === "chassis" ? 64 : 58
 }
@@ -458,6 +463,24 @@ export function readBlocks(
         return {
           ...base,
           modules: normalizeModules("loop", block.modules) as MotorModule[],
+          times:
+            Number.isFinite(times) && times >= 1
+              ? Math.min(MAX_LOOP_TIMES, Math.round(times))
+              : DEFAULT_LOOP_TIMES,
+        }
+      }
+
+      if (type === "sound") {
+        const times = Number(block.times)
+        const volume = Number(block.volume)
+        return {
+          ...base,
+          modules: normalizeModules("sound", block.modules) as MotorModule[],
+          soundId:
+            typeof block.soundId === "string" && block.soundId && block.soundId.length <= 80
+              ? block.soundId
+              : DEFAULT_SOUND_ID,
+          volume: Number.isFinite(volume) ? Math.max(0, Math.min(100, Math.round(volume))) : DEFAULT_SOUND_VOLUME,
           times:
             Number.isFinite(times) && times >= 1
               ? Math.min(MAX_LOOP_TIMES, Math.round(times))
@@ -735,6 +758,9 @@ export function addBlock(
   if (type === "loop") {
     Object.assign(block, { modules: [], times: DEFAULT_LOOP_TIMES })
   }
+  if (type === "sound") {
+    Object.assign(block, { modules: [], soundId: DEFAULT_SOUND_ID, volume: DEFAULT_SOUND_VOLUME, times: DEFAULT_LOOP_TIMES })
+  }
   if (type === "motor-buttons") {
     Object.assign(block, { width: 180, height: 132, controlModules: [], hiddenControlButtons: [] })
   }
@@ -820,7 +846,7 @@ export function updateDrive(
   return readBlocks(
     {
       blocks: source.map((block) => {
-        if (block.id !== id || !["drive", "pair", "chassis", "if", "loop", "button", "stop", "sensor"].includes(block.type)) return block
+        if (block.id !== id || !["drive", "pair", "chassis", "if", "loop", "button", "stop", "sensor", "sound"].includes(block.type)) return block
         const merged: WorkspaceBlock = { ...block, ...changes }
         if (block.type === "pair" && changes.type === "drive") {
           merged.type = "drive"
@@ -1079,7 +1105,7 @@ export function generatePybricks(
   )
   const ordered = executionOrder(autonomousBlocks)
   const driveBlocks = ordered.filter((block) =>
-    ACTION_BLOCK_TYPES.includes(block.type)
+    ACTION_BLOCK_TYPES.includes(block.type) && block.type !== "sound"
   )
   if (!driveBlocks.length) {
     const hasButtonActions = clean.some(block =>
@@ -1168,6 +1194,11 @@ export function generatePybricks(
 
   function emitBlock(block: WorkspaceBlock, indent: string) {
     if (block.type === "start" || block.type === "button") return
+    if (block.type === "sound") {
+      // У автономной программы нет доступа к записям: звук играет только пульт.
+      lines.push(`${indent}pass  # Звук играет только в пульте Brick Studio`)
+      return
+    }
     if (block.type === "stop") {
       const stopPorts = block.stopAll
         ? used

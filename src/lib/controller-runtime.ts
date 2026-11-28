@@ -53,9 +53,13 @@ export type SessionState={
   hubName:string|null
   needsManualHubProgram?:boolean
 }
+type SoundAction=Extract<ControllerAction,{kind:'sound'}>
 type SessionOptions={
   compileHubProgram?:()=>Promise<Uint8Array>
   compileCustomProgram?:(source:string)=>Promise<Uint8Array>
+  /** Играет звук на этом устройстве; обещание завершается, когда звук доиграл. */
+  playSound?:(action:SoundAction,signal:AbortSignal)=>Promise<void>
+  stopSounds?:()=>void
   expectedVersion?:string
   probeTimeoutMs?:number
   heartbeatTimeoutMs?:number
@@ -63,6 +67,8 @@ type SessionOptions={
 type Clock={now:()=>number;setTimeout:(fn:()=>void,ms:number)=>ReturnType<typeof setTimeout>;clearTimeout:(id:ReturnType<typeof setTimeout>)=>void;setInterval:(fn:()=>void,ms:number)=>ReturnType<typeof setInterval>;clearInterval:(id:ReturnType<typeof setInterval>)=>void}
 const systemClock:Clock={now:()=>Date.now(),setTimeout:(fn,ms)=>setTimeout(fn,ms),clearTimeout:id=>clearTimeout(id),setInterval:(fn,ms)=>setInterval(fn,ms),clearInterval:id=>clearInterval(id)}
 const LOOP_TICK_MS=10
+/** Есть ли в списке звук: он играет на устройстве и без робота. */
+const hasSound=(list:ControllerAction[]):boolean=>list.some(a=>a.kind==='sound'||(a.kind==='loop'&&hasSound(a.bodyActions))||(a.kind==='branch'&&(hasSound(a.thenActions)||hasSound(a.elseActions))))
 /** Есть ли в списке то, что зависит от датчиков: тогда программа идёт и в пробном режиме. */
 const hasSensorFlow=(list:ControllerAction[]):boolean=>list.some(a=>a.kind==='branch'||a.kind==='waitSensor'||(a.kind==='loop'&&(Boolean(a.condition)||hasSensorFlow(a.bodyActions))))
 const sleep=(ms:number,signal?:AbortSignal,clock:Clock=systemClock)=>new Promise<void>((resolve,reject)=>{
@@ -232,7 +238,7 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
   }
   const publish=(patch:Partial<SessionState>)=>{if(disposed)return;state={...state,...patch};for(const f of listeners)f(state)}
   const log=(line:string)=>publish({log:[...state.log,line].slice(-30)})
-  const clear=()=>{epoch++;for(const run of runners.values())run.abort();runners.clear();owners.clear();held.clear();activeHolds.clear();snapshot=null;notifySensorWaiters();if(heartbeat)clock.clearInterval(heartbeat);heartbeat=null}
+  const clear=()=>{epoch++;options?.stopSounds?.();for(const run of runners.values())run.abort();runners.clear();owners.clear();held.clear();activeHolds.clear();snapshot=null;notifySensorWaiters();if(heartbeat)clock.clearInterval(heartbeat);heartbeat=null}
   const disconnectTransport=async()=>{
     connection++
     startAbort?.abort();startAbort=null
@@ -392,6 +398,15 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
     const runList=async(list:ControllerAction[])=>{
       for(const action of list){
         if(runner.signal.aborted||epoch!==generation)break
+        if(action.kind==='sound'){
+          log(describeAction(action))
+          // Ошибка звука не должна рвать связь с роботом и останавливать программу.
+          const played=Promise.resolve(options?.playSound?.(action,runner.signal)).catch(error=>{
+            if(!runner.signal.aborted&&epoch===generation)log(`⚠ ${error instanceof Error?error.message:'Звук не проигрался'}`)
+          })
+          if(action.wait)await played
+          continue
+        }
         if(action.kind==='wait'){if(sendWrites)await sleep(action.ms,runner.signal,clock);continue}
         if(action.kind==='waitSensor'){
           while(!runner.signal.aborted&&epoch===generation&&!evalCondition(action)){
@@ -656,7 +671,7 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
       }
       clear();snapshot=structuredClone(program);const generation=epoch
       publish({program:live?'live-running':'trial-running',uploadProgress:null,message:live?'Программа запущена':'Пробный режим: команды роботу не отправляются'})
-      if(program.startup.length){log('Запуск → '+program.startup.map(describeAction).filter(Boolean).join(' · '));if(live||hasSensorFlow(program.startup))void runActions('startup',program.startup,generation,live)}
+      if(program.startup.length){log('Запуск → '+program.startup.map(describeAction).filter(Boolean).join(' · '));if(live||hasSensorFlow(program.startup)||hasSound(program.startup))void runActions('startup',program.startup,generation,live)}
       if(live)beginHeartbeat()
     },
     dispatch(target:Target,event:ControllerEvent){
@@ -710,8 +725,8 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
       const runnerKey = handler?.driveAreaId ? `drive-area:${handler.driveAreaId}` : `input:${key}`
       log(`${target.input} ${event==='pressed'?'нажата':'отпущена'} → ${actions.map(describeAction).filter(Boolean).join(' · ')||'нет действий'}`)
       let startedRunner:AbortController|null=null
-      const hasSensorFlowNow=hasSensorFlow(actions)
-      if(actions.length&&(state.program==='live-running'||hasSensorFlowNow))startedRunner=startActions(runnerKey,actions,epoch,state.program==='live-running')
+      const runsWithoutRobot=hasSensorFlow(actions)||hasSound(actions)
+      if(actions.length&&(state.program==='live-running'||runsWithoutRobot))startedRunner=startActions(runnerKey,actions,epoch,state.program==='live-running')
       if(event==='pressed' && handler?.event==='hold'){
         const drivenPorts=collectDrivenPorts(actions)
         const ownedRunners=new Set<AbortController>()

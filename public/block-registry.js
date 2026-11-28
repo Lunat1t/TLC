@@ -53,6 +53,7 @@ export const BLOCK_TYPES = Object.freeze([
   'stop',
   'motor-buttons',
   'sensor',
+  'sound',
 ]);
 
 export const ACTION_BLOCK_TYPES = Object.freeze([
@@ -61,6 +62,7 @@ export const ACTION_BLOCK_TYPES = Object.freeze([
   'chassis',
   'stop',
   'sensor',
+  'sound',
 ]);
 
 export const CONTROLLER_BUTTONS = Object.freeze([

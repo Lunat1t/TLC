@@ -1,8 +1,8 @@
 import * as Raw from "../../public/block-modules.js"
 
-export type ModuleId = "pair" | "speed" | "power" | "travel" | "times" | "while"
-export type ModuleBlockType = "drive" | "pair" | "chassis" | "loop"
-export type ModuleIconKey = "gauge" | "zap" | null
+export type ModuleId = "pair" | "speed" | "power" | "travel" | "times" | "while" | "volume" | "wait"
+export type ModuleBlockType = "drive" | "pair" | "chassis" | "loop" | "sound"
+export type ModuleIconKey = "gauge" | "zap" | "volume" | null
 
 export interface ModuleDef {
   id: ModuleId
