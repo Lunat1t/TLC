@@ -15,6 +15,7 @@ import {
   waitForDisplayIce,
   waitForDisplayPoll,
 } from "@/lib/display-stream"
+import { isQuarterTurn, ROTATION_CHANNEL, type QuarterTurn } from "@/lib/camera-rotation"
 
 type DisplaySession = {
   abort: AbortController
@@ -38,6 +39,7 @@ export function DisplayStreamView({ editing }: { editing: boolean }) {
   const [qr, setQr] = useState("")
   const [status, setStatus] = useState<"idle" | "starting" | "waiting" | "connecting" | "live">("idle")
   const [error, setError] = useState("")
+  const [rotation, setRotation] = useState<QuarterTurn>(0)
 
   useEffect(() => {
     function cleanup() {
@@ -91,6 +93,7 @@ export function DisplayStreamView({ editing }: { editing: boolean }) {
     current.current = session
     setDiagnosticPeer(peer)
     setSignaling("online")
+    setRotation(0)
     const { signal } = session.abort
     setError("")
     setStatus("starting")
@@ -120,6 +123,11 @@ export function DisplayStreamView({ editing }: { editing: boolean }) {
       }
       const transceiver = peer.addTransceiver("video", { direction: "recvonly" })
       setLowDelayRequested(requestLowDelay(transceiver.receiver))
+      const rotationChannel = peer.createDataChannel(ROTATION_CHANNEL)
+      rotationChannel.onmessage = event => {
+        const value: unknown = Number(event.data)
+        if (!signal.aborted && isQuarterTurn(value)) setRotation(value)
+      }
       await peer.setLocalDescription(await peer.createOffer())
       await publishDisplaySignal(offerToken, await waitForDisplayIce(peer, signal), signal)
 
@@ -155,19 +163,22 @@ export function DisplayStreamView({ editing }: { editing: boolean }) {
   const showVideo = status === "connecting" || status === "live"
   return (
     <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-md bg-[#1e1c1b] p-2 text-white" aria-label="Экран дисплея">
-      <video
-        ref={video}
-        className={`absolute inset-0 size-full object-contain ${showVideo ? "" : "invisible"}`}
-        playsInline
-        autoPlay
-        muted
-        onPlaying={() => {
-          if (!current.current) return
-          setStatus("live")
-          setQr("")
-          dialog.current?.close()
-        }}
-      />
+      <div className="absolute inset-0 [container-type:size]">
+        <video
+          ref={video}
+          className={`absolute left-1/2 top-1/2 max-w-none object-contain ${rotation % 180 ? "h-[100cqw] w-[100cqh]" : "size-full"} ${showVideo ? "" : "invisible"}`}
+          style={{ transform: `translate(-50%, -50%) rotate(${rotation}deg)` }}
+          playsInline
+          autoPlay
+          muted
+          onPlaying={() => {
+            if (!current.current) return
+            setStatus("live")
+            setQr("")
+            dialog.current?.close()
+          }}
+        />
+      </div>
       {status === "idle" && (
         <div className="grid max-h-full gap-1 overflow-y-auto text-center">
           <button

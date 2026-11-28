@@ -20,6 +20,7 @@ import './navigation-layout.test.ts';
 import './session-resource.test.ts';
 import './startup.test.ts';
 import './editor-orientation.test.ts';
+import './camera-rotation.test.ts';
 import './navigation-shell.test.ts';
 import './project-list.test.ts';
 import './roadmap.test.ts';

@@ -13,6 +13,7 @@ import {
   waitForDisplayIce,
   waitForDisplayPoll,
 } from "@/lib/display-stream"
+import { ROTATION_CHANNEL, watchCameraRotation, type QuarterTurn } from "@/lib/camera-rotation"
 
 const TOKEN_PATTERN = /^[a-f0-9]{64}$/
 const CAMERA_CONSTRAINTS: MediaStreamConstraints = {
@@ -138,6 +139,22 @@ export default function DisplayCameraPage() {
     setPhase("connecting")
     setSignaling("online")
 
+    let rotation: QuarterTurn = 0
+    let rotationChannel: RTCDataChannel | undefined
+    const sendRotation = () => {
+      if (rotationChannel?.readyState === "open") rotationChannel.send(String(rotation))
+    }
+    // До первого await: iOS разрешает запросить датчик только по нажатию.
+    watchCameraRotation(
+      () => session.stream?.getVideoTracks()[0]?.getSettings().facingMode === "user",
+      next => {
+        if (next === rotation) return
+        rotation = next
+        sendRotation()
+      },
+      signal,
+    )
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia(CAMERA_CONSTRAINTS)
       if (signal.aborted) {
@@ -176,6 +193,12 @@ export default function DisplayCameraPage() {
           finish(session, session.published)
           setError("Связь с дисплеем прервалась. Проверьте Wi‑Fi.")
         }
+      })
+      peer.addEventListener("datachannel", ({ channel }) => {
+        if (channel.label !== ROTATION_CHANNEL) return
+        rotationChannel = channel
+        channel.addEventListener("open", sendRotation)
+        sendRotation()
       })
       await peer.setRemoteDescription(offer)
       const sender = peer.addTrack(track, stream)
