@@ -96,6 +96,9 @@ export function selectPreloadPages(currentPage: number, totalPages: number): num
   return result
 }
 
+/** Папка с WASM-декодерами PDF.js (JPEG 2000, JBIG2, ICC). Без неё страницы из JPX-картинок рисуются белыми. */
+export const PDFJS_WASM_URL = "/vendor/pdfjs-wasm/"
+
 export function calculateCanvasFitScale(
   areaWidth: number,
   pageWidthAtScale1: number,

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import { existsSync, readFileSync } from "node:fs"
 import test from "node:test"
 import {
   createBoundedRangeReadableStream,
@@ -12,6 +13,7 @@ import {
   calculateReaderScale,
   calculateCanvasPixelRatio,
   clampPageNumber,
+  PDFJS_WASM_URL,
   normalizeReaderUserId,
   normalizeRotation,
   normalizeZoom,
@@ -189,4 +191,16 @@ test("canvas resolution has a four megapixel budget even at 200% zoom", () => {
   const ratio = calculateCanvasPixelRatio(2400, 3600, 3)
   assert.ok(2400 * 3600 * ratio * ratio <= 4_000_001)
   assert.equal(calculateCanvasPixelRatio(600, 800, 3), 2)
+})
+
+test("reader passes wasmUrl to every getDocument call and ships the JPEG 2000 decoder", () => {
+  assert.match(PDFJS_WASM_URL, /^\/vendor\/pdfjs-wasm\/$/)
+  for (const file of ["openjpeg.wasm", "openjpeg_nowasm_fallback.js", "jbig2.wasm", "qcms_bg.wasm"]) {
+    assert.ok(existsSync(new URL(`../public${PDFJS_WASM_URL}${file}`, import.meta.url)), `${file} must be served from ${PDFJS_WASM_URL}`)
+  }
+  const source = readFileSync(new URL("../src/components/instructions/pdf-reader.tsx", import.meta.url), "utf8")
+  const getDocumentCalls = source.match(/lib\.getDocument\(/g) ?? []
+  const wasmOptions = source.match(/wasmUrl: PDFJS_WASM_URL/g) ?? []
+  assert.equal(getDocumentCalls.length, 2)
+  assert.equal(wasmOptions.length, getDocumentCalls.length)
 })
