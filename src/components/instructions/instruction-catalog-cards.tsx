@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation"
 import { useEffect, useState, type FormEvent } from "react"
 import { useAccess } from "@/components/auth/access-provider"
 import { driveDownloadPath } from "@/lib/instructions/drive-links"
+import { catalogCoverUrl, spikeCardCode } from "@/lib/instructions/card-cover"
 import type { CatalogCard } from "@/lib/instructions/types"
 import "./instruction-catalog-admin.css"
 
@@ -122,10 +123,8 @@ export function InstructionCatalogCards({ items, nextCursor, kit, query, totalCo
     {error && !editor && !selected && <p className="instruction-admin-error" role="alert">{error}</p>}
     <div className={"instruction-grid" + (kit === "spike" ? " instruction-grid--spike" : "")}>
       {cards.map((item, index) => {
-        const coverUrl = item.coverAssetId
-          ? `/api/instruction-media/${item.id}/${item.coverAssetId}`
-          : item.hasPdf ? `/api/instructions/${encodeURIComponent(item.slug)}/preview` : null
-        const code = item.title.match(/\((\d{4})\)/)?.[1]
+        const coverUrl = catalogCoverUrl(item)
+        const code = spikeCardCode(item)
         const content = <>
           <div className="instruction-cover">
             <div className="instruction-cover-placeholder" aria-hidden="true">
@@ -155,9 +154,7 @@ export function InstructionCatalogCards({ items, nextCursor, kit, query, totalCo
 
     {selected && (() => {
       const downloadUrl = driveDownloadPath(selected.slug, selected.hasPdf)
-      const coverUrl = selected.coverAssetId
-        ? `/api/instruction-media/${selected.id}/${selected.coverAssetId}`
-        : selected.hasPdf ? `/api/instructions/${encodeURIComponent(selected.slug)}/preview` : null
+      const coverUrl = catalogCoverUrl(selected)
       return <div className="instruction-admin-backdrop instruction-card-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) setSelected(null) }}>
         <section className="instruction-card-dialog" role="dialog" aria-modal="true" aria-labelledby="instruction-card-dialog-title">
           <button type="button" className="instruction-card-dialog-close" onClick={() => setSelected(null)} aria-label="Закрыть">×</button>
