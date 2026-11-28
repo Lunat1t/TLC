@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation"
 import { useEffect, useState, type FormEvent } from "react"
 import { useAccess } from "@/components/auth/access-provider"
 import { driveDownloadPath } from "@/lib/instructions/drive-links"
-import { catalogCoverUrl, spikeCardCode } from "@/lib/instructions/card-cover"
+import { cardCode, catalogCoverUrl } from "@/lib/instructions/card-cover"
 import type { CatalogCard } from "@/lib/instructions/types"
 import "./instruction-catalog-admin.css"
 
@@ -121,10 +121,10 @@ export function InstructionCatalogCards({ items, nextCursor, kit, query, totalCo
   return <>
     {notice && <p className="instruction-admin-notice" role="status">{notice}</p>}
     {error && !editor && !selected && <p className="instruction-admin-error" role="alert">{error}</p>}
-    <div className={"instruction-grid" + (kit === "spike" ? " instruction-grid--spike" : "")}>
+    <div className={"instruction-grid" + (kit === "spike" || kit === "ev3" ? " instruction-grid--spike" : "")}>
       {cards.map((item, index) => {
         const coverUrl = catalogCoverUrl(item)
-        const code = spikeCardCode(item)
+        const code = cardCode(item)
         const content = <>
           <div className="instruction-cover">
             <div className="instruction-cover-placeholder" aria-hidden="true">
@@ -133,9 +133,8 @@ export function InstructionCatalogCards({ items, nextCursor, kit, query, totalCo
             </div>
             {coverUrl && <img src={coverUrl} alt="" width={720} height={480} loading={index < 2 ? "eager" : "lazy"} fetchPriority={index === 0 ? "high" : "auto"} decoding="async" onError={(event) => { event.currentTarget.style.display = "none" }} />}
           </div>
-          {item.kit === "spike"
-            ? <><h2 className="instruction-card-title">{item.title}</h2><div className="instruction-card-meta"><strong>{code ? "№ " + code : "SPIKE Prime"}</strong><span>{item.hasPdf ? "PDF" : "Сборка"}</span></div></>
-            : <div className="instruction-card-copy"><h2>{item.title}</h2><p>{item.summary}</p><div className="instruction-topics">{item.topics.map((topic) => <span key={topic}>{topic}</span>)}</div></div>}
+          <h2 className="instruction-card-title">{item.title}</h2>
+          <div className="instruction-card-meta"><strong>{code ? "№ " + code : item.kit === "spike" ? "SPIKE Prime" : "LEGO EV3"}</strong><span>{item.hasPdf ? "PDF" : "Сборка"}</span></div>
         </>
         return <div className="instruction-admin-shell" key={item.id}>
           <button type="button" className="instruction-card" onClick={() => { setError(""); setSelected(item) }} aria-label={`Открыть инструкцию: ${item.title}`}>
