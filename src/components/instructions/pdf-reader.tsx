@@ -17,6 +17,7 @@ import { useAccess } from "@/components/auth/access-provider"
 import { useWorkspaceSettings } from "@/components/lab/workspace-settings"
 import type { Kit } from "@/lib/instructions/types"
 import {
+  PDFJS_WASM_URL,
   READER_ZOOM_OPTIONS,
   calculateReaderScale,
   calculateCanvasPixelRatio,
@@ -173,6 +174,7 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
       const loadingTask = lib.getDocument({
         url: `/api/instructions/${encodeURIComponent(slug)}/document`,
         rangeChunkSize: 262144,
+        wasmUrl: PDFJS_WASM_URL,
       })
       task = loadingTask
       loadingTask.onProgress = (progressData: { loaded: number; total: number }) => {
@@ -243,7 +245,7 @@ export function PdfReader({ slug, title, kit, initialUserId = "anon" }: PdfReade
           if (!alive || verdict === "blocked") return
           if (verdict === "allow" || verdict === "offline-allow") {
             try {
-              const cacheTask = lib.getDocument({ data: cachedBytes })
+              const cacheTask = lib.getDocument({ data: cachedBytes, wasmUrl: PDFJS_WASM_URL })
               task = cacheTask
               doc = await cacheTask.promise
               if (alive && verdict === "offline-allow") setOfflineCached(true)
