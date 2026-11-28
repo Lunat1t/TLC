@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { deviceAngle, isQuarterTurn, videoRotation } from '../src/lib/camera-rotation.ts';
 
 test('phone position follows screen.orientation.angle convention', () => {
@@ -29,4 +30,9 @@ test('video rotates only when the screen did not follow the phone', () => {
 test('only quarter turns are accepted from the phone', () => {
   assert.ok(isQuarterTurn(270));
   for (const value of [45, -90, 360, '90', null]) assert.ok(!isQuarterTurn(value));
+});
+
+test('video layer lets clicks reach the connect and QR buttons', () => {
+  const source = readFileSync(new URL('../src/components/editor/display-stream-view.tsx', import.meta.url), 'utf8');
+  assert.match(source, /className="pointer-events-none absolute inset-0 \[container-type:size\]"/);
 });

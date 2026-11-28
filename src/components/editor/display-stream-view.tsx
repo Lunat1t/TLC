@@ -163,7 +163,8 @@ export function DisplayStreamView({ editing }: { editing: boolean }) {
   const showVideo = status === "connecting" || status === "live"
   return (
     <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-md bg-[#1e1c1b] p-2 text-white" aria-label="Экран дисплея">
-      <div className="absolute inset-0 [container-type:size]">
+      {/* Слой видео не должен перехватывать нажатия на кнопки под ним. */}
+      <div className="pointer-events-none absolute inset-0 [container-type:size]">
         <video
           ref={video}
           className={`absolute left-1/2 top-1/2 max-w-none object-contain ${rotation % 180 ? "h-[100cqw] w-[100cqh]" : "size-full"} ${showVideo ? "" : "invisible"}`}
