@@ -33,6 +33,7 @@ export const DEFAULT_SENSOR_TILT = 30;
 export const DEFAULT_SENSOR_AXIS = 'pitch';
 export const DEFAULT_SPEED = 360;
 export const DEFAULT_POWER = 50;
+export const HIGH_POWER_WARNING = 80;
 
 export const DEFAULT_DRIVE_SETTINGS = Object.freeze({
   leftPort: 'A',
@@ -544,6 +545,15 @@ export function expandActionBlock(child, context = {}) {
 
     const rawPower = Number.isFinite(child.power) ? Number(child.power) : DEFAULT_POWER;
     const clampedPower = Math.max(1, Math.min(100, Math.round(rawPower)));
+    if (powered && clampedPower > HIGH_POWER_WARNING) {
+      errors.push({
+        button: btn,
+        blockId: child.id,
+        code: 'high-power',
+        severity: 'warning',
+        message: `Мощность выше ${HIGH_POWER_WARNING} %: при упоре мотор перегреется. Лимит момента на «Мощность» не действует.`,
+      });
+    }
 
     const value = Number.isFinite(Number(child.value)) && Number(child.value) > 0 && Number(child.value) <= 10000 ? Number(child.value) : 1;
     const signA = child.direction === 'backward' ? -1 : 1;

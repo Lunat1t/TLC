@@ -36,6 +36,7 @@ import {
 
 export const MAX_BLOCKS = 200
 export const MOTOR_SPEED = 360
+export const MOTOR_TORQUE_PERCENT = 80
 export const MAX_SHEETS = 32
 
 export type ControllerButton =
@@ -1163,6 +1164,19 @@ export function generatePybricks(
     ...usedSensors.map(
       ([port, st]) => `sensor_${port.toLowerCase()} = ${st === "imu" ? "UltrasonicSensor" : sensorClassMap[st]}(Port.${port})`
     ),
+    ...(hub === "spike" && used.length > 0
+      ? [
+          `# Защита моторов: момент не выше ${MOTOR_TORQUE_PERCENT} % от штатного предела (не действует на dc)`,
+          ...used.flatMap((port) => {
+            const m = `motor_${port.toLowerCase()}`
+            return [
+              `_, _, _torque = ${m}.control.limits()`,
+              `${m}.control.limits(torque=_torque * ${MOTOR_TORQUE_PERCENT / 100})`,
+            ]
+          }),
+          "",
+        ]
+      : []),
     "",
   ]
 

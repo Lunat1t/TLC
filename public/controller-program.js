@@ -560,7 +560,7 @@ export function compileControllerProgram(project) {
     for (const error of result.errors.slice(errorStart)) {
       error.target = target || undefined;
       error.scope = isStart ? 'startup' : 'handler';
-      error.severity = 'error';
+      error.severity = error.severity || 'error';
     }
     if (!isStart && target && actions.length === 0 && result.errors.length === errorStart) {
       result.errors.push({ target, blockId: root.id, code: 'empty-handler', scope: 'handler', severity: 'warning', message: 'Добавьте действия под событием кнопки' });
