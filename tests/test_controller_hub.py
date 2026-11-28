@@ -36,6 +36,9 @@ input_bytes = list(
     b"u,F,50\n"
     b"u,B,60\n"
     b"g,IMU,r\n"
+    b"n,880,100,60\n"
+    b"n,10,100,60\n"
+    b"n,880,100,101\n"
     b"k\n"
 )
 
@@ -141,9 +144,21 @@ class FakeImu:
         imu_state["heading"] = angle
 
 
+speaker_calls = []
+
+
+class FakeSpeaker:
+    def volume(self, volume):
+        speaker_calls.append(("volume", volume))
+
+    def beep(self, frequency, duration):
+        speaker_calls.append(("beep", frequency, duration))
+
+
 class PrimeHub:
     def __init__(self):
         self.imu = FakeImu()
+        self.speaker = FakeSpeaker()
 
 
 class StopWatch:
@@ -214,7 +229,7 @@ with contextlib.redirect_stdout(output):
         pass
 
 out = output.getvalue()
-assert "SOCER_VER|7" in out, f"Unexpected version output: {out}"
+assert "SOCER_VER|8" in out, f"Unexpected version output: {out}"
 assert "SOCER3_READY|A,D" in out, f"Unexpected ready output: {out}"
 assert "SOCER_SENSORS|B:color,C:ultrasonic,E:ultrasonic,F:force,IMU:imu" in out, f"Unexpected sensors output: {out}"
 ports_lines = [line for line in out.splitlines() if line.startswith("SOCER_PORTS|")]
@@ -253,4 +268,12 @@ assert sensors["B"].light_calls == [
     ("off",),
     ("off",),
 ], f"Unexpected color sensor light calls: {sensors['B'].light_calls}"
+# One valid tone starts without blocking and is muted after its length; the
+# out-of-range ones are ignored.
+assert speaker_calls == [
+    ("volume", 60),
+    ("beep", 880, -1),
+    ("volume", 0),
+    ("beep", 500, -1),
+], f"Unexpected speaker calls: {speaker_calls}"
 print("controller hub simulation passed")

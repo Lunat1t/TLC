@@ -151,7 +151,7 @@ export function describeAction(action) {
       return 'Сброс гироскопа 0°';
     }
     case 'sound': {
-      const name = findSoundPreset(action.soundId)?.name || 'своя запись';
+      const name = (findSoundPreset(action.soundId) || findSoundPreset(DEFAULT_SOUND_ID)).name;
       const times = action.times > 1 ? ` ×${action.times}` : '';
       return `Звук «${name}»${times}${action.wait ? ' до конца' : ''}`;
     }
@@ -363,7 +363,7 @@ function compileSound(block) {
   const volume = Number(block.volume);
   return {
     kind: 'sound',
-    soundId: typeof block.soundId === 'string' && block.soundId ? block.soundId : DEFAULT_SOUND_ID,
+    soundId: findSoundPreset(block.soundId) ? block.soundId : DEFAULT_SOUND_ID,
     // Без модуля поле блока не действует: звук играет с обычной громкостью один раз.
     volume: modules.includes('volume') && Number.isFinite(volume)
       ? Math.max(0, Math.min(100, Math.round(volume)))

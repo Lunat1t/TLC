@@ -8,7 +8,7 @@ Next.js serves the files in this directory as static assets. Some scripts run in
 
 - [`compileControllerProgram()` and `commandsFor()`](./controller-program.js) compile controller blocks and format hub commands.
 - [`MODULE_DEFS`, `BLOCK_MODULES` and the module helpers](./block-modules.js) are the single registry of block modules: which modules a block offers, what conflicts, what is required for export and which defaults and texts the editor shows.
-- [`SOUND_PRESETS`](./sound-presets.js) is the list of built-in sounds, described as notes and rendered in the browser.
+- [`SOUND_PRESETS`](./sound-presets.js) is the list of sounds for the hub speaker, described as notes; `soundSteps()` splits them into tones.
 - [`validateConfig()`](./controller-model.js) validates controller layout and port settings.
 - [`validateProject()`, `loadProjects()`, and `saveProjects()`](./projects.js) work with the versioned project format and a caller-provided storage object.
 - [`commandBytes()` and `parseEvent()`](./pybricks-protocol.js) encode commands and decode events. [`subscribeNotifications()`](./notifications.js) attaches the Bluetooth notification handler.

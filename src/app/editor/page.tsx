@@ -80,7 +80,6 @@ import { ModuleBar } from "@/components/editor/module-bar"
 import { ConditionSlot } from "@/components/editor/condition-slot"
 import { LoopBlock } from "@/components/editor/loop-block"
 import { SoundBlock } from "@/components/editor/sound-block"
-import { soundPlayer } from "@/lib/sound/player"
 import {
   DEFAULT_DRIVE_SETTINGS,
   compileControllerProgram,
@@ -697,8 +696,6 @@ function EditorWorkspace() {
   }
 
   async function startProgram() {
-    // Браузер разрешает звук только после нажатия, поэтому включаем его сразу.
-    soundPlayer.unlock()
     const session = sessionRef.current
     if (!session || starting || checking) return
     if (editorMode === "pybricks") {
@@ -724,8 +721,17 @@ function EditorWorkspace() {
     } finally { setStarting(false) }
   }
 
+  async function previewSound(soundId: string, volume: number) {
+    const session = sessionRef.current
+    if (!session) return { ok: false, error: "Редактор ещё загружается." }
+    return session.previewSound(soundId, volume)
+  }
+
+  function stopSoundPreview() {
+    void sessionRef.current?.stopSound()
+  }
+
   async function connectAndStart() {
-    soundPlayer.unlock()
     const session = sessionRef.current
     if (!session || starting) return
     const runPybricks = pendingPybricksRun || editorMode === "pybricks"
@@ -2724,6 +2730,8 @@ function EditorWorkspace() {
                     ) : isSoundBlock ? (
                       <SoundBlock
                         block={block}
+                        onPreview={previewSound}
+                        onStopPreview={stopSoundPreview}
                         errorMessage={blockError}
                         onChange={(changes) => {
                           if (!project) return

@@ -1,5 +1,5 @@
 import { DEFAULT_LOOP_TIMES, MAX_LOOP_TIMES, normalizeModules, validateModuleRules } from "./block-modules.ts"
-import { DEFAULT_SOUND_ID, DEFAULT_SOUND_VOLUME } from "./sound/presets.ts"
+import { DEFAULT_SOUND_ID, DEFAULT_SOUND_VOLUME, findSoundPreset, soundSteps } from "./sound/presets.ts"
 import { HUB_PROGRAM_SOURCE } from "./hub-program-source.ts"
 import type { HubType } from "./projects"
 import {
@@ -477,8 +477,8 @@ export function readBlocks(
           ...base,
           modules: normalizeModules("sound", block.modules) as MotorModule[],
           soundId:
-            typeof block.soundId === "string" && block.soundId && block.soundId.length <= 80
-              ? block.soundId
+            findSoundPreset(String(block.soundId))
+              ? String(block.soundId)
               : DEFAULT_SOUND_ID,
           volume: Number.isFinite(volume) ? Math.max(0, Math.min(100, Math.round(volume))) : DEFAULT_SOUND_VOLUME,
           times:
@@ -1105,7 +1105,7 @@ export function generatePybricks(
   )
   const ordered = executionOrder(autonomousBlocks)
   const driveBlocks = ordered.filter((block) =>
-    ACTION_BLOCK_TYPES.includes(block.type) && block.type !== "sound"
+    ACTION_BLOCK_TYPES.includes(block.type)
   )
   if (!driveBlocks.length) {
     const hasButtonActions = clean.some(block =>
@@ -1136,8 +1136,12 @@ export function generatePybricks(
     }
   }
   let hasStopAll = false
+  let usesSound = false
   for (const block of driveBlocks) {
-    if (block.type === "sensor") {
+    if (block.type === "sound") {
+      // Динамик хаба не занимает портов.
+      usesSound = true
+    } else if (block.type === "sensor") {
       recordSensor(block)
     } else if (isPairedBlock(block)) {
       explicitPorts.add(block.motor || "A")
@@ -1175,14 +1179,14 @@ export function generatePybricks(
 
   const lines = [
     "# Brick Studio: команды выполняются сверху вниз",
-    ...(usesImu ? ["from pybricks.hubs import PrimeHub"] : []),
+    ...(usesImu || (usesSound && hub === "spike") ? ["from pybricks.hubs import PrimeHub"] : []),
     `from pybricks.${
       hub === "spike" ? "pupdevices" : "ev3devices"
     } import ${imports.join(", ") || "Motor"}`,
     `from pybricks.parameters import ${paramImports.join(", ")}`,
     "from pybricks.tools import wait",
     "",
-    ...(usesImu ? ["hub = PrimeHub()"] : []),
+    ...(usesImu || (usesSound && hub === "spike") ? ["hub = PrimeHub()"] : []),
     ...used.map(
       (port) => `motor_${port.toLowerCase()} = Motor(Port.${port})`
     ),
@@ -1190,13 +1194,36 @@ export function generatePybricks(
       ([port, st]) => `sensor_${port.toLowerCase()} = ${st === "imu" ? "UltrasonicSensor" : sensorClassMap[st]}(Port.${port})`
     ),
     "",
+    ...(usesSound && hub === "spike"
+      ? [
+          "def play_sound(notes, volume, times):",
+          "    hub.speaker.volume(volume)",
+          "    for _ in range(times):",
+          "        for frequency, ms in notes:",
+          "            if frequency:",
+          "                hub.speaker.beep(frequency, ms)",
+          "            else:",
+          "                wait(ms)",
+          "",
+        ]
+      : []),
   ]
 
   function emitBlock(block: WorkspaceBlock, indent: string) {
     if (block.type === "start" || block.type === "button") return
     if (block.type === "sound") {
-      // У автономной программы нет доступа к записям: звук играет только пульт.
-      lines.push(`${indent}pass  # Звук играет только в пульте Brick Studio`)
+      if (hub !== "spike") {
+        lines.push(`${indent}pass  # Звук пока играет только на SPIKE Prime`)
+        return
+      }
+      const mods = block.modules || []
+      const soundId = block.soundId || DEFAULT_SOUND_ID
+      const volume = mods.includes("volume") ? block.volume ?? DEFAULT_SOUND_VOLUME : DEFAULT_SOUND_VOLUME
+      const times = mods.includes("times") ? block.times || DEFAULT_LOOP_TIMES : 1
+      const notes = soundSteps(soundId).map((step) => `(${step.freq}, ${step.ms})`).join(", ")
+      // В автономной программе звук всегда доигрывает до конца.
+      if (options?.comments) lines.push(`${indent}# Звук «${findSoundPreset(soundId)?.name}»`)
+      lines.push(`${indent}play_sound((${notes},), ${volume}, ${times})`)
       return
     }
     if (block.type === "stop") {

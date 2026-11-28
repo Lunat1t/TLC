@@ -3,28 +3,34 @@ import { ChevronDown, Volume2 } from "lucide-react"
 import type { WorkspaceBlock } from "@/lib/workspace"
 import { BlockErrorBar } from "@/components/editor/controller-blocks"
 import { ModuleBar } from "@/components/editor/module-bar"
-import { SoundLibraryDialog } from "@/components/sound/sound-library"
-import { useSoundName } from "@/components/sound/use-sounds"
-import { DEFAULT_SOUND_ID } from "@/lib/sound/presets"
+import { SoundLibraryDialog, type SoundPreview } from "@/components/sound/sound-library"
+import { DEFAULT_SOUND_ID, DEFAULT_SOUND_VOLUME, findSoundPreset } from "@/lib/sound/presets"
 
 /**
- * Блок «Звук». База играет выбранный звук и сразу пропускает программу дальше;
+ * Блок «Звук». База играет выбранный звук на роботе и сразу пропускает программу дальше;
  * модули добавляют громкость, число повторов и ожидание конца.
  */
 export function SoundBlock({
   block,
   errorMessage,
   onChange,
+  onPreview,
+  onStopPreview,
 }: {
   block: WorkspaceBlock
   errorMessage?: string
   onChange: (changes: Partial<WorkspaceBlock>) => void
+  onPreview: SoundPreview
+  onStopPreview: () => void
 }) {
   const [libraryOpen, setLibraryOpen] = React.useState(false)
-  const closeLibrary = React.useCallback(() => setLibraryOpen(false), [])
+  const closeLibrary = () => {
+    onStopPreview()
+    setLibraryOpen(false)
+  }
   const soundId = block.soundId || DEFAULT_SOUND_ID
-  const name = useSoundName(soundId)
-  const waits = Boolean(block.modules?.includes("wait"))
+  const name = findSoundPreset(soundId)?.name ?? soundId
+  const modules = block.modules || []
 
   return (
     <div className="flex flex-col">
@@ -44,13 +50,16 @@ export function SoundBlock({
           <span className="truncate">{name}</span>
           <ChevronDown size={14} aria-hidden="true" className="shrink-0" />
         </button>
-        {waits && <span className="whitespace-nowrap text-[16px] font-bold tracking-tight">до конца</span>}
+        {modules.includes("wait") && <span className="whitespace-nowrap text-[16px] font-bold tracking-tight">до конца</span>}
         <ModuleBar blockType="sound" block={block} subject="звука" onChange={onChange} />
       </div>
       <BlockErrorBar errorMessage={errorMessage} />
       {libraryOpen && (
         <SoundLibraryDialog
           selectedId={soundId}
+          volume={modules.includes("volume") ? block.volume ?? DEFAULT_SOUND_VOLUME : DEFAULT_SOUND_VOLUME}
+          onPreview={onPreview}
+          onStopPreview={onStopPreview}
           onSelect={(id) => {
             onChange({ soundId: id })
             closeLibrary()

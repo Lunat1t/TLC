@@ -13,6 +13,7 @@ import {
   writeProgramMetaBytes,
   writeUserRamBytes,
 } from '../../public/pybricks-protocol.js'
+import {soundSteps} from './sound/presets.ts'
 import {subscribeNotifications} from '../../public/notifications.js'
 
 type Target = {controlId:string;input:string}
@@ -53,13 +54,11 @@ export type SessionState={
   hubName:string|null
   needsManualHubProgram?:boolean
 }
+const TONE_OVERLAP_MS=100
 type SoundAction=Extract<ControllerAction,{kind:'sound'}>
 type SessionOptions={
   compileHubProgram?:()=>Promise<Uint8Array>
   compileCustomProgram?:(source:string)=>Promise<Uint8Array>
-  /** Играет звук на этом устройстве; обещание завершается, когда звук доиграл. */
-  playSound?:(action:SoundAction,signal:AbortSignal)=>Promise<void>
-  stopSounds?:()=>void
   expectedVersion?:string
   probeTimeoutMs?:number
   heartbeatTimeoutMs?:number
@@ -67,8 +66,6 @@ type SessionOptions={
 type Clock={now:()=>number;setTimeout:(fn:()=>void,ms:number)=>ReturnType<typeof setTimeout>;clearTimeout:(id:ReturnType<typeof setTimeout>)=>void;setInterval:(fn:()=>void,ms:number)=>ReturnType<typeof setInterval>;clearInterval:(id:ReturnType<typeof setInterval>)=>void}
 const systemClock:Clock={now:()=>Date.now(),setTimeout:(fn,ms)=>setTimeout(fn,ms),clearTimeout:id=>clearTimeout(id),setInterval:(fn,ms)=>setInterval(fn,ms),clearInterval:id=>clearInterval(id)}
 const LOOP_TICK_MS=10
-/** Есть ли в списке звук: он играет на устройстве и без робота. */
-const hasSound=(list:ControllerAction[]):boolean=>list.some(a=>a.kind==='sound'||(a.kind==='loop'&&hasSound(a.bodyActions))||(a.kind==='branch'&&(hasSound(a.thenActions)||hasSound(a.elseActions))))
 /** Есть ли в списке то, что зависит от датчиков: тогда программа идёт и в пробном режиме. */
 const hasSensorFlow=(list:ControllerAction[]):boolean=>list.some(a=>a.kind==='branch'||a.kind==='waitSensor'||(a.kind==='loop'&&(Boolean(a.condition)||hasSensorFlow(a.bodyActions))))
 const sleep=(ms:number,signal?:AbortSignal,clock:Clock=systemClock)=>new Promise<void>((resolve,reject)=>{
@@ -176,6 +173,8 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
   let uploadedThisConnect=false
   let customProgramActive=false
   let snapshot:ControllerProgram|null=null
+  // Динамик один: новый звук прерывает предыдущий.
+  let sound:{key:string;abort:AbortController;done:Promise<void>}|null=null
   const runners=new Map<string,AbortController>();const owners=new Map<string,AbortController>();const held=new Set<string>()
   type ActiveHold={key:string;handler:ControllerHandler;ports:string[];ownedRunners:Set<AbortController>}
   const activeHolds=new Map<string,ActiveHold>()
@@ -238,7 +237,7 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
   }
   const publish=(patch:Partial<SessionState>)=>{if(disposed)return;state={...state,...patch};for(const f of listeners)f(state)}
   const log=(line:string)=>publish({log:[...state.log,line].slice(-30)})
-  const clear=()=>{epoch++;options?.stopSounds?.();for(const run of runners.values())run.abort();runners.clear();owners.clear();held.clear();activeHolds.clear();snapshot=null;notifySensorWaiters();if(heartbeat)clock.clearInterval(heartbeat);heartbeat=null}
+  const clear=()=>{epoch++;sound?.abort.abort();sound=null;for(const run of runners.values())run.abort();runners.clear();owners.clear();held.clear();activeHolds.clear();snapshot=null;notifySensorWaiters();if(heartbeat)clock.clearInterval(heartbeat);heartbeat=null}
   const disconnectTransport=async()=>{
     connection++
     startAbort?.abort();startAbort=null
@@ -347,14 +346,15 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
       void fault('Связь с программой хаба потеряна; остановка не подтверждена.')
     }
   }
-  const write=(command:string,valid:()=>boolean=()=>true)=>{
+  // `countsAsHeartbeat` = false для тонов: они не заменяют хабу сигнал связи.
+  const write=(command:string,valid:()=>boolean=()=>true,countsAsHeartbeat=true)=>{
     const serial=connection
     const next=queue.catch(()=>{}).then(async()=>{
       if(!valid())return
       if(writeFailed || serial!==connection)throw new Error('Соединение больше не действительно')
       try {
         await withTimeout(transport.write(command),2000,'Нет ответа при записи',clock)
-        lastWriteAt=clock.now()
+        if(countsAsHeartbeat)lastWriteAt=clock.now()
       }
       catch(error){writeFailed=true;throw error}
     })
@@ -381,6 +381,42 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
   function stopAllPorts(){
     return state.ports.length?state.ports:(snapshot?.ports?.length?snapshot.ports:[...DRIVE_PORTS])
   }
+  /** Посылает хабу тоны звука по очереди; обещание завершается, когда звук доиграл. */
+  function playOnHub(action:SoundAction,signal?:AbortSignal):Promise<void> {
+    const key=`${action.soundId}|${action.volume}|${action.times}`
+    // Тот же звук уже играет: не начинаем заново, иначе цикл без паузы держал бы первую ноту.
+    if(sound?.key===key&&!sound.abort.signal.aborted)return sound.done
+    sound?.abort.abort()
+    const abort=new AbortController();const generation=epoch
+    const cancel=()=>abort.abort()
+    signal?.addEventListener('abort',cancel,{once:true})
+    const current={key,abort,done:Promise.resolve()}
+    sound=current
+    const valid=()=>generation===epoch&&!abort.signal.aborted
+    current.done=(async()=>{
+      try {
+        const steps=soundSteps(action.soundId)
+        for(let round=0;round<action.times&&valid();round++){
+          for(const step of steps){
+            if(!valid())break
+            // Хаб держит тон чуть дольше шага, чтобы задержка Bluetooth не рвала звук.
+            await write(`n,${step.freq},${step.freq?step.ms+TONE_OVERLAP_MS:0},${action.volume}\n`,valid,false)
+            await sleep(step.ms,abort.signal,clock)
+          }
+        }
+      } catch(error){
+        if(!abort.signal.aborted&&generation===epoch)throw error
+      } finally {
+        signal?.removeEventListener('abort',cancel)
+        if(sound===current){
+          sound=null
+          // После полной остановки тишину обеспечивает команда `x`.
+          if(generation===epoch)await write('n,0,0,0\n',()=>generation===epoch&&!sound,false)
+        }
+      }
+    })()
+    return current.done
+  }
   function startActions(key:string,actions:ControllerAction[],generation:number,sendWrites=true):AbortController {
     runners.get(key)?.abort()
     const runner=new AbortController();runners.set(key,runner)
@@ -400,11 +436,11 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
         if(runner.signal.aborted||epoch!==generation)break
         if(action.kind==='sound'){
           log(describeAction(action))
-          // Ошибка звука не должна рвать связь с роботом и останавливать программу.
-          const played=Promise.resolve(options?.playSound?.(action,runner.signal)).catch(error=>{
-            if(!runner.signal.aborted&&epoch===generation)log(`⚠ ${error instanceof Error?error.message:'Звук не проигрался'}`)
-          })
+          // Без робота играть нечем: звук идёт только в динамик хаба.
+          if(!sendWrites)continue
+          const played=playOnHub(action,runner.signal)
           if(action.wait)await played
+          else void played.catch(error=>{if(epoch===generation)void fault(`Ошибка связи: ${error instanceof Error?error.message:String(error)}`)})
           continue
         }
         if(action.kind==='wait'){if(sendWrites)await sleep(action.ms,runner.signal,clock);continue}
@@ -671,7 +707,7 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
       }
       clear();snapshot=structuredClone(program);const generation=epoch
       publish({program:live?'live-running':'trial-running',uploadProgress:null,message:live?'Программа запущена':'Пробный режим: команды роботу не отправляются'})
-      if(program.startup.length){log('Запуск → '+program.startup.map(describeAction).filter(Boolean).join(' · '));if(live||hasSensorFlow(program.startup)||hasSound(program.startup))void runActions('startup',program.startup,generation,live)}
+      if(program.startup.length){log('Запуск → '+program.startup.map(describeAction).filter(Boolean).join(' · '));if(live||hasSensorFlow(program.startup))void runActions('startup',program.startup,generation,live)}
       if(live)beginHeartbeat()
     },
     dispatch(target:Target,event:ControllerEvent){
@@ -725,8 +761,8 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
       const runnerKey = handler?.driveAreaId ? `drive-area:${handler.driveAreaId}` : `input:${key}`
       log(`${target.input} ${event==='pressed'?'нажата':'отпущена'} → ${actions.map(describeAction).filter(Boolean).join(' · ')||'нет действий'}`)
       let startedRunner:AbortController|null=null
-      const runsWithoutRobot=hasSensorFlow(actions)||hasSound(actions)
-      if(actions.length&&(state.program==='live-running'||runsWithoutRobot))startedRunner=startActions(runnerKey,actions,epoch,state.program==='live-running')
+      const hasSensorFlowNow=hasSensorFlow(actions)
+      if(actions.length&&(state.program==='live-running'||hasSensorFlowNow))startedRunner=startActions(runnerKey,actions,epoch,state.program==='live-running')
       if(event==='pressed' && handler?.event==='hold'){
         const drivenPorts=collectDrivenPorts(actions)
         const ownedRunners=new Set<AbortController>()
@@ -746,6 +782,28 @@ export function createControllerSession(transport:Transport,clock:Clock=systemCl
       notifySensorWaiters()
     },
     stop,
+    /** Прослушивание из библиотеки: играет на подключённом роботе без запуска программы. */
+    async previewSound(soundId:string,volume:number):Promise<{ok:boolean;error?:string}>{
+      if(state.program!=='idle'&&state.program!=='stopped')return {ok:false,error:'Остановите программу, чтобы прослушать звук.'}
+      if(state.transport==='connected')await this.startHub()
+      if((state as SessionState).transport!=='ready'){
+        const busy=['connecting','uploading','starting-hub'].includes(state.transport)
+        return {ok:false,error:busy?'Робот ещё готовится. Подождите.':state.transport==='fault'?state.message:'Подключите робота: кнопка «Робот» вверху.'}
+      }
+      try {
+        await playOnHub({kind:'sound',soundId,volume,times:1,wait:true})
+        return {ok:true}
+      } catch(error){
+        const message=`Ошибка связи: ${error instanceof Error?error.message:String(error)}`
+        await fault(message)
+        return {ok:false,error:message}
+      }
+    },
+    async stopSound(){
+      if(!sound)return
+      sound.abort.abort();sound=null
+      if(state.transport==='ready')await write('n,0,0,0\n',()=>!sound,false).catch(()=>{})
+    },
     async disconnect(){await stop();clear();await disconnectTransport();publish({transport:'disconnected',program:'stopped',uploadProgress:null,hubName:null,needsManualHubProgram:false,message:'Хаб отключён.',ports:[],sensorPorts:[],sensorPortsKnown:false,sensorDistances:{},sensorTypes:{},sensorTelemetry:{},protocol:null})},
     async dispose(){if(disposed)return;await stop();clear();await disconnectTransport();disposed=true;listeners.clear()},
     getState(){return state},

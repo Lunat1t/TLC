@@ -412,7 +412,7 @@ test('createBluetoothTransport auto-uploads when clean hub rejects 0x01 start pr
 test('offline compileBundledHubProgram has embedded source ready', async () => {
   assert.equal(typeof compileBundledHubProgram, 'function');
   const {HUB_PROGRAM_SOURCE} = await import('../src/lib/hub-program-source.ts');
-  assert.match(HUB_PROGRAM_SOURCE, /PROGRAM_VERSION = "7"/);
+  assert.match(HUB_PROGRAM_SOURCE, /PROGRAM_VERSION = "8"/);
   assert.match(HUB_PROGRAM_SOURCE, /LINK_TIMEOUT_MS = 2000/);
 });
 
@@ -837,7 +837,7 @@ test('SOCER_PORTS updates connected motors and sensors live and clears data of u
     startHub: async () => {},
     write: async (line) => {
       if (line === 'h\n') {
-        onLine('SOCER_VER|7');
+        onLine('SOCER_VER|8');
         onLine('SOCER3_READY|A,D');
         onLine('SOCER_SENSORS|C:ultrasonic,IMU:imu');
         onLine('SOCER_PORTS|A:motor,C:ultrasonic,D:motor');

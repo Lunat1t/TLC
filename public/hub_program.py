@@ -22,7 +22,7 @@ except ImportError:
     ENODEV = 19
 
 MAX_SPEED = 1000
-PROGRAM_VERSION = "7"
+PROGRAM_VERSION = "8"
 LINK_TIMEOUT_MS = 2000
 SENSOR_POLL_MS = 150
 SENSOR_HEARTBEAT_MS = 500
@@ -55,6 +55,8 @@ for _hub_name in ("PrimeHub", "TechnicHub"):
     except (ImportError, AttributeError, OSError):
         pass
 imu = getattr(hub, "imu", None) if hub is not None else None
+speaker = getattr(hub, "speaker", None) if hub is not None else None
+tone_end = None
 
 motors = {}
 sensors = {}
@@ -143,9 +145,33 @@ def _color_name(val):
     return "none"
 
 
+def silence():
+    """Mute the speaker without blocking the command loop."""
+    global tone_end
+    tone_end = None
+    if speaker is not None:
+        speaker.volume(0)
+        speaker.beep(500, -1)
+
+
+def play_tone(frequency, ms, volume):
+    """Start a tone and return at once; the main loop ends it after `ms`."""
+    global tone_end
+    if speaker is None:
+        return
+    if not frequency or not ms or not volume:
+        silence()
+        return
+    speaker.volume(volume)
+    speaker.beep(frequency, -1)
+    tone_end = clock.time() + ms
+
+
 def stop_all():
     global link_active
     link_active = False
+    if tone_end is not None:
+        silence()
     last_distances.clear()
     last_sns.clear()
     for name, motor in motors.items():
@@ -293,6 +319,22 @@ def process(line):
 
     port = parts[1]
 
+    if cmd == "n" and len(parts) == 4:
+        try:
+            frequency, ms, volume = int(parts[1]), int(parts[2]), int(parts[3])
+        except ValueError:
+            return
+        if frequency != 0 and not 64 <= frequency <= 24000:
+            return
+        if not 0 <= ms <= 10000 or not 0 <= volume <= 100:
+            return
+        play_tone(frequency, ms, volume)
+        # A tone alone never arms the link watchdog: the editor may preview a
+        # sound while no program (and no heartbeat) is running.
+        if link_active:
+            last_command = clock.time()
+        return
+
     if cmd == "g" and len(parts) == 3 and port == "IMU" and parts[2] == "r":
         if imu is None:
             return
@@ -416,6 +458,8 @@ try:
         if link_active and now - last_ack >= 250:
             print("SOCER2_ACK")
             last_ack = now
+        if tone_end is not None and now >= tone_end:
+            silence()
         scan_ports(now)
         if link_active:
             poll_sensors(now)
