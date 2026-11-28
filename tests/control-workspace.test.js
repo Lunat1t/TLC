@@ -100,7 +100,7 @@ test('when cross-tab locks are unavailable projects remain readable without stor
   assert.equal(writes,0);
 });
 
-test('pre-change autonomous fixture exports identical Pybricks code',async()=>{
+test('autonomous fixture exports Pybricks code with the motor torque limit',async()=>{
   const {generatePybricks}=await import('../src/lib/workspace.ts');
   const project=fixture('autonomous.json');
   const expected=readFileSync(new URL('./fixtures/controller/autonomous.py',import.meta.url),'utf8');
@@ -207,4 +207,12 @@ test('distance-gauge widget and sensor blocks validate, clone, and survive migra
   const badPortLayout = JSON.parse(JSON.stringify(project.workspace.controlLayout));
   badPortLayout.controls.find(c => c.id === 'gauge-1').port = 'A';
   assert.throws(() => validateControlLayout(badPortLayout, ['sheet-main']), /Неверный порт дальномера/);
+});
+
+test('export caps motor torque on SPIKE only',async()=>{
+  const {generatePybricks}=await import('../src/lib/workspace.ts');
+  const blocks=fixture('autonomous.json').workspace.sheets[0].blocks;
+  const spike=generatePybricks(blocks,'spike');
+  assert.match(spike,/_, _, _torque = motor_a\.control\.limits\(\)\nmotor_a\.control\.limits\(torque=_torque \* 0\.8\)/);
+  assert.doesNotMatch(generatePybricks(blocks,'ev3'),/control\.limits/);
 });

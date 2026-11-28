@@ -100,6 +100,8 @@ class Motor:
         self.port=port
         self.control=self
         self.checks=0
+    def limits(self, **kwargs):
+        return (1000, 2000, 400)
     def run_angle(self, speed, angle, then, wait):
         assert wait is False
         self.run(speed)

@@ -155,6 +155,17 @@ test('timed power brakes both motors after one shared wait', () => {
   assert.deepEqual(actions.filter(action => action.kind === 'wait').map(action => action.ms), [2000]);
 });
 
+test('high motor power warns without blocking the handler', () => {
+  const make = power => ({id: 'pw', hub: 'spike', workspace: {blocks: [
+    {id: 'b', type: 'button', button: 'a', event: 'pressed'},
+    {id: 'd', type: 'drive', parentId: 'b', motor: 'A', modules: ['power'], power},
+  ]}});
+  const high = compileControllerProgram(make(100)).errors.filter(error => error.code === 'high-power');
+  assert.equal(high.length, 1);
+  assert.equal(high[0].severity, 'warning');
+  assert.deepEqual(compileControllerProgram(make(80)).errors.filter(error => error.code === 'high-power'), []);
+});
+
 test('READY compatibility blocks only handlers requiring absent ports or v3', () => {
   const project = {id: 'p5', hub: 'spike', workspace: {blocks: [
     {id: 'b1', type: 'button', button: 'up', event: 'pressed'},
