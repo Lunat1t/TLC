@@ -23,6 +23,10 @@ Legacy resumable-upload/import API endpoints remain optional. They require serve
 5. Run `npm run dev`. Next.js normally uses port 3000; if it is occupied, read the actual address printed at startup and open that port. Confirm the server responds on that address instead of assuming it stayed on 3000.
 6. Use `specs/001-instruction-library/quickstart.md` for acceptance runs and record outcomes in `docs/instruction-library-validation.md`.
 
+## SPIKE Prime covers from the legoowedoo catalogue
+
+`public/instruction-covers/spike/NNNN.jpg` holds 336 covers (480 px wide) taken on 2026-11-28 from the feed "LEGO Spike Prime инструкции" at `legoowedoo.tilda.ws/instruction-lego-spike`. The site owner confirmed the right to use these images in TLC. The file name is the four-digit instruction number from the post title, e.g. `(0263)`. `src/lib/instructions/spike-cover-codes.ts` lists the available numbers; regenerate it from the folder when covers are added. Cover priority on a card: manually uploaded cover, then this folder, then page 1 of the PDF. Instruction 0086 has no catalogue cover and keeps the PDF preview.
+
 ## Content and roles
 
 The LEGO example pages are layout references only. Add images and PDFs made by TLC or licensed for publication, and record provenance before an administrator confirms rights. Grant or revoke `instruction_admins` only through a trusted operator SQL/admin process in the test project; no public signup or editable profile field grants this role. Export metadata and Storage object keys with the underlying files before changing providers. Never delete a file still referenced by an open assembly launch.
